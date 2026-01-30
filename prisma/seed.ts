@@ -29,6 +29,42 @@ async function main() {
 
     // 3. Mock Applicants for Recruitment
     const applicant1 = await prisma.applicant.upsert({
+        where: { email: 'somchai@example.com' },
+        update: {},
+        create: {
+            firstName: 'Somchai',
+            lastName: 'Siriwat',
+            nickname: 'Chai',
+            positionApplied: 'Full Stack Developer',
+            status: 'pending',
+            phone: '081-234-5678',
+            email: 'somchai@example.com',
+            photoPath: '/uploads/mock/mock1.png',
+            age: 29,
+            dateOfBirth: new Date('1995-05-15'),
+            address: 'Bangkok, Thailand',
+        }
+    })
+
+    const applicant2 = await prisma.applicant.upsert({
+        where: { email: 'kanya@example.com' },
+        update: {},
+        create: {
+            firstName: 'Kanya',
+            lastName: 'Rakthai',
+            nickname: 'Nam',
+            positionApplied: 'UI/UX Designer',
+            status: 'reviewed',
+            phone: '089-876-5432',
+            email: 'kanya@example.com',
+            photoPath: '/uploads/mock/mock2.png',
+            age: 26,
+            dateOfBirth: new Date('1998-10-20'),
+            address: 'Chiang Mai, Thailand',
+        }
+    })
+
+    const applicant3 = await prisma.applicant.upsert({
         where: { email: 'somchai.r@example.com' },
         update: {},
         create: {
@@ -36,17 +72,17 @@ async function main() {
             lastName: 'รักงาน',
             nickname: 'ชาย',
             positionApplied: 'Fullstack Developer',
-            expectedSalary: 55000,
+            status: 'pending',
             phone: '081-222-3333',
             email: 'somchai.r@example.com',
-            address: '123/45 กทม.',
-            dateOfBirth: new Date('1995-05-15'),
+            photoPath: '/uploads/mock/mock3.png',
             age: 29,
-            status: 'pending',
+            dateOfBirth: new Date('1995-01-01'),
+            address: 'กทม.',
         }
     })
 
-    const applicant2 = await prisma.applicant.upsert({
+    const applicant4 = await prisma.applicant.upsert({
         where: { email: 'somsri.d@example.com' },
         update: {},
         create: {
@@ -54,17 +90,17 @@ async function main() {
             lastName: 'ดีใจ',
             nickname: 'ศรี',
             positionApplied: 'UI/UX Designer',
-            expectedSalary: 45000,
+            status: 'reviewed',
             phone: '089-999-8888',
             email: 'somsri.d@example.com',
-            address: '99/1 นนทบุรี',
-            dateOfBirth: new Date('1998-10-20'),
+            photoPath: '/uploads/mock/mock4.png',
             age: 26,
-            status: 'reviewed',
+            dateOfBirth: new Date('1998-01-01'),
+            address: 'นนทบุรี',
         }
     })
 
-    const applicant3 = await prisma.applicant.upsert({
+    const applicant5 = await prisma.applicant.upsert({
         where: { email: 'wichai.g@example.com' },
         update: {},
         create: {
@@ -72,17 +108,21 @@ async function main() {
             lastName: 'กล้าหาญ',
             nickname: 'ชัย',
             positionApplied: 'Project Manager',
-            expectedSalary: 75000,
+            status: 'pending',
             phone: '085-555-4444',
             email: 'wichai.g@example.com',
-            address: '77/77 ปทุมธานี',
-            dateOfBirth: new Date('1990-01-10'),
+            photoPath: '/uploads/mock/mock5.png',
             age: 34,
-            status: 'pending',
+            dateOfBirth: new Date('1990-01-10'),
+            address: 'ปทุมธานี',
         }
     })
 
-    console.log({ admin, employee, applicants: [applicant1.firstName, applicant2.firstName, applicant3.firstName] })
+    console.log({
+        admin,
+        employee,
+        applicantsCount: 5
+    })
 }
 
 main()

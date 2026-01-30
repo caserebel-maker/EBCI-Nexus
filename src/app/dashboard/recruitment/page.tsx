@@ -1,88 +1,50 @@
 import prisma from "@/lib/prisma"
 import { ApplicantTable } from "./applicant-table"
 import { UserCircle } from 'lucide-react'
+import { User } from 'lucide-react'
 
 // Force dynamic fetch to ensure fresh data
 export const dynamic = 'force-dynamic'
 
 export default async function RecruitmentPage() {
     try {
-        // Fetch real data from DB
-        const applicantsRaw = await prisma.applicant.findMany({
-            orderBy: { createdAt: 'desc' },
-            select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                nickname: true,
-                positionApplied: true,
-                status: true,
-                createdAt: true,
-                email: true,
-                phone: true,
-                photoPath: true,
-            }
-        })
+        const [applicantsRaw] = await Promise.all([
+            prisma.applicant.findMany({
+                orderBy: { createdAt: 'desc' },
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    nickname: true,
+                    positionApplied: true,
+                    status: true,
+                    createdAt: true,
+                    email: true,
+                    phone: true,
+                    photoPath: true,
+                }
+            })
+        ])
 
-        console.log('DEBUG: Recruitment Data Fetched:', applicantsRaw.length, 'applicants found.')
-        if (applicantsRaw.length > 0) {
-            console.log('DEBUG: First applicant:', applicantsRaw[0].firstName, applicantsRaw[0].lastName)
-        }
-
-        const applicants = [
-            {
-                id: "mock-1",
-                firstName: "สมชาย",
-                lastName: "รักงาน",
-                nickname: "ชาย",
-                positionApplied: "Fullstack Developer",
-                status: "pending",
-                createdAt: new Date().toISOString(),
-                email: "somchai.r@example.com",
-                phone: "081-222-3333",
-                photoPath: null
-            },
-            {
-                id: "mock-2",
-                firstName: "สมศรี",
-                lastName: "ดีใจ",
-                nickname: "ศรี",
-                positionApplied: "UI/UX Designer",
-                status: "reviewed",
-                createdAt: new Date(Date.now() - 86400000).toISOString(),
-                email: "somsri.d@example.com",
-                phone: "089-999-8888",
-                photoPath: null
-            },
-            {
-                id: "mock-3",
-                firstName: "วิชัย",
-                lastName: "กล้าหาญ",
-                nickname: "ชัย",
-                positionApplied: "Project Manager",
-                status: "pending",
-                createdAt: new Date(Date.now() - 172800000).toISOString(),
-                email: "wichai.g@example.com",
-                phone: "085-555-4444",
-                photoPath: null
-            },
-            ...applicantsRaw.map((a: any) => ({
-                ...a,
-                createdAt: a.createdAt?.toISOString() || new Date().toISOString()
-            }))
-        ]
+        const applicants = applicantsRaw.map((a: any) => ({
+            ...a,
+            createdAt: a.createdAt?.toISOString() || new Date().toISOString()
+        }))
 
         return (
             <div className="space-y-6">
+                {/* Page Header */}
                 <div className="flex flex-col gap-1">
-                    <h1 className="text-2xl font-black text-white dark:text-foreground flex items-center gap-2 uppercase tracking-[0.1em]">
-                        <UserCircle className="h-7 w-7 text-white" />
+                    <h1 className="text-2xl font-bold text-white dark:text-foreground flex items-center gap-2">
+                        <User className="h-6 w-6 text-white dark:text-primary" />
                         Recruitment
                     </h1>
-                    <p className="text-white/70 dark:text-muted-foreground text-sm font-medium">
+                    <p className="text-white/80 dark:text-muted-foreground text-sm">
                         จัดการผู้สมัครงานและติดตามสถานะใบสมัครที่ส่งเข้ามา
                     </p>
                 </div>
+
+                {/* Main Content */}
                 <ApplicantTable initialData={applicants} />
             </div>
         )
