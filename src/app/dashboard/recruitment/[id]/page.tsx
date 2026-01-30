@@ -182,7 +182,7 @@ export default async function ApplicantDetailPage({ params }: PageProps) {
                     </div>
 
                     {/* 2. Contact & Address & Education (Merged Row for Print) */}
-                    <div className="print:grid print:grid-cols-2 print:gap-6">
+                    <div className="space-y-8 print:space-y-0 print:grid print:grid-cols-2 print:gap-6">
 
                         {/* Contact */}
                         <div className="glass rounded-3xl p-10 space-y-8 border border-white/10 print:border-none print:p-0 print:space-y-2 print:shadow-none shadow-xl">
@@ -228,7 +228,7 @@ export default async function ApplicantDetailPage({ params }: PageProps) {
                     </div>
 
                     {/* 4. Experience & Skills (Merged Row for Print) */}
-                    <div className="print:grid print:grid-cols-2 print:gap-6">
+                    <div className="space-y-8 print:space-y-0 print:grid print:grid-cols-2 print:gap-6">
 
                         {/* Experience */}
                         <div className="glass rounded-3xl p-10 space-y-8 border border-white/10 print:border-none print:p-0 print:space-y-2 print:shadow-none shadow-xl">
