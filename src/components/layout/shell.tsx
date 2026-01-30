@@ -52,7 +52,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                             <img
                                 src="/logo-white.png"
                                 alt="EBCI NEXUS"
-                                className="transition-all duration-300 drop-shadow-[0_4px_6px_rgba(255,255,255,0.25)] h-12"
+                                className="transition-all duration-300 drop-shadow-[0_4px_6px_rgba(255,255,255,0.25)] h-16"
                             />
                             <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.5em] ml-1 group-hover:text-white/40 transition-colors">V 1.0</span>
                         </Link>
@@ -118,7 +118,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                             <img
                                 src="/logo-white.png"
                                 alt="EBCI NEXUS"
-                                className="h-8 drop-shadow-[0_2px_4px_rgba(255,255,255,0.2)] group-active:scale-95 transition-transform"
+                                className="h-10 drop-shadow-[0_2px_4px_rgba(255,255,255,0.2)] group-active:scale-95 transition-transform"
                             />
                             <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] self-end mb-1">V 1.0</span>
                         </Link>
