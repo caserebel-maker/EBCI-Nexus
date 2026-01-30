@@ -47,9 +47,16 @@ export default function LoginPage() {
                 <div className="backdrop-blur-sm bg-black/20 border border-white/10 rounded-2xl shadow-2xl overflow-hidden p-8 animate-in fade-in zoom-in duration-500">
 
                     {/* Header */}
-                    <div className="text-center mb-8">
-                        <h1 className="text-4xl font-bold text-white tracking-wider mb-2 drop-shadow-md">EBCI NEXUS</h1>
-                        <p className="text-white/70 text-sm font-light uppercase tracking-widest">Human Resources Management</p>
+                    <div className="text-center mb-10 flex flex-col items-center">
+                        <img
+                            src="/logo-white.png"
+                            alt="EBCI NEXUS"
+                            className="h-20 drop-shadow-[0_4px_10px_rgba(255,255,255,0.3)] mb-6 transition-transform hover:scale-105 duration-500"
+                        />
+                        <div className="space-y-1">
+                            <p className="text-white font-medium text-xs uppercase tracking-[0.3em] opacity-90">Human Resources Management</p>
+                            <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.6em] ml-1">System</p>
+                        </div>
                     </div>
 
                     {/* Login Form */}
