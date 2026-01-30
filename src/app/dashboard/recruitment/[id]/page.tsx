@@ -97,21 +97,21 @@ export default async function ApplicantDetailPage({ params }: PageProps) {
             </div>
 
             {/* Print Only Header */}
-            <div className="hidden print:flex items-center justify-between mb-6 border-b-2 border-red-900/10 pb-4">
-                <div className="flex items-center gap-4">
-                    <div className="h-20 w-20 rounded-xl overflow-hidden border border-red-900/20">
+            <div className="hidden print:flex items-start justify-between mb-8 border-b-2 border-red-900/10 pb-6">
+                <div className="flex items-start gap-6">
+                    <div className="w-32 aspect-[4/5] rounded-xl overflow-hidden border border-red-900/20 shadow-sm">
                         {applicant.photoPath ? (
                             <img src={applicant.photoPath} className="h-full w-full object-cover" alt="Profile" />
                         ) : (
                             <div className="h-full w-full bg-red-50 flex items-center justify-center">
-                                <User className="text-red-900/30" size={32} />
+                                <User className="text-red-900/30" size={40} />
                             </div>
                         )}
                     </div>
-                    <div>
-                        <h1 className="text-2xl font-black text-black uppercase tracking-wider">{applicant.firstName} {applicant.lastName}</h1>
-                        <div className="text-sm font-bold text-red-900 uppercase tracking-widest">{applicant.positionApplied}</div>
-                        <div className="text-xs text-red-900/60 mt-1 flex gap-3">
+                    <div className="pt-2">
+                        <h1 className="text-3xl font-black text-black uppercase tracking-wider leading-tight">{applicant.firstName} {applicant.lastName}</h1>
+                        <div className="text-lg font-bold text-red-900 uppercase tracking-widest mt-1">{applicant.positionApplied}</div>
+                        <div className="text-sm text-red-900/60 mt-2 flex gap-3 font-medium">
                             <span>Age: {applicant.age}</span>
                             <span>|</span>
                             <span>{formatDate(applicant.dateOfBirth)}</span>
@@ -119,8 +119,9 @@ export default async function ApplicantDetailPage({ params }: PageProps) {
                     </div>
                 </div>
                 <div className="text-right">
-                    <div className="text-3xl font-black text-red-900/10 uppercase">EBCI NEXUS</div>
-                    <div className="text-[10px] text-red-900 font-bold uppercase tracking-widest bg-red-50 px-2 py-1 rounded inline-block mt-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/assets/logo_red.png" alt="EBCI Nexus" className="h-12 w-auto object-contain mb-2 ml-auto" />
+                    <div className="text-[10px] text-red-900 font-bold uppercase tracking-widest bg-red-50 px-3 py-1.5 rounded inline-block">
                         {applicant.status}
                     </div>
                 </div>
