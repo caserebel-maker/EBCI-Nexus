@@ -52,9 +52,9 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                     <div className="flex flex-col items-center justify-center px-4 w-full">
                         <Link href="/dashboard" className="flex flex-col items-center gap-4 group">
                             <img
-                                src="/logo-white.png"
+                                src="/assets/logo_red.png"
                                 alt="EBCI NEXUS"
-                                className="transition-all duration-300 drop-shadow-[0_4px_6px_rgba(255,255,255,0.25)] h-16"
+                                className="transition-all duration-300 drop-shadow-[0_4px_6px_rgba(0,0,0,0.2)] h-16 object-contain"
                             />
                             <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.5em] ml-1 group-hover:text-white/40 transition-colors">V 1.0</span>
                         </Link>
