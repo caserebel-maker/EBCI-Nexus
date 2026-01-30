@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { LogOut, Menu, X, ChevronRight, ChevronLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { logout } from '@/app/login/action'
@@ -21,6 +22,7 @@ interface DashboardShellProps {
 // ... imports ...
 
 export function DashboardShell({ children, role, userName }: DashboardShellProps) {
+    const pathname = usePathname()
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
     const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen)
@@ -74,20 +76,28 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
 
                 {/* Nav Links */}
                 <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
-                    {navItems.map((item, idx) => (
-                        <Link
-                            key={idx}
-                            href={item.href}
-                            className={cn(
-                                "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors",
-                                "hover:bg-white/10 dark:hover:bg-accent dark:hover:text-accent-foreground",
-                                "text-white hover:text-white dark:text-muted-foreground dark:hover:text-foreground"
-                            )}
-                        >
-                            <item.icon size={20} />
-                            <span>{item.label}</span>
-                        </Link>
-                    ))}
+                    {navItems.map((item, idx) => {
+                        const isActive = item.href === '/dashboard'
+                            ? pathname === '/dashboard'
+                            : pathname?.startsWith(item.href)
+
+                        return (
+                            <Link
+                                key={idx}
+                                href={item.href}
+                                className={cn(
+                                    "flex items-center gap-3 px-3 py-2.5 rounded-md transition-all duration-200",
+                                    "hover:bg-white/10 dark:hover:bg-accent dark:hover:text-accent-foreground",
+                                    isActive
+                                        ? "bg-white/15 text-white shadow-lg shadow-black/5 ring-1 ring-white/10"
+                                        : "text-white/70 hover:text-white dark:text-muted-foreground dark:hover:text-foreground"
+                                )}
+                            >
+                                <item.icon size={20} className={cn(isActive && "text-white")} />
+                                <span className={cn(isActive && "font-semibold")}>{item.label}</span>
+                            </Link>
+                        )
+                    })}
                 </nav>
 
                 {/* Sign Out (Bottom) */}
