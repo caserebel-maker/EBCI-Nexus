@@ -30,7 +30,11 @@ async function main() {
     // 3. Mock Applicants for Recruitment
     const applicant1 = await prisma.applicant.upsert({
         where: { email: 'somchai@example.com' },
-        update: {},
+        update: {
+            photoPath: '/uploads/mock/mock1.png',
+            status: 'pending',
+            age: 29,
+        },
         create: {
             firstName: 'Somchai',
             lastName: 'Siriwat',
@@ -48,7 +52,11 @@ async function main() {
 
     const applicant2 = await prisma.applicant.upsert({
         where: { email: 'kanya@example.com' },
-        update: {},
+        update: {
+            photoPath: '/uploads/mock/mock2.png',
+            status: 'reviewed',
+            age: 26,
+        },
         create: {
             firstName: 'Kanya',
             lastName: 'Rakthai',
@@ -66,7 +74,11 @@ async function main() {
 
     const applicant3 = await prisma.applicant.upsert({
         where: { email: 'somchai.r@example.com' },
-        update: {},
+        update: {
+            photoPath: '/uploads/mock/mock3.png',
+            status: 'pending',
+            age: 29,
+        },
         create: {
             firstName: 'สมชาย',
             lastName: 'รักงาน',
@@ -84,7 +96,11 @@ async function main() {
 
     const applicant4 = await prisma.applicant.upsert({
         where: { email: 'somsri.d@example.com' },
-        update: {},
+        update: {
+            photoPath: '/uploads/mock/mock4.png',
+            status: 'reviewed',
+            age: 26,
+        },
         create: {
             firstName: 'สมศรี',
             lastName: 'ดีใจ',
@@ -102,7 +118,11 @@ async function main() {
 
     const applicant5 = await prisma.applicant.upsert({
         where: { email: 'wichai.g@example.com' },
-        update: {},
+        update: {
+            photoPath: '/uploads/mock/mock5.png',
+            status: 'pending',
+            age: 34,
+        },
         create: {
             firstName: 'วิชัย',
             lastName: 'กล้าหาญ',
