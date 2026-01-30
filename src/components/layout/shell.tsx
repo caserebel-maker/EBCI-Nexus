@@ -48,19 +48,40 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                 )}
             >
                 {/* Sidebar Header */}
-                <div className="flex h-16 items-center justify-between px-4 border-b border-white/10 dark:border-border bg-black/10 dark:bg-transparent">
-                    <div className={cn("flex items-center gap-2", !sidebarOpen && "lg:justify-center")}>
-                        <div className="h-8 w-8 rounded-md bg-white/20 dark:bg-primary flex items-center justify-center font-bold text-white dark:text-primary-foreground">N</div>
-                        {sidebarOpen && <span className="font-bold tracking-wide">EBCI NEXUS</span>}
+                <div className="flex flex-col h-auto pt-10 pb-6 border-b border-white/10 dark:border-border bg-black/20 dark:bg-transparent">
+                    <div className="flex items-center justify-between px-6">
+                        <Link href="/dashboard" className={cn("flex flex-col items-center gap-3", !sidebarOpen && "mx-auto")}>
+                            <img
+                                src="/logo-white.png"
+                                alt="EBCI NEXUS"
+                                className={cn(
+                                    "transition-all duration-300 drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]",
+                                    sidebarOpen ? "h-11" : "h-7"
+                                )}
+                            />
+                            {sidebarOpen && (
+                                <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em] ml-1">V 1.0</span>
+                            )}
+                        </Link>
+
+                        <div className="flex items-center gap-1">
+                            {/* Desktop Toggle */}
+                            {sidebarOpen && (
+                                <button onClick={toggleSidebar} className="hidden lg:flex p-1.5 hover:bg-white/10 dark:hover:bg-muted rounded text-white/60 hover:text-white transition-colors">
+                                    <ChevronLeft size={18} />
+                                </button>
+                            )}
+                            {/* Mobile Close Button */}
+                            <button onClick={toggleMobileMenu} className="lg:hidden p-1.5 text-white/60 hover:text-white transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
                     </div>
-                    {/* Desktop Toggle */}
-                    <button onClick={toggleSidebar} className="hidden lg:flex p-1 hover:bg-white/10 dark:hover:bg-muted rounded">
-                        {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-                    </button>
-                    {/* Mobile Close */}
-                    <button onClick={toggleMobileMenu} className="lg:hidden p-1">
-                        <X size={20} />
-                    </button>
+                    {!sidebarOpen && (
+                        <button onClick={toggleSidebar} className="hidden lg:flex p-1.5 hover:bg-white/10 dark:hover:bg-muted rounded text-white/60 hover:text-white transition-colors mt-6 mx-auto">
+                            <ChevronRight size={18} />
+                        </button>
+                    )}
                 </div>
 
                 {/* User Profile (Top) */}
@@ -122,7 +143,14 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                             <Menu size={24} />
                         </button>
                         {/* Mobile Logo */}
-                        <span className="lg:hidden font-bold tracking-wide text-lg">EBCI NEXUS</span>
+                        <Link href="/dashboard" className="lg:hidden flex items-center gap-2 group">
+                            <img
+                                src="/logo-white.png"
+                                alt="EBCI NEXUS"
+                                className="h-8 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] group-active:scale-95 transition-transform"
+                            />
+                            <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] self-end mb-1">V 1.0</span>
+                        </Link>
                     </div>
                     <div className="flex items-center gap-4">
                         <ModeToggle />
