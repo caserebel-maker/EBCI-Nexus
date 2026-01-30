@@ -15,7 +15,7 @@ export const ROLE_CONFIG: Record<UserRole, RoleConfig> = {
     [ROLES.HR_ADMIN]: {
         label: 'HR Admin',
         homePath: '/dashboard',
-        allowedPrefixes: ['/dashboard', '/employees', '/recruitment'],
+        allowedPrefixes: ['/dashboard', '/employees', '/recruitment', '/portal', '/careers'],
     },
     [ROLES.EMPLOYEE]: {
         label: 'Employee',
