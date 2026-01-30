@@ -46,7 +46,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                 )}
             >
                 {/* Sidebar Header */}
-                <div className="flex flex-col h-auto pt-10 pb-8 border-b border-white/10 dark:border-border bg-black/20 dark:bg-transparent">
+                <div className="flex flex-col h-auto pt-12 pb-10">
                     <div className="flex flex-col items-center justify-center px-4 w-full">
                         <Link href="/dashboard" className="flex flex-col items-center gap-4 group">
                             <img
