@@ -53,9 +53,10 @@ export default function LoginPage() {
                             alt="EBCI NEXUS"
                             className="h-20 drop-shadow-[0_4px_10px_rgba(255,255,255,0.3)] mb-6 transition-transform hover:scale-105 duration-500"
                         />
-                        <p className="text-white font-medium text-[10px] md:text-xs uppercase tracking-[0.4em] opacity-80">
-                            Human Resources Management System
-                        </p>
+                        <div className="text-white font-medium text-[10px] md:text-xs uppercase tracking-[0.4em] opacity-80 flex flex-col gap-1.5">
+                            <span>Human Resources</span>
+                            <span>Management System</span>
+                        </div>
                     </div>
 
                     {/* Login Form */}
