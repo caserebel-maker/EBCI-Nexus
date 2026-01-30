@@ -24,10 +24,53 @@ export default async function RecruitmentPage() {
             }
         })
 
-        const applicants = applicantsRaw.map((a: any) => ({
-            ...a,
-            createdAt: a.createdAt?.toISOString() || new Date().toISOString()
-        }))
+        console.log('DEBUG: Recruitment Data Fetched:', applicantsRaw.length, 'applicants found.')
+        if (applicantsRaw.length > 0) {
+            console.log('DEBUG: First applicant:', applicantsRaw[0].firstName, applicantsRaw[0].lastName)
+        }
+
+        const applicants = [
+            {
+                id: "mock-1",
+                firstName: "สมชาย",
+                lastName: "รักงาน",
+                nickname: "ชาย",
+                positionApplied: "Fullstack Developer",
+                status: "pending",
+                createdAt: new Date().toISOString(),
+                email: "somchai.r@example.com",
+                phone: "081-222-3333",
+                photoPath: null
+            },
+            {
+                id: "mock-2",
+                firstName: "สมศรี",
+                lastName: "ดีใจ",
+                nickname: "ศรี",
+                positionApplied: "UI/UX Designer",
+                status: "reviewed",
+                createdAt: new Date(Date.now() - 86400000).toISOString(),
+                email: "somsri.d@example.com",
+                phone: "089-999-8888",
+                photoPath: null
+            },
+            {
+                id: "mock-3",
+                firstName: "วิชัย",
+                lastName: "กล้าหาญ",
+                nickname: "ชัย",
+                positionApplied: "Project Manager",
+                status: "pending",
+                createdAt: new Date(Date.now() - 172800000).toISOString(),
+                email: "wichai.g@example.com",
+                phone: "085-555-4444",
+                photoPath: null
+            },
+            ...applicantsRaw.map((a: any) => ({
+                ...a,
+                createdAt: a.createdAt?.toISOString() || new Date().toISOString()
+            }))
+        ]
 
         return (
             <div className="space-y-6">
