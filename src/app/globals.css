@@ -1,26 +1,153 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* LIGHT MODE (Default) */
+  --background: 0 0% 100%;
+  --foreground: 340 10% 3.9%;
+
+  --primary: 355 44% 33%;
+  --primary-foreground: 0 0% 98%;
+
+  --secondary: 355 42% 90%;
+  --secondary-foreground: 355 44% 33%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 340 10% 3.9%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 340 10% 3.9%;
+
+  --muted: 340 10% 96.1%;
+  --muted-foreground: 340 10% 30%;
+
+  --accent: 340 10% 96.1%;
+  --accent-foreground: 355 44% 33%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 340 10% 89.8%;
+  --input: 340 10% 89.8%;
+  --ring: 355 44% 33%;
+
+  --success: 163 39% 49%;
+  --warning: 40 62% 52%;
+  --error: 357 42% 54%;
+  --info: 218 26% 59%;
+
+  --radius: 0.5rem;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+.dark {
+  --background: 330 6% 7%;
+  --card: 340 13% 9%;
+  --popover: 340 13% 9%;
+  --muted: 342 17% 11%;
+
+  --foreground: 340 20% 93%;
+  --card-foreground: 350 16% 75%;
+  --popover-foreground: 340 20% 93%;
+  --muted-foreground: 350 13% 55%;
+
+  --primary: 355 44% 33%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 355 42% 40%;
+  --secondary-foreground: 0 0% 100%;
+
+  --accent: 355 38% 46%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 357 42% 54%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 340 15% 16%;
+  --input: 342 17% 11%;
+  --ring: 355 44% 33%;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme {
+  --font-sans: var(--font-kanit);
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-success: hsl(var(--success));
+  --color-warning: hsl(var(--warning));
+  --color-error: hsl(var(--error));
+  --color-info: hsl(var(--info));
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: calc(var(--radius));
+  --radius-lg: calc(var(--radius) + 2px);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-kanit), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  @apply bg-background text-foreground antialiased;
+}
+
+.glass {
+  @apply bg-black/20 backdrop-blur-md border border-white/10 shadow-lg;
+}
+
+.bg-brand-gradient {
+  background: linear-gradient(180deg, #561e23 0%, #7a2f35 50%, #ad5f6c 100%);
+}
+
+/* Global Print Styles for Recruitment Details */
+@media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .glass {
+    background: transparent !important;
+    border: 1px solid #eee !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+  }
+
+  button,
+  nav,
+  .print-hidden {
+    display: none !important;
+  }
+
+  .print-break-inside-avoid {
+    break-inside: avoid;
+  }
 }

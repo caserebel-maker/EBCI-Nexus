@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Phase 1: Authentication & Role-Based Access
+// Phase 1: Authentication & Role-Based Access
+// Note: SQLite does not support Enums, using String instead.
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // In production, this should be hashed
+  role      String   @default("employee") // 'employee' or 'hr_admin'
+  name      String?
+  
+  // Future-Proofing: Biometric Data
+  biometric_id     String?  @unique // ID from fingerprint device
+  fingerprint_data String?  // Raw template or hash
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Existing Table: Job Applications (Mapped from legacy system)
+model JobApplication {
+  id               Int      @id @default(autoincrement())
+  fullname_th      String?
+  position_applied String?
+  salary_expected  String?  // Changed to String to match legacy flexibility
+  phone            String?
+  email            String?
+  photo_file       String?
+  resume_file      String?
+  created_at       DateTime @default(now())
+
+  @@map("job_applications") // Map to existing table name
+}
+
+// ==========================================
+// Phase 3.1: Recruitment Module (New System)
+// ==========================================
+
+model Applicant {
+  id              String   @id @default(cuid())
+  
+  // --- A. ข้อมูลการสมัคร (Job & Status) ---
+  positionApplied String   @map("position_applied") // ตำแหน่งที่สมัคร
+  expectedSalary  Decimal? @map("expected_salary") // เงินเดือนที่ต้องการ
+  startDate       DateTime? @map("start_date") // วันที่เริ่มงานได้
+  employmentStatus String? @map("employment_status") // สถานภาพการทำงาน (ว่างงาน, ทำงานอยู่ ฯลฯ)
+  
+  // --- B. ประวัติส่วนตัว (Personal Info) ---
+  firstName       String   @map("first_name") // ชื่อจริง (ไทย)
+  lastName        String   @map("last_name") // นามสกุล (ไทย)
+  nickname        String?  @map("nickname") // ชื่อเล่น
+  dateOfBirth     DateTime @map("date_of_birth") // วันเกิด
+  age             Int      // อายุ
+  gender          String?  // เพศ (คำนวณจากคำนำหน้า)
+  nationality     String?  // สัญชาติ
+  religion        String?  // ศาสนา
+  race            String?  // เชื้อชาติ
+
+  // --- C. ที่อยู่ & ติดต่อ (Contact) ---
+  phone           String   // เบอร์โทรศัพท์
+  email           String   @unique // อีเมล (ใช้เป็น Key รอง)
+  address         String   @map("current_address") // ที่อยู่ปัจจุบัน
+  residenceType   String?  @map("residence_type") // ประเภทที่อยู่ (บ้านตัวเอง/หอพัก)
+  livingDuration  Int?     @map("living_duration") // อาศัยมาแล้ว (ปี)
+  
+  // --- D. ครอบครัว & ทหาร (Family & Military) ---
+  maritalStatus   String?  @map("marital_status") // สถานภาพสมรส
+  militaryStatus  String?  @map("military_status") // สถานะทางทหาร
+  childrenCount   Int      @default(0) @map("children_count") // จำนวนบุตร
+  
+  // --- JSON Data (Skills & Others) ---
+  // Store: { languages: [], computer: {}, office_machines: [] }
+  skills          String?  @map("skills_json")
+  
+  // Store: ["id_card", "transcript", "resume"] (List of attached doc types)
+  documents       String?  @map("documents_json")
+  
+  // --- Uploads (Paths) ---
+  photoPath       String?  @map("photo_path") // รูปถ่าย
+  resumePath      String?  @map("resume_path") // เรซูเม่
+  
+  status          String   @default("pending") // pending, reviewed, rejected, hired
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  educations      ApplicantEducation[]
+  experiences     ApplicantExperience[]
+
+  @@map("applicants")
+}
+
+model ApplicantEducation {
+  id            String    @id @default(cuid())
+  applicantId   String    @map("applicant_id")
+  applicant     Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  
+  level         String    // ระดับการศึกษา (ประถม/มัธยม/ป.ตรี)
+  institution   String    // สถาบัน
+  major         String?   // สาขาวิชา
+  graduatedYear Int?      @map("graduated_year") // ปีที่จบ
+  gpa           Decimal?  // เกรดเฉลี่ย
+
+  @@index([applicantId])
+  @@map("applicant_educations")
+}
+
+model ApplicantExperience {
+  id            String    @id @default(cuid())
+  applicantId   String    @map("applicant_id")
+  applicant     Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  
+  company       String    // สถานประกอบการ
+  position      String    // ตำแหน่ง
+  salary        Decimal?  // เงินเดือน
+  startDate     DateTime? @map("start_date") // เริ่มงาน
+  endDate       DateTime? @map("end_date") // ออกจากงาน
+  reasonForLeaving String? @map("reason_for_leaving") // สาเหตุที่ออก
+
+  @@index([applicantId])
+  @@map("applicant_experiences")
+}
