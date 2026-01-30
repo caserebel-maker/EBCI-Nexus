@@ -46,23 +46,16 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                 )}
             >
                 {/* Sidebar Header */}
-                <div className="flex flex-col h-auto pt-10 pb-6 border-b border-white/10 dark:border-border bg-black/20 dark:bg-transparent">
-                    <div className="flex items-center justify-between px-6">
-                        <Link href="/dashboard" className="flex flex-col items-center gap-3">
+                <div className="flex flex-col h-auto pt-10 pb-8 border-b border-white/10 dark:border-border bg-black/20 dark:bg-transparent">
+                    <div className="flex flex-col items-center justify-center px-4 w-full">
+                        <Link href="/dashboard" className="flex flex-col items-center gap-4 group">
                             <img
                                 src="/logo-white.png"
                                 alt="EBCI NEXUS"
-                                className="transition-all duration-300 drop-shadow-[0_0_20px_rgba(255,255,255,0.4)] h-11"
+                                className="transition-all duration-300 drop-shadow-[0_4px_6px_rgba(255,255,255,0.25)] h-12"
                             />
-                            <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em] ml-1">V 1.0</span>
+                            <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.5em] ml-1 group-hover:text-white/40 transition-colors">V 1.0</span>
                         </Link>
-
-                        <div className="flex items-center gap-1">
-                            {/* Mobile Close Button */}
-                            <button onClick={toggleMobileMenu} className="lg:hidden p-1.5 text-white/60 hover:text-white transition-colors">
-                                <X size={20} />
-                            </button>
-                        </div>
                     </div>
                 </div>
 
@@ -125,9 +118,9 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                             <img
                                 src="/logo-white.png"
                                 alt="EBCI NEXUS"
-                                className="h-8 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] group-active:scale-95 transition-transform"
+                                className="h-8 drop-shadow-[0_2px_4px_rgba(255,255,255,0.2)] group-active:scale-95 transition-transform"
                             />
-                            <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] self-end mb-1">V 1.0</span>
+                            <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] self-end mb-1">V 1.0</span>
                         </Link>
                     </div>
                     <div className="flex items-center gap-4">
