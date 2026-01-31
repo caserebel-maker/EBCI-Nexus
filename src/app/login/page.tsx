@@ -62,12 +62,29 @@ export default function LoginPage() {
                     {/* Login Form */}
                     <form onSubmit={async (e) => {
                         e.preventDefault()
+                        setLoading(true)
+                        setError(null)
                         const formData = new FormData(e.currentTarget)
+                        const data = Object.fromEntries(formData.entries())
+
                         try {
-                            await handleSubmit(formData)
+                            const res = await fetch('/api/auth/login', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(data)
+                            })
+
+                            const result = await res.json()
+
+                            if (!res.ok) {
+                                throw new Error(result.error || 'Login failed')
+                            }
+
+                            // Success -> Redirect
+                            window.location.href = result.redirectTo
                         } catch (err) {
                             console.error("Login Error:", err)
-                            setError("Connection Failed: " + (err as Error).message)
+                            setError((err as Error).message)
                             setLoading(false)
                         }
                     }} className="space-y-6">
