@@ -36,10 +36,10 @@ export default function LoginPage() {
                     <source src="https://videos.pexels.com/video-files/3129671/3129671-uhd_2560_1440_30fps.mp4" type="video/mp4" />
                     Your browser does not support the video tag.
                 </video>
-                {/* Dark Overlay for Readability */}
-                <div className="absolute inset-0 bg-black/10 pointer-events-none" />
-                {/* DEBUG: Blue Gradient Overlay to verify updates (User Request) */}
-                <div className="absolute inset-0 bg-gradient-to-b from-blue-800 to-cyan-500 mix-blend-color opacity-75 pointer-events-none" />
+                {/* Dark Overlay REMOVED for maximum brightness (User Request) */}
+                <div className="hidden absolute inset-0 bg-black/0 pointer-events-none" />
+                {/* Maroon Gradient Overlay (Restored: #561e23 to #ad5f6c) */}
+                <div className="absolute inset-0 bg-gradient-to-b from-[#561e23] to-[#ad5f6c] mix-blend-color opacity-50 pointer-events-none" />
             </div>
 
             {/* 2. Glassmorphism Card (Kept the transparent style you liked) */}
