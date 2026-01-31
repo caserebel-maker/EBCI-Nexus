@@ -1,25 +1,13 @@
 "use client"
 
 import { useState } from 'react'
-import { login } from './action'
 import { Loader2, User, Lock } from 'lucide-react'
 
 export default function LoginPage() {
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
 
-    async function handleSubmit(formData: FormData) {
-        setLoading(true)
-        setError(null)
 
-        // Call Server Action
-        const result = await login(formData)
-
-        if (result?.error) {
-            setError(result.error)
-            setLoading(false)
-        }
-    }
 
     return (
         <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
