@@ -75,7 +75,7 @@ export default function LoginPage() {
                                     name="username"
                                     type="text"
                                     required
-                                    className="w-full bg-white/10 border border-white/30 text-white placeholder:text-white/60 pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/20 shadow-inner"
+                                    className="w-full bg-white/30 border border-white/30 text-white placeholder:text-white/60 pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/40 shadow-inner"
                                     placeholder="Employee ID"
                                 />
                             </div>
@@ -86,7 +86,7 @@ export default function LoginPage() {
                                     name="password"
                                     type="password"
                                     required
-                                    className="w-full bg-white/10 border border-white/30 text-white placeholder:text-white/60 pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/20 shadow-inner"
+                                    className="w-full bg-white/30 border border-white/30 text-white placeholder:text-white/60 pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/40 shadow-inner"
                                     placeholder="Password"
                                 />
                             </div>
