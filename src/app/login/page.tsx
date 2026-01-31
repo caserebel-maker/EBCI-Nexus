@@ -60,9 +60,16 @@ export default function LoginPage() {
                     </div>
 
                     {/* Login Form */}
-                    <form onSubmit={(e) => {
+                    <form onSubmit={async (e) => {
                         e.preventDefault()
-                        handleSubmit(new FormData(e.currentTarget))
+                        const formData = new FormData(e.currentTarget)
+                        try {
+                            await handleSubmit(formData)
+                        } catch (err) {
+                            console.error("Login Error:", err)
+                            setError("Connection Failed: " + (err as Error).message)
+                            setLoading(false)
+                        }
                     }} className="space-y-6">
 
                         {error && (
