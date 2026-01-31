@@ -60,7 +60,10 @@ export default function LoginPage() {
                     </div>
 
                     {/* Login Form */}
-                    <form action={handleSubmit} className="space-y-6">
+                    <form onSubmit={(e) => {
+                        e.preventDefault()
+                        handleSubmit(new FormData(e.currentTarget))
+                    }} className="space-y-6">
 
                         {error && (
                             <div className="bg-red-500/20 text-red-100 text-sm p-3 rounded-lg border border-red-500/50 text-center backdrop-blur-sm">
