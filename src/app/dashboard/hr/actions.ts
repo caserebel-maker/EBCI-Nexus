@@ -51,7 +51,6 @@ export async function publishAnnouncement(formData: FormData) {
             const employees = await prisma.employee.findMany({
                 where: {
                     status: 'active', // Or any active status
-                    email: { not: null } // Ensure email exists
                 },
                 select: { email: true }
             })
