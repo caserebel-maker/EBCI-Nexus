@@ -1,6 +1,22 @@
 import { Users, FileText, UserCheck, AlertCircle } from 'lucide-react'
+import prisma from '@/lib/prisma'
+import { PromotionCard } from '@/components/dashboard/promotion-card'
+import { InternalNews } from '@/components/dashboard/internal-news'
 
-export default function AdminDashboard() {
+export default async function AdminDashboard() {
+    // 1. Fetch Latest Promotion
+    const promotion = await prisma.announcement.findFirst({
+        where: { priority: 'promote', publishStatus: 'published' },
+        orderBy: { publishDate: 'desc' }
+    })
+
+    // 2. Fetch Internal News (Limit 5)
+    const internalNews = await prisma.announcement.findMany({
+        where: { priority: 'internal', publishStatus: 'published' },
+        orderBy: { publishDate: 'desc' },
+        take: 5
+    })
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -17,10 +33,13 @@ export default function AdminDashboard() {
             </div>
 
             {/* Content Area */}
-            <div className="bg-white/10 dark:bg-card backdrop-blur-md rounded-xl shadow-lg border border-white/20 dark:border-border p-6 min-h-[400px]">
-                <h2 className="text-lg font-bold mb-4 text-white dark:text-foreground uppercase tracking-wider">Recent Activity</h2>
-                <div className="text-white/80 dark:text-muted-foreground text-center py-20 bg-black/10 dark:bg-muted/20 rounded-lg border border-dashed border-white/20 dark:border-border">
-                    No recent activity to display (Phase 1 Preview)
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-[400px]">
+                {/* Main Promotion Area (Span 3 cols) */}
+                <PromotionCard promotion={promotion} />
+
+                {/* Side Utility / News Area (Span 1 col) */}
+                <div className="lg:col-span-1 flex flex-col gap-6">
+                    <InternalNews announcements={internalNews} />
                 </div>
             </div>
         </div>

@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils"
 import { StatusSelector } from "./status-selector"
 import { ImageViewer } from "./image-viewer"
 import { PrintButton } from "./print-button"
+import { OnboardButton } from "./onboard-button"
 
 export const dynamic = 'force-dynamic'
 
@@ -40,7 +41,8 @@ export default async function ApplicantDetailPage({ params }: PageProps) {
             },
             experiences: {
                 orderBy: { startDate: 'desc' }
-            }
+            },
+            employee: true // Include linked employee
         }
     })
 
@@ -90,6 +92,15 @@ export default async function ApplicantDetailPage({ params }: PageProps) {
 
                 <div className="flex items-center gap-4">
                     <PrintButton />
+
+                    {/* Onboard Button (The Bridge) */}
+                    <OnboardButton
+                        applicantId={applicant.id}
+                        status={applicant.status}
+                        existingEmployeeId={applicant.employee?.id}
+                        existingEmployeeCode={applicant.employee?.employeeCode}
+                    />
+
                     <div className="flex items-center gap-2 bg-black/20 p-2 rounded-2xl border border-white/10 shadow-2xl">
                         <StatusSelector applicantId={applicant.id} initialStatus={applicant.status} />
                     </div>
@@ -210,7 +221,7 @@ export default async function ApplicantDetailPage({ params }: PageProps) {
                         <div className="glass rounded-3xl p-10 space-y-8 border border-white/10 print:border-none print:p-0 print:space-y-2 print:shadow-none shadow-xl">
                             <SectionTitle icon={<GraduationCap />} title="Education" />
                             <div className="grid grid-cols-1 gap-4 print:gap-2">
-                                {applicant.educations.map((edu) => (
+                                {applicant.educations.map((edu: any) => (
                                     <div key={edu.id} className="p-6 rounded-2xl bg-white/5 border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 print:p-0 print:bg-transparent print:border-l-2 print:border-red-900/20 print:pl-3 print:rounded-none print:flex-col print:gap-0 print:items-start">
                                         <div>
                                             <div className="text-sm font-black text-primary/80 uppercase tracking-widest print:text-[9px] print:text-red-900">{edu.level}</div>
@@ -234,7 +245,7 @@ export default async function ApplicantDetailPage({ params }: PageProps) {
                         <div className="glass rounded-3xl p-10 space-y-8 border border-white/10 print:border-none print:p-0 print:space-y-2 print:shadow-none shadow-xl">
                             <SectionTitle icon={<Briefcase />} title="Experience" />
                             <div className="space-y-10 relative ml-6 border-l-2 border-white/10 pl-10 print:ml-2 print:pl-4 print:border-red-900/20 print:space-y-4">
-                                {applicant.experiences.map((exp) => (
+                                {applicant.experiences.map((exp: any) => (
                                     <div key={exp.id} className="relative">
                                         {/* Timeline Dot */}
                                         <div className="absolute -left-[51px] top-2 h-5 w-5 rounded-full bg-primary border-4 border-black print:-left-[23px] print:h-2 print:w-2 print:bg-red-900 print:border-none" />

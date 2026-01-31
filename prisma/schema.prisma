@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/client"
 }
 
 datasource db {
@@ -24,6 +23,39 @@ model User {
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  employee  Employee? // Reverse relation
+}
+
+model Employee {
+  id             String   @id @default(cuid())
+  employeeCode   String   @unique @map("employee_code")
+  title          String?  // Mr/Ms/Mrs
+  firstNameTH    String   @map("first_name_th")
+  lastNameTH     String   @map("last_name_th")
+  firstNameEN    String?  @map("first_name_en")
+  lastNameEN     String?  @map("last_name_en")
+  
+  position       String
+  department     String
+  startDate      DateTime @map("start_date")
+  employmentType String   @map("employment_type") // full-time, contract, intern
+  status         String   @default("active") // active, inactive, on_leave
+
+  email          String   @unique
+  phone          String?
+
+  userId         String?  @unique @map("user_id") // Link to system login user
+  user           User?    @relation(fields: [userId], references: [id])
+
+  // Link to Applicant (The Bridge)
+  applicantId    String?   @unique @map("applicant_id")
+  applicant      Applicant? @relation(fields: [applicantId], references: [id])
+
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("employees")
 }
 
 // Existing Table: Job Applications (Mapped from legacy system)
@@ -95,6 +127,7 @@ model Applicant {
   // Relations
   educations      ApplicantEducation[]
   experiences     ApplicantExperience[]
+  employee        Employee? // Link to created employee
 
   @@map("applicants")
 }
@@ -128,4 +161,28 @@ model ApplicantExperience {
 
   @@index([applicantId])
   @@map("applicant_experiences")
+}
+
+// ==========================================
+// Phase 4: HR Announcement Module
+// ==========================================
+
+model Announcement {
+  id             String   @id @default(cuid())
+  headline       String
+  content        String
+  imagePath      String?  @map("image_path")
+  priority       String   @default("internal") // emergency, internal, promote
+  publishStatus  String   @default("draft") // draft, published
+  publishDate    DateTime @default(now()) @map("publish_date")
+  
+  // Logic fields
+  emailSent      Boolean  @default(false) @map("email_sent")
+  emailSentAt    DateTime? @map("email_sent_at")
+
+  createdBy      String?  @map("created_by") // user_id or username
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("announcements")
 }

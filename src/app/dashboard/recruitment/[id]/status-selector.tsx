@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { cn } from "@/lib/utils"
+import { useRouter } from "next/navigation"
 
 interface StatusSelectorProps {
     applicantId: string
@@ -11,6 +12,7 @@ interface StatusSelectorProps {
 export function StatusSelector({ applicantId, initialStatus }: StatusSelectorProps) {
     const [status, setStatus] = useState(initialStatus)
     const [loading, setLoading] = useState(false)
+    const router = useRouter()
 
     const updateStatus = async (newStatus: string) => {
         if (newStatus === status) return
@@ -21,7 +23,10 @@ export function StatusSelector({ applicantId, initialStatus }: StatusSelectorPro
                 body: JSON.stringify({ status: newStatus }),
                 headers: { "Content-Type": "application/json" }
             })
-            if (res.ok) setStatus(newStatus)
+            if (res.ok) {
+                setStatus(newStatus)
+                router.refresh() // <--- Trigger Server Component re-fetch
+            }
         } catch (e) {
             console.error(e)
         } finally {

@@ -194,7 +194,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Volumes/1TB-NVME/EB-CI/EBCI_job_app/nexus/src/generated/client",
+      "value": "/Users/suriyaebci/.gemini/antigravity/scratch/EBCI_Nexus/src/generated/client",
       "fromEnvVar": null
     },
     "config": {
@@ -208,12 +208,11 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Volumes/1TB-NVME/EB-CI/EBCI_job_app/nexus/prisma/schema.prisma",
+    "sourceFilePath": "/Users/suriyaebci/.gemini/antigravity/scratch/EBCI_Nexus/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": null,
-    "schemaEnvPath": "../../../.env"
+    "rootEnvPath": null
   },
   "relativePath": "../../../prisma",
   "clientVersion": "5.22.0",
@@ -222,7 +221,6 @@ const config = {
     "db"
   ],
   "activeProvider": "sqlite",
-  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {

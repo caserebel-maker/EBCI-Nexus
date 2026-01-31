@@ -94,7 +94,7 @@ export function ApplicantTable({ initialData }: ApplicantTableProps) {
             </div>
 
             {/* Grid Content */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-8 gap-4">
                 {sortedData.length > 0 ? (
                     sortedData.map((applicant) => (
                         <div
@@ -103,7 +103,7 @@ export function ApplicantTable({ initialData }: ApplicantTableProps) {
                             className="group relative flex flex-col bg-white/10 dark:bg-card backdrop-blur-xl rounded-2xl border border-white/20 dark:border-border overflow-hidden hover:scale-[1.02] hover:border-white/40 transition-all duration-300 cursor-pointer shadow-xl"
                         >
                             {/* Photo / Placeholder */}
-                            <div className="relative h-48 w-full overflow-hidden bg-white/5">
+                            <div className="relative aspect-[3/4] w-full overflow-hidden bg-white/5">
                                 {applicant.photoPath ? (
                                     <img
                                         src={applicant.photoPath}
@@ -124,24 +124,24 @@ export function ApplicantTable({ initialData }: ApplicantTableProps) {
                             {/* Info */}
                             <div className="p-4 flex flex-col flex-1">
                                 <div className="mb-2">
-                                    <h3 className="text-base font-normal text-white dark:text-foreground leading-tight line-clamp-1">
+                                    <h3 className="text-lg font-normal text-white dark:text-foreground leading-tight line-clamp-1">
                                         {applicant.firstName} {applicant.lastName}
                                     </h3>
                                     {applicant.nickname && (
-                                        <span className="text-xs font-bold uppercase tracking-wider text-primary-foreground/60 dark:text-primary/80 block mt-0.5">
+                                        <span className="text-sm font-bold uppercase tracking-wider text-primary-foreground/60 dark:text-primary/80 block mt-0.5">
                                             ({applicant.nickname})
                                         </span>
                                     )}
                                 </div>
 
                                 <div className="mt-auto space-y-3">
-                                    <div className="flex items-center gap-2 text-white/90 dark:text-foreground/90 text-sm font-bold">
-                                        <Briefcase size={14} className="shrink-0 text-white/60" />
+                                    <div className="flex items-center gap-2 text-white/90 dark:text-foreground/90 text-base font-bold">
+                                        <Briefcase size={16} className="shrink-0 text-white/60" />
                                         <span className="line-clamp-1">{applicant.positionApplied}</span>
                                     </div>
-                                    <div className="flex items-center justify-between text-xs uppercase font-bold tracking-wider text-white/50">
+                                    <div className="flex items-center justify-between text-sm uppercase font-bold tracking-wider text-white/50">
                                         <div className="flex items-center gap-1.5">
-                                            <Calendar size={12} />
+                                            <Calendar size={14} />
                                             {new Date(applicant.createdAt).toLocaleDateString('en-GB')}
                                         </div>
                                         <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -190,7 +190,7 @@ function StatusBadge({ status, compact }: { status: string; compact?: boolean })
     return (
         <span className={cn(
             "rounded-full font-black uppercase tracking-widest border inline-flex items-center gap-1.5",
-            compact ? "px-2 py-0.5 text-[8px]" : "px-3 py-1 text-[10px]",
+            compact ? "px-2 py-0.5 text-[10px]" : "px-3 py-1 text-xs",
             styles[status] || defaultStyle
         )}>
             {!compact && (

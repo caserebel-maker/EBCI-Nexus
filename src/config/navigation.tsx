@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, UserCircle, FileText, Settings } from 'lucide-react'
+import { LayoutDashboard, Users, UserCircle, FileText, Settings, Megaphone } from 'lucide-react'
 import { ROLES, type UserRole } from './roles'
 
 export interface NavItem {
@@ -12,6 +12,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
         { label: 'Employees', href: '/dashboard/employees', icon: Users },
         { label: 'Recruitment', href: '/dashboard/recruitment', icon: UserCircle },
+        { label: 'Announcements', href: '/dashboard/hr/announcements', icon: Megaphone },
         // Future roles/menus can be easily added here
         { label: 'Reports', href: '/dashboard/reports', icon: FileText },
         { label: 'Settings', href: '/dashboard/settings', icon: Settings },

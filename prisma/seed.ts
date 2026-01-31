@@ -1,4 +1,4 @@
-import { PrismaClient } from '../src/generated/client'
+import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -15,8 +15,8 @@ async function main() {
         },
     })
 
-    // 2. Employee
-    const employee = await prisma.user.upsert({
+    // 2. Employee (User Account)
+    const employeeUser = await prisma.user.upsert({
         where: { username: 'emp' },
         update: { password: '0000' },
         create: {
@@ -26,6 +26,93 @@ async function main() {
             role: 'employee',
         },
     })
+
+    // ----------------------------------------------------
+    // Seed Real Employees (Linked to Users & Standalone)
+    // ----------------------------------------------------
+
+    // 1. Link Admin User -> Employee Profile
+    await prisma.employee.upsert({
+        where: { employeeCode: 'EMP-000' },
+        update: {},
+        create: {
+            employeeCode: 'EMP-000',
+            firstNameTH: 'ผู้ดูแลระบบ',
+            lastNameTH: 'สูงสุด',
+            firstNameEN: 'System',
+            lastNameEN: 'Admin',
+            position: 'HR Manager',
+            department: 'Human Resources',
+            startDate: new Date('2020-01-01'),
+            employmentType: 'full-time',
+            status: 'active',
+            email: 'admin@ebci.co.th',
+            phone: '02-123-4567',
+            user: { connect: { username: 'admin' } }
+        }
+    })
+
+    // 2. Link Employee User -> John Doe
+    await prisma.employee.upsert({
+        where: { employeeCode: 'EMP-001' },
+        update: {},
+        create: {
+            employeeCode: 'EMP-001',
+            firstNameTH: 'สมชาย',
+            lastNameTH: 'ใจดี',
+            firstNameEN: 'Somchai',
+            lastNameEN: 'Jai-dee',
+            position: 'Talent Acquisition',
+            department: 'Human Resources',
+            startDate: new Date('2022-05-01'),
+            employmentType: 'full-time',
+            status: 'active',
+            email: 'somchai@ebci.co.th',
+            phone: '081-999-9999',
+            user: { connect: { username: 'emp' } }
+        }
+    })
+
+    // 3. Additional Employees (Standard)
+    const employees = [
+        {
+            code: 'EMP-002', th: ['ซาร่า', 'คอนเนอร์'], en: ['Sarah', 'Connor'],
+            pos: 'Senior Developer', dept: 'IT', email: 'sarah@ebci.co.th', status: 'active'
+        },
+        {
+            code: 'EMP-003', th: ['สุริยา', 'ปอนด์'], en: ['Suriya', 'Pond'],
+            pos: 'CEO', dept: 'Management', email: 'pond@ebci.co.th', status: 'active'
+        },
+        {
+            code: 'EMP-004', th: ['โรเบิร์ต', 'บราวน์'], en: ['Robert', 'Brown'],
+            pos: 'System Admin', dept: 'IT', email: 'robert@ebci.co.th', status: 'inactive'
+        },
+        {
+            code: 'EMP-005', th: ['เอมิลี่', 'ขาว'], en: ['Emily', 'White'],
+            pos: 'Sales Manager', dept: 'Sales', email: 'emily@ebci.co.th', status: 'on_leave'
+        }
+    ]
+
+    for (const e of employees) {
+        await prisma.employee.upsert({
+            where: { employeeCode: e.code },
+            update: {},
+            create: {
+                employeeCode: e.code,
+                firstNameTH: e.th[0],
+                lastNameTH: e.th[1],
+                firstNameEN: e.en[0],
+                lastNameEN: e.en[1],
+                position: e.pos,
+                department: e.dept,
+                startDate: new Date(),
+                employmentType: 'full-time',
+                status: e.status,
+                email: e.email,
+                phone: '080-000-0000'
+            }
+        })
+    }
 
     // 3. Mock Applicants for Recruitment
     const applicant1 = await prisma.applicant.upsert({
@@ -140,7 +227,7 @@ async function main() {
 
     console.log({
         admin,
-        employee,
+        employeeUser,
         applicantsCount: 5
     })
 }

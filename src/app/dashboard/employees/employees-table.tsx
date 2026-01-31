@@ -6,16 +6,22 @@ import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
-// Mock Data Type
+// Real Data Type (Matches Prisma)
 export type Employee = {
     id: string
-    employeeId: string
-    name: string
+    employeeCode: string
+    firstNameTH: string
+    lastNameTH: string
+    firstNameEN?: string | null
+    lastNameEN?: string | null
+    nickname?: string | null
     department: string
     position: string
-    status: "Active" | "Inactive" | "On Leave"
+    status: string // active, inactive, on_leave
     email: string
-    avatar?: string
+    phone?: string | null
+    startDate: Date
+    photoPath?: string | null
 }
 
 interface EmployeesTableProps {
@@ -30,9 +36,13 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
 
     // Filtering Logic
     const filteredData = initialData.filter((employee) => {
+        const fullNameTH = `${employee.firstNameTH} ${employee.lastNameTH}`.toLowerCase()
+        const fullNameEN = `${employee.firstNameEN || ""} ${employee.lastNameEN || ""}`.toLowerCase()
+
         const matchesSearch =
-            employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            employee.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            fullNameTH.includes(searchTerm.toLowerCase()) ||
+            fullNameEN.includes(searchTerm.toLowerCase()) ||
+            employee.employeeCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
             employee.email.toLowerCase().includes(searchTerm.toLowerCase())
 
         const matchesStatus = statusFilter === "all" || employee.status === statusFilter
@@ -79,9 +89,9 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
                         onChange={(e) => setStatusFilter(e.target.value)}
                     >
                         <option value="all">All Status</option>
-                        <option value="Active">Active</option>
-                        <option value="On Leave">On Leave</option>
-                        <option value="Inactive">Inactive</option>
+                        <option value="active">Active</option>
+                        <option value="on_leave">On Leave</option>
+                        <option value="inactive">Inactive</option>
                     </select>
                 </div>
             </div>
@@ -108,16 +118,15 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
                                     >
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-primary/20">
-                                                    {employee.avatar ? (
-                                                        // Keeping it simple for now, using initials
-                                                        employee.name.charAt(0)
+                                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-primary/20 overflow-hidden">
+                                                    {employee.photoPath ? (
+                                                        <img src={employee.photoPath} alt="" className="w-full h-full object-cover" />
                                                     ) : (
-                                                        employee.name.charAt(0)
+                                                        employee.firstNameEN ? employee.firstNameEN.charAt(0) : employee.firstNameTH.charAt(0)
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <div className="font-semibold text-foreground">{employee.name}</div>
+                                                    <div className="font-semibold text-foreground">{employee.firstNameTH} {employee.lastNameTH}</div>
                                                     <div className="text-xs text-muted-foreground font-mono">{employee.email}</div>
                                                 </div>
                                             </div>
@@ -132,7 +141,7 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
                                                     <Building className="h-3.5 w-3.5" />
                                                     <span>{employee.department}</span>
                                                     <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono text-[10px] border border-border">
-                                                        {employee.employeeId}
+                                                        {employee.employeeCode}
                                                     </span>
                                                 </div>
                                             </div>
@@ -171,10 +180,18 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
 }
 
 function StatusBadge({ status }: { status: string }) {
+    // DB status is lowercase, map to styles
     const styles: Record<string, string> = {
-        "Active": "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-        "Inactive": "bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/20",
-        "On Leave": "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20",
+        "active": "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+        "inactive": "bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/20",
+        "on_leave": "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20",
+    }
+
+    // Display labels
+    const labels: Record<string, string> = {
+        "active": "Active",
+        "inactive": "Inactive",
+        "on_leave": "On Leave"
     }
 
     const defaultStyle = "bg-primary/10 text-primary border-primary/20"
@@ -185,10 +202,10 @@ function StatusBadge({ status }: { status: string }) {
             styles[status] || defaultStyle
         )}>
             <span className={cn("h-1.5 w-1.5 rounded-full",
-                status === 'Active' ? 'bg-current' :
-                    status === 'Inactive' ? 'bg-current opacity-50' : 'bg-current animate-pulse'
+                status === 'active' ? 'bg-current' :
+                    status === 'inactive' ? 'bg-current opacity-50' : 'bg-current animate-pulse'
             )} />
-            {status}
+            {labels[status] || status}
         </span>
     )
 }
