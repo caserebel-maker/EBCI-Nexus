@@ -42,9 +42,9 @@ export default function LoginPage() {
                 <div className="absolute inset-0 bg-gradient-to-b from-[#561e23] to-[#ad5f6c] mix-blend-color opacity-90 pointer-events-none" />
             </div>
 
-            {/* 2. Glassmorphism Card (Kept the transparent style you liked) */}
+            {/* 2. Glassmorphism Card (Switched to White Glass Theme) */}
             <div className="relative z-10 w-full max-w-md p-8 mx-4">
-                <div className="backdrop-blur-sm bg-black/20 border border-white/10 rounded-2xl shadow-2xl overflow-hidden p-8 animate-in fade-in zoom-in duration-500">
+                <div className="backdrop-blur-sm bg-white/10 border border-white/20 rounded-2xl shadow-2xl overflow-hidden p-8 animate-in fade-in zoom-in duration-500">
 
                     {/* Header */}
                     <div className="text-center mb-10 flex flex-col items-center">
@@ -70,23 +70,23 @@ export default function LoginPage() {
 
                         <div className="space-y-4">
                             <div className="relative">
-                                <User className="absolute left-3 top-3 h-5 w-5 text-white/50" />
+                                <User className="absolute left-3 top-3 h-5 w-5 text-white/70" />
                                 <input
                                     name="username"
                                     type="text"
                                     required
-                                    className="w-full bg-white/20 border border-white/20 text-white placeholder:text-white/50 pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/30 shadow-none"
+                                    className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/60 pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/20 shadow-none"
                                     placeholder="Employee ID"
                                 />
                             </div>
 
                             <div className="relative">
-                                <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-500" />
+                                <Lock className="absolute left-3 top-3 h-5 w-5 text-white/70" />
                                 <input
                                     name="password"
                                     type="password"
                                     required
-                                    className="w-full bg-white/90 border border-white text-gray-900 placeholder:text-gray-500 pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white outline-none transition-all hover:bg-white shadow-lg"
+                                    className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/60 pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/20 shadow-none"
                                     placeholder="Password"
                                 />
                             </div>
