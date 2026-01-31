@@ -1,3 +1,4 @@
+// Force Schema Update v2
 generator client {
   provider = "prisma-client-js"
 }
