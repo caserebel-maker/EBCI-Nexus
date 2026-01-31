@@ -2,13 +2,13 @@
 
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import prisma from '@/lib/prisma'
 
 export async function login(formData: FormData) {
     const username = formData.get('username') as string
     const password = formData.get('password') as string
+
+    console.log(`[Login] Attempt for user: ${username}`)
 
     if (!username || !password) {
         return { error: 'Please provide both username and password' }
@@ -19,9 +19,11 @@ export async function login(formData: FormData) {
         const user = await prisma.user.findUnique({
             where: { username },
         })
+        console.log(`[Login] User found: ${!!user}`)
 
         // 2. Validate Credentials (Simple check for Phase 1)
         if (!user || user.password !== password) {
+            console.log(`[Login] Invalid credentials for ${username}`)
             return { error: 'Invalid credentials' }
         }
 
