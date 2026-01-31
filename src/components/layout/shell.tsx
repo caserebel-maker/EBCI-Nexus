@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LogOut, Menu, X, ChevronRight, ChevronLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { logout } from '@/app/login/action'
 import { NAVIGATION_CONFIG } from '@/config/navigation'
 import { ModeToggle } from '@/components/mode-toggle'
 
@@ -103,7 +102,10 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                 {/* Sign Out (Bottom) */}
                 <div className="absolute bottom-0 w-full p-4 border-t border-white/10 dark:border-border">
                     <button
-                        onClick={() => logout()}
+                        onClick={async () => {
+                            await fetch('/api/auth/logout', { method: 'POST' })
+                            window.location.href = '/login'
+                        }}
                         className={cn(
                             "flex items-center gap-3 w-full px-3 py-2.5 rounded-md transition-colors",
                             "text-white hover:bg-white/10 hover:text-white dark:text-destructive dark:hover:bg-destructive/10"
