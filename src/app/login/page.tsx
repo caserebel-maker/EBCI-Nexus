@@ -70,23 +70,23 @@ export default function LoginPage() {
 
                         <div className="space-y-4">
                             <div className="relative">
-                                <User className="absolute left-3 top-3 h-5 w-5 text-white/80" />
+                                <User className="absolute left-3 top-3 h-5 w-5 text-white/50" />
                                 <input
                                     name="username"
                                     type="text"
                                     required
-                                    className="w-full bg-white/50 border border-white/50 text-white placeholder:text-white/80 pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white outline-none transition-all hover:bg-white/60 shadow-none"
+                                    className="w-full bg-white/20 border border-white/20 text-white placeholder:text-white/50 pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/30 shadow-none"
                                     placeholder="Employee ID"
                                 />
                             </div>
 
                             <div className="relative">
-                                <Lock className="absolute left-3 top-3 h-5 w-5 text-white/80" />
+                                <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-500" />
                                 <input
                                     name="password"
                                     type="password"
                                     required
-                                    className="w-full bg-white/50 border border-white/50 text-white placeholder:text-white/80 pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white outline-none transition-all hover:bg-white/60 shadow-none"
+                                    className="w-full bg-white/90 border border-white text-gray-900 placeholder:text-gray-500 pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white outline-none transition-all hover:bg-white shadow-lg"
                                     placeholder="Password"
                                 />
                             </div>
