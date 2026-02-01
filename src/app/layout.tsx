@@ -3,6 +3,7 @@ import { Kanit } from 'next/font/google'
 import './globals.css'
 import { cn } from '@/lib/utils'
 import { ThemeProvider } from "@/components/theme-provider"
+import { Providers } from "@/components/providers"
 
 const kanit = Kanit({
   subsets: ['latin', 'thai'],
@@ -29,7 +30,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <Providers>
+            {children}
+          </Providers>
         </ThemeProvider>
       </body>
     </html>

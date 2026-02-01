@@ -8,10 +8,10 @@ export function PromotionCard({ promotion }: { promotion: any }) {
     return (
         <div className="col-span-1 md:col-span-2 lg:col-span-3 bg-white/10 dark:bg-card backdrop-blur-md rounded-xl shadow-lg border border-white/20 dark:border-border overflow-hidden relative group min-h-[300px] flex flex-col justify-end">
             {/* Background Image */}
-            {promotion.imagePath ? (
+            {promotion.imageUrl ? (
                 <div className="absolute inset-0 z-0">
                     <img
-                        src={promotion.imagePath}
+                        src={promotion.imageUrl}
                         alt="Promotion"
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />

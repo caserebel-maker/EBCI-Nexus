@@ -26,7 +26,7 @@ export function InternalNews({ announcements }: { announcements: any[] }) {
                     >
                         <div className="flex justify-between items-start mb-1">
                             <span className="text-xs text-blue-300 font-mono">
-                                {new Date(item.publishDate).toLocaleDateString('en-GB')}
+                                {new Date(item.publish_date).toLocaleDateString('en-GB')}
                             </span>
                         </div>
                         <h3 className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors line-clamp-2">
@@ -56,10 +56,10 @@ export function InternalNews({ announcements }: { announcements: any[] }) {
                         </button>
 
                         {/* Image Header */}
-                        {selectedNews.imagePath ? (
+                        {selectedNews.imageUrl ? (
                             <div className="h-48 w-full relative">
                                 <img
-                                    src={selectedNews.imagePath}
+                                    src={selectedNews.imageUrl}
                                     alt={selectedNews.headline}
                                     className="w-full h-full object-cover"
                                 />
@@ -76,7 +76,7 @@ export function InternalNews({ announcements }: { announcements: any[] }) {
                             <h2 className="text-2xl font-bold text-white mb-2">{selectedNews.headline}</h2>
                             <div className="flex items-center gap-2 text-white/40 text-sm mb-6 pb-6 border-b border-white/10">
                                 <Calendar size={14} />
-                                {new Date(selectedNews.publishDate).toLocaleDateString('en-US', { dateStyle: 'long' })}
+                                {new Date(selectedNews.publish_date).toLocaleDateString('en-US', { dateStyle: 'long' })}
                             </div>
 
                             <div className="prose prose-invert prose-sm max-w-none text-white/80 leading-relaxed whitespace-pre-wrap">

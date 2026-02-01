@@ -1,8 +1,7 @@
+import crypto from "crypto"
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { supabase } from '@/lib/supabase'
 import { getSession } from '@/lib/auth'
-
-const prisma = new PrismaClient()
 
 // GET /api/applicants
 export async function GET(request: Request) {
@@ -25,26 +24,29 @@ export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
         const status = searchParams.get('status')
-        const whereCondition = status ? { status } : {}
 
-        const applicants = await prisma.applicant.findMany({
-            where: whereCondition,
-            orderBy: { createdAt: 'desc' },
-            include: {
-                educations: true,
-                experiences: true,
-            }
-        })
+        let query = supabase
+            .from('applicants')
+            .select('*, applicant_educations(*), applicant_experiences(*)')
+            .order('created_at', { ascending: false })
+
+        if (status) {
+            query = query.eq('status', status)
+        }
+
+        const { data: applicants, error } = await query
+
+        if (error) throw error
 
         return NextResponse.json({
             success: true,
             data: applicants
         })
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching applicants:', error)
         return NextResponse.json(
-            { success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูล กรุณาลองใหม่' },
+            { success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูล: ' + error.message },
             { status: 500 }
         )
     }
@@ -64,98 +66,127 @@ export async function POST(request: Request) {
         }
 
         const body = JSON.parse(rawData)
-
         const photoFile = formData.get('photo') as File | null
         const resumeFile = formData.get('resume') as File | null
 
-        const photoPath = photoFile ? `/uploads/${photoFile.name}` : null
-        const resumePath = resumeFile ? `/uploads/${resumeFile.name}` : null
+        let photoPath = null
+        let resumePath = null
 
-        const newApplicant = await prisma.$transaction(async (tx) => {
-            // 3.1 Create Main Applicant
-            const applicant = await tx.applicant.create({
-                data: {
-                    // A. Job
-                    positionApplied: body.positionApplied,
-                    expectedSalary: body.expectedSalary ? Number(body.expectedSalary) : undefined,
-                    startDate: body.startDate ? new Date(body.startDate) : undefined,
-                    employmentStatus: body.employmentStatus,
+        const timestamp = Date.now()
 
-                    // B. Personal
-                    firstName: body.firstName,
-                    lastName: body.lastName,
-                    nickname: body.nickname,
-                    dateOfBirth: new Date(body.dateOfBirth),
-                    age: Number(body.age),
-                    gender: body.gender,
-                    nationality: body.nationality,
-                    religion: body.religion,
-                    race: body.race,
+        // 1. Upload Photo to Supabase Storage
+        if (photoFile) {
+            const fileName = `${timestamp}_${photoFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('applicant-assets')
+                .upload(`photos/${fileName}`, photoFile)
 
-                    // C. Contact
-                    address: body.address,
-                    phone: body.phone,
-                    email: body.email,
-                    residenceType: body.residenceType,
-                    livingDuration: body.livingDuration ? Number(body.livingDuration) : undefined,
+            if (uploadError) throw new Error('Photo upload failed: ' + uploadError.message)
+            photoPath = uploadData.path
+        }
 
-                    // D. Family
-                    maritalStatus: body.maritalStatus,
-                    militaryStatus: body.militaryStatus,
-                    childrenCount: body.childrenCount ? Number(body.childrenCount) : 0,
+        // 2. Upload Resume to Supabase Storage
+        if (resumeFile) {
+            const fileName = `${timestamp}_${resumeFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('applicant-assets')
+                .upload(`resumes/${fileName}`, resumeFile)
 
-                    // E. Files (Paths)
-                    photoPath: photoPath,
-                    resumePath: resumePath,
+            if (uploadError) throw new Error('Resume upload failed: ' + uploadError.message)
+            resumePath = uploadData.path
+        }
 
-                    // F. JSON Fields
-                    skills: body.skills ? JSON.stringify(body.skills) : null,
-                    documents: body.documents ? JSON.stringify(body.documents) : null,
-                }
+        const applicantId = crypto.randomUUID()
+        const now = new Date().toISOString()
+
+        // 3. Insert Main Applicant to Supabase Database
+        const { data: applicant, error: applicantError } = await supabase
+            .from('applicants')
+            .insert({
+                id: applicantId,
+                position_applied: body.positionApplied,
+                expected_salary: body.expectedSalary ? Number(body.expectedSalary) : undefined,
+                start_date: body.startDate ? body.startDate : undefined,
+                employment_status: body.employmentStatus,
+                first_name: body.firstName,
+                last_name: body.lastName,
+                nickname: body.nickname,
+                date_of_birth: body.dateOfBirth,
+                age: Number(body.age),
+                gender: body.gender,
+                nationality: body.nationality,
+                religion: body.religion,
+                race: body.race,
+                current_address: body.address,
+                phone: body.phone,
+                email: body.email,
+                residence_type: body.residenceType,
+                living_duration: body.livingDuration ? Number(body.livingDuration) : undefined,
+                marital_status: body.maritalStatus,
+                military_status: body.militaryStatus,
+                children_count: body.childrenCount ? Number(body.childrenCount) : 0,
+                photo_path: photoPath,
+                resume_path: resumePath,
+                skills_json: body.skills ? JSON.stringify(body.skills) : null,
+                documents_json: body.documents ? JSON.stringify(body.documents) : null,
+                status: 'pending',
+                created_at: now,
+                updated_at: now
             })
+            .select()
+            .single()
 
-            // 3.2 Create Edu Records
-            if (body.educations && Array.isArray(body.educations)) {
-                await tx.applicantEducation.createMany({
-                    data: body.educations.map((edu: any) => ({
-                        applicantId: applicant.id,
-                        level: edu.level,
-                        institution: edu.institution,
-                        major: edu.major,
-                        graduatedYear: edu.graduatedYear ? Number(edu.graduatedYear) : null,
-                        gpa: edu.gpa ? Number(edu.gpa) : null,
-                    }))
-                })
-            }
+        if (applicantError) throw applicantError
 
-            // 3.3 Create Experience Records
-            if (body.experiences && Array.isArray(body.experiences)) {
-                await tx.applicantExperience.createMany({
-                    data: body.experiences.map((exp: any) => ({
-                        applicantId: applicant.id,
-                        company: exp.company,
-                        position: exp.position,
-                        salary: exp.salary ? Number(exp.salary) : null,
-                        startDate: exp.startDate ? new Date(exp.startDate) : null,
-                        endDate: exp.endDate ? new Date(exp.endDate) : null,
-                        reasonForLeaving: exp.reasonForLeaving,
-                    }))
-                })
-            }
+        // 4. Insert Educations
+        if (body.educations && Array.isArray(body.educations)) {
+            const { error: eduError } = await supabase
+                .from('applicant_educations')
+                .insert(body.educations.map((edu: any) => ({
+                    id: crypto.randomUUID(),
+                    applicant_id: applicant.id,
+                    level: edu.level,
+                    institution: edu.institution,
+                    major: edu.major,
+                    graduated_year: edu.graduatedYear ? Number(edu.graduatedYear) : null,
+                    gpa: edu.gpa ? Number(edu.gpa) : null,
+                    created_at: now,
+                    updated_at: now
+                })))
 
-            return applicant
-        })
+            if (eduError) console.error('Error inserting educations:', eduError)
+        }
+
+        // 5. Insert Experiences
+        if (body.experiences && Array.isArray(body.experiences)) {
+            const { error: expError } = await supabase
+                .from('applicant_experiences')
+                .insert(body.experiences.map((exp: any) => ({
+                    id: crypto.randomUUID(),
+                    applicant_id: applicant.id,
+                    company: exp.company,
+                    position: exp.position,
+                    salary: exp.salary ? Number(exp.salary) : null,
+                    start_date: exp.startDate ? exp.startDate : null,
+                    end_date: exp.endDate ? exp.endDate : null,
+                    reason_for_leaving: exp.reasonForLeaving,
+                    created_at: now,
+                    updated_at: now
+                })))
+
+            if (expError) console.error('Error inserting experiences:', expError)
+        }
 
         return NextResponse.json({
             success: true,
-            message: 'บันทึกใบสมัครเรียบร้อยแล้ว',
-            data: { id: newApplicant.id }
+            message: 'บันทึกใบสมัครเรียบร้อยแล้ว (Supabase Cloud)',
+            data: { id: applicant.id }
         })
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Submission Error:', error)
         return NextResponse.json(
-            { success: false, message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' },
+            { success: false, message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message },
             { status: 500 }
         )
     }

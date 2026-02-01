@@ -1,4 +1,4 @@
-import prisma from "@/lib/prisma"
+import { supabase } from "@/lib/supabase"
 import { NextResponse } from "next/server"
 
 export async function PATCH(
@@ -7,20 +7,28 @@ export async function PATCH(
 ) {
     try {
         const { id } = await params
-        const { status } = await request.json()
+        const body = await request.json()
+        const { status } = body
 
         if (!status) {
             return NextResponse.json({ error: "Status is required" }, { status: 400 })
         }
 
-        const updated = await prisma.applicant.update({
-            where: { id },
-            data: { status }
-        })
+        const { data, error } = await supabase
+            .from('applicants')
+            .update({ status })
+            .eq('id', id)
+            .select()
+            .single()
 
-        return NextResponse.json(updated)
+        if (error) {
+            console.error("Supabase Error:", error)
+            return NextResponse.json({ error: error.message }, { status: 500 })
+        }
+
+        return NextResponse.json({ success: true, applicant: data })
     } catch (error) {
-        console.error("DEBUG: Update Status Error:", error)
-        return NextResponse.json({ error: "Failed to update status" }, { status: 500 })
+        console.error("Status Update API Error:", error)
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }
 }

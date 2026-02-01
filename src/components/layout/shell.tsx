@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LogOut, Menu, X, ChevronRight, ChevronLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAVIGATION_CONFIG } from '@/config/navigation'
 import { ModeToggle } from '@/components/mode-toggle'
+import { LanguageToggle } from '@/components/ui/language-toggle'
+import { useTranslation } from '@/contexts/language-context'
 
 interface DashboardShellProps {
     children: React.ReactNode
@@ -14,17 +16,12 @@ interface DashboardShellProps {
     userName?: string
 }
 
-// ... existing imports ...
-
-// ... existing interface ...
-
-// ... imports ...
-
 export function DashboardShell({ children, role, userName }: DashboardShellProps) {
     const pathname = usePathname()
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
     const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen)
+    const { t } = useTranslation() // Hook
 
     // Navigation Items based on Role (Dynamic)
     const navItems = NAVIGATION_CONFIG[role] || []
@@ -42,7 +39,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                     "fixed top-0 left-0 z-50 h-screen transition-all duration-300 ease-in-out lg:relative",
                     "bg-brand-gradient dark:bg-card border-r border-white/10 dark:border-border",
                     "text-white dark:text-card-foreground",
-                    "w-64",
+                    "w-64 shadow-2xl",
                     mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
                 )}
             >
@@ -93,7 +90,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                                 )}
                             >
                                 <item.icon size={20} className={cn(isActive && "text-white")} />
-                                <span className={cn(isActive && "font-semibold")}>{item.label}</span>
+                                <span className={cn(isActive && "font-semibold")}>{t(item.label)}</span>
                             </Link>
                         )
                     })}
@@ -112,7 +109,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                         )}
                     >
                         <LogOut size={20} />
-                        <span>Sign Out</span>
+                        <span>{t('auth.signOut')}</span>
                     </button>
                 </div>
             </aside>
@@ -135,7 +132,8 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                             <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] self-end mb-1">V 1.0</span>
                         </Link>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 relative z-[100]">
+                        <LanguageToggle />
                         <ModeToggle />
                     </div>
                 </header>

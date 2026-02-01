@@ -1,8 +1,8 @@
 'use server'
 
-import prisma from "@/lib/prisma"
+import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase-admin"
 import { revalidatePath } from "next/cache"
-import { redirect } from "next/navigation"
 
 export async function onboardCandidate(applicantId: string, prevState: any, formData?: FormData) {
     if (!applicantId) {
@@ -10,36 +10,40 @@ export async function onboardCandidate(applicantId: string, prevState: any, form
     }
 
     try {
-        // 1. Fetch Applicant
-        const applicant = await prisma.applicant.findUnique({
-            where: { id: applicantId },
-            include: { employee: true }
-        })
+        // 1. Fetch Applicant from Supabase
+        const { data: applicant, error: fetchError } = await supabase
+            .from('applicants')
+            .select('*')
+            .eq('id', applicantId)
+            .single()
 
-        if (!applicant) {
-            return { error: 'Applicant not found' }
+        if (fetchError || !applicant) {
+            return { error: 'Applicant not found on Cloud: ' + (fetchError?.message || '') }
         }
 
-        if (applicant.employee) {
-            return { error: 'Applicant is already onboarded as ' + applicant.employee.employeeCode }
+        // 2. Check if already onboarded (Strict check)
+        const { data: existingEmployee, error: checkError } = await supabaseAdmin
+            .from('employees')
+            .select('id, employee_code')
+            .eq('applicant_id', applicantId)
+            .maybeSingle()
+
+        if (existingEmployee) {
+            return { error: `Applicant is already onboarded as ${existingEmployee.employee_code}` }
         }
 
-        /* 
-         Note: In a real world scenario, we should allow HR to override defaults.
-         For this "Bridge" feature, we automate as much as possible.
-        */
-
-        // 2. Generate Employee Code (Simple Logic: Find Max + 1)
-        // Format: EBCI-YYYY (e.g. EBCI-0001) or standard EMP-XXXX
-        // Let's stick to existing EMP-XXX format from seed.
-        const lastEmployee = await prisma.employee.findFirst({
-            orderBy: { employeeCode: 'desc' }
-        })
+        // 3. Generate Employee Code (EMP-XXX)
+        // Note: Simple logic to find the max current ID and increment
+        const { data: lastEmployees, error: lastError } = await supabaseAdmin
+            .from('employees')
+            .select('employee_code')
+            .order('employee_code', { ascending: false })
+            .limit(1)
 
         let nextId = 1
-        if (lastEmployee?.employeeCode) {
-            // Extract number from EMP-XXX
-            const parts = lastEmployee.employeeCode.split('-')
+        if (lastEmployees && lastEmployees.length > 0) {
+            const lastCode = lastEmployees[0].employee_code
+            const parts = lastCode.split('-')
             if (parts.length === 2 && !isNaN(Number(parts[1]))) {
                 nextId = Number(parts[1]) + 1
             }
@@ -47,50 +51,50 @@ export async function onboardCandidate(applicantId: string, prevState: any, form
 
         const employeeCode = `EMP-${nextId.toString().padStart(3, '0')}`
 
-        // 3. Create Employee Record
-        const newEmployee = await prisma.employee.create({
-            data: {
-                employeeCode,
-                firstNameTH: applicant.firstName,
-                lastNameTH: applicant.lastName,
-                firstNameEN: applicant.firstName, // Assuming English name might be same or we map incorrectly. schema has different fields.
-                // Wait, Applicant Schema has: firstName (TH), lastName (TH). NO ENGLISH fields in Applicant Schema phase 3.1
-                // BUT Employee Schema has TH/EN.
-                // We will map TH -> TH, and maybe leave EN blank or use same?
-                // Let's use TH for now and let HR update later.
-                // Or wait, Applicant Schema MIGHT have EN? 
-                // Checking Schema Step 672:
-                // Applicant: firstName (@map "first_name"), lastName (@map "last_name"). (Usually implies TH in Govt/Thai context context)
-                // Employee: firstNameTH, firstNameEN.
-                // Constraint: "Use defaults". I will put TH name in TH fields. Leave EN null.
-
-                position: applicant.positionApplied,
+        // 4. Create Employee Record in Supabase
+        const { data: newEmployee, error: insertError } = await supabaseAdmin
+            .from('employees')
+            .insert({
+                employee_code: employeeCode,
+                first_name_th: applicant.first_name,
+                last_name_th: applicant.last_name,
+                first_name_en: applicant.first_name, // Mapping same for EN for now
+                last_name_en: applicant.last_name,
+                position: applicant.position_applied,
                 department: "Unassigned", // Default
-                startDate: applicant.startDate || new Date(),
-                employmentType: "full-time", // Default
+                start_date: applicant.start_date || new Date().toISOString(),
+                employment_type: "full-time",
                 status: "active",
                 email: applicant.email,
                 phone: applicant.phone,
-                applicantId: applicant.id
-            }
-        })
+                applicant_id: applicant.id,
+                // photo_path: applicant.photo_path // We can add this if needed for profile
+            })
+            .select()
+            .single()
 
-        // 4. Update Applicant Status
-        await prisma.applicant.update({
-            where: { id: applicantId },
-            data: {
-                status: 'hired',
-                // employmentStatus: 'employed' // Optional update
-            }
-        })
+        if (insertError) {
+            throw new Error('Failed to create employee record: ' + insertError.message)
+        }
+
+        // 5. Update Applicant Status
+        const { error: updateError } = await supabaseAdmin
+            .from('applicants')
+            .update({ status: 'hired' })
+            .eq('id', applicantId)
+
+        if (updateError) {
+            console.warn("Applicant status update failed but employee was created:", updateError.message)
+        }
 
         revalidatePath('/dashboard/recruitment')
         revalidatePath(`/dashboard/recruitment/${applicantId}`)
+        revalidatePath('/dashboard/employees')
 
         return { success: true, employeeId: newEmployee.id }
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Onboarding Error:", error)
-        return { error: 'Failed to onboard candidate. Please try again.' }
+        return { error: error.message || 'Failed to onboard candidate. Please try again.' }
     }
 }

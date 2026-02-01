@@ -5,7 +5,10 @@ import { publishAnnouncement } from "../actions"
 import { AlertTriangle, Send, Megaphone, Info, CheckCircle, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+import { useTranslation } from "@/contexts/language-context"
+
 export default function AnnouncementPage() {
+    const { t } = useTranslation()
     const [isPending, startTransition] = useTransition()
     const [priority, setPriority] = useState("internal")
     const [success, setSuccess] = useState(false)
@@ -36,7 +39,7 @@ export default function AnnouncementPage() {
                     <Megaphone size={24} />
                 </div>
                 <div>
-                    <h1 className="text-2xl font-bold text-white tracking-tight">Post Announcement</h1>
+                    <h1 className="text-2xl font-bold text-white tracking-tight">{t('announcements.create')}</h1>
                     <p className="text-white/80 font-medium text-sm mt-0.5">Broadcast news, updates, or emergency alerts to the organization.</p>
                 </div>
             </div>
@@ -44,7 +47,7 @@ export default function AnnouncementPage() {
             {success && (
                 <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
                     <CheckCircle size={20} />
-                    <span className="font-bold">Announcement published successfully!</span>
+                    <span className="font-bold">{t('common.success')}</span>
                 </div>
             )}
 
@@ -54,7 +57,7 @@ export default function AnnouncementPage() {
                 <div className="grid grid-cols-3 gap-4">
                     <PriorityOption
                         id="internal"
-                        label="Internal News"
+                        label={t('announcements.priorities.internal')}
                         icon={Info}
                         color="bg-blue-500"
                         current={priority}
@@ -62,7 +65,7 @@ export default function AnnouncementPage() {
                     />
                     <PriorityOption
                         id="promote"
-                        label="Promotion / Event"
+                        label={t('announcements.priorities.promote')}
                         icon={Megaphone}
                         color="bg-purple-500"
                         current={priority}
@@ -70,7 +73,7 @@ export default function AnnouncementPage() {
                     />
                     <PriorityOption
                         id="emergency"
-                        label="Emergency Alert"
+                        label={t('announcements.priorities.emergency')}
                         icon={AlertTriangle}
                         color="bg-amber-500"
                         current={priority}
@@ -91,7 +94,7 @@ export default function AnnouncementPage() {
                 )}
 
                 <div className="space-y-2">
-                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Headline</label>
+                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">{t('announcements.form.headline')}</label>
                     <input
                         name="headline"
                         required
@@ -101,18 +104,18 @@ export default function AnnouncementPage() {
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Content</label>
+                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">{t('announcements.form.content')}</label>
                     <textarea
                         name="content"
                         required
                         rows={5}
-                        placeholder="Write the full details here..."
+                        placeholder={t('announcements.form.content')}
                         className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-white/20"
                     />
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Image Attachment (Optional)</label>
+                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">{t('announcements.form.image')}</label>
                     <div className="bg-gray-200 text-gray-900 rounded-xl p-6 text-center hover:bg-white transition-all group cursor-pointer relative flex flex-col items-center justify-center gap-2 border-2 border-transparent hover:border-primary/20 shadow-lg active:scale-[0.99] h-48">
                         <input
                             type="file"
@@ -162,7 +165,7 @@ export default function AnnouncementPage() {
                         )}
                     >
                         {isPending ? <Loader2 className="animate-spin" /> : <Send size={18} />}
-                        {priority === 'emergency' ? "Broadcast Alert" : "Publish Now"}
+                        {priority === 'emergency' ? "Broadcast Alert" : t('announcements.form.publish')}
                     </button>
                 </div>
             </form>

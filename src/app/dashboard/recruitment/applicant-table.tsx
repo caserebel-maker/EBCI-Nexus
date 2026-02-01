@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Search, Filter, MoreHorizontal, User, Briefcase, Calendar, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import { useTranslation } from "@/contexts/language-context"
 
 export type Applicant = {
     id: string
@@ -27,6 +28,8 @@ export function ApplicantTable({ initialData }: ApplicantTableProps) {
     const [searchTerm, setSearchTerm] = useState("")
     const [statusFilter, setStatusFilter] = useState<string>("all")
     const [positionFilter, setPositionFilter] = useState<string>("all")
+
+    const { t } = useTranslation()
 
     // Filtering Logic
     const filteredData = initialData.filter((applicant) => {
@@ -62,7 +65,7 @@ export function ApplicantTable({ initialData }: ApplicantTableProps) {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50 dark:text-muted-foreground" />
                     <input
                         type="text"
-                        placeholder="Search applicants by name, nickname, position..."
+                        placeholder={t('common.search')}
                         className="w-full h-10 pl-10 pr-4 rounded-lg border border-white/10 dark:border-input bg-black/30 dark:bg-muted/50 text-white dark:text-foreground placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/20 transition-all font-sans text-sm"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -75,7 +78,7 @@ export function ApplicantTable({ initialData }: ApplicantTableProps) {
                         value={positionFilter}
                         onChange={(e) => setPositionFilter(e.target.value)}
                     >
-                        <option value="all">All Positions</option>
+                        <option value="all">{t('recruitment.position')}</option>
                         {positions.map(pos => <option key={pos} value={pos} className="text-black">{pos}</option>)}
                     </select>
 
@@ -84,11 +87,11 @@ export function ApplicantTable({ initialData }: ApplicantTableProps) {
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
                     >
-                        <option value="all">All Status</option>
-                        <option value="pending" className="text-black">New</option>
-                        <option value="reviewed" className="text-black">Interview</option>
-                        <option value="hired" className="text-black">Hired</option>
-                        <option value="rejected" className="text-black">Rejected</option>
+                        <option value="all">{t('common.status')}</option>
+                        <option value="pending" className="text-black">{t('status.new')}</option>
+                        <option value="reviewed" className="text-black">{t('status.interview')}</option>
+                        <option value="hired" className="text-black">{t('status.hired')}</option>
+                        <option value="rejected" className="text-black">{t('status.rejected')}</option>
                     </select>
                 </div>
             </div>
@@ -156,21 +159,22 @@ export function ApplicantTable({ initialData }: ApplicantTableProps) {
                 ) : (
                     <div className="col-span-full h-96 flex flex-col items-center justify-center bg-white/5 rounded-2xl border border-dashed border-white/10 text-white/40">
                         <User className="h-16 w-16 mb-4 opacity-10" />
-                        <p className="text-xl font-black uppercase tracking-widest">No matching applicants</p>
-                        <p className="text-xs font-medium opacity-60">ไม่พบผู้สมัครที่ตรงกับเงื่อนไขการค้นหา</p>
+                        <p className="text-xl font-black uppercase tracking-widest">{t('common.search')}</p>
+                        <p className="text-xs font-medium opacity-60">No result found.</p>
                     </div>
                 )}
             </div>
 
             {/* Footer Summary */}
             <div className="text-[10px] font-bold uppercase tracking-widest text-white/50 dark:text-muted-foreground text-center pt-8 italic">
-                Showing {filteredData.length} of {initialData.length} recruitment cards
+                {t('common.status')}: {filteredData.length}
             </div>
         </div>
     )
 }
 
 function StatusBadge({ status, compact }: { status: string; compact?: boolean }) {
+    const { t } = useTranslation()
     const styles: Record<string, string> = {
         "pending": "bg-blue-500/20 text-blue-400 dark:text-blue-400 border-blue-500/30",
         "reviewed": "bg-amber-500/20 text-amber-400 dark:text-amber-400 border-amber-500/30",
@@ -179,10 +183,10 @@ function StatusBadge({ status, compact }: { status: string; compact?: boolean })
     }
 
     const labels: Record<string, string> = {
-        "pending": "New",
-        "reviewed": "Interview",
-        "hired": "Hired",
-        "rejected": "Rejected",
+        "pending": t('status.new'),
+        "reviewed": t('status.interview'),
+        "hired": t('status.hired'),
+        "rejected": t('status.rejected'),
     }
 
     const defaultStyle = "bg-white/10 text-white border-white/20"

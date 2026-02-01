@@ -5,6 +5,7 @@ import { Search, Filter, MoreHorizontal, User, Building, Briefcase, ChevronRight
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useTranslation } from "@/contexts/language-context"
 
 // Real Data Type (Matches Prisma)
 export type Employee = {
@@ -34,6 +35,8 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
     const [statusFilter, setStatusFilter] = useState<string>("all")
     const [deptFilter, setDeptFilter] = useState<string>("all")
 
+    const { t } = useTranslation()
+
     // Filtering Logic
     const filteredData = initialData.filter((employee) => {
         const fullNameTH = `${employee.firstNameTH} ${employee.lastNameTH}`.toLowerCase()
@@ -57,14 +60,14 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
     return (
         <div className="space-y-4">
             {/* Toolbar */}
-            <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-card p-4 rounded-lg border border-border shadow-sm">
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 shadow-xl">
                 {/* Search */}
                 <div className="relative w-full md:w-96">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
                     <input
                         type="text"
-                        placeholder="Search by name, ID, or email..."
-                        className="w-full h-10 pl-10 pr-4 rounded-md border border-input bg-muted/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-sans"
+                        placeholder={t('employees.searchPlaceholder')}
+                        className="w-full h-10 pl-10 pr-4 rounded-lg border border-white/10 bg-black/20 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-sans"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -73,52 +76,52 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
                 {/* Filters */}
                 <div className="flex gap-2 w-full md:w-auto">
                     <select
-                        className="h-10 px-3 rounded-md border border-input bg-card text-foreground text-sm focus:outline-none focus:border-primary"
+                        className="h-10 px-3 rounded-lg border border-white/10 bg-black/20 text-white text-sm focus:outline-none focus:border-primary appearance-none cursor-pointer"
                         value={deptFilter}
                         onChange={(e) => setDeptFilter(e.target.value)}
                     >
-                        <option value="all">All Departments</option>
+                        <option value="all" className="bg-slate-900 text-white">{t('employees.filter.all')}</option>
                         {departments.map(dept => (
-                            <option key={dept} value={dept}>{dept}</option>
+                            <option key={dept} value={dept} className="bg-slate-900 text-white">{dept}</option>
                         ))}
                     </select>
 
                     <select
-                        className="h-10 px-3 rounded-md border border-input bg-card text-foreground text-sm focus:outline-none focus:border-primary"
+                        className="h-10 px-3 rounded-lg border border-white/10 bg-black/20 text-white text-sm focus:outline-none focus:border-primary appearance-none cursor-pointer"
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
                     >
-                        <option value="all">All Status</option>
-                        <option value="active">Active</option>
-                        <option value="on_leave">On Leave</option>
-                        <option value="inactive">Inactive</option>
+                        <option value="all" className="bg-slate-900 text-white">{t('employees.filter.all')}</option>
+                        <option value="active" className="bg-slate-900 text-white">{t('employees.filter.active')}</option>
+                        <option value="on_leave" className="bg-slate-900 text-white">{t('employees.filter.active')}</option>
+                        <option value="inactive" className="bg-slate-900 text-white">{t('employees.filter.inactive')}</option>
                     </select>
                 </div>
             </div>
 
             {/* Table Content */}
-            <div className="rounded-md border border-border bg-card overflow-hidden shadow-sm">
+            <div className="rounded-xl border border-white/20 bg-white/10 backdrop-blur-md overflow-hidden shadow-2xl">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                        <thead className="bg-muted/50 text-muted-foreground font-medium uppercase text-xs">
+                        <thead className="bg-white/5 text-white/70 font-medium uppercase text-xs">
                             <tr>
-                                <th className="px-6 py-4">Employee</th>
-                                <th className="px-6 py-4">Details</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4 text-right">Action</th>
+                                <th className="px-6 py-4">{t('employees.table.name')}</th>
+                                <th className="px-6 py-4">{t('employees.table.position')}</th>
+                                <th className="px-6 py-4">{t('employees.table.status')}</th>
+                                <th className="px-6 py-4 text-right">{t('common.actions')}</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-border">
+                        <tbody className="divide-y divide-white/10">
                             {filteredData.length > 0 ? (
                                 filteredData.map((employee) => (
                                     <tr
                                         key={employee.id}
                                         onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
-                                        className="hover:bg-muted/30 transition-colors group cursor-pointer"
+                                        className="hover:bg-white/5 transition-colors group cursor-pointer text-white/90"
                                     >
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-primary/20 overflow-hidden">
+                                                <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white font-bold border border-white/10 overflow-hidden text-lg">
                                                     {employee.photoPath ? (
                                                         <img src={employee.photoPath} alt="" className="w-full h-full object-cover" />
                                                     ) : (
@@ -126,21 +129,21 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <div className="font-semibold text-foreground">{employee.firstNameTH} {employee.lastNameTH}</div>
-                                                    <div className="text-xs text-muted-foreground font-mono">{employee.email}</div>
+                                                    <div className="font-semibold text-white">{employee.firstNameTH} {employee.lastNameTH}</div>
+                                                    <div className="text-xs text-white/50 font-mono">{employee.email}</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="space-y-1">
-                                                <div className="flex items-center gap-2 text-foreground">
-                                                    <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+                                                <div className="flex items-center gap-2 text-white">
+                                                    <Briefcase className="h-3.5 w-3.5 text-white/50" />
                                                     <span>{employee.position}</span>
                                                 </div>
-                                                <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                                                <div className="flex items-center gap-2 text-white/50 text-xs">
                                                     <Building className="h-3.5 w-3.5" />
                                                     <span>{employee.department}</span>
-                                                    <span className="px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono text-[10px] border border-border">
+                                                    <span className="px-1.5 py-0.5 rounded bg-white/10 text-white/60 font-mono text-[10px] border border-white/10">
                                                         {employee.employeeCode}
                                                     </span>
                                                 </div>
@@ -150,7 +153,7 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
                                             <StatusBadge status={employee.status} />
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <button className="p-2 hover:bg-muted rounded-full text-muted-foreground hover:text-foreground transition-colors">
+                                            <button className="p-2 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors">
                                                 <MoreHorizontal className="h-5 w-5" />
                                             </button>
                                         </td>
@@ -159,10 +162,10 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
                             ) : (
                                 <tr>
                                     <td colSpan={4} className="h-64 text-center">
-                                        <div className="flex flex-col items-center justify-center text-muted-foreground">
-                                            <User className="h-12 w-12 mb-4 opacity-20" />
+                                        <div className="flex flex-col items-center justify-center text-white/40">
+                                            <User className="h-12 w-12 mb-4 opacity-50" />
                                             <p className="text-lg font-medium">No employees found</p>
-                                            <p className="text-sm">Try adjusting your search or filters.</p>
+                                            <p className="text-sm opacity-70">Try adjusting your search or filters.</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -180,6 +183,7 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
 }
 
 function StatusBadge({ status }: { status: string }) {
+    const { t } = useTranslation()
     // DB status is lowercase, map to styles
     const styles: Record<string, string> = {
         "active": "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
@@ -189,8 +193,8 @@ function StatusBadge({ status }: { status: string }) {
 
     // Display labels
     const labels: Record<string, string> = {
-        "active": "Active",
-        "inactive": "Inactive",
+        "active": t('employees.filter.active'),
+        "inactive": t('employees.filter.inactive'),
         "on_leave": "On Leave"
     }
 

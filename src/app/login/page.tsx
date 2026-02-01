@@ -2,12 +2,16 @@
 
 import { useState } from 'react'
 import { Loader2, User, Lock } from 'lucide-react'
+import { LanguageToggle } from '@/components/ui/language-toggle'
+import { useTranslation } from '@/contexts/language-context'
 
 export default function LoginPage() {
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
 
 
+
+    const { t } = useTranslation()
 
     return (
         <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -30,6 +34,11 @@ export default function LoginPage() {
                 <div className="absolute inset-0 bg-gradient-to-b from-[#561e23] to-[#ad5f6c] mix-blend-color opacity-90 pointer-events-none" />
             </div>
 
+            {/* Language Toggle (Floating Top Right) */}
+            <div className="absolute top-4 right-4 z-20">
+                <LanguageToggle />
+            </div>
+
             {/* 2. Glassmorphism Card (Switched to White Glass Theme) */}
             <div className="relative z-10 w-full max-w-md p-8 mx-4">
                 <div className="backdrop-blur-sm bg-white/10 border border-white/20 rounded-2xl shadow-2xl overflow-hidden p-8 animate-in fade-in zoom-in duration-500">
@@ -37,13 +46,13 @@ export default function LoginPage() {
                     {/* Header */}
                     <div className="text-center mb-10 flex flex-col items-center">
                         <img
-                            src="/logo-white.png"
-                            alt="EBCI NEXUS"
-                            className="h-20 drop-shadow-[0_4px_10px_rgba(255,255,255,0.3)] mb-6 transition-transform hover:scale-105 duration-500"
+                            src="/sidebar-logo.png"
+                            alt="EBCI Nexus"
+                            className="h-20 w-auto opacity-90 drop-shadow-2xl"
                         />
                         <div className="text-white font-medium text-[10px] md:text-xs uppercase tracking-[0.4em] opacity-80 flex flex-col gap-1.5">
-                            <span>Human Resources</span>
-                            <span>Management System</span>
+                            <span>{t('dashboard.hrSystem')}</span>
+                            <span>{t('dashboard.title')}</span>
                         </div>
                     </div>
 
@@ -65,7 +74,7 @@ export default function LoginPage() {
                             const result = await res.json()
 
                             if (!res.ok) {
-                                throw new Error(result.error || 'Login failed')
+                                throw new Error(result.error || t('auth.errorCredentials'))
                             }
 
                             // Success -> Redirect
@@ -91,7 +100,7 @@ export default function LoginPage() {
                                     type="text"
                                     required
                                     className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/60 pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/20 shadow-none"
-                                    placeholder="Employee ID"
+                                    placeholder={t('auth.username')}
                                 />
                             </div>
 
@@ -102,7 +111,7 @@ export default function LoginPage() {
                                     type="password"
                                     required
                                     className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/60 pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/20 shadow-none"
-                                    placeholder="Password"
+                                    placeholder={t('auth.password')}
                                 />
                             </div>
                         </div>
@@ -113,7 +122,7 @@ export default function LoginPage() {
                                 disabled={loading}
                                 className="w-full bg-gradient-to-r from-[#561e23] to-[#ad5f6c] hover:from-[#ad5f6c] hover:to-[#c47080] text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transform transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center border border-white/10"
                             >
-                                {loading ? <Loader2 className="animate-spin h-5 w-5" /> : 'SIGN IN'}
+                                {loading ? <Loader2 className="animate-spin h-5 w-5" /> : t('auth.signIn')}
                             </button>
                             <p className="text-center text-white/30 text-xs mt-6">
                                 Authorized Personnel Only

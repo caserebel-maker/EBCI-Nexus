@@ -1,0 +1,155 @@
+{
+    "common": {
+        "loading": "Loading...",
+        "error": "Error",
+        "success": "Success",
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "view": "View",
+        "back": "Back",
+        "search": "Search...",
+        "status": "Status",
+        "actions": "Actions",
+        "next": "Next",
+        "processing": "Processing...",
+        "confirm_action": "Confirm Action",
+        "required_field": "Required Field"
+    },
+    "auth": {
+        "loginTitle": "Login",
+        "username": "Username",
+        "password": "Password",
+        "signIn": "Sign In",
+        "signOut": "Sign Out",
+        "errorCredentials": "Invalid username or password"
+    },
+    "dashboard": {
+        "title": "Dashboard",
+        "welcome": "Welcome",
+        "overview": "Overview",
+        "employees": "Employees",
+        "recruitment": "Recruitment",
+        "announcements": "Announcements",
+        "hrSystem": "HR System",
+        "portal": "Employee Portal",
+        "hrOverview": "HR Overview",
+        "systemStatus": "System",
+        "cloudConnected": "Cloud Connected",
+        "stats": {
+            "totalEmployees": "Total Employees",
+            "newApplicants": "New Applicants",
+            "onboarding": "Onboarding",
+            "pendingReview": "Pending Review"
+        }
+    },
+    "recruitment": {
+        "title": "Recruitment System",
+        "applications": "All Applications",
+        "newApplication": "New Application",
+        "position": "Position",
+        "expectedSalary": "Expected Salary",
+        "experience": "Experience",
+        "education": "Education",
+        "submit": "Submit Application",
+        "personalInfo": "Personal Info",
+        "firstName": "First Name",
+        "lastName": "Last Name",
+        "email": "Email",
+        "phone": "Phone Number",
+        "status": {
+            "new": "New",
+            "screening": "Screening",
+            "interview": "Interview",
+            "hired": "Hired",
+            "rejected": "Rejected"
+        }
+    },
+    "employees": {
+        "title": "Employees Directory",
+        "table": {
+            "name": "Name",
+            "position": "Position",
+            "department": "Department",
+            "status": "Status",
+            "joinedDate": "Joined Date",
+            "email": "Email"
+        },
+        "searchPlaceholder": "Search employees...",
+        "filter": {
+            "all": "All",
+            "active": "Active",
+            "inactive": "Inactive"
+        }
+    },
+    "announcements": {
+        "title": "Announcements",
+        "create": "Create New",
+        "form": {
+            "headline": "Headline",
+            "content": "Content",
+            "priority": "Priority",
+            "image": "Cover Image",
+            "publish": "Publish",
+            "draft": "Save Draft"
+        },
+        "priorities": {
+            "emergency": "Emergency",
+            "urgent": "Urgent",
+            "normal": "Normal",
+            "promote": "Promotion/Activity",
+            "internal": "Internal"
+        }
+    },
+    "career": {
+        "title": "Join Our Team",
+        "subtitle": "Be part of the EBCI Nexus journey",
+        "applyNow": "Apply Now",
+        "step_1": "Basic Info",
+        "step_2": "Contact Info",
+        "step_3": "Education/Work",
+        "step_4": "Skills/Docs",
+        "step_5": "Review",
+        "position_label": "Position Applied",
+        "salary_label": "Expected Salary",
+        "start_date_label": "Start Date",
+        "firstname_label": "First Name",
+        "lastname_label": "Last Name",
+        "nickname_label": "Nickname",
+        "dob_label": "Date of Birth",
+        "age_label": "Age",
+        "nationality_label": "Nationality",
+        "address_label": "Current Address",
+        "phone_label": "Phone Number",
+        "email_label": "Email",
+        "military_label": "Military Status",
+        "marital_label": "Marital Status",
+        "edu_level": "Level",
+        "edu_institute": "Institution",
+        "edu_year": "Year",
+        "add_edu": "Add Education",
+        "exp_company": "Company",
+        "exp_position": "Position",
+        "exp_salary": "Salary",
+        "exp_reason": "Reason for Leaving",
+        "add_exp": "Add Experience",
+        "no_exp": "No experience added",
+        "skill_lang": "Language Skills",
+        "skill_comp": "Computer Skills",
+        "upload_photo": "Upload Photo",
+        "upload_resume": "Upload Resume",
+        "review_title": "Review Application",
+        "consent_disclaimer": "I certify that all information provided in this application is true and correct. I understand that any false statement may result in termination of employment without compensation.",
+        "success_msg": "Application Submitted!",
+        "success_desc": "Thank you for your interest. HR will review your application and contact you shortly.",
+        "apply_more": "Apply Another",
+        "back_home": "Back to Home",
+        "form": {
+            "resume": "Resume/CV",
+            "coverLetter": "Cover Letter",
+            "submitSuccess": "Application submitted successfully",
+            "submitError": "Error submitting application"
+        }
+    }
+}

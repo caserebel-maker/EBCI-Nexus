@@ -1,61 +1,64 @@
-import { Users, FileText, UserCheck, AlertCircle } from 'lucide-react'
-import prisma from '@/lib/prisma'
-import { PromotionCard } from '@/components/dashboard/promotion-card'
-import { InternalNews } from '@/components/dashboard/internal-news'
+import { supabase } from '@/lib/supabase'
+import { DashboardContent } from './dashboard-content'
+
+export const dynamic = 'force-dynamic'
 
 export default async function AdminDashboard() {
-    // 1. Fetch Latest Promotion
-    const promotion = await prisma.announcement.findFirst({
-        where: { priority: 'promote', publishStatus: 'published' },
-        orderBy: { publishDate: 'desc' }
-    })
+    // 1. Fetch Emergency Alerts (ACTIVE)
+    const { data: emergencies, error: emergencyError } = await supabase
+        .from('announcements')
+        .select('*')
+        .eq('priority', 'emergency')
+        .eq('publishStatus', 'published')
+        .order('publish_date', { ascending: false })
+        .limit(1)
 
-    // 2. Fetch Internal News (Limit 5)
-    const internalNews = await prisma.announcement.findMany({
-        where: { priority: 'internal', publishStatus: 'published' },
-        orderBy: { publishDate: 'desc' },
-        take: 5
-    })
+    if (emergencyError) console.error("Emergency Fetch Error:", emergencyError)
+    console.log("Active Emergencies Found:", emergencies?.length || 0)
+
+    const activeEmergency = emergencies?.[0] || null
+
+    // 2. Fetch Latest Promotion
+    const { data: promotionRaw } = await supabase
+        .from('announcements')
+        .select('*')
+        .eq('priority', 'promote')
+        .eq('publishStatus', 'published')
+        .order('publish_date', { ascending: false })
+        .limit(1)
+
+    let promotion = promotionRaw?.[0] || null
+    if (promotion?.image_path) {
+        const { data } = await supabase.storage
+            .from('announcement-images')
+            .createSignedUrl(promotion.image_path, 3600)
+        promotion = { ...promotion, imageUrl: data?.signedUrl }
+    }
+
+    // 3. Fetch Internal News (Limit 5)
+    const { data: internalNewsRaw } = await supabase
+        .from('announcements')
+        .select('*')
+        .eq('priority', 'internal')
+        .eq('publishStatus', 'published')
+        .order('publish_date', { ascending: false })
+        .limit(5)
+
+    const internalNews = await Promise.all((internalNewsRaw || []).map(async (item) => {
+        if (item.image_path) {
+            const { data } = await supabase.storage
+                .from('announcement-images')
+                .createSignedUrl(item.image_path, 3600)
+            return { ...item, imageUrl: data?.signedUrl }
+        }
+        return item
+    }))
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-white dark:text-foreground">HR Overview</h1>
-                <span className="text-sm text-white/70 dark:text-muted-foreground">Last updated: Today, 12:00 PM</span>
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard title="Total Employees" value="128" icon={Users} color="bg-blue-600 shadow-blue-900/20" />
-                <StatCard title="New Applicants" value="12" icon={FileText} color="bg-emerald-600 shadow-emerald-900/20" />
-                <StatCard title="Onboarding" value="3" icon={UserCheck} color="bg-amber-600 shadow-amber-900/20" />
-                <StatCard title="Pending Review" value="5" icon={AlertCircle} color="bg-rose-600 shadow-rose-900/20" />
-            </div>
-
-            {/* Content Area */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-[400px]">
-                {/* Main Promotion Area (Span 3 cols) */}
-                <PromotionCard promotion={promotion} />
-
-                {/* Side Utility / News Area (Span 1 col) */}
-                <div className="lg:col-span-1 flex flex-col gap-6">
-                    <InternalNews announcements={internalNews} />
-                </div>
-            </div>
-        </div>
-    )
-}
-
-function StatCard({ title, value, icon: Icon, color }: any) {
-    return (
-        <div className="bg-white/10 dark:bg-card backdrop-blur-md p-5 rounded-xl shadow-lg border border-white/20 dark:border-border flex items-center justify-between transition-all hover:bg-white/15 dark:hover:bg-accent group">
-            <div>
-                <p className="text-sm text-white/80 dark:text-muted-foreground font-bold uppercase tracking-tight">{title}</p>
-                <p className="text-2xl font-black text-white dark:text-foreground mt-1">{value}</p>
-            </div>
-            <div className={`h-11 w-11 rounded-full ${color} flex items-center justify-center text-white shadow-lg border border-white/20`}>
-                <Icon size={22} />
-            </div>
-        </div>
+        <DashboardContent
+            activeEmergency={activeEmergency}
+            promotion={promotion}
+            internalNews={internalNews}
+        />
     )
 }

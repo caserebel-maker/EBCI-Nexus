@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useForm, useFieldArray, SubmitHandler } from 'react-hook-form'
 import { Upload, Plus, Trash2, CheckCircle, AlertCircle, ChevronRight, ChevronLeft, Save } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { getDictionary } from '@/config/i18n'
+import { useTranslation } from '@/contexts/language-context'
 
 // Type definitions
 interface Education {
@@ -36,15 +36,15 @@ interface FormData {
 
 export default function ApplicationForm() {
     const router = useRouter()
-    const dict = getDictionary('th'); // Default to Thai
+    const { t } = useTranslation()
 
     // STEPS derived from dictionary
     const STEPS = [
-        { number: 1, title: dict.career.step_1 },
-        { number: 2, title: dict.career.step_2 },
-        { number: 3, title: dict.career.step_3 },
-        { number: 4, title: dict.career.step_4 },
-        { number: 5, title: dict.career.step_5 },
+        { number: 1, title: t('career.step_1') },
+        { number: 2, title: t('career.step_2') },
+        { number: 3, title: t('career.step_3') },
+        { number: 4, title: t('career.step_4') },
+        { number: 5, title: t('career.step_5') },
     ]
 
     const [currentStep, setCurrentStep] = useState(1)
@@ -90,7 +90,7 @@ export default function ApplicationForm() {
     }
 
     const onSubmit: SubmitHandler<FormData> = async (data) => {
-        if (!confirm(dict.common.confirm_action + '?')) return;
+        if (!confirm(t('common.confirm_action') + '?')) return;
 
         setSubmitting(true)
         setError(null)
@@ -127,14 +127,14 @@ export default function ApplicationForm() {
                 <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
                     <CheckCircle size={40} />
                 </div>
-                <h2 className="text-3xl font-bold text-foreground mb-4">{dict.career.success_msg}</h2>
-                <p className="text-muted-foreground mb-8">{dict.career.success_desc}</p>
+                <h2 className="text-3xl font-bold text-foreground mb-4">{t('career.success_msg')}</h2>
+                <p className="text-muted-foreground mb-8">{t('career.success_desc')}</p>
                 <div className="flex justify-center gap-4">
                     <button onClick={() => window.location.reload()} className="px-6 py-3 border border-border rounded-lg hover:bg-muted transition-colors text-foreground">
-                        {dict.career.apply_more}
+                        {t('career.apply_more')}
                     </button>
                     <button onClick={() => router.push('/')} className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
-                        {dict.career.back_home}
+                        {t('career.back_home')}
                     </button>
                 </div>
             </div>
@@ -182,43 +182,43 @@ export default function ApplicationForm() {
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-foreground mb-1">{dict.career.position_label} <span className="text-destructive">*</span></label>
+                                    <label className="block text-sm font-medium text-foreground mb-1">{t('career.position_label')} <span className="text-destructive">*</span></label>
                                     <input {...register("positionApplied", { required: true })} className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-secondary outline-none" />
-                                    {errors.positionApplied && <span className="text-xs text-destructive">{dict.common.required_field}</span>}
+                                    {errors.positionApplied && <span className="text-xs text-destructive">{t('common.required_field')}</span>}
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-foreground mb-1">{dict.career.salary_label}</label>
+                                    <label className="block text-sm font-medium text-foreground mb-1">{t('career.salary_label')}</label>
                                     <input type="number" {...register("expectedSalary")} className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-secondary outline-none" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-foreground mb-1">{dict.career.start_date_label}</label>
+                                    <label className="block text-sm font-medium text-foreground mb-1">{t('career.start_date_label')}</label>
                                     <input type="date" {...register("startDate")} className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-secondary outline-none" />
                                 </div>
                             </div>
                             <hr className="border-border" />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-foreground mb-1">{dict.career.firstname_label} <span className="text-destructive">*</span></label>
+                                    <label className="block text-sm font-medium text-foreground mb-1">{t('career.firstname_label')} <span className="text-destructive">*</span></label>
                                     <input {...register("firstName", { required: true })} className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-secondary outline-none" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-foreground mb-1">{dict.career.lastname_label} <span className="text-destructive">*</span></label>
+                                    <label className="block text-sm font-medium text-foreground mb-1">{t('career.lastname_label')} <span className="text-destructive">*</span></label>
                                     <input {...register("lastName", { required: true })} className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-secondary outline-none" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-foreground mb-1">{dict.career.nickname_label}</label>
+                                    <label className="block text-sm font-medium text-foreground mb-1">{t('career.nickname_label')}</label>
                                     <input {...register("nickname")} className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-secondary outline-none" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-foreground mb-1">{dict.career.dob_label} <span className="text-destructive">*</span></label>
+                                    <label className="block text-sm font-medium text-foreground mb-1">{t('career.dob_label')} <span className="text-destructive">*</span></label>
                                     <input type="date" {...register("dateOfBirth", { required: true })} className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-secondary outline-none" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-foreground mb-1">{dict.career.age_label}</label>
+                                    <label className="block text-sm font-medium text-foreground mb-1">{t('career.age_label')}</label>
                                     <input type="number" {...register("age")} className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-secondary outline-none" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-foreground mb-1">{dict.career.nationality_label}</label>
+                                    <label className="block text-sm font-medium text-foreground mb-1">{t('career.nationality_label')}</label>
                                     <input {...register("nationality")} className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-secondary outline-none" />
                                 </div>
                             </div>
@@ -230,19 +230,19 @@ export default function ApplicationForm() {
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-foreground mb-1">{dict.career.address_label} <span className="text-destructive">*</span></label>
+                                    <label className="block text-sm font-medium text-foreground mb-1">{t('career.address_label')} <span className="text-destructive">*</span></label>
                                     <textarea {...register("address", { required: true })} rows={3} className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-secondary outline-none" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-foreground mb-1">{dict.career.phone_label} <span className="text-destructive">*</span></label>
+                                    <label className="block text-sm font-medium text-foreground mb-1">{t('career.phone_label')} <span className="text-destructive">*</span></label>
                                     <input {...register("phone", { required: true })} className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-secondary outline-none" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-foreground mb-1">{dict.career.email_label} <span className="text-destructive">*</span></label>
+                                    <label className="block text-sm font-medium text-foreground mb-1">{t('career.email_label')} <span className="text-destructive">*</span></label>
                                     <input type="email" {...register("email", { required: true })} className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-secondary outline-none" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-foreground mb-1">{dict.career.military_label}</label>
+                                    <label className="block text-sm font-medium text-foreground mb-1">{t('career.military_label')}</label>
                                     <select {...register("militaryStatus")} className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-secondary outline-none">
                                         <option value="ได้รับการยกเว้น">ได้รับการยกเว้น</option>
                                         <option value="ผ่านการเกณฑ์">ผ่านการเกณฑ์</option>
@@ -251,7 +251,7 @@ export default function ApplicationForm() {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-foreground mb-1">{dict.career.marital_label}</label>
+                                    <label className="block text-sm font-medium text-foreground mb-1">{t('career.marital_label')}</label>
                                     <select {...register("maritalStatus")} className="w-full p-3 border border-input rounded-lg bg-background focus:ring-2 focus:ring-secondary outline-none">
                                         <option value="โสด">โสด</option>
                                         <option value="แต่งงาน">แต่งงาน</option>
@@ -267,18 +267,18 @@ export default function ApplicationForm() {
                             {/* Education */}
                             <div>
                                 <div className="flex justify-between items-center mb-4">
-                                    <h3 className="font-semibold text-lg text-foreground">{dict.career.step_3} (Education)</h3>
+                                    <h3 className="font-semibold text-lg text-foreground">{t('career.step_3')} (Education)</h3>
                                     <button type="button" onClick={() => appendEdu({ level: '', institution: '', major: '', graduatedYear: 2024, gpa: 0 })} className="text-sm text-primary font-medium hover:underline flex items-center gap-1">
-                                        <Plus size={16} /> {dict.career.add_edu}
+                                        <Plus size={16} /> {t('career.add_edu')}
                                     </button>
                                 </div>
                                 {eduFields.map((field, index) => (
                                     <div key={field.id} className="p-4 bg-muted/50 rounded-lg relative mb-3 border border-border">
                                         <button type="button" onClick={() => removeEdu(index)} className="absolute top-2 right-2 text-muted-foreground hover:text-destructive"><Trash2 size={16} /></button>
                                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                                            <div className="col-span-2 lg:col-span-1"><input {...register(`educations.${index}.level`)} className="w-full p-2 border border-border rounded text-sm bg-background" placeholder={dict.career.edu_level} /></div>
-                                            <div className="col-span-2"><input {...register(`educations.${index}.institution`)} className="w-full p-2 border border-border rounded text-sm bg-background" placeholder={dict.career.edu_institute} /></div>
-                                            <div><input type="number" {...register(`educations.${index}.graduatedYear`)} className="w-full p-2 border border-border rounded text-sm bg-background" placeholder={dict.career.edu_year} /></div>
+                                            <div className="col-span-2 lg:col-span-1"><input {...register(`educations.${index}.level`)} className="w-full p-2 border border-border rounded text-sm bg-background" placeholder={t('career.edu_level')} /></div>
+                                            <div className="col-span-2"><input {...register(`educations.${index}.institution`)} className="w-full p-2 border border-border rounded text-sm bg-background" placeholder={t('career.edu_institute')} /></div>
+                                            <div><input type="number" {...register(`educations.${index}.graduatedYear`)} className="w-full p-2 border border-border rounded text-sm bg-background" placeholder={t('career.edu_year')} /></div>
                                         </div>
                                     </div>
                                 ))}
@@ -287,25 +287,25 @@ export default function ApplicationForm() {
                             {/* Experience */}
                             <div>
                                 <div className="flex justify-between items-center mb-4">
-                                    <h3 className="font-semibold text-lg text-foreground">{dict.career.step_3} (Work)</h3>
+                                    <h3 className="font-semibold text-lg text-foreground">{t('career.step_3')} (Work)</h3>
                                     <button type="button" onClick={() => appendExp({ company: '', position: '', salary: 0, startDate: '', endDate: '', reasonForLeaving: '' })} className="text-sm text-primary font-medium hover:underline flex items-center gap-1">
-                                        <Plus size={16} /> {dict.career.add_exp}
+                                        <Plus size={16} /> {t('career.add_exp')}
                                     </button>
                                 </div>
                                 {expFields.map((field, index) => (
                                     <div key={field.id} className="p-4 bg-muted/50 rounded-lg relative mb-3 border border-border">
                                         <button type="button" onClick={() => removeExp(index)} className="absolute top-2 right-2 text-muted-foreground hover:text-destructive"><Trash2 size={16} /></button>
                                         <div className="grid grid-cols-2 gap-3 mb-2">
-                                            <input {...register(`experiences.${index}.company`)} className="w-full p-2 border border-border rounded text-sm bg-background" placeholder={dict.career.exp_company} />
-                                            <input {...register(`experiences.${index}.position`)} className="w-full p-2 border border-border rounded text-sm bg-background" placeholder={dict.career.exp_position} />
+                                            <input {...register(`experiences.${index}.company`)} className="w-full p-2 border border-border rounded text-sm bg-background" placeholder={t('career.exp_company')} />
+                                            <input {...register(`experiences.${index}.position`)} className="w-full p-2 border border-border rounded text-sm bg-background" placeholder={t('career.exp_position')} />
                                         </div>
                                         <div className="grid grid-cols-2 gap-3">
-                                            <input {...register(`experiences.${index}.salary`)} className="w-full p-2 border border-border rounded text-sm bg-background" placeholder={dict.career.exp_salary} type="number" />
-                                            <input {...register(`experiences.${index}.reasonForLeaving`)} className="w-full p-2 border border-border rounded text-sm bg-background" placeholder={dict.career.exp_reason} />
+                                            <input {...register(`experiences.${index}.salary`)} className="w-full p-2 border border-border rounded text-sm bg-background" placeholder={t('career.exp_salary')} type="number" />
+                                            <input {...register(`experiences.${index}.reasonForLeaving`)} className="w-full p-2 border border-border rounded text-sm bg-background" placeholder={t('career.exp_reason')} />
                                         </div>
                                     </div>
                                 ))}
-                                {expFields.length === 0 && <div className="text-center text-muted-foreground text-sm py-4 bg-muted/30 rounded-lg border border-dashed border-border">{dict.career.no_exp}</div>}
+                                {expFields.length === 0 && <div className="text-center text-muted-foreground text-sm py-4 bg-muted/30 rounded-lg border border-dashed border-border">{t('career.no_exp')}</div>}
                             </div>
                         </div>
                     )}
@@ -316,9 +316,9 @@ export default function ApplicationForm() {
                             {/* Languages */}
                             <div>
                                 <div className="flex justify-between items-center mb-4">
-                                    <h3 className="font-semibold text-lg text-foreground">{dict.career.skill_lang}</h3>
+                                    <h3 className="font-semibold text-lg text-foreground">{t('career.skill_lang')}</h3>
                                     <button type="button" onClick={() => appendLang({ language: '', speaking: 'พอใช้', reading: 'พอใช้', writing: 'พอใช้' })} className="text-sm text-primary font-medium hover:underline flex items-center gap-1">
-                                        <Plus size={16} /> {dict.common.next}
+                                        <Plus size={16} /> {t('common.next')}
                                     </button>
                                 </div>
                                 {langFields.map((field, index) => (
@@ -348,22 +348,22 @@ export default function ApplicationForm() {
 
                             {/* Computer Skills */}
                             <div>
-                                <label className="block font-semibold text-lg mb-2 text-foreground">{dict.career.skill_comp}</label>
+                                <label className="block font-semibold text-lg mb-2 text-foreground">{t('career.skill_comp')}</label>
                                 <textarea {...register("skills.computer")} rows={3} className="w-full p-3 border border-border rounded-lg bg-background focus:ring-2 focus:ring-secondary outline-none" placeholder="Microsoft Office, Photoshop..." />
                             </div>
 
                             {/* Documents */}
                             <div>
-                                <h3 className="font-semibold text-lg mb-4 text-foreground">{dict.career.step_4}</h3>
+                                <h3 className="font-semibold text-lg mb-4 text-foreground">{t('career.step_4')}</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="border border-dashed border-border rounded-lg p-6 text-center hover:bg-muted/50 transition-colors">
                                         <Upload className="mx-auto text-muted-foreground mb-2" />
-                                        <label className="block text-sm font-medium mb-1 text-foreground">{dict.career.upload_photo}</label>
+                                        <label className="block text-sm font-medium mb-1 text-foreground">{t('career.upload_photo')}</label>
                                         <input type="file" {...register("photo")} className="text-xs block mx-auto text-muted-foreground" />
                                     </div>
                                     <div className="border border-dashed border-border rounded-lg p-6 text-center hover:bg-muted/50 transition-colors">
                                         <Upload className="mx-auto text-muted-foreground mb-2" />
-                                        <label className="block text-sm font-medium mb-1 text-foreground">{dict.career.upload_resume}</label>
+                                        <label className="block text-sm font-medium mb-1 text-foreground">{t('career.upload_resume')}</label>
                                         <input type="file" {...register("resume")} className="text-xs block mx-auto text-muted-foreground" />
                                     </div>
                                 </div>
@@ -375,19 +375,19 @@ export default function ApplicationForm() {
                     {currentStep === 5 && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                             <div className="bg-muted/30 p-6 rounded-lg border border-border text-sm space-y-4">
-                                <h3 className="font-bold text-lg text-primary border-b border-border pb-2">{dict.career.review_title}</h3>
+                                <h3 className="font-bold text-lg text-primary border-b border-border pb-2">{t('career.review_title')}</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-foreground">
-                                    <p><span className="font-semibold text-muted-foreground">{dict.career.position_label}:</span> {formDataValues.positionApplied}</p>
-                                    <p><span className="font-semibold text-muted-foreground">{dict.career.salary_label}:</span> {formDataValues.expectedSalary}</p>
-                                    <p><span className="font-semibold text-muted-foreground">{dict.career.firstname_label}:</span> {formDataValues.firstName} {formDataValues.lastName}</p>
-                                    <p><span className="font-semibold text-muted-foreground">{dict.career.phone_label}:</span> {formDataValues.phone}</p>
-                                    <p><span className="font-semibold text-muted-foreground">{dict.career.email_label}:</span> {formDataValues.email}</p>
+                                    <p><span className="font-semibold text-muted-foreground">{t('career.position_label')}:</span> {formDataValues.positionApplied}</p>
+                                    <p><span className="font-semibold text-muted-foreground">{t('career.salary_label')}:</span> {formDataValues.expectedSalary}</p>
+                                    <p><span className="font-semibold text-muted-foreground">{t('career.firstname_label')}:</span> {formDataValues.firstName} {formDataValues.lastName}</p>
+                                    <p><span className="font-semibold text-muted-foreground">{t('career.phone_label')}:</span> {formDataValues.phone}</p>
+                                    <p><span className="font-semibold text-muted-foreground">{t('career.email_label')}:</span> {formDataValues.email}</p>
                                 </div>
                             </div>
 
                             <div className="flex items-start gap-3 p-4 bg-yellow-50/50 text-yellow-800 border border-yellow-200 rounded-lg text-sm dark:bg-yellow-900/20 dark:text-yellow-200 dark:border-yellow-800">
                                 <AlertCircle className="shrink-0 mt-0.5" size={18} />
-                                <p>{dict.career.consent_disclaimer}</p>
+                                <p>{t('career.consent_disclaimer')}</p>
                             </div>
                         </div>
                     )}
@@ -397,7 +397,7 @@ export default function ApplicationForm() {
                 <div className="bg-muted/30 p-6 border-t border-border flex justify-between items-center">
                     {currentStep > 1 ? (
                         <button type="button" onClick={prevStep} className="px-6 py-2.5 text-muted-foreground hover:text-foreground font-medium flex items-center gap-2 hover:bg-muted rounded-lg transition-colors">
-                            <ChevronLeft size={18} /> {dict.common.back}
+                            <ChevronLeft size={18} /> {t('common.back')}
                         </button>
                     ) : (
                         <div></div>
@@ -405,7 +405,7 @@ export default function ApplicationForm() {
 
                     {currentStep < 5 ? (
                         <button type="button" onClick={nextStep} className="px-8 py-2.5 bg-primary text-primary-foreground font-medium rounded-lg shadow-lg hover:bg-primary/90 flex items-center gap-2 transition-all">
-                            {dict.common.next} <ChevronRight size={18} />
+                            {t('common.next')} <ChevronRight size={18} />
                         </button>
                     ) : (
                         <button
@@ -413,7 +413,7 @@ export default function ApplicationForm() {
                             disabled={submitting}
                             className="px-8 py-2.5 bg-green-600 text-white font-medium rounded-lg shadow-lg hover:bg-green-700 flex items-center gap-2 transition-all disabled:opacity-50"
                         >
-                            {submitting ? dict.common.processing : dict.common.submit} <Save size={18} />
+                            {submitting ? t('common.processing') : t('common.submit')} <Save size={18} />
                         </button>
                     )}
                 </div>
