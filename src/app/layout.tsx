@@ -24,6 +24,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{
+          __html: `
+          window.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.log('GLOBAL ERROR:', msg, url, lineNo);
+            return false;
+          };
+          console.log('Layout Bootstrapped');
+        `}} />
+      </head>
       <body className={cn(kanit.variable, "font-sans bg-background text-foreground min-h-screen")}>
         <ThemeProvider
           attribute="class"

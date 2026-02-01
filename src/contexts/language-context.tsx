@@ -58,11 +58,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         return current as string
     }
 
-    // Render children only after hydration to prevent hydration mismatch
-    if (!isLoaded) {
-        return null // Or a loading spinner
-    }
-
     return (
         <LanguageContext.Provider value={{ language, setLanguage, t, toggleLanguage }}>
             {children}
