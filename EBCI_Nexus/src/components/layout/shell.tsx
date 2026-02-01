@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LogOut, Menu, X, ChevronRight, ChevronLeft } from 'lucide-react'
@@ -15,12 +15,6 @@ interface DashboardShellProps {
     role: 'hr_admin' | 'employee'
     userName?: string
 }
-
-// ... existing imports ...
-
-// ... existing interface ...
-
-// ... imports ...
 
 export function DashboardShell({ children, role, userName }: DashboardShellProps) {
     const pathname = usePathname()

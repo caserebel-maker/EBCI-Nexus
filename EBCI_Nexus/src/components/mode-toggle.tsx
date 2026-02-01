@@ -22,7 +22,6 @@ export function ModeToggle({ className }: { className?: string }) {
             onClick={() => {
                 const nextTheme = theme === "dark" ? "light" : "dark"
                 console.log("Setting theme:", nextTheme)
-                alert("Click detected! Changing theme to: " + nextTheme)
                 setTheme(nextTheme)
             }}
             className={cn(
