@@ -10,7 +10,10 @@ export function ModeToggle({ className }: { className?: string }) {
 
     return (
         <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={() => {
+                console.log("Setting theme:", theme === "dark" ? "light" : "dark")
+                setTheme(theme === "dark" ? "light" : "dark")
+            }}
             className={cn(
                 "relative inline-flex h-9 w-9 items-center justify-center rounded-md border border-input bg-transparent shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors",
                 className

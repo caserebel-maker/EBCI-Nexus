@@ -11,7 +11,10 @@ export function LanguageToggle() {
         <Button
             variant="ghost"
             size="sm"
-            onClick={toggleLanguage}
+            onClick={() => {
+                console.log("Toggling language from:", language)
+                toggleLanguage()
+            }}
             className="flex items-center gap-2 font-medium"
             title="Switch Language"
         >

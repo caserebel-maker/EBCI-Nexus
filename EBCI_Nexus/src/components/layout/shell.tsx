@@ -54,7 +54,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                     <div className="flex flex-col items-center justify-center px-4 w-full">
                         <Link href="/dashboard" className="flex flex-col items-center gap-4 group">
                             <img
-                                src="/logo-white.png"
+                                src="/sidebar-logo.png"
                                 alt="EBCI NEXUS"
                                 className="transition-all duration-300 drop-shadow-[0_4px_6px_rgba(255,255,255,0.25)] h-16"
                             />
@@ -131,14 +131,14 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                         {/* Mobile Logo */}
                         <Link href="/dashboard" className="lg:hidden flex items-center gap-2 group">
                             <img
-                                src="/logo-white.png"
+                                src="/sidebar-logo.png"
                                 alt="EBCI NEXUS"
                                 className="h-10 drop-shadow-[0_2px_4px_rgba(255,255,255,0.2)] group-active:scale-95 transition-transform"
                             />
                             <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] self-end mb-1">V 1.0</span>
                         </Link>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 relative z-[100]">
                         <LanguageToggle />
                         <ModeToggle />
                     </div>
