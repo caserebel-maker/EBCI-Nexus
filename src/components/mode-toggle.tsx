@@ -19,9 +19,10 @@ export function ModeToggle({ className }: { className?: string }) {
 
     return (
         <button
+            type="button"
             onClick={() => {
                 const nextTheme = theme === "dark" ? "light" : "dark"
-                console.log("Setting theme:", nextTheme)
+                console.log("Setting theme to:", nextTheme)
                 setTheme(nextTheme)
             }}
             className={cn(
