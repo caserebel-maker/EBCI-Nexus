@@ -46,9 +46,9 @@ export default function LoginPage() {
                     {/* Header */}
                     <div className="text-center mb-10 flex flex-col items-center">
                         <img
-                            src="/logo-white.png"
-                            alt="EBCI NEXUS"
-                            className="h-20 drop-shadow-[0_4px_10px_rgba(255,255,255,0.3)] mb-6 transition-transform hover:scale-105 duration-500"
+                            src="/sidebar-logo.png"
+                            alt="EBCI Nexus"
+                            className="h-20 w-auto opacity-90 drop-shadow-2xl"
                         />
                         <div className="text-white font-medium text-[10px] md:text-xs uppercase tracking-[0.4em] opacity-80 flex flex-col gap-1.5">
                             <span>{t('dashboard.hrSystem')}</span>

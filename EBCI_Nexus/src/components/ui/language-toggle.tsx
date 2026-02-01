@@ -13,9 +13,11 @@ export function LanguageToggle() {
             size="sm"
             onClick={() => {
                 console.log("Toggling language from:", language)
+                alert("Language Toggle clicked! Current: " + language)
                 toggleLanguage()
             }}
-            className="flex items-center gap-2 font-medium"
+            className="flex items-center gap-2 font-medium cursor-pointer active:scale-95"
+            style={{ pointerEvents: 'auto' }}
             title="Switch Language"
         >
             <Globe className="h-4 w-4" />
