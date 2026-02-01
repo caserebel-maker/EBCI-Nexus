@@ -58,10 +58,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         return current as string
     }
 
-    // Render children only after hydration to prevent hydration mismatch? 
-    // Actually, for SEO/Performance updates, we should probably render with default matching server. 
-    // But for this client-side switch, a small flash is acceptable or we assume default 'th' matches server.
-    // Let's render immediately with default 'th' and update if storage says otherwise (useEffect).
+    // Render children only after hydration to prevent hydration mismatch
+    if (!isLoaded) {
+        return null // Or a loading spinner
+    }
 
     return (
         <LanguageContext.Provider value={{ language, setLanguage, t, toggleLanguage }}>

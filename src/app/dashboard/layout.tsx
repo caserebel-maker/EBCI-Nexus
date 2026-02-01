@@ -2,7 +2,7 @@ import { DashboardShell } from '@/components/layout/shell'
 import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
-import { EmergencyBanner } from '@/components/emergency-banner'
+import { EmergencyBanner } from '@/components/dashboard/emergency-banner'
 
 export default async function AdminLayout({
     children,
