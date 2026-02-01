@@ -17,7 +17,6 @@ export function DashboardContent({ activeEmergency, promotion, internalNews }: D
 
     return (
         <div className="space-y-6 relative">
-            <EmergencyBanner emergency={activeEmergency} />
 
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-white dark:text-foreground">{t('dashboard.hrOverview')}</h1>

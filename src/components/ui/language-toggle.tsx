@@ -12,6 +12,7 @@ export function LanguageToggle() {
             variant="ghost"
             size="sm"
             onClick={() => {
+                alert("Language Toggle Clicked!")
                 console.log("Toggling language from:", language)
                 toggleLanguage()
             }}
