@@ -10,7 +10,7 @@ export function EmergencyBanner({ emergency }: { emergency: any }) {
 
     return (
         <>
-            <div className="bg-amber-500 text-black p-4 rounded-xl shadow-2xl border-2 border-amber-400 flex items-center justify-between animate-pulse-slow z-50 sticky top-4 mb-8">
+            <div className="bg-amber-500 text-black p-4 rounded-xl shadow-2xl border-2 border-amber-400 flex items-center justify-between animate-pulse-slow z-40 relative mb-8">
                 <div className="flex items-center gap-4">
                     <div className="h-10 w-10 bg-black/10 rounded-full flex items-center justify-center">
                         <AlertTriangle size={24} className="animate-bounce" />
