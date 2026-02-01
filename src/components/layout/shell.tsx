@@ -117,7 +117,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
             {/* Main Content Area */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent">
                 {/* Top Navbar */}
-                <header className="h-16 flex items-center justify-between px-4 lg:px-8 absolute top-0 w-full lg:relative z-40 bg-white/5 backdrop-blur-md border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground">
+                <header className="h-16 flex items-center justify-between px-4 lg:px-8 absolute top-0 w-full lg:relative z-[60] bg-white/5 backdrop-blur-md border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground">
                     <div className="flex items-center gap-4">
                         <button onClick={toggleMobileMenu} className="lg:hidden p-2 text-white/80 hover:text-white dark:text-muted-foreground dark:hover:text-foreground">
                             <Menu size={24} />
