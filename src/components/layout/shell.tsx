@@ -36,10 +36,10 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
             {/* Sidebar */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 z-[70] h-screen transition-all duration-300 ease-in-out lg:relative",
+                    "fixed top-0 left-0 z-50 h-screen transition-all duration-300 ease-in-out lg:relative",
                     "bg-brand-gradient dark:bg-card border-r border-white/10 dark:border-border",
                     "text-white dark:text-card-foreground",
-                    "w-64 shadow-2xl pointer-events-auto",
+                    "w-64 shadow-2xl",
                     mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
                 )}
             >
@@ -117,7 +117,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
             {/* Main Content Area */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent">
                 {/* Top Navbar */}
-                <header className="h-16 flex items-center justify-between px-4 lg:px-8 sticky top-0 w-full z-[80] bg-white/5 backdrop-blur-md border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground pointer-events-auto">
+                <header className="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground">
                     <div className="flex items-center gap-4">
                         <button onClick={toggleMobileMenu} className="lg:hidden p-2 text-white/80 hover:text-white dark:text-muted-foreground dark:hover:text-foreground">
                             <Menu size={24} />
