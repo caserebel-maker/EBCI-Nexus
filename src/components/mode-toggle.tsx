@@ -13,9 +13,7 @@ export function ModeToggle({ className }: { className?: string }) {
         setMounted(true)
     }, [])
 
-    if (!mounted) {
-        return <div className="h-9 w-9 opacity-0" />
-    }
+
 
     return (
         <button
@@ -32,8 +30,14 @@ export function ModeToggle({ className }: { className?: string }) {
             style={{ pointerEvents: 'auto', zIndex: 9999 }}
             aria-label="Toggle theme"
         >
-            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-white dark:text-foreground" />
-            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 text-white dark:text-foreground" />
+            <Sun className={cn(
+                "h-[1.2rem] w-[1.2rem] transition-all text-white dark:text-foreground",
+                mounted && theme === "dark" ? "-rotate-90 scale-0" : "rotate-0 scale-100"
+            )} />
+            <Moon className={cn(
+                "absolute h-[1.2rem] w-[1.2rem] transition-all text-white dark:text-foreground",
+                mounted && theme === "dark" ? "rotate-0 scale-100" : "rotate-90 scale-0"
+            )} />
         </button>
     )
 }
