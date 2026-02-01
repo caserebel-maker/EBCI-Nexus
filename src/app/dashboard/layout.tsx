@@ -26,7 +26,7 @@ export default async function AdminLayout({
 
     return (
         <DashboardShell role="hr_admin" userName={session.name}>
-            <EmergencyBanner headline={emergency?.headline || ""} content={emergency?.content || ""} />
+            <EmergencyBanner emergency={emergency} />
             {children}
         </DashboardShell>
     )
