@@ -133,6 +133,12 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                         </Link>
                     </div>
                     <div className="flex items-center gap-4 relative z-[100]">
+                        <div
+                            onClick={() => alert("Container click!")}
+                            className="p-1 cursor-pointer bg-red-500/20 rounded text-[8px]"
+                        >
+                            DEBUG
+                        </div>
                         <LanguageToggle />
                         <ModeToggle />
                     </div>
