@@ -12,7 +12,7 @@ import { useTranslation } from '@/contexts/language-context'
 
 interface DashboardShellProps {
     children: React.ReactNode
-    role: 'hr_admin' | 'employee'
+    role: 'hr_admin' | 'manager' | 'employee'
     userName?: string
 }
 

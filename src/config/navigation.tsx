@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, UserCircle, FileText, Settings, Megaphone } from 'lucide-react'
+import { LayoutDashboard, Users, UserCircle, FileText, Settings, Megaphone, CalendarDays, ClipboardCheck, ShieldCheck } from 'lucide-react'
 import { ROLES, type UserRole } from './roles'
 
 export interface NavItem {
@@ -13,13 +13,19 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         { label: 'dashboard.employees', href: '/dashboard/employees', icon: Users },
         { label: 'dashboard.recruitment', href: '/dashboard/recruitment', icon: UserCircle },
         { label: 'dashboard.announcements', href: '/dashboard/hr/announcements', icon: Megaphone },
-        // Future roles/menus can be easily added here
-        { label: 'common.view', href: '/dashboard/reports', icon: FileText }, // Placeholder mapped to common.view for now or add new keys
-        { label: 'common.actions', href: '/dashboard/settings', icon: Settings }, // Placeholder
+        { label: 'leave.title', href: '/dashboard/leave/admin', icon: CalendarDays },
+        { label: 'common.view', href: '/dashboard/reports', icon: FileText },
+        { label: 'common.actions', href: '/dashboard/settings', icon: Settings },
+    ],
+    [ROLES.MANAGER]: [
+        { label: 'dashboard.title', href: '/dashboard', icon: LayoutDashboard },
+        { label: 'leave.myLeave', href: '/portal/leave', icon: CalendarDays },
+        { label: 'leave.approveLeave', href: '/dashboard/leave/approve', icon: ClipboardCheck },
     ],
     [ROLES.EMPLOYEE]: [
         { label: 'dashboard.portal', href: '/portal', icon: LayoutDashboard },
         { label: 'recruitment.personalInfo', href: '/portal/profile', icon: UserCircle },
+        { label: 'leave.myLeave', href: '/portal/leave', icon: CalendarDays },
         { label: 'common.view', href: '/portal/payslips', icon: FileText },
     ],
 }

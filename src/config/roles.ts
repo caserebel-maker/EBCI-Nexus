@@ -1,5 +1,6 @@
 export const ROLES = {
     HR_ADMIN: 'hr_admin',
+    MANAGER: 'manager',
     EMPLOYEE: 'employee',
 } as const
 
@@ -15,12 +16,17 @@ export const ROLE_CONFIG: Record<UserRole, RoleConfig> = {
     [ROLES.HR_ADMIN]: {
         label: 'HR Admin',
         homePath: '/dashboard',
-        allowedPrefixes: ['/dashboard', '/employees', '/recruitment', '/portal', '/careers'],
+        allowedPrefixes: ['/dashboard', '/employees', '/recruitment', '/portal', '/careers', '/leave'],
+    },
+    [ROLES.MANAGER]: {
+        label: 'Manager',
+        homePath: '/dashboard',
+        allowedPrefixes: ['/dashboard', '/portal', '/leave'],
     },
     [ROLES.EMPLOYEE]: {
         label: 'Employee',
         homePath: '/portal',
-        allowedPrefixes: ['/portal'],
+        allowedPrefixes: ['/portal', '/leave'],
     },
 }
 
@@ -29,6 +35,5 @@ export function isRouteAllowed(role: UserRole, path: string): boolean {
     const config = ROLE_CONFIG[role]
     if (!config) return false
 
-    // Public routes (if any) could be handled here or in middleware
     return config.allowedPrefixes.some(prefix => path.startsWith(prefix))
 }

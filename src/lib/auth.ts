@@ -2,8 +2,9 @@ import { cookies } from 'next/headers'
 
 export interface SessionUser {
     id: string
-    role: 'hr_admin' | 'employee'
+    role: 'hr_admin' | 'manager' | 'employee'
     name: string
+    employeeId?: string // linked employee record id
 }
 
 export async function getSession(): Promise<SessionUser | null> {

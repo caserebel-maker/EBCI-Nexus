@@ -15,17 +15,18 @@ model User {
   id        String   @id @default(cuid())
   username  String   @unique
   password  String   // In production, this should be hashed
-  role      String   @default("employee") // 'employee' or 'hr_admin'
+  role      String   @default("employee") // 'employee', 'manager', or 'hr_admin'
   name      String?
-  
+
   // Future-Proofing: Biometric Data
   biometric_id     String?  @unique // ID from fingerprint device
   fingerprint_data String?  // Raw template or hash
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
-  employee  Employee? // Reverse relation
+
+  employee         Employee?      // Reverse relation
+  approvedLeaves   LeaveRequest[] @relation("LeaveApprover")
 }
 
 model Employee {
@@ -36,7 +37,7 @@ model Employee {
   lastNameTH     String   @map("last_name_th")
   firstNameEN    String?  @map("first_name_en")
   lastNameEN     String?  @map("last_name_en")
-  
+
   position       String
   department     String
   startDate      DateTime @map("start_date")
@@ -49,12 +50,20 @@ model Employee {
   userId         String?  @unique @map("user_id") // Link to system login user
   user           User?    @relation(fields: [userId], references: [id])
 
+  // Manager relationship
+  managerId      String?   @map("manager_id")
+  manager        Employee? @relation("ManagerEmployee", fields: [managerId], references: [id])
+  subordinates   Employee[] @relation("ManagerEmployee")
+
   // Link to Applicant (The Bridge)
   applicantId    String?   @unique @map("applicant_id")
   applicant      Applicant? @relation(fields: [applicantId], references: [id])
 
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
+
+  leaveRequests  LeaveRequest[]
+  leaveBalances  LeaveBalance[]
 
   @@map("employees")
 }
@@ -162,6 +171,58 @@ model ApplicantExperience {
 
   @@index([applicantId])
   @@map("applicant_experiences")
+}
+
+// ==========================================
+// Phase 5: Leave Management Module
+// ==========================================
+// leaveType: sick | personal | annual | maternity | ordination
+// status: pending | approved | rejected | cancelled
+
+model LeaveRequest {
+  id              String    @id @default(cuid())
+
+  employeeId      String    @map("employee_id")
+  employee        Employee  @relation(fields: [employeeId], references: [id])
+
+  leaveType       String    @map("leave_type") // sick, personal, annual, maternity, ordination
+  startDate       DateTime  @map("start_date")
+  endDate         DateTime  @map("end_date")
+  totalDays       Float     @map("total_days")
+  reason          String
+
+  status          String    @default("pending") // pending, approved, rejected, cancelled
+
+  approvedBy      String?   @map("approved_by") // User.id
+  approver        User?     @relation("LeaveApprover", fields: [approvedBy], references: [id])
+  approvedAt      DateTime? @map("approved_at")
+  rejectionReason String?   @map("rejection_reason")
+
+  notifiedAt      DateTime? @map("notified_at")  // when manager was first notified
+  escalatedAt     DateTime? @map("escalated_at") // when HR escalation was sent
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@map("leave_requests")
+}
+
+model LeaveBalance {
+  id           String   @id @default(cuid())
+
+  employeeId   String   @map("employee_id")
+  employee     Employee @relation(fields: [employeeId], references: [id])
+
+  year         Int
+  leaveType    String   @map("leave_type") // sick, personal, annual, maternity, ordination
+  entitledDays Float    @map("entitled_days")
+  usedDays     Float    @default(0) @map("used_days")
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([employeeId, year, leaveType])
+  @@map("leave_balances")
 }
 
 // ==========================================

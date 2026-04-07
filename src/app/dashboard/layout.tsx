@@ -11,7 +11,7 @@ export default async function AdminLayout({
 }) {
     const session = await getSession()
 
-    if (!session || session.role !== 'hr_admin') {
+    if (!session || (session.role !== 'hr_admin' && session.role !== 'manager')) {
         // Redundant safety check (middleware covers this)
         redirect('/login')
     }
@@ -25,7 +25,7 @@ export default async function AdminLayout({
     })
 
     return (
-        <DashboardShell role="hr_admin" userName={session.name}>
+        <DashboardShell role={session.role as 'hr_admin' | 'manager'} userName={session.name}>
             <EmergencyBanner emergency={emergency} />
             {children}
         </DashboardShell>
