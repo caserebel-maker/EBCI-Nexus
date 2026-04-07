@@ -20,6 +20,7 @@
     "auth": {
         "loginTitle": "Login",
         "username": "Username",
+        "email": "Email",
         "password": "Password",
         "signIn": "Sign In",
         "signOut": "Sign Out",

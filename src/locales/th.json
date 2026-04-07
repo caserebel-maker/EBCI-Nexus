@@ -20,6 +20,7 @@
     "auth": {
         "loginTitle": "เข้าสู่ระบบ",
         "username": "ชื่อผู้ใช้",
+        "email": "อีเมล",
         "password": "รหัสผ่าน",
         "signIn": "เข้าสู่ระบบ",
         "signOut": "ออกจากระบบ",

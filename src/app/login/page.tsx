@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { Loader2, User, Lock } from 'lucide-react'
+import { Loader2, Mail, Lock } from 'lucide-react'
 import { LanguageToggle } from '@/components/ui/language-toggle'
 import { useTranslation } from '@/contexts/language-context'
 
@@ -94,13 +94,14 @@ export default function LoginPage() {
 
                         <div className="space-y-4">
                             <div className="relative">
-                                <User className="absolute left-3 top-3 h-5 w-5 text-white/70" />
+                                <Mail className="absolute left-3 top-3 h-5 w-5 text-white/70" />
                                 <input
-                                    name="username"
-                                    type="text"
+                                    name="email"
+                                    type="email"
                                     required
+                                    autoComplete="email"
                                     className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/60 pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/20 shadow-none"
-                                    placeholder={t('auth.username')}
+                                    placeholder={t('auth.email')}
                                 />
                             </div>
 
