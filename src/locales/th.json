@@ -96,8 +96,8 @@
             "draft": "บันทึกร่าง"
         },
         "priorities": {
-            "emergency": "ฉุกเฉิน",
-            "urgent": "ด่วน",
+            "emergency": "ฉุกเฉิน (Emergency)",
+            "urgent": "ด่วน (Urgent)",
             "normal": "ทั่วไป",
             "promote": "โปรโมชั่น/กิจกรรม",
             "internal": "ภายในองค์กร"

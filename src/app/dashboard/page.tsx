@@ -1,69 +1,58 @@
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import { DashboardContent } from './dashboard-content'
 
 export const dynamic = 'force-dynamic'
 
+async function withSignedUrl(item: any) {
+    if (!item?.image_path) return item
+    try {
+        const { data } = await supabaseAdmin.storage
+            .from('announcement-images')
+            .createSignedUrl(item.image_path, 3600)
+        return { ...item, imageUrl: data?.signedUrl }
+    } catch {
+        return item
+    }
+}
+
 export default async function AdminDashboard() {
     try {
-        // 1. Fetch Emergency Alerts (ACTIVE)
-        const { data: emergencies, error: emergencyError } = await supabase
-            .from('announcements')
-            .select('*')
-            .eq('priority', 'emergency')
-            .eq('publishStatus', 'published')
-            .order('publish_date', { ascending: false })
-            .limit(1)
+        const [
+            { data: emergencies },
+            { data: urgentRaw },
+            { data: promotionRaw },
+            { data: internalNewsRaw },
+        ] = await Promise.all([
+            // 1. Emergency (priority = 'emergency') — used by layout banner
+            supabaseAdmin.from('announcements').select('*')
+                .eq('priority', 'emergency').eq('publishStatus', 'published')
+                .order('publish_date', { ascending: false }).limit(1),
 
-        if (emergencyError) console.error("Emergency Fetch Error:", emergencyError)
+            // 2. Urgent (priority = 'urgent') — yellow banners on dashboard
+            supabaseAdmin.from('announcements').select('*')
+                .eq('priority', 'urgent').eq('publishStatus', 'published')
+                .order('publish_date', { ascending: false }).limit(10),
+
+            // 3. Promotion
+            supabaseAdmin.from('announcements').select('*')
+                .eq('priority', 'promote').eq('publishStatus', 'published')
+                .order('publish_date', { ascending: false }).limit(1),
+
+            // 4. Internal News
+            supabaseAdmin.from('announcements').select('*')
+                .eq('priority', 'internal').eq('publishStatus', 'published')
+                .order('publish_date', { ascending: false }).limit(5),
+        ])
+
         const activeEmergency = emergencies?.[0] || null
-
-        // 2. Fetch Latest Promotion
-        const { data: promotionRaw } = await supabase
-            .from('announcements')
-            .select('*')
-            .eq('priority', 'promote')
-            .eq('publishStatus', 'published')
-            .order('publish_date', { ascending: false })
-            .limit(1)
-
-        let promotion = promotionRaw?.[0] || null
-        if (promotion?.image_path) {
-            try {
-                const { data } = await supabase.storage
-                    .from('announcement-images')
-                    .createSignedUrl(promotion.image_path, 3600)
-                promotion = { ...promotion, imageUrl: data?.signedUrl }
-            } catch (e) {
-                console.error("Promotion Image URL Error:", e)
-            }
-        }
-
-        // 3. Fetch Internal News (Limit 5)
-        const { data: internalNewsRaw } = await supabase
-            .from('announcements')
-            .select('*')
-            .eq('priority', 'internal')
-            .eq('publishStatus', 'published')
-            .order('publish_date', { ascending: false })
-            .limit(5)
-
-        const internalNews = await Promise.all((internalNewsRaw || []).map(async (item) => {
-            if (item.image_path) {
-                try {
-                    const { data } = await supabase.storage
-                        .from('announcement-images')
-                        .createSignedUrl(item.image_path, 3600)
-                    return { ...item, imageUrl: data?.signedUrl }
-                } catch (e) {
-                    console.error("News Image URL Error:", e)
-                }
-            }
-            return item
-        }))
+        const promotion = await withSignedUrl(promotionRaw?.[0] || null)
+        const urgentBanners = await Promise.all((urgentRaw || []).map(withSignedUrl))
+        const internalNews = await Promise.all((internalNewsRaw || []).map(withSignedUrl))
 
         return (
             <DashboardContent
                 activeEmergency={activeEmergency}
+                urgentBanners={urgentBanners}
                 promotion={promotion}
                 internalNews={internalNews}
             />

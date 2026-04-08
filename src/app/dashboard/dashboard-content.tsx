@@ -3,20 +3,24 @@
 import { Users, FileText, UserCheck, AlertCircle } from 'lucide-react'
 import { PromotionCard } from '@/components/dashboard/promotion-card'
 import { InternalNews } from '@/components/dashboard/internal-news'
-import { EmergencyBanner } from '@/components/dashboard/emergency-banner'
+import { UrgentBanners } from '@/components/dashboard/urgent-banners'
 import { useTranslation } from '@/contexts/language-context'
 
 interface DashboardContentProps {
     activeEmergency: any
+    urgentBanners: any[]
     promotion: any
     internalNews: any[]
 }
 
-export function DashboardContent({ activeEmergency, promotion, internalNews }: DashboardContentProps) {
+export function DashboardContent({ activeEmergency, urgentBanners, promotion, internalNews }: DashboardContentProps) {
     const { t } = useTranslation()
 
     return (
         <div className="space-y-6 relative">
+
+            {/* Urgent Banners — above heading, stacked */}
+            <UrgentBanners banners={urgentBanners} />
 
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-white dark:text-foreground">{t('dashboard.hrOverview')}</h1>
@@ -35,25 +39,11 @@ export function DashboardContent({ activeEmergency, promotion, internalNews }: D
 
             {/* Content Area */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-[400px]">
-                {/* Main Promotion Area (Span 3 cols) */}
                 <PromotionCard promotion={promotion} />
-
-                {/* Side Utility / News Area (Span 1 col) */}
                 <div className="lg:col-span-1 flex flex-col gap-6">
                     <InternalNews announcements={internalNews} />
                 </div>
             </div>
-
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                @keyframes pulse-slow {
-                    0%, 100% { opacity: 1; transform: scale(1); }
-                    50% { opacity: 0.95; transform: scale(0.998); }
-                }
-                .animate-pulse-slow {
-                    animation: pulse-slow 3s infinite ease-in-out;
-                }
-            `}} />
         </div>
     )
 }

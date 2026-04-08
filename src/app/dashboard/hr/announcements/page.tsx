@@ -54,7 +54,7 @@ export default function AnnouncementPage() {
             <form action={handleSubmit} className="bg-card border border-white/10 p-8 rounded-2xl shadow-xl space-y-6">
 
                 {/* Priority Selection */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <PriorityOption
                         id="internal"
                         label={t('announcements.priorities.internal')}
@@ -72,10 +72,18 @@ export default function AnnouncementPage() {
                         onClick={setPriority}
                     />
                     <PriorityOption
+                        id="urgent"
+                        label={t('announcements.priorities.urgent')}
+                        icon={AlertTriangle}
+                        color="bg-amber-400"
+                        current={priority}
+                        onClick={setPriority}
+                    />
+                    <PriorityOption
                         id="emergency"
                         label={t('announcements.priorities.emergency')}
                         icon={AlertTriangle}
-                        color="bg-amber-500"
+                        color="bg-red-600"
                         current={priority}
                         onClick={setPriority}
                     />
