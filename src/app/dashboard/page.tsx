@@ -28,9 +28,9 @@ export default async function AdminDashboard() {
                 .eq('priority', 'emergency').eq('publishStatus', 'published')
                 .order('publish_date', { ascending: false }).limit(1),
 
-            // 2. Urgent (priority = 'urgent') — yellow banners on dashboard
+            // 2. Urgent banners — priority 'urgent' OR 'emergency'
             supabaseAdmin.from('announcements').select('*')
-                .eq('priority', 'urgent').eq('publishStatus', 'published')
+                .in('priority', ['urgent', 'emergency']).eq('publishStatus', 'published')
                 .order('publish_date', { ascending: false }).limit(10),
 
             // 3. Promotion
