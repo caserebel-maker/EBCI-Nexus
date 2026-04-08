@@ -1,6 +1,6 @@
 import { EmployeesTable, Employee } from "./employees-table"
 import { EmployeesHeader } from "./header"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase-admin"
 import { cookies } from "next/headers"
 
 export const dynamic = 'force-dynamic'
@@ -22,7 +22,7 @@ export default async function EmployeesPage() {
 
     // 2. Fetch Employees from Supabase
     // We join with applicants to get the photo_path and other original details
-    const { data: employeesRaw, error } = await supabase
+    const { data: employeesRaw, error } = await supabaseAdmin
         .from('employees')
         .select(`
             *,
