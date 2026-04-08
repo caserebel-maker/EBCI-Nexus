@@ -1,13 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Search, Filter, MoreHorizontal, User, Building, Briefcase, ChevronRight } from "lucide-react"
+import { Search, User, Building, Briefcase, ArrowUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useTranslation } from "@/contexts/language-context"
 
-// Real Data Type (Matches Prisma)
 export type Employee = {
     id: string
     employeeCode: string
@@ -18,11 +16,59 @@ export type Employee = {
     nickname?: string | null
     department: string
     position: string
-    status: string // active, inactive, on_leave
+    status: string
     email: string
     phone?: string | null
     startDate: Date
     photoPath?: string | null
+}
+
+type SortKey = "name_asc" | "name_desc" | "status" | "tenure_desc" | "tenure_asc" | "dept_asc"
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+    { value: "name_asc",    label: "ชื่อ (ก → ฮ)" },
+    { value: "name_desc",   label: "ชื่อ (ฮ → ก)" },
+    { value: "status",      label: "สถานะ (ปฏิบัติงานก่อน)" },
+    { value: "tenure_desc", label: "อายุงาน (มากไปน้อย)" },
+    { value: "tenure_asc",  label: "อายุงาน (น้อยไปมาก)" },
+    { value: "dept_asc",    label: "ฝ่าย (ก → ฮ)" },
+]
+
+function sortEmployees(data: Employee[], key: SortKey): Employee[] {
+    const sorted = [...data]
+    switch (key) {
+        case "name_asc":
+            return sorted.sort((a, b) =>
+                `${a.firstNameTH}${a.lastNameTH}`.localeCompare(`${b.firstNameTH}${b.lastNameTH}`, 'th'))
+        case "name_desc":
+            return sorted.sort((a, b) =>
+                `${b.firstNameTH}${b.lastNameTH}`.localeCompare(`${a.firstNameTH}${a.lastNameTH}`, 'th'))
+        case "status":
+            return sorted.sort((a, b) => {
+                const order: Record<string, number> = { active: 0, on_leave: 1, inactive: 2 }
+                return (order[a.status] ?? 9) - (order[b.status] ?? 9)
+            })
+        case "tenure_desc":
+            return sorted.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+        case "tenure_asc":
+            return sorted.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+        case "dept_asc":
+            return sorted.sort((a, b) => a.department.localeCompare(b.department, 'th'))
+        default:
+            return sorted
+    }
+}
+
+function tenureText(startDate: Date): string {
+    const start = new Date(startDate)
+    const now = new Date()
+    const years = now.getFullYear() - start.getFullYear()
+    const months = now.getMonth() - start.getMonth() + years * 12
+    const y = Math.floor(months / 12)
+    const m = months % 12
+    if (y > 0 && m > 0) return `${y} ปี ${m} เดือน`
+    if (y > 0) return `${y} ปี`
+    return `${m} เดือน`
 }
 
 interface EmployeesTableProps {
@@ -31,75 +77,89 @@ interface EmployeesTableProps {
 
 export function EmployeesTable({ initialData }: EmployeesTableProps) {
     const router = useRouter()
+    const { t } = useTranslation()
     const [searchTerm, setSearchTerm] = useState("")
     const [statusFilter, setStatusFilter] = useState<string>("all")
     const [deptFilter, setDeptFilter] = useState<string>("all")
+    const [sortKey, setSortKey] = useState<SortKey>("name_asc")
 
-    const { t } = useTranslation()
+    const departments = Array.from(new Set(initialData.map(e => e.department))).sort((a, b) =>
+        a.localeCompare(b, 'th'))
 
-    // Filtering Logic
-    const filteredData = initialData.filter((employee) => {
-        const fullNameTH = `${employee.firstNameTH} ${employee.lastNameTH}`.toLowerCase()
-        const fullNameEN = `${employee.firstNameEN || ""} ${employee.lastNameEN || ""}`.toLowerCase()
-
-        const matchesSearch =
-            fullNameTH.includes(searchTerm.toLowerCase()) ||
-            fullNameEN.includes(searchTerm.toLowerCase()) ||
-            employee.employeeCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            employee.email.toLowerCase().includes(searchTerm.toLowerCase())
-
-        const matchesStatus = statusFilter === "all" || employee.status === statusFilter
-        const matchesDept = deptFilter === "all" || employee.department === deptFilter
-
-        return matchesSearch && matchesStatus && matchesDept
+    const filtered = initialData.filter((e) => {
+        const fullTH = `${e.firstNameTH} ${e.lastNameTH}`.toLowerCase()
+        const fullEN = `${e.firstNameEN || ""} ${e.lastNameEN || ""}`.toLowerCase()
+        const matchSearch =
+            fullTH.includes(searchTerm.toLowerCase()) ||
+            fullEN.includes(searchTerm.toLowerCase()) ||
+            e.employeeCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            e.email.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchStatus = statusFilter === "all" || e.status === statusFilter
+        const matchDept = deptFilter === "all" || e.department === deptFilter
+        return matchSearch && matchStatus && matchDept
     })
 
-    // Group unique departments for filter dropdown
-    const departments = Array.from(new Set(initialData.map(e => e.department)))
+    const displayData = sortEmployees(filtered, sortKey)
 
     return (
         <div className="space-y-4">
             {/* Toolbar */}
-            <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 shadow-xl">
-                {/* Search */}
-                <div className="relative w-full md:w-96">
+            <div className="flex flex-col gap-3 bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 shadow-xl">
+                {/* Row 1: Search */}
+                <div className="relative w-full">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
                     <input
                         type="text"
                         placeholder={t('employees.searchPlaceholder')}
-                        className="w-full h-10 pl-10 pr-4 rounded-lg border border-white/10 bg-black/20 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-sans"
+                        className="w-full h-10 pl-10 pr-4 rounded-lg border border-white/10 bg-black/20 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
 
-                {/* Filters */}
-                <div className="flex gap-2 w-full md:w-auto">
+                {/* Row 2: Filters + Sort */}
+                <div className="flex flex-wrap gap-2">
+                    {/* Department filter */}
                     <select
-                        className="h-10 px-3 rounded-lg border border-white/10 bg-black/20 text-white text-sm focus:outline-none focus:border-primary appearance-none cursor-pointer"
+                        className="h-10 px-3 rounded-lg border border-white/10 bg-black/20 text-white text-sm focus:outline-none focus:border-primary appearance-none cursor-pointer flex-1 min-w-[140px]"
                         value={deptFilter}
                         onChange={(e) => setDeptFilter(e.target.value)}
                     >
-                        <option value="all" className="bg-slate-900 text-white">{t('employees.filter.all')}</option>
+                        <option value="all" className="bg-slate-900">ทุกฝ่าย</option>
                         {departments.map(dept => (
-                            <option key={dept} value={dept} className="bg-slate-900 text-white">{dept}</option>
+                            <option key={dept} value={dept} className="bg-slate-900">{dept}</option>
                         ))}
                     </select>
 
+                    {/* Status filter */}
                     <select
-                        className="h-10 px-3 rounded-lg border border-white/10 bg-black/20 text-white text-sm focus:outline-none focus:border-primary appearance-none cursor-pointer"
+                        className="h-10 px-3 rounded-lg border border-white/10 bg-black/20 text-white text-sm focus:outline-none focus:border-primary appearance-none cursor-pointer flex-1 min-w-[120px]"
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
                     >
-                        <option value="all" className="bg-slate-900 text-white">{t('employees.filter.all')}</option>
-                        <option value="active" className="bg-slate-900 text-white">{t('employees.filter.active')}</option>
-                        <option value="on_leave" className="bg-slate-900 text-white">{t('employees.filter.active')}</option>
-                        <option value="inactive" className="bg-slate-900 text-white">{t('employees.filter.inactive')}</option>
+                        <option value="all" className="bg-slate-900">ทุกสถานะ</option>
+                        <option value="active" className="bg-slate-900">ปฏิบัติงาน</option>
+                        <option value="on_leave" className="bg-slate-900">ลา</option>
+                        <option value="inactive" className="bg-slate-900">ลาออก/พักงาน</option>
                     </select>
+
+                    {/* Sort */}
+                    <div className="flex items-center gap-1.5 h-10 px-3 rounded-lg border border-white/10 bg-black/20 flex-1 min-w-[180px]">
+                        <ArrowUpDown className="h-3.5 w-3.5 text-white/40 shrink-0" />
+                        <select
+                            className="bg-transparent text-white text-sm focus:outline-none cursor-pointer w-full appearance-none"
+                            value={sortKey}
+                            onChange={(e) => setSortKey(e.target.value as SortKey)}
+                        >
+                            {SORT_OPTIONS.map(o => (
+                                <option key={o.value} value={o.value} className="bg-slate-900">{o.label}</option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            {/* Table Content */}
+            {/* Table */}
             <div className="rounded-xl border border-white/20 bg-white/10 backdrop-blur-md overflow-hidden shadow-2xl">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
@@ -107,25 +167,25 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
                             <tr>
                                 <th className="px-6 py-4">{t('employees.table.name')}</th>
                                 <th className="px-6 py-4">{t('employees.table.position')}</th>
+                                <th className="px-6 py-4">อายุงาน</th>
                                 <th className="px-6 py-4">{t('employees.table.status')}</th>
-                                <th className="px-6 py-4 text-right">{t('common.actions')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/10">
-                            {filteredData.length > 0 ? (
-                                filteredData.map((employee) => (
+                            {displayData.length > 0 ? (
+                                displayData.map((employee) => (
                                     <tr
                                         key={employee.id}
                                         onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
-                                        className="hover:bg-white/5 transition-colors group cursor-pointer text-white/90"
+                                        className="hover:bg-white/5 transition-colors cursor-pointer text-white/90"
                                     >
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white font-bold border border-white/10 overflow-hidden text-lg">
+                                                <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white font-bold border border-white/10 overflow-hidden text-lg shrink-0">
                                                     {employee.photoPath ? (
                                                         <img src={employee.photoPath} alt="" className="w-full h-full object-cover" />
                                                     ) : (
-                                                        employee.firstNameEN ? employee.firstNameEN.charAt(0) : employee.firstNameTH.charAt(0)
+                                                        (employee.firstNameEN?.charAt(0) ?? employee.firstNameTH.charAt(0))
                                                     )}
                                                 </div>
                                                 <div>
@@ -135,27 +195,23 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-2 text-white">
-                                                    <Briefcase className="h-3.5 w-3.5 text-white/50" />
-                                                    <span>{employee.position}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-white/50 text-xs">
-                                                    <Building className="h-3.5 w-3.5" />
-                                                    <span>{employee.department}</span>
-                                                    <span className="px-1.5 py-0.5 rounded bg-white/10 text-white/60 font-mono text-[10px] border border-white/10">
-                                                        {employee.employeeCode}
-                                                    </span>
-                                                </div>
+                                            <div className="flex items-center gap-2 text-white">
+                                                <Briefcase className="h-3.5 w-3.5 text-white/50 shrink-0" />
+                                                <span className="truncate max-w-[160px]">{employee.position}</span>
                                             </div>
+                                            <div className="flex items-center gap-2 text-white/50 text-xs mt-1">
+                                                <Building className="h-3.5 w-3.5 shrink-0" />
+                                                <span className="truncate max-w-[160px]">{employee.department}</span>
+                                                <span className="px-1.5 py-0.5 rounded bg-white/10 text-white/60 font-mono text-[10px] border border-white/10 shrink-0">
+                                                    {employee.employeeCode}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-white/70 text-xs whitespace-nowrap">
+                                            {tenureText(employee.startDate)}
                                         </td>
                                         <td className="px-6 py-4">
                                             <StatusBadge status={employee.status} />
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button className="p-2 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors">
-                                                <MoreHorizontal className="h-5 w-5" />
-                                            </button>
                                         </td>
                                     </tr>
                                 ))
@@ -164,8 +220,8 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
                                     <td colSpan={4} className="h-64 text-center">
                                         <div className="flex flex-col items-center justify-center text-white/40">
                                             <User className="h-12 w-12 mb-4 opacity-50" />
-                                            <p className="text-lg font-medium">No employees found</p>
-                                            <p className="text-sm opacity-70">Try adjusting your search or filters.</p>
+                                            <p className="text-lg font-medium">ไม่พบพนักงาน</p>
+                                            <p className="text-sm opacity-70">ลองเปลี่ยนเงื่อนไขการค้นหาหรือตัวกรอง</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -175,41 +231,33 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
                 </div>
             </div>
 
-            <div className="text-xs text-muted-foreground text-center pt-4">
-                Showing {filteredData.length} of {initialData.length} employees
+            <div className="text-xs text-white/40 text-center pt-2">
+                แสดง {displayData.length} จาก {initialData.length} คน
             </div>
         </div>
     )
 }
 
 function StatusBadge({ status }: { status: string }) {
-    const { t } = useTranslation()
-    // DB status is lowercase, map to styles
     const styles: Record<string, string> = {
-        "active": "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-        "inactive": "bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/20",
-        "on_leave": "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20",
+        "active":   "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
+        "inactive": "bg-slate-500/15 text-slate-400 border-slate-500/20",
+        "on_leave": "bg-amber-500/15 text-amber-400 border-amber-500/20",
     }
-
-    // Display labels
     const labels: Record<string, string> = {
-        "active": t('employees.filter.active'),
-        "inactive": t('employees.filter.inactive'),
-        "on_leave": "On Leave"
+        "active":   "ปฏิบัติงาน",
+        "inactive": "ลาออก/พักงาน",
+        "on_leave": "ลา",
     }
-
-    const defaultStyle = "bg-primary/10 text-primary border-primary/20"
-
     return (
         <span className={cn(
             "px-2.5 py-1 rounded-full text-xs font-medium border inline-flex items-center gap-1.5",
-            styles[status] || defaultStyle
+            styles[status] ?? "bg-primary/10 text-primary border-primary/20"
         )}>
-            <span className={cn("h-1.5 w-1.5 rounded-full",
-                status === 'active' ? 'bg-current' :
-                    status === 'inactive' ? 'bg-current opacity-50' : 'bg-current animate-pulse'
+            <span className={cn("h-1.5 w-1.5 rounded-full bg-current",
+                status === "on_leave" && "animate-pulse"
             )} />
-            {labels[status] || status}
+            {labels[status] ?? status}
         </span>
     )
 }

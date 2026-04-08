@@ -1,7 +1,7 @@
 import { ArrowLeft, User, Phone, Mail, MapPin, Building, Briefcase, Calendar, Clock, Shield, Bell, FileText, ChevronRight, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase-admin"
 import { notFound } from "next/navigation"
 
 export const dynamic = 'force-dynamic'
@@ -15,7 +15,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
 
     // 1. Fetch Employee from Supabase Cloud
     // Include the applicant relation to get recruitment origin data
-    const { data: employee, error } = await supabase
+    const { data: employee, error } = await supabaseAdmin
         .from('employees')
         .select(`
             *,
@@ -47,7 +47,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
     let photoUrl = null
     const photoPath = employee.photo_path || employee.applicants?.photo_path
     if (photoPath) {
-        const { data } = await supabase.storage
+        const { data } = await supabaseAdmin.storage
             .from(employee.photo_path ? 'employee-assets' : 'applicant-assets')
             .createSignedUrl(photoPath, 3600)
         photoUrl = data?.signedUrl
