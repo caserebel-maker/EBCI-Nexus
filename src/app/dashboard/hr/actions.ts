@@ -1,7 +1,6 @@
 'use server'
 
 import crypto from "crypto"
-import { supabase } from "@/lib/supabase"
 import { supabaseAdmin } from "@/lib/supabase-admin"
 import { sendEmail } from "@/lib/email"
 import { revalidatePath } from "next/cache"
@@ -26,8 +25,8 @@ export async function publishAnnouncement(formData: FormData) {
             console.log('Uploading image...')
             const fileExt = image.name.split('.').pop()
             const fileName = `${Math.random()}.${fileExt}`
-            const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('announcement-images') // Changed from 'announcements' to 'announcement-images' to match original bucket
+            const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+                .from('announcement-images')
                 .upload(fileName, image)
 
             if (uploadError) {
