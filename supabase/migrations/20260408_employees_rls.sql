@@ -42,7 +42,7 @@ CREATE POLICY "manager_department"
         AND department = (
             SELECT e.department
             FROM employees e
-            WHERE e.user_id = auth.uid()
+            WHERE e.user_id = auth.uid()::text
             LIMIT 1
         )
     );
@@ -56,7 +56,7 @@ CREATE POLICY "employee_self"
     TO authenticated
     USING (
         (auth.jwt() -> 'user_metadata' ->> 'role') = 'employee'
-        AND user_id = auth.uid()
+        AND user_id = auth.uid()::text
     );
 
 -- ----------------------------------------------------------------------------
