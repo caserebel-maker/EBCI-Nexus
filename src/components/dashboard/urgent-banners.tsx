@@ -70,13 +70,14 @@ function UrgentModal({ item, onClose }: { item: Announcement; onClose: () => voi
                     <X size={20} />
                 </button>
 
-                {/* Image — full width, 16:9 */}
+                {/* Image — full width, contain (no crop), dark bg */}
                 {item.imageUrl ? (
-                    <div className="w-full" style={{ aspectRatio: '16/9' }}>
+                    <div className="w-full bg-gray-900 flex items-center justify-center" style={{ minHeight: '12rem', maxHeight: '20rem' }}>
                         <img
                             src={item.imageUrl}
                             alt={item.headline}
-                            className="w-full h-full object-cover"
+                            className="w-full object-contain"
+                            style={{ maxHeight: '20rem' }}
                         />
                     </div>
                 ) : (
