@@ -10,7 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate --no-engine"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
