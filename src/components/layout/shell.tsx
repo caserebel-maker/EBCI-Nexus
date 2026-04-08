@@ -27,7 +27,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
     const navItems = NAVIGATION_CONFIG[role] || []
 
     return (
-        <div className="flex min-h-screen bg-brand-gradient dark:bg-background pt-16 lg:pt-0 transition-colors duration-300">
+        <div className="flex h-screen overflow-hidden bg-brand-gradient bg-fixed dark:bg-background pt-16 lg:pt-0 transition-colors duration-300">
             {/* Mobile Overlay */}
             {mobileMenuOpen && (
                 <div className="fixed inset-0 z-40 bg-black/80 lg:hidden" onClick={toggleMobileMenu} />
@@ -36,8 +36,8 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
             {/* Sidebar */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 z-50 h-screen transition-all duration-300 ease-in-out lg:relative",
-                    "bg-brand-gradient dark:bg-card border-r border-white/10 dark:border-border",
+                    "fixed top-0 left-0 z-50 h-screen transition-all duration-300 ease-in-out",
+                    "bg-brand-gradient bg-fixed dark:bg-card border-r border-white/10 dark:border-border",
                     "text-white dark:text-card-foreground",
                     "w-64 shadow-2xl",
                     mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
@@ -114,8 +114,8 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                 </div>
             </aside>
 
-            {/* Main Content Area */}
-            <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent">
+            {/* Main Content Area — offset for fixed sidebar on desktop */}
+            <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent lg:pl-64">
                 {/* Top Navbar */}
                 <header className="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground">
                     <div className="flex items-center gap-4">
