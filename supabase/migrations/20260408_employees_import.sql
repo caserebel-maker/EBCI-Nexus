@@ -12,8 +12,10 @@
 -- เพิ่ม column ที่ขาด: nickname, probation_end_date, date_of_birth, gender, end_date
 -- =============================================================================
 
--- ตั้ง default ให้ id ใช้ gen_random_uuid() (กรณีตารางสร้างโดยไม่มี default)
+-- ตั้ง default ให้ id และ timestamps (กรณีตารางสร้างโดยไม่มี default)
 ALTER TABLE employees ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE employees ALTER COLUMN updated_at SET DEFAULT NOW();
+ALTER TABLE employees ALTER COLUMN created_at SET DEFAULT NOW();
 
 -- เพิ่ม column ที่ยังไม่มี (idempotent)
 ALTER TABLE employees
