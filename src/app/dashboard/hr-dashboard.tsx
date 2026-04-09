@@ -37,14 +37,16 @@ const LEAVE_LABELS: Record<string, string> = {
     sick: 'ลาป่วย', personal: 'ลากิจ', annual: 'ลาพักร้อน',
     maternity: 'ลาคลอด', ordination: 'ลาบวช',
 }
+// hex โดยตรง — ไม่ใช้ CSS variable เพื่อให้ recharts render ได้ถูกต้อง
 const LEAVE_COLORS: Record<string, string> = {
-    sick: '#e07a7a', personal: '#e0b87a', annual: '#7ab5e0',
-    maternity: '#c47ae0', ordination: '#7ae0c4',
+    sick:      '#A78BFA', // ม่วง lavender
+    personal:  '#F472B6', // ชมพู
+    annual:    '#60A5FA', // ฟ้า
+    maternity: '#34D399', // เขียว mint
+    ordination:'#FBBF24', // เหลืองทอง
 }
-const DEPT_COLORS = [
-    '#c9606f', '#e8909a', '#a04455', '#f0b8c0',
-    '#7a2d3a', '#d4788a', '#561e23', '#eecdd1',
-]
+const CHART_PALETTE = ['#60A5FA', '#34D399', '#FBBF24', '#F472B6', '#A78BFA', '#FB923C']
+const DEPT_COLORS = CHART_PALETTE
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Metrics {
@@ -112,9 +114,9 @@ function DeptDonut({ data, total }: { data: any[]; total: number }) {
 
     return (
         <div className="flex items-center gap-4">
-            {/* Pie */}
-            <div className="shrink-0" style={{ width: 180, height: 180 }}>
-                <ResponsiveContainer width="100%" height="100%">
+            {/* Pie — ใช้ fixed px height แทน "100%" เพื่อให้ recharts render bars/cells ถูกต้อง */}
+            <div className="shrink-0 relative" style={{ width: 180, height: 180 }}>
+                <ResponsiveContainer width={180} height={180}>
                     <PieChart>
                         <Pie
                             data={data}
@@ -125,13 +127,14 @@ function DeptDonut({ data, total }: { data: any[]; total: number }) {
                             onMouseEnter={(_, i) => setActiveIndex(i)}
                             onMouseLeave={() => setActiveIndex(null)}
                             strokeWidth={0}
+                            isAnimationActive={false}
                         >
                             {data.map((_, i) => (
                                 <Cell
                                     key={i}
                                     fill={DEPT_COLORS[i % DEPT_COLORS.length]}
                                     opacity={activeIndex === null || activeIndex === i ? 1 : 0.45}
-                                    style={{ cursor: 'pointer', transition: 'opacity 0.2s' }}
+                                    style={{ cursor: 'pointer' }}
                                 />
                             ))}
                         </Pie>
@@ -142,11 +145,8 @@ function DeptDonut({ data, total }: { data: any[]; total: number }) {
                         />
                     </PieChart>
                 </ResponsiveContainer>
-                {/* Center text via absolute overlay */}
-                <div
-                    className="flex flex-col items-center justify-center pointer-events-none"
-                    style={{ marginTop: -180, height: 180 }}
-                >
+                {/* Center label — absolute overlay */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-3xl font-black text-white">{total}</span>
                     <span className="text-xs text-white/45 font-bold mt-0.5 text-center leading-tight">พนักงาน<br />ทั้งหมด</span>
                 </div>
@@ -318,7 +318,9 @@ export function HRDashboard({
                                 <Tooltip content={<LeaveTooltip />} />
                                 <Legend formatter={v => <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13 }}>{LEAVE_LABELS[v] ?? v}</span>} />
                                 {Object.keys(LEAVE_LABELS).map(k => (
-                                    <Bar key={k} dataKey={k} stackId="a" fill={LEAVE_COLORS[k]}
+                                    <Bar key={k} dataKey={k} stackId="a"
+                                        fill={LEAVE_COLORS[k]}
+                                        isAnimationActive={false}
                                         radius={k === 'ordination' ? [4, 4, 0, 0] : [0, 0, 0, 0]} />
                                 ))}
                             </BarChart>
@@ -348,8 +350,8 @@ export function HRDashboard({
                                         formatter={(v: any, name: string) => [`${v} คน`, name === 'present' ? 'มาทำงาน' : 'ลา/ขาด']}
                                     />
                                     <Legend formatter={v => <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13 }}>{v === 'present' ? 'มาทำงาน' : 'ลา/ขาด'}</span>} />
-                                    <Line type="monotone" dataKey="present" stroke="#ad5f6c" strokeWidth={2.5} dot={{ r: 4, fill: '#ad5f6c' }} />
-                                    <Line type="monotone" dataKey="absent" stroke="#e07a7a" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3, fill: '#e07a7a' }} />
+                                    <Line type="monotone" dataKey="present" stroke="#60A5FA" strokeWidth={2.5} dot={{ r: 4, fill: '#60A5FA' }} isAnimationActive={false} />
+                                    <Line type="monotone" dataKey="absent" stroke="#F472B6" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3, fill: '#F472B6' }} isAnimationActive={false} />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
