@@ -57,12 +57,8 @@ export default async function EmployeesPage() {
 
     return (
         <div className="space-y-6">
-            {/* Page Header */}
-            {/* Page Header */}
             <EmployeesHeader />
-
-            {/* Main Content */}
-            <EmployeesTable initialData={employees} />
+            <EmployeesTable initialData={employees} isHrAdmin={userRole === 'hr_admin'} />
         </div>
     )
 }

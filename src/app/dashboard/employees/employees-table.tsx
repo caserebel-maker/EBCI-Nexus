@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Search, User, Building, Briefcase, ArrowUpDown } from "lucide-react"
+import { Search, User, Building, Briefcase, ArrowUpDown, UserPlus } from "lucide-react"
+import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { useTranslation } from "@/contexts/language-context"
@@ -85,9 +86,10 @@ function tenureText(startDate: Date): string {
 
 interface EmployeesTableProps {
     initialData: Employee[]
+    isHrAdmin?: boolean
 }
 
-export function EmployeesTable({ initialData }: EmployeesTableProps) {
+export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) {
     const router = useRouter()
     const { t } = useTranslation()
     const [searchTerm, setSearchTerm] = useState("")
@@ -117,18 +119,27 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
         <div className="space-y-4">
             {/* Toolbar */}
             <div style={silverOverlay} className="flex flex-col gap-3 p-4 shadow-xl">
-                {/* Row 1: Search */}
-                <div className="relative w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
-                    <input
-                        type="text"
-                        placeholder={t('employees.searchPlaceholder')}
-                        className="w-full h-10 pl-10 pr-4 rounded-lg border border-white/10 bg-black/20 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                {/* Row 1: Search + Add button */}
+                <div className="flex items-center gap-3">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+                        <input
+                            type="text"
+                            placeholder={t('employees.searchPlaceholder')}
+                            className="w-full h-10 pl-10 pr-4 rounded-lg border border-white/10 bg-black/20 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 font-sans"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    {isHrAdmin && (
+                        <Link
+                            href="/dashboard/employees/new"
+                            className="inline-flex items-center gap-2 h-10 px-4 rounded-lg text-sm font-semibold bg-[#882136]/70 hover:bg-[#882136] text-white border border-[#ad5f6c]/30 hover:border-[#ad5f6c]/60 transition-all whitespace-nowrap shrink-0"
+                        >
+                            <UserPlus size={15} /> + เพิ่มพนักงาน
+                        </Link>
+                    )}
                 </div>
-
                 {/* Row 2: Filters + Sort */}
                 <div className="flex flex-wrap gap-2">
                     {/* Department filter */}
