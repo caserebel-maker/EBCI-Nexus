@@ -87,6 +87,17 @@ export default async function AdminDashboard() {
             .order('publish_date', { ascending: false }).limit(5),
     ])
 
+    // ─── Generate signed URLs for announcement images ───
+    const newsWithImages = await Promise.all(
+        (newsAnnouncements ?? []).map(async (a: any) => {
+            if (!a.image_path) return a
+            const { data } = await supabaseAdmin.storage
+                .from('announcement-images')
+                .createSignedUrl(a.image_path, 3600)
+            return { ...a, image_url: data?.signedUrl ?? null }
+        })
+    )
+
     // ─── Build dept distribution for donut chart ───
     const deptMap: Record<string, number> = {}
     for (const e of employees ?? []) {
@@ -210,7 +221,7 @@ export default async function AdminDashboard() {
             weekDays={weekDays.map(d => d.toISOString())}
             leavesToday={leavesToday ?? []}
             urgentBanners={announcements ?? []}
-            newsAnnouncements={newsAnnouncements ?? []}
+            newsAnnouncements={newsWithImages}
             birthdays={birthdays}
         />
     )

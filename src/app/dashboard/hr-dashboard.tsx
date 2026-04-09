@@ -263,9 +263,9 @@ function NewsModal({ news, onClose }: { news: any; onClose: () => void }) {
                 </div>
                 {/* Body */}
                 <div className="overflow-y-auto p-6 pt-4 space-y-4">
-                    {news.image_path && (
+                    {news.image_url && (
                         <img
-                            src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/announcement-images/${news.image_path}`}
+                            src={news.image_url}
                             alt={news.headline}
                             className="w-full rounded-lg object-cover"
                         />
