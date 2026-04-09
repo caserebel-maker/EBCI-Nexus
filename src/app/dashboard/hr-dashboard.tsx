@@ -12,21 +12,25 @@ import {
 import { UrgentBanners } from '@/components/dashboard/urgent-banners'
 import { cn } from '@/lib/utils'
 
-// ─── Styles (aligned with employees-table card style) ────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const glassStyle: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.06)',
+    background: 'rgba(255,255,255,0.13)',
     backdropFilter: 'blur(12px)',
     WebkitBackdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255,255,255,0.12)',
+    border: '1px solid rgba(255,255,255,0.22)',
+    borderTop: '1px solid rgba(255,255,255,0.30)',
     borderRadius: '16px',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15)',
 }
 
 const metricCardStyle: React.CSSProperties = {
-    background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(200,200,220,0.04) 50%, rgba(255,255,255,0.07) 100%)',
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.16) 0%, rgba(200,200,220,0.08) 50%, rgba(255,255,255,0.13) 100%)',
     backdropFilter: 'blur(12px)',
     WebkitBackdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255,255,255,0.12)',
+    border: '1px solid rgba(255,255,255,0.22)',
+    borderTop: '1px solid rgba(255,255,255,0.30)',
     borderRadius: '16px',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15)',
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
