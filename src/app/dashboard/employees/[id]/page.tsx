@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase-admin"
 import { notFound } from "next/navigation"
+import { cookies } from "next/headers"
 import { EmployeeProfileView } from "./employee-profile-view"
 
 export const dynamic = 'force-dynamic'
@@ -10,6 +11,17 @@ interface PageProps {
 
 export default async function EmployeeDetailPage({ params }: PageProps) {
     const { id } = await params
+
+    // Resolve role from session cookie
+    const cookieStore = await cookies()
+    const sessionCookie = cookieStore.get('nexus_session')
+    let isHrAdmin = false
+    if (sessionCookie?.value) {
+        try {
+            const session = JSON.parse(sessionCookie.value)
+            isHrAdmin = session.role === 'hr_admin'
+        } catch { /* ignore */ }
+    }
 
     const { data: employee, error } = await supabaseAdmin
         .from('employees')
@@ -65,6 +77,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             displayName={displayName}
             stats={stats}
             id={id}
+            isHrAdmin={isHrAdmin}
         />
     )
 }
