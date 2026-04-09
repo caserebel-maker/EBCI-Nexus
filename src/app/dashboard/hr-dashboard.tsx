@@ -80,13 +80,13 @@ function MetricCard({ title, value, sub, icon: Icon, accent }: {
     title: string; value: string | number; sub?: string; icon: any; accent: string
 }) {
     return (
-        <div style={metricCardStyle} className="p-4 lg:p-6 flex items-start gap-3 min-w-0 overflow-hidden">
+        <div style={metricCardStyle} className="p-3 lg:p-5 flex items-start gap-3">
             <div className={cn('h-10 w-10 lg:h-12 lg:w-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg', accent)}>
                 <Icon size={22} className="text-white" />
             </div>
-            <div className="min-w-0 flex-1">
-                <p className="text-xs lg:text-sm font-bold text-white/55 uppercase tracking-wide leading-tight whitespace-nowrap overflow-hidden text-ellipsis">{title}</p>
-                <p className="text-3xl lg:text-4xl font-black text-white mt-0.5 leading-none">{value}</p>
+            <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white/55 leading-tight whitespace-normal">{title}</p>
+                <p className="text-2xl lg:text-3xl font-black text-white mt-0.5 leading-none">{value}</p>
                 {sub && <p className="text-xs lg:text-sm text-white/45 mt-1 leading-tight">{sub}</p>}
             </div>
         </div>
