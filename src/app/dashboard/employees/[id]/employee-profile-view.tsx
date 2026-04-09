@@ -1,15 +1,15 @@
 'use client'
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useRef } from "react"
 import {
     ArrowLeft, User, Phone, Mail, MapPin, Building, Briefcase,
     Calendar, Clock, Shield, Bell, FileText, ChevronRight,
-    MessageSquare, Pencil, X, Check, AlertCircle, CheckCircle2
+    MessageSquare, Pencil, X, Check, AlertCircle, CheckCircle2, Camera
 } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "@/contexts/language-context"
-import { updateEmployee } from "./actions"
+import { updateEmployee, uploadEmployeePhoto } from "./actions"
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const glassCard: React.CSSProperties = {
@@ -102,12 +102,22 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
     const [form, setForm] = useState<FormState>(initForm)
     const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
     const [isPending, startTransition] = useTransition()
+    const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+    const [photoFile, setPhotoFile] = useState<File | null>(null)
+    const photoInputRef = useRef<HTMLInputElement>(null)
 
     const set = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
         setForm(prev => ({ ...prev, [field]: e.target.value }))
 
-    const handleEdit = () => { setForm(initForm()); setIsEditing(true) }
-    const handleCancel = () => { setForm(initForm()); setIsEditing(false) }
+    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        setPhotoFile(file)
+        setPhotoPreview(URL.createObjectURL(file))
+    }
+
+    const handleEdit = () => { setForm(initForm()); setPhotoPreview(null); setPhotoFile(null); setIsEditing(true) }
+    const handleCancel = () => { setForm(initForm()); setPhotoPreview(null); setPhotoFile(null); setIsEditing(false) }
 
     const showToast = (type: 'success' | 'error', msg: string) => {
         setToast({ type, msg })
@@ -116,6 +126,17 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
 
     const handleSave = () => {
         startTransition(async () => {
+            // Upload photo first if a new file was selected
+            if (photoFile) {
+                const fd = new FormData()
+                fd.append('photo', photoFile)
+                const photoResult = await uploadEmployeePhoto(id, fd)
+                if (photoResult.error) {
+                    showToast('error', `อัปโหลดรูปไม่สำเร็จ: ${photoResult.error}`)
+                    return
+                }
+            }
+
             const result = await updateEmployee(id, {
                 first_name_th: form.first_name_th,
                 last_name_th: form.last_name_th,
@@ -133,6 +154,7 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
                 showToast('error', `เกิดข้อผิดพลาด: ${result.error}`)
             } else {
                 showToast('success', 'บันทึกข้อมูลสำเร็จ')
+                setPhotoFile(null)
                 setIsEditing(false)
             }
         })
@@ -203,11 +225,36 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
             {/* Header / Identity Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div style={silverCard} className="lg:col-span-2 flex flex-col md:flex-row gap-6 p-6 shadow-xl">
-                    <div className="h-32 w-32 md:h-40 md:w-40 rounded-2xl bg-brand-gradient flex items-center justify-center text-white font-bold text-4xl border-2 border-white/20 shrink-0 overflow-hidden shadow-inner">
-                        {photoUrl
-                            ? <img src={photoUrl} className="h-full w-full object-cover" alt={currentDisplayName} />
-                            : currentDisplayName.charAt(0)
-                        }
+                    <div className="relative shrink-0">
+                        <div className="h-32 w-32 md:h-40 md:w-40 rounded-2xl bg-brand-gradient flex items-center justify-center text-white font-bold text-4xl border-2 border-white/20 overflow-hidden shadow-inner">
+                            {(photoPreview || photoUrl)
+                                ? <img src={photoPreview ?? photoUrl!} className="h-full w-full object-cover" alt={currentDisplayName} />
+                                : currentDisplayName.charAt(0)
+                            }
+                        </div>
+                        {isEditing && (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={() => photoInputRef.current?.click()}
+                                    className="absolute inset-0 rounded-2xl flex items-end justify-center pb-3 bg-black/40 opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+                                >
+                                    <span className="flex items-center gap-1.5 bg-black/70 text-white text-xs font-semibold px-3 py-1.5 rounded-lg">
+                                        <Camera size={13} /> เปลี่ยนรูป
+                                    </span>
+                                </button>
+                                <input
+                                    ref={photoInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    className="hidden"
+                                    onChange={handlePhotoChange}
+                                />
+                            </>
+                        )}
+                        {photoPreview && isEditing && (
+                            <span className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">ใหม่</span>
+                        )}
                     </div>
                     <div className="flex-1 space-y-4">
                         <div className="flex flex-wrap items-start justify-between gap-2">

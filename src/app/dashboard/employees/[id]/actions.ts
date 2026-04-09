@@ -65,3 +65,38 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
 
     return { success: true }
 }
+
+export async function uploadEmployeePhoto(employeeId: string, formData: FormData) {
+    const session = await getSession()
+    if (!session || session.role !== 'hr_admin') {
+        return { error: 'Unauthorized' }
+    }
+
+    const file = formData.get('photo') as File | null
+    if (!file || file.size === 0) return { error: 'No file provided' }
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) return { error: 'ไฟล์ต้องเป็น JPG, PNG หรือ WebP' }
+    if (file.size > 5 * 1024 * 1024) return { error: 'ขนาดไฟล์ต้องไม่เกิน 5 MB' }
+
+    const ext = file.name.split('.').pop()
+    const fileName = `${employeeId}-${Date.now()}.${ext}`
+
+    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+        .from('employee-assets')
+        .upload(fileName, file, { upsert: true })
+
+    if (uploadError) {
+        console.error('uploadEmployeePhoto error:', uploadError)
+        return { error: uploadError.message }
+    }
+
+    const { error: dbError } = await supabaseAdmin
+        .from('employees')
+        .update({ photo_path: uploadData.path })
+        .eq('id', employeeId)
+
+    if (dbError) return { error: dbError.message }
+
+    return { success: true, path: uploadData.path }
+}
