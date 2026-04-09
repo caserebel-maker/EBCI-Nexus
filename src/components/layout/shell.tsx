@@ -36,7 +36,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
             {/* Sidebar */}
             <aside
                 className={cn(
-                    "fixed top-0 left-0 z-50 h-screen transition-all duration-300 ease-in-out",
+                    "fixed top-0 left-0 z-50 h-screen flex flex-col transition-all duration-300 ease-in-out",
                     "bg-brand-gradient bg-fixed dark:bg-card border-r border-white/10 dark:border-border",
                     "text-white dark:text-card-foreground",
                     "w-64 shadow-2xl",
@@ -44,7 +44,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                 )}
             >
                 {/* Sidebar Header */}
-                <div className="flex flex-col h-auto pt-12 pb-10">
+                <div className="flex flex-col shrink-0 pt-12 pb-10">
                     <div className="flex flex-col items-center justify-center px-4 w-full">
                         <Link href="/dashboard" className="flex flex-col items-center gap-4 group">
                             <img
@@ -58,7 +58,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                 </div>
 
                 {/* User Profile (Top) */}
-                <div className="p-4 border-b border-white/10 dark:border-border">
+                <div className="p-4 border-b border-white/10 dark:border-border shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-full bg-white/20 dark:bg-muted flex items-center justify-center text-sm font-bold text-white dark:text-primary">
                             {userName ? userName.charAt(0).toUpperCase() : 'U'}
@@ -71,7 +71,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                 </div>
 
                 {/* Nav Links */}
-                <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
+                <nav className="p-4 space-y-2 flex-1 overflow-y-auto pb-20">
                     {navItems.map((item, idx) => {
                         const isActive = item.href === '/dashboard'
                             ? pathname === '/dashboard'
