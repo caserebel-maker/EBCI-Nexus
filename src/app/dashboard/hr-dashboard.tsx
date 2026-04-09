@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import {
     Users, CalendarDays, Clock, AlertTriangle, TrendingUp,
-    CheckCircle, XCircle, Cake, Building2, Loader2, Megaphone, Gift
+    CheckCircle, XCircle, Cake, Building2, Loader2, Megaphone, Gift, X
 } from 'lucide-react'
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -176,8 +177,134 @@ function DeptDonut({ data, total }: { data: any[]; total: number }) {
     )
 }
 
+// ─── Day Leave Modal ──────────────────────────────────────────────────────────
+const LEAVE_BADGE: Record<string, string> = {
+    sick:       'bg-purple-500/20 text-purple-300 border-purple-500/30',
+    personal:   'bg-pink-500/20 text-pink-300 border-pink-500/30',
+    annual:     'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    maternity:  'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+    ordination: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+}
+
+function DayLeaveModal({ date, onClose }: { date: Date; onClose: () => void }) {
+    const router = useRouter()
+    const [leaves, setLeaves] = useState<any[] | null>(null)
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        const iso = date.toISOString().split('T')[0]
+        fetch(`/api/leave/by-date?date=${iso}`)
+            .then(r => r.json())
+            .then(data => { setLeaves(Array.isArray(data) ? data : []); setLoading(false) })
+            .catch(() => { setLeaves([]); setLoading(false) })
+    }, [date])
+
+    const dateStr = date.toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ animation: 'fadeInModal 0.18s ease' }}
+            onClick={onClose}
+        >
+            <style>{`
+                @keyframes fadeInModal {
+                    from { opacity: 0; }
+                    to   { opacity: 1; }
+                }
+                @keyframes slideUpModal {
+                    from { opacity: 0; transform: translateY(16px) scale(0.97); }
+                    to   { opacity: 1; transform: translateY(0) scale(1); }
+                }
+            `}</style>
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/60" style={{ backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} />
+
+            {/* Panel */}
+            <div
+                style={{
+                    ...glassStyle,
+                    animation: 'slideUpModal 0.22s cubic-bezier(0.34,1.56,0.64,1)',
+                    maxHeight: '80vh',
+                }}
+                className="relative w-full max-w-md flex flex-col z-10"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between p-5 border-b border-white/10">
+                    <div>
+                        <p className="text-[10px] uppercase font-black text-white/35 tracking-[0.2em] mb-0.5">รายชื่อผู้ลา</p>
+                        <h3 className="text-base font-black text-white leading-snug">{dateStr}</h3>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="h-8 w-8 rounded-lg bg-white/5 hover:bg-white/15 flex items-center justify-center text-white/50 hover:text-white transition-colors ml-4 shrink-0"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto p-4">
+                    {loading ? (
+                        <div className="flex items-center justify-center py-10">
+                            <Loader2 size={22} className="animate-spin text-white/40" />
+                        </div>
+                    ) : !leaves || leaves.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-white/35">
+                            <CalendarDays size={36} className="mb-3 opacity-50" />
+                            <p className="text-sm font-bold">ไม่มีพนักงานลาวันนี้</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-1.5">
+                            {leaves.map(lr => {
+                                const emp = lr.employees
+                                if (!emp) return null
+                                return (
+                                    <button
+                                        key={lr.id}
+                                        onClick={() => { router.push(`/dashboard/employees/${emp.id}`); onClose() }}
+                                        className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-white/10 transition-colors text-left group"
+                                    >
+                                        <div className="h-10 w-10 rounded-full bg-[#561e23]/80 border border-[#ad5f6c]/40 flex items-center justify-center text-white font-black text-sm shrink-0">
+                                            {emp.first_name_th?.charAt(0)}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-white font-bold text-sm truncate group-hover:text-white transition-colors">
+                                                {emp.first_name_th} {emp.last_name_th}
+                                            </p>
+                                            <p className="text-white/45 text-xs truncate">{emp.department}</p>
+                                        </div>
+                                        <span className={cn(
+                                            'text-xs font-bold px-2.5 py-1 rounded-full border shrink-0',
+                                            LEAVE_BADGE[lr.leave_type] ?? 'bg-white/10 text-white/60 border-white/15'
+                                        )}>
+                                            {LEAVE_LABELS[lr.leave_type] ?? lr.leave_type}
+                                        </span>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                {leaves && leaves.length > 0 && (
+                    <div className="px-5 py-3 border-t border-white/10 text-xs text-white/30 font-bold uppercase tracking-widest text-center">
+                        {leaves.length} คน · คลิกชื่อเพื่อดูโปรไฟล์
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
 // ─── Week Calendar ────────────────────────────────────────────────────────────
-function WeekCalendar({ weekDays, leavesToday }: { weekDays: string[]; leavesToday: any[] }) {
+function WeekCalendar({ weekDays, leavesToday, onDayClick }: {
+    weekDays: string[]
+    leavesToday: any[]
+    onDayClick: (date: Date) => void
+}) {
     const DAY_NAMES = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา']
     const today = new Date(); today.setHours(0, 0, 0, 0)
     return (
@@ -186,11 +313,16 @@ function WeekCalendar({ weekDays, leavesToday }: { weekDays: string[]; leavesTod
                 const d = new Date(iso)
                 const isToday = d.toDateString() === today.toDateString()
                 return (
-                    <div key={i} className={cn(
-                        'flex flex-col items-center py-2.5 px-1 rounded-xl text-center transition-colors',
-                        isToday ? 'bg-[#882136]/70 ring-1 ring-[#ad5f6c]' : 'bg-white/5',
-                        i >= 5 && 'opacity-40',
-                    )}>
+                    <button
+                        key={i}
+                        onClick={() => onDayClick(d)}
+                        className={cn(
+                            'flex flex-col items-center py-2.5 px-1 rounded-xl text-center transition-colors cursor-pointer',
+                            'hover:bg-white/10 active:scale-95',
+                            isToday ? 'bg-[#882136]/70 ring-1 ring-[#ad5f6c]' : 'bg-white/5',
+                            i >= 5 && 'opacity-40',
+                        )}
+                    >
                         <span className="text-xs font-bold text-white/40">{DAY_NAMES[i]}</span>
                         <span className={cn('text-lg font-black mt-0.5', isToday ? 'text-white' : 'text-white/70')}>
                             {d.getDate()}
@@ -200,7 +332,7 @@ function WeekCalendar({ weekDays, leavesToday }: { weekDays: string[]; leavesTod
                                 {leavesToday.length}
                             </span>
                         )}
-                    </div>
+                    </button>
                 )
             })}
         </div>
@@ -283,9 +415,16 @@ export function HRDashboard({
 }: Props) {
     const [pending, setPending] = useState(pendingLeaves)
     const removePending = (id: string) => setPending(prev => prev.filter(r => r.id !== id))
+    const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+    console.log('leaveChartData:', leaveChartData)
 
     return (
         <div className="space-y-6">
+            {/* Day leave modal */}
+            {selectedDay && (
+                <DayLeaveModal date={selectedDay} onClose={() => setSelectedDay(null)} />
+            )}
+
             {/* Urgent Banners */}
             <UrgentBanners banners={urgentBanners} />
 
@@ -320,6 +459,8 @@ export function HRDashboard({
                                 {Object.keys(LEAVE_LABELS).map(k => (
                                     <Bar key={k} dataKey={k} stackId="a"
                                         fill={LEAVE_COLORS[k]}
+                                        opacity={1}
+                                        fillOpacity={1}
                                         isAnimationActive={false}
                                         radius={k === 'ordination' ? [4, 4, 0, 0] : [0, 0, 0, 0]} />
                                 ))}
@@ -412,7 +553,7 @@ export function HRDashboard({
                     {/* Week calendar */}
                     <div style={glassStyle} className="p-5">
                         <SectionHeader title={`ปฏิทินสัปดาห์นี้ · ลาวันนี้ ${leavesToday.length} คน`} icon={CalendarDays} />
-                        <WeekCalendar weekDays={weekDays} leavesToday={leavesToday} />
+                        <WeekCalendar weekDays={weekDays} leavesToday={leavesToday} onDayClick={setSelectedDay} />
                     </div>
 
                     {/* Pending approvals */}
