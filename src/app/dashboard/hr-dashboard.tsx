@@ -212,7 +212,7 @@ function SectionHeader({ title, icon: Icon, warn }: { title: string; icon: any; 
     return (
         <div className="flex items-center gap-2 mb-4">
             <Icon size={16} className={warn ? 'text-amber-400' : 'text-[#ad5f6c]'} />
-            <h2 className="text-sm font-black text-white/65 uppercase tracking-[0.15em]">{title}</h2>
+            <h2 className="text-base lg:text-lg font-semibold text-white/65 tracking-wide">{title}</h2>
         </div>
     )
 }
