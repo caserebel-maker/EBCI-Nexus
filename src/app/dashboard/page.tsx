@@ -82,7 +82,7 @@ export default async function AdminDashboard() {
             .order('publish_date', { ascending: false }).limit(10),
 
         // Latest news announcements for right-column section
-        supabaseAdmin.from('announcements').select('id, headline, publish_date, priority')
+        supabaseAdmin.from('announcements').select('id, headline, publish_date, priority, content')
             .eq('publishStatus', 'published')
             .order('publish_date', { ascending: false }).limit(5),
     ])

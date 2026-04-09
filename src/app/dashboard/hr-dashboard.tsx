@@ -217,6 +217,62 @@ function SectionHeader({ title, icon: Icon, warn }: { title: string; icon: any; 
     )
 }
 
+// ─── News Modal ───────────────────────────────────────────────────────────────
+const newsModalOverlayStyle: React.CSSProperties = {
+    background: 'rgba(20,5,8,0.72)',
+    backdropFilter: 'blur(4px)',
+}
+const newsModalStyle: React.CSSProperties = {
+    background: 'linear-gradient(145deg, rgba(255,255,255,0.18) 0%, rgba(200,180,190,0.14) 40%, rgba(255,255,255,0.16) 100%), linear-gradient(145deg, rgba(86,30,35,0.72) 0%, rgba(60,15,20,0.88) 60%, rgba(100,35,45,0.72) 100%)',
+    backdropFilter: 'blur(24px)',
+    border: '1px solid rgba(255,255,255,0.18)',
+    boxShadow: '0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.14)',
+    borderRadius: '1.25rem',
+}
+function NewsModal({ news, onClose }: { news: any; onClose: () => void }) {
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={newsModalOverlayStyle}
+            onClick={onClose}
+        >
+            <div
+                className="w-full max-w-lg max-h-[80vh] flex flex-col animate-[fadeInScale_0.2s_ease-out]"
+                style={newsModalStyle}
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="flex items-start justify-between gap-3 p-6 pb-4 border-b border-white/10">
+                    <div className="flex-1 min-w-0">
+                        <span className={cn(
+                            'inline-block text-xs font-bold px-2.5 py-0.5 rounded-full border mb-2',
+                            PRIORITY_COLOR[news.priority] ?? 'bg-white/10 text-white/50 border-white/10'
+                        )}>
+                            {PRIORITY_LABEL[news.priority] ?? news.priority}
+                        </span>
+                        <h2 className="text-xl font-semibold text-white leading-snug">{news.headline}</h2>
+                        <p className="text-sm text-white/45 mt-1">
+                            {new Date(news.publish_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </p>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-colors text-lg leading-none"
+                        aria-label="ปิด"
+                    >×</button>
+                </div>
+                {/* Body */}
+                <div className="overflow-y-auto p-6 pt-4">
+                    {news.content
+                        ? <p className="text-base text-white/80 leading-relaxed whitespace-pre-wrap">{news.content}</p>
+                        : <p className="text-sm text-white/35 italic">ไม่มีเนื้อหาเพิ่มเติม</p>
+                    }
+                </div>
+            </div>
+        </div>
+    )
+}
+
 // ─── Pending Leave Row ────────────────────────────────────────────────────────
 function PendingRow({ lr, onDone }: { lr: any; onDone: (id: string) => void }) {
     const [isPending, start] = useTransition()
@@ -283,9 +339,11 @@ export function HRDashboard({
 }: Props) {
     const [pending, setPending] = useState(pendingLeaves)
     const removePending = (id: string) => setPending(prev => prev.filter(r => r.id !== id))
+    const [selectedNews, setSelectedNews] = useState<any>(null)
 
     return (
         <div className="space-y-6">
+            {selectedNews && <NewsModal news={selectedNews} onClose={() => setSelectedNews(null)} />}
             {/* Urgent Banners */}
             <UrgentBanners banners={urgentBanners} />
 
@@ -369,9 +427,9 @@ export function HRDashboard({
                         ) : (
                             <div className="space-y-2">
                                 {newsAnnouncements.map(a => (
-                                    <div key={a.id} className="flex items-start gap-2.5 py-2 px-2 rounded-xl hover:bg-white/5 transition-colors">
+                                    <div key={a.id} className="flex items-start gap-2.5 py-2 px-2 rounded-xl hover:bg-white/8 cursor-pointer transition-colors" onClick={() => setSelectedNews(a)}>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-base font-bold text-white leading-snug truncate">{a.headline}</p>
+                                            <p className="text-base font-bold text-white leading-snug">{a.headline}</p>
                                             <p className="text-sm text-white/40 mt-0.5">
                                                 {new Date(a.publish_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
                                             </p>
