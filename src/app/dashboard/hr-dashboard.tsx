@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import {
     Users, CalendarDays, Clock, AlertTriangle, TrendingUp,
-    CheckCircle, XCircle, Cake, Building2, Loader2
+    CheckCircle, XCircle, Cake, Building2, Loader2, Megaphone, Gift
 } from 'lucide-react'
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -14,12 +14,12 @@ import { cn } from '@/lib/utils'
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const glassStyle: React.CSSProperties = {
-    background: 'rgba(86,30,35,0.28)',
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(86,30,35,0.36) 50%, rgba(255,255,255,0.12) 100%)',
     backdropFilter: 'blur(12px)',
     WebkitBackdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255,255,255,0.14)',
+    border: '1px solid rgba(255,255,255,0.25)',
     borderRadius: '16px',
-    boxShadow: '0 4px 24px rgba(0,0,0,0.22)',
+    boxShadow: '0 4px 28px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.15)',
 }
 
 // Silver/pearl gradient overlay for metric cards
@@ -65,6 +65,8 @@ interface Props {
     weekDays: string[]
     leavesToday: any[]
     urgentBanners: any[]
+    newsAnnouncements: any[]
+    birthdays: any[]
 }
 
 async function handleLeaveAction(id: string, action: 'approve' | 'reject') {
@@ -260,10 +262,24 @@ function PendingRow({ lr, onDone }: { lr: any; onDone: (id: string) => void }) {
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
+// ─── Priority label + color ───────────────────────────────────────────────────
+const PRIORITY_LABEL: Record<string, string> = {
+    emergency: 'ฉุกเฉิน', urgent: 'ด่วน', promote: 'กิจกรรม', internal: 'ทั่วไป',
+}
+const PRIORITY_COLOR: Record<string, string> = {
+    emergency: 'bg-red-500/25 text-red-300 border-red-500/30',
+    urgent: 'bg-amber-500/25 text-amber-300 border-amber-500/30',
+    promote: 'bg-purple-500/25 text-purple-300 border-purple-500/30',
+    internal: 'bg-blue-500/20 text-blue-300 border-blue-500/25',
+}
+
+// ─── Month names Thai ─────────────────────────────────────────────────────────
+const MONTHS_TH = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+
 export function HRDashboard({
     metrics, leaveChartData, deptData, attendanceData,
     pendingLeaves, contractsExpiring, anniversaries,
-    weekDays, leavesToday, urgentBanners,
+    weekDays, leavesToday, urgentBanners, newsAnnouncements, birthdays,
 }: Props) {
     const [pending, setPending] = useState(pendingLeaves)
     const removePending = (id: string) => setPending(prev => prev.filter(r => r.id !== id))
@@ -342,6 +358,54 @@ export function HRDashboard({
 
                 {/* ══ RIGHT COL (1/3) ══ */}
                 <div className="space-y-5">
+
+                    {/* ── ประกาศข่าวสาร ── */}
+                    <div style={glassStyle} className="p-5">
+                        <SectionHeader title="ประกาศข่าวสาร" icon={Megaphone} />
+                        {newsAnnouncements.length === 0 ? (
+                            <p className="text-sm text-white/30 italic text-center py-4">ยังไม่มีประกาศ</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {newsAnnouncements.map(a => (
+                                    <div key={a.id} className="flex items-start gap-2.5 py-2 px-2 rounded-xl hover:bg-white/5 transition-colors">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-base font-bold text-white leading-snug truncate">{a.headline}</p>
+                                            <p className="text-sm text-white/40 mt-0.5">
+                                                {new Date(a.publish_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
+                                            </p>
+                                        </div>
+                                        <span className={cn(
+                                            'text-xs font-bold px-2 py-0.5 rounded-full border shrink-0 mt-0.5',
+                                            PRIORITY_COLOR[a.priority] ?? 'bg-white/10 text-white/50 border-white/10'
+                                        )}>
+                                            {PRIORITY_LABEL[a.priority] ?? a.priority}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── วันเกิดเดือนนี้ ── */}
+                    {birthdays.length > 0 && (
+                        <div style={glassStyle} className="p-5">
+                            <SectionHeader title={`วันเกิดเดือนนี้ (${birthdays.length} คน)`} icon={Gift} />
+                            <div className="space-y-2">
+                                {birthdays.slice(0, 6).map(e => (
+                                    <div key={e.id} className="flex items-center gap-3 py-1.5 px-2 rounded-xl hover:bg-white/5 transition-colors">
+                                        <div className="h-9 w-9 rounded-full bg-[#561e23]/70 flex items-center justify-center text-sm font-black text-white border border-[#ad5f6c]/30 shrink-0">
+                                            {e.first_name_th?.charAt(0)}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-base font-bold text-white truncate">{e.first_name_th} {e.last_name_th}</p>
+                                            <p className="text-sm text-white/40">{e.dobDay} {MONTHS_TH[e.dobMonth]}</p>
+                                        </div>
+                                        <span className="text-base font-black text-[#e8909a] shrink-0">{e.age} ปี</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Week calendar */}
                     <div style={glassStyle} className="p-5">

@@ -39,9 +39,10 @@ export default async function AdminDashboard() {
         { data: leaveHistory },
         { data: pendingLeaves },
         { data: announcements },
+        { data: newsAnnouncements },
     ] = await Promise.all([
-        // All employees
-        supabaseAdmin.from('employees').select('id, employee_code, first_name_th, last_name_th, department, start_date, status, end_date, title'),
+        // All employees (include date_of_birth for birthday section)
+        supabaseAdmin.from('employees').select('id, employee_code, first_name_th, last_name_th, department, start_date, status, end_date, title, date_of_birth'),
 
         // Leaves today (approved)
         supabaseAdmin.from('leave_requests')
@@ -79,6 +80,11 @@ export default async function AdminDashboard() {
         supabaseAdmin.from('announcements').select('*')
             .in('priority', ['urgent', 'emergency']).eq('publishStatus', 'published')
             .order('publish_date', { ascending: false }).limit(10),
+
+        // Latest news announcements for right-column section
+        supabaseAdmin.from('announcements').select('id, headline, publish_date, priority')
+            .eq('publishStatus', 'published')
+            .order('publish_date', { ascending: false }).limit(5),
     ])
 
     // ─── Build dept distribution for donut chart ───
@@ -150,6 +156,24 @@ export default async function AdminDashboard() {
         return da - db
     })
 
+    // ─── Birthdays this month ───
+    const birthdays = (employees ?? [])
+        .filter(e => {
+            if (!e.date_of_birth) return false
+            const dob = new Date(e.date_of_birth)
+            return dob.getMonth() + 1 === month
+        })
+        .map(e => {
+            const dob = new Date(e.date_of_birth!)
+            return {
+                ...e,
+                age: year - dob.getFullYear(),
+                dobDay: dob.getDate(),
+                dobMonth: dob.getMonth() + 1,
+            }
+        })
+        .sort((a, b) => a.dobDay - b.dobDay)
+
     // ─── Enrich pending leaves with employee names ───
     const empMap = Object.fromEntries((employees ?? []).map(e => [e.id, e]))
     const pendingEnriched = (pendingLeaves ?? []).map(lr => ({
@@ -186,6 +210,8 @@ export default async function AdminDashboard() {
             weekDays={weekDays.map(d => d.toISOString())}
             leavesToday={leavesToday ?? []}
             urgentBanners={announcements ?? []}
+            newsAnnouncements={newsAnnouncements ?? []}
+            birthdays={birthdays}
         />
     )
 }
