@@ -12,24 +12,21 @@ import {
 import { UrgentBanners } from '@/components/dashboard/urgent-banners'
 import { cn } from '@/lib/utils'
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
+// ─── Styles (aligned with employees-table card style) ────────────────────────
 const glassStyle: React.CSSProperties = {
-    background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(200,200,220,0.19) 50%, rgba(255,255,255,0.22) 100%), linear-gradient(135deg, rgba(255,255,255,0.21) 0%, rgba(86,30,35,0.36) 50%, rgba(255,255,255,0.21) 100%)',
+    background: 'rgba(255,255,255,0.06)',
     backdropFilter: 'blur(12px)',
     WebkitBackdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255,255,255,0.27)',
+    border: '1px solid rgba(255,255,255,0.12)',
     borderRadius: '16px',
-    boxShadow: '0 4px 28px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.30)',
 }
 
-// Silver/pearl gradient overlay for metric cards
 const metricCardStyle: React.CSSProperties = {
-    background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(200,200,220,0.19) 50%, rgba(255,255,255,0.22) 100%), linear-gradient(135deg, rgba(255,255,255,0.21) 0%, rgba(86,30,35,0.45) 60%, rgba(255,255,255,0.21) 100%)',
-    backdropFilter: 'blur(14px)',
-    WebkitBackdropFilter: 'blur(14px)',
-    border: '1px solid rgba(255,255,255,0.27)',
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(200,200,220,0.04) 50%, rgba(255,255,255,0.07) 100%)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255,255,255,0.12)',
     borderRadius: '16px',
-    boxShadow: '0 6px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.33)',
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
