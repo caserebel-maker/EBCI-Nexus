@@ -262,7 +262,14 @@ function NewsModal({ news, onClose }: { news: any; onClose: () => void }) {
                     >×</button>
                 </div>
                 {/* Body */}
-                <div className="overflow-y-auto p-6 pt-4">
+                <div className="overflow-y-auto p-6 pt-4 space-y-4">
+                    {news.image_path && (
+                        <img
+                            src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/announcement-images/${news.image_path}`}
+                            alt={news.headline}
+                            className="w-full rounded-lg object-cover"
+                        />
+                    )}
                     {news.content
                         ? <p className="text-base text-white/80 leading-relaxed whitespace-pre-wrap">{news.content}</p>
                         : <p className="text-sm text-white/35 italic">ไม่มีเนื้อหาเพิ่มเติม</p>
