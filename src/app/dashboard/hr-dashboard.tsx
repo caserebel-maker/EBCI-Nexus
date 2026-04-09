@@ -14,22 +14,22 @@ import { cn } from '@/lib/utils'
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const glassStyle: React.CSSProperties = {
-    background: 'linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(86,30,35,0.36) 50%, rgba(255,255,255,0.12) 100%)',
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(200,200,220,0.19) 50%, rgba(255,255,255,0.22) 100%), linear-gradient(135deg, rgba(255,255,255,0.21) 0%, rgba(86,30,35,0.36) 50%, rgba(255,255,255,0.21) 100%)',
     backdropFilter: 'blur(12px)',
     WebkitBackdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255,255,255,0.25)',
+    border: '1px solid rgba(255,255,255,0.27)',
     borderRadius: '16px',
-    boxShadow: '0 4px 28px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.15)',
+    boxShadow: '0 4px 28px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.30)',
 }
 
 // Silver/pearl gradient overlay for metric cards
 const metricCardStyle: React.CSSProperties = {
-    background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(86,30,35,0.45) 60%, rgba(255,255,255,0.05) 100%)',
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(200,200,220,0.19) 50%, rgba(255,255,255,0.22) 100%), linear-gradient(135deg, rgba(255,255,255,0.21) 0%, rgba(86,30,35,0.45) 60%, rgba(255,255,255,0.21) 100%)',
     backdropFilter: 'blur(14px)',
     WebkitBackdropFilter: 'blur(14px)',
-    border: '1px solid rgba(255,255,255,0.22)',
+    border: '1px solid rgba(255,255,255,0.27)',
     borderRadius: '16px',
-    boxShadow: '0 6px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.18)',
+    boxShadow: '0 6px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.33)',
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -80,14 +80,14 @@ function MetricCard({ title, value, sub, icon: Icon, accent }: {
     title: string; value: string | number; sub?: string; icon: any; accent: string
 }) {
     return (
-        <div style={metricCardStyle} className="p-5 flex items-start gap-4">
-            <div className={cn('h-13 w-13 h-12 w-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg', accent)}>
-                <Icon size={24} className="text-white" />
+        <div style={metricCardStyle} className="p-4 lg:p-6 flex items-start gap-3 min-w-0 overflow-hidden">
+            <div className={cn('h-10 w-10 lg:h-12 lg:w-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg', accent)}>
+                <Icon size={22} className="text-white" />
             </div>
-            <div className="min-w-0">
-                <p className="text-sm font-bold text-white/55 uppercase tracking-widest truncate">{title}</p>
-                <p className="text-4xl font-black text-white mt-0.5 leading-none">{value}</p>
-                {sub && <p className="text-sm text-white/45 mt-1">{sub}</p>}
+            <div className="min-w-0 flex-1">
+                <p className="text-xs lg:text-sm font-bold text-white/55 uppercase tracking-wide leading-tight whitespace-nowrap overflow-hidden text-ellipsis">{title}</p>
+                <p className="text-3xl lg:text-4xl font-black text-white mt-0.5 leading-none">{value}</p>
+                {sub && <p className="text-xs lg:text-sm text-white/45 mt-1 leading-tight">{sub}</p>}
             </div>
         </div>
     )
