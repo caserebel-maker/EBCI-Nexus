@@ -6,6 +6,18 @@ import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { useTranslation } from "@/contexts/language-context"
 
+const glassCard: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.06)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: '16px',
+}
+const silverOverlay: React.CSSProperties = {
+    ...glassCard,
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(200,200,220,0.04) 50%, rgba(255,255,255,0.07) 100%)',
+}
+
 export type Employee = {
     id: string
     employeeCode: string
@@ -104,7 +116,7 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
     return (
         <div className="space-y-4">
             {/* Toolbar */}
-            <div className="flex flex-col gap-3 bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20 shadow-xl">
+            <div style={silverOverlay} className="flex flex-col gap-3 p-4 shadow-xl">
                 {/* Row 1: Search */}
                 <div className="relative w-full">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
@@ -160,7 +172,7 @@ export function EmployeesTable({ initialData }: EmployeesTableProps) {
             </div>
 
             {/* Table */}
-            <div className="rounded-xl border border-white/20 bg-white/10 backdrop-blur-md overflow-hidden shadow-2xl">
+            <div style={glassCard} className="overflow-hidden shadow-2xl">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="bg-white/5 text-white/70 font-medium uppercase text-xs">

@@ -4,6 +4,21 @@ import { cn } from "@/lib/utils"
 import { supabaseAdmin } from "@/lib/supabase-admin"
 import { notFound } from "next/navigation"
 
+const glassCard: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.06)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: '16px',
+}
+const silverCard: React.CSSProperties = {
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(200,200,220,0.04) 50%, rgba(255,255,255,0.07) 100%)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: '16px',
+}
+
 export const dynamic = 'force-dynamic'
 
 interface PageProps {
@@ -81,7 +96,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
 
             {/* Header / Identity Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 flex flex-col md:flex-row gap-6 glass p-6 rounded-2xl border border-white/10 shadow-xl">
+                <div style={silverCard} className="lg:col-span-2 flex flex-col md:flex-row gap-6 p-6 shadow-xl">
                     <div className="h-32 w-32 md:h-40 md:w-40 rounded-2xl bg-brand-gradient flex items-center justify-center text-white font-bold text-4xl border-2 border-white/20 shrink-0 overflow-hidden shadow-inner">
                         {photoUrl ? (
                             <img src={photoUrl} className="h-full w-full object-cover" alt={displayName} />
@@ -140,7 +155,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
                 </div>
 
                 {/* Quick Stats Card */}
-                <div className="bg-brand-gradient/10 rounded-2xl border border-white/10 p-6 space-y-6 shadow-xl relative overflow-hidden group">
+                <div style={glassCard} className="p-6 space-y-6 shadow-xl relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-8 opacity-5 transition-opacity group-hover:opacity-10">
                         <Clock size={120} />
                     </div>
@@ -169,7 +184,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
 
             {/* Employment & Detailed Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="glass rounded-2xl p-6 border border-white/10 shadow-xl space-y-6">
+                <div style={silverCard} className="p-6 shadow-xl space-y-6">
                     <h2 className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-2">
                         <FileText size={20} className="text-primary-light" /> Employment Info
                     </h2>
@@ -181,7 +196,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
                     </div>
                 </div>
 
-                <div className="glass rounded-2xl p-6 border border-white/10 shadow-xl space-y-6">
+                <div style={silverCard} className="p-6 shadow-xl space-y-6">
                     <h2 className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-2">
                         <Bell size={20} className="text-primary-light" /> Contact Info
                     </h2>
@@ -197,7 +212,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             </div>
 
             {/* HR Internal Notes */}
-            <div className="glass rounded-2xl p-6 border border-white/10 shadow-xl">
+            <div style={glassCard} className="p-6 shadow-xl">
                 <h2 className="text-lg font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
                     <MessageSquare size={20} className="text-primary-light" /> HR Log
                 </h2>
