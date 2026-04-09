@@ -82,6 +82,29 @@
             "all": "All",
             "active": "Active",
             "inactive": "Inactive"
+        },
+        "profile": {
+            "title": "Employee Profile",
+            "backToList": "Back to List",
+            "employmentInfo": "Employment Info",
+            "contactInfo": "Contact Info",
+            "quickStats": "Quick Stats",
+            "attendance": "Attendance",
+            "annualLeave": "Annual Leave",
+            "lastActivity": "Last Activity",
+            "recently": "Recently",
+            "joinDate": "Join Date",
+            "type": "Type",
+            "permanent": "Permanent",
+            "supervisor": "Supervisor",
+            "linkedAccount": "Linked Account",
+            "notLinked": "Not Linked",
+            "officialEmail": "Official Email",
+            "emergencyContact": "Emergency Contact",
+            "addressOverview": "Address Overview",
+            "active": "Active",
+            "na": "N/A",
+            "hrLog": "HR Log"
         }
     },
     "announcements": {
