@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import {
     Users, CalendarDays, Clock, AlertTriangle, TrendingUp,
-    CheckCircle, XCircle, Cake, Building2, ChevronRight, Loader2
+    CheckCircle, XCircle, Cake, Building2, Loader2
 } from 'lucide-react'
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -12,19 +12,27 @@ import {
 import { UrgentBanners } from '@/components/dashboard/urgent-banners'
 import { cn } from '@/lib/utils'
 
-// ─── Glass card style ───────────────────────────────────────────────────────
-const glass = {
-    style: {
-        background: 'rgba(86,30,35,0.28)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        border: '1px solid rgba(255,255,255,0.14)',
-        borderRadius: '16px',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.22)',
-    } as React.CSSProperties,
+// ─── Styles ──────────────────────────────────────────────────────────────────
+const glassStyle: React.CSSProperties = {
+    background: 'rgba(86,30,35,0.28)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255,255,255,0.14)',
+    borderRadius: '16px',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.22)',
 }
 
-// ─── Leave type labels ────────────────────────────────────────────────────
+// Silver/pearl gradient overlay for metric cards
+const metricCardStyle: React.CSSProperties = {
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(86,30,35,0.45) 60%, rgba(255,255,255,0.05) 100%)',
+    backdropFilter: 'blur(14px)',
+    WebkitBackdropFilter: 'blur(14px)',
+    border: '1px solid rgba(255,255,255,0.22)',
+    borderRadius: '16px',
+    boxShadow: '0 6px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.18)',
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 const LEAVE_LABELS: Record<string, string> = {
     sick: 'ลาป่วย', personal: 'ลากิจ', annual: 'ลาพักร้อน',
     maternity: 'ลาคลอด', ordination: 'ลาบวช',
@@ -34,11 +42,11 @@ const LEAVE_COLORS: Record<string, string> = {
     maternity: '#c47ae0', ordination: '#7ae0c4',
 }
 const DEPT_COLORS = [
-    '#ad5f6c', '#882136', '#c47a88', '#561e23',
-    '#d4a0aa', '#6b3040', '#f0c4cb', '#9e4a58',
+    '#c9606f', '#e8909a', '#a04455', '#f0b8c0',
+    '#7a2d3a', '#d4788a', '#561e23', '#eecdd1',
 ]
 
-// ─── Types ────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface Metrics {
     totalEmployees: number
     activeEmployees: number
@@ -46,7 +54,6 @@ interface Metrics {
     pendingLeaves: number
     expiringContracts: number
 }
-
 interface Props {
     metrics: Metrics
     leaveChartData: any[]
@@ -60,38 +67,36 @@ interface Props {
     urgentBanners: any[]
 }
 
-// ─── Server action (inline approach via fetch) ────────────────────────────
 async function handleLeaveAction(id: string, action: 'approve' | 'reject') {
     await fetch(`/api/leave/requests/${id}/${action}`, { method: 'POST' })
 }
 
-// ─── Metric Card ─────────────────────────────────────────────────────────
+// ─── Metric Card ──────────────────────────────────────────────────────────────
 function MetricCard({ title, value, sub, icon: Icon, accent }: {
-    title: string; value: string | number; sub?: string
-    icon: any; accent: string
+    title: string; value: string | number; sub?: string; icon: any; accent: string
 }) {
     return (
-        <div style={glass.style} className="p-5 flex items-start gap-4">
-            <div className={cn('h-12 w-12 rounded-xl flex items-center justify-center shrink-0', accent)}>
-                <Icon size={22} className="text-white" />
+        <div style={metricCardStyle} className="p-5 flex items-start gap-4">
+            <div className={cn('h-13 w-13 h-12 w-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg', accent)}>
+                <Icon size={24} className="text-white" />
             </div>
             <div className="min-w-0">
-                <p className="text-xs font-bold text-white/50 uppercase tracking-widest truncate">{title}</p>
-                <p className="text-3xl font-black text-white mt-0.5">{value}</p>
-                {sub && <p className="text-xs text-white/40 mt-0.5">{sub}</p>}
+                <p className="text-sm font-bold text-white/55 uppercase tracking-widest truncate">{title}</p>
+                <p className="text-4xl font-black text-white mt-0.5 leading-none">{value}</p>
+                {sub && <p className="text-sm text-white/45 mt-1">{sub}</p>}
             </div>
         </div>
     )
 }
 
-// ─── Leave type Thai tooltip ──────────────────────────────────────────────
-function CustomTooltip({ active, payload, label }: any) {
+// ─── Bar chart tooltip ────────────────────────────────────────────────────────
+function LeaveTooltip({ active, payload, label }: any) {
     if (!active || !payload?.length) return null
     return (
-        <div style={{ background: 'rgba(30,10,12,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 14px' }}>
-            <p className="text-white/60 text-xs mb-2 font-bold">{label}</p>
+        <div style={{ background: 'rgba(20,5,8,0.96)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '10px 14px' }}>
+            <p className="text-white/60 text-sm mb-2 font-bold">{label}</p>
             {payload.map((p: any) => (
-                <p key={p.dataKey} className="text-xs" style={{ color: p.color }}>
+                <p key={p.dataKey} className="text-sm" style={{ color: p.color }}>
                     {LEAVE_LABELS[p.dataKey] ?? p.dataKey}: {p.value} ครั้ง
                 </p>
             ))}
@@ -99,89 +104,97 @@ function CustomTooltip({ active, payload, label }: any) {
     )
 }
 
-// ─── Pending Leave Row ────────────────────────────────────────────────────
-function PendingRow({ lr, onDone }: { lr: any; onDone: (id: string) => void }) {
-    const [isPending, start] = useTransition()
-    const [done, setDone] = useState<'approve' | 'reject' | null>(null)
-
-    const act = (action: 'approve' | 'reject') => {
-        start(async () => {
-            await handleLeaveAction(lr.id, action)
-            setDone(action)
-            onDone(lr.id)
-        })
-    }
-
-    const name = lr.employee
-        ? `${lr.employee.first_name_th} ${lr.employee.last_name_th}`
-        : lr.employee_id
-
-    if (done) {
-        return (
-            <div className="flex items-center gap-2 py-2 px-3 rounded-xl text-xs text-white/50 italic">
-                {done === 'approve'
-                    ? <><CheckCircle size={14} className="text-emerald-400" /> อนุมัติแล้ว</>
-                    : <><XCircle size={14} className="text-red-400" /> ปฏิเสธแล้ว</>}
-            </div>
-        )
-    }
+// ─── Donut chart with center label & right legend ─────────────────────────────
+function DeptDonut({ data, total }: { data: any[]; total: number }) {
+    const [activeIndex, setActiveIndex] = useState<number | null>(null)
 
     return (
-        <div className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-white/5 transition-colors">
-            <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white truncate">{name}</p>
-                <p className="text-xs text-white/50">
-                    {LEAVE_LABELS[lr.leave_type] ?? lr.leave_type} · {lr.total_days} วัน ·{' '}
-                    {new Date(lr.start_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
-                </p>
+        <div className="flex items-center gap-4">
+            {/* Pie */}
+            <div className="shrink-0" style={{ width: 180, height: 180 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                        <Pie
+                            data={data}
+                            cx="50%" cy="50%"
+                            innerRadius={58} outerRadius={82}
+                            paddingAngle={3}
+                            dataKey="value"
+                            onMouseEnter={(_, i) => setActiveIndex(i)}
+                            onMouseLeave={() => setActiveIndex(null)}
+                            strokeWidth={0}
+                        >
+                            {data.map((_, i) => (
+                                <Cell
+                                    key={i}
+                                    fill={DEPT_COLORS[i % DEPT_COLORS.length]}
+                                    opacity={activeIndex === null || activeIndex === i ? 1 : 0.45}
+                                    style={{ cursor: 'pointer', transition: 'opacity 0.2s' }}
+                                />
+                            ))}
+                        </Pie>
+                        <Tooltip
+                            formatter={(v: any, name: string) => [`${v} คน (${Math.round(v / total * 100)}%)`, name]}
+                            contentStyle={{ background: 'rgba(20,5,8,0.96)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, fontSize: 13 }}
+                            itemStyle={{ color: '#fff' }}
+                        />
+                    </PieChart>
+                </ResponsiveContainer>
+                {/* Center text via absolute overlay */}
+                <div
+                    className="flex flex-col items-center justify-center pointer-events-none"
+                    style={{ marginTop: -180, height: 180 }}
+                >
+                    <span className="text-3xl font-black text-white">{total}</span>
+                    <span className="text-xs text-white/45 font-bold mt-0.5 text-center leading-tight">พนักงาน<br />ทั้งหมด</span>
+                </div>
             </div>
-            <div className="flex gap-1 shrink-0">
-                <button
-                    onClick={() => act('approve')}
-                    disabled={isPending}
-                    className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 text-xs font-bold transition-colors disabled:opacity-40"
-                >
-                    {isPending ? <Loader2 size={12} className="animate-spin" /> : 'อนุมัติ'}
-                </button>
-                <button
-                    onClick={() => act('reject')}
-                    disabled={isPending}
-                    className="px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-red-300 text-xs font-bold transition-colors disabled:opacity-40"
-                >
-                    ปฏิเสธ
-                </button>
+
+            {/* Legend */}
+            <div className="flex-1 min-w-0 space-y-1.5 overflow-hidden">
+                {data.map((d, i) => {
+                    const pct = Math.round(d.value / total * 100)
+                    return (
+                        <div
+                            key={i}
+                            className={cn('flex items-center gap-2 rounded-lg px-2 py-1 transition-colors cursor-default',
+                                activeIndex === i ? 'bg-white/10' : 'hover:bg-white/5')}
+                            onMouseEnter={() => setActiveIndex(i)}
+                            onMouseLeave={() => setActiveIndex(null)}
+                        >
+                            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: DEPT_COLORS[i % DEPT_COLORS.length] }} />
+                            <span className="text-sm text-white/70 truncate flex-1">{d.name}</span>
+                            <span className="text-sm font-bold text-white shrink-0">{d.value}</span>
+                            <span className="text-xs text-white/40 shrink-0 w-8 text-right">{pct}%</span>
+                        </div>
+                    )
+                })}
             </div>
         </div>
     )
 }
 
-// ─── Week Calendar ────────────────────────────────────────────────────────
+// ─── Week Calendar ────────────────────────────────────────────────────────────
 function WeekCalendar({ weekDays, leavesToday }: { weekDays: string[]; leavesToday: any[] }) {
-    const dayNames = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา']
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
+    const DAY_NAMES = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา']
+    const today = new Date(); today.setHours(0, 0, 0, 0)
     return (
         <div className="grid grid-cols-7 gap-1.5">
             {weekDays.map((iso, i) => {
                 const d = new Date(iso)
                 const isToday = d.toDateString() === today.toDateString()
-                const isWeekend = i >= 5
                 return (
-                    <div
-                        key={i}
-                        className={cn(
-                            'flex flex-col items-center py-2 px-1 rounded-xl text-center transition-colors',
-                            isToday ? 'bg-[#882136]/60 ring-1 ring-[#ad5f6c]' : 'bg-white/5',
-                            isWeekend && 'opacity-40',
-                        )}
-                    >
-                        <span className="text-[10px] font-bold text-white/40 uppercase">{dayNames[i]}</span>
-                        <span className={cn('text-base font-black mt-0.5', isToday ? 'text-white' : 'text-white/70')}>
+                    <div key={i} className={cn(
+                        'flex flex-col items-center py-2.5 px-1 rounded-xl text-center transition-colors',
+                        isToday ? 'bg-[#882136]/70 ring-1 ring-[#ad5f6c]' : 'bg-white/5',
+                        i >= 5 && 'opacity-40',
+                    )}>
+                        <span className="text-xs font-bold text-white/40">{DAY_NAMES[i]}</span>
+                        <span className={cn('text-lg font-black mt-0.5', isToday ? 'text-white' : 'text-white/70')}>
                             {d.getDate()}
                         </span>
                         {isToday && leavesToday.length > 0 && (
-                            <span className="mt-1 text-[9px] font-bold bg-[#ad5f6c] text-white rounded-full px-1.5 py-0.5">
+                            <span className="mt-1 text-xs font-bold bg-[#ad5f6c] text-white rounded-full px-1.5 py-0.5 leading-none">
                                 {leavesToday.length}
                             </span>
                         )}
@@ -192,17 +205,61 @@ function WeekCalendar({ weekDays, leavesToday }: { weekDays: string[]; leavesTod
     )
 }
 
-// ─── Section header ───────────────────────────────────────────────────────
-function SectionHeader({ title, icon: Icon }: { title: string; icon: any }) {
+// ─── Section Header ───────────────────────────────────────────────────────────
+function SectionHeader({ title, icon: Icon, warn }: { title: string; icon: any; warn?: boolean }) {
     return (
         <div className="flex items-center gap-2 mb-4">
-            <Icon size={15} className="text-[#ad5f6c]" />
-            <h2 className="text-xs font-black text-white/60 uppercase tracking-[0.18em]">{title}</h2>
+            <Icon size={16} className={warn ? 'text-amber-400' : 'text-[#ad5f6c]'} />
+            <h2 className="text-sm font-black text-white/65 uppercase tracking-[0.15em]">{title}</h2>
         </div>
     )
 }
 
-// ─── Main Dashboard ───────────────────────────────────────────────────────
+// ─── Pending Leave Row ────────────────────────────────────────────────────────
+function PendingRow({ lr, onDone }: { lr: any; onDone: (id: string) => void }) {
+    const [isPending, start] = useTransition()
+    const [done, setDone] = useState<'approve' | 'reject' | null>(null)
+    const act = (action: 'approve' | 'reject') => {
+        start(async () => {
+            await handleLeaveAction(lr.id, action)
+            setDone(action)
+            onDone(lr.id)
+        })
+    }
+    const name = lr.employee ? `${lr.employee.first_name_th} ${lr.employee.last_name_th}` : lr.employee_id
+    if (done) {
+        return (
+            <div className="flex items-center gap-2 py-2 px-3 rounded-xl text-sm text-white/45 italic">
+                {done === 'approve'
+                    ? <><CheckCircle size={15} className="text-emerald-400" /> อนุมัติแล้ว</>
+                    : <><XCircle size={15} className="text-red-400" /> ปฏิเสธแล้ว</>}
+            </div>
+        )
+    }
+    return (
+        <div className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-white/5 transition-colors">
+            <div className="flex-1 min-w-0">
+                <p className="text-base font-bold text-white truncate">{name}</p>
+                <p className="text-sm text-white/50">
+                    {LEAVE_LABELS[lr.leave_type] ?? lr.leave_type} · {lr.total_days} วัน ·{' '}
+                    {new Date(lr.start_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                </p>
+            </div>
+            <div className="flex gap-1.5 shrink-0">
+                <button onClick={() => act('approve')} disabled={isPending}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 text-sm font-bold transition-colors disabled:opacity-40">
+                    {isPending ? <Loader2 size={13} className="animate-spin" /> : 'อนุมัติ'}
+                </button>
+                <button onClick={() => act('reject')} disabled={isPending}
+                    className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-red-300 text-sm font-bold transition-colors disabled:opacity-40">
+                    ปฏิเสธ
+                </button>
+            </div>
+        </div>
+    )
+}
+
+// ─── Main Dashboard ───────────────────────────────────────────────────────────
 export function HRDashboard({
     metrics, leaveChartData, deptData, attendanceData,
     pendingLeaves, contractsExpiring, anniversaries,
@@ -216,110 +273,65 @@ export function HRDashboard({
             {/* Urgent Banners */}
             <UrgentBanners banners={urgentBanners} />
 
-            {/* ── Metric Cards ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <MetricCard
-                    title="พนักงานทั้งหมด"
-                    value={metrics.totalEmployees}
-                    sub={`ปฏิบัติงาน ${metrics.activeEmployees} คน`}
-                    icon={Users}
-                    accent="bg-[#882136]"
-                />
-                <MetricCard
-                    title="ลาวันนี้"
-                    value={metrics.leavingToday}
-                    sub="ได้รับอนุมัติแล้ว"
-                    icon={CalendarDays}
-                    accent="bg-[#7a3040]"
-                />
-                <MetricCard
-                    title="รออนุมัติใบลา"
-                    value={metrics.pendingLeaves}
-                    sub="รายการ"
-                    icon={Clock}
-                    accent="bg-[#9e4050]"
-                />
-                <MetricCard
-                    title="สัญญาหมดใน 30 วัน"
-                    value={metrics.expiringContracts}
-                    sub="คน"
-                    icon={AlertTriangle}
-                    accent="bg-[#6b2030]"
-                />
-            </div>
-
-            {/* ── Main 3-column grid ── */}
+            {/* ── 2-column layout: left 2/3, right 1/3 ── */}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
-                {/* ── Left col: Charts ── */}
+                {/* ══ LEFT COL (2/3) ══ */}
                 <div className="xl:col-span-2 space-y-6">
 
+                    {/* Metric Cards */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <MetricCard title="พนักงานทั้งหมด" value={metrics.totalEmployees}
+                            sub={`ปฏิบัติงาน ${metrics.activeEmployees} คน`} icon={Users} accent="bg-[#882136]" />
+                        <MetricCard title="ลาวันนี้" value={metrics.leavingToday}
+                            sub="ได้รับอนุมัติแล้ว" icon={CalendarDays} accent="bg-[#7a3040]" />
+                        <MetricCard title="รออนุมัติใบลา" value={metrics.pendingLeaves}
+                            sub="รายการ" icon={Clock} accent="bg-[#9e4050]" />
+                        <MetricCard title="สัญญาหมดใน 30 วัน" value={metrics.expiringContracts}
+                            sub="คน" icon={AlertTriangle} accent="bg-[#6b2030]" />
+                    </div>
+
                     {/* Bar chart – monthly leave */}
-                    <div style={glass.style} className="p-6">
+                    <div style={glassStyle} className="p-6">
                         <SectionHeader title="สถิติการลารายเดือน (12 เดือนย้อนหลัง)" icon={TrendingUp} />
-                        <ResponsiveContainer width="100%" height={220}>
-                            <BarChart data={leaveChartData} barSize={8} barGap={2}>
+                        <ResponsiveContainer width="100%" height={240}>
+                            <BarChart data={leaveChartData} barSize={9} barGap={2}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                                <XAxis dataKey="month" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                                <Tooltip content={<CustomTooltip />} />
-                                <Legend formatter={(v) => <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>{LEAVE_LABELS[v] ?? v}</span>} />
+                                <XAxis dataKey="month" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 13 }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 13 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                                <Tooltip content={<LeaveTooltip />} />
+                                <Legend formatter={v => <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13 }}>{LEAVE_LABELS[v] ?? v}</span>} />
                                 {Object.keys(LEAVE_LABELS).map(k => (
-                                    <Bar key={k} dataKey={k} stackId="a" fill={LEAVE_COLORS[k]} radius={k === 'ordination' ? [4, 4, 0, 0] : [0, 0, 0, 0]} />
+                                    <Bar key={k} dataKey={k} stackId="a" fill={LEAVE_COLORS[k]}
+                                        radius={k === 'ordination' ? [4, 4, 0, 0] : [0, 0, 0, 0]} />
                                 ))}
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
 
-                    {/* Bottom 2 charts side by side */}
+                    {/* Donut + Line side by side */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                         {/* Donut – dept distribution */}
-                        <div style={glass.style} className="p-6">
+                        <div style={glassStyle} className="p-6">
                             <SectionHeader title="สัดส่วนพนักงานแยกฝ่าย" icon={Building2} />
-                            <ResponsiveContainer width="100%" height={200}>
-                                <PieChart>
-                                    <Pie
-                                        data={deptData}
-                                        cx="50%" cy="50%"
-                                        innerRadius={55} outerRadius={80}
-                                        paddingAngle={3}
-                                        dataKey="value"
-                                    >
-                                        {deptData.map((_, i) => (
-                                            <Cell key={i} fill={DEPT_COLORS[i % DEPT_COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip
-                                        formatter={(v: any, name: string) => [`${v} คน`, name]}
-                                        contentStyle={{ background: 'rgba(30,10,12,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 12 }}
-                                        itemStyle={{ color: '#fff' }}
-                                    />
-                                    <Legend
-                                        formatter={(v) => <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10 }}>{v.length > 16 ? v.slice(0, 16) + '…' : v}</span>}
-                                        iconSize={8}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
+                            <DeptDonut data={deptData} total={metrics.totalEmployees} />
                         </div>
 
                         {/* Line chart – weekly attendance */}
-                        <div style={glass.style} className="p-6">
+                        <div style={glassStyle} className="p-6">
                             <SectionHeader title="อัตราการมาทำงาน (30 วัน)" icon={TrendingUp} />
-                            <ResponsiveContainer width="100%" height={200}>
+                            <ResponsiveContainer width="100%" height={210}>
                                 <LineChart data={attendanceData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                                    <XAxis dataKey="week" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                                    <YAxis tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                                    <XAxis dataKey="week" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 12 }} axisLine={false} tickLine={false} />
+                                    <YAxis tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 12 }} axisLine={false} tickLine={false} />
                                     <Tooltip
-                                        contentStyle={{ background: 'rgba(30,10,12,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 12 }}
+                                        contentStyle={{ background: 'rgba(20,5,8,0.96)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, fontSize: 13 }}
                                         itemStyle={{ color: '#fff' }}
-                                        formatter={(v: any, name: string) => [
-                                            `${v} คน`,
-                                            name === 'present' ? 'มาทำงาน' : 'ลา/ขาด'
-                                        ]}
+                                        formatter={(v: any, name: string) => [`${v} คน`, name === 'present' ? 'มาทำงาน' : 'ลา/ขาด']}
                                     />
-                                    <Legend formatter={(v) => <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>{v === 'present' ? 'มาทำงาน' : 'ลา/ขาด'}</span>} />
+                                    <Legend formatter={v => <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13 }}>{v === 'present' ? 'มาทำงาน' : 'ลา/ขาด'}</span>} />
                                     <Line type="monotone" dataKey="present" stroke="#ad5f6c" strokeWidth={2.5} dot={{ r: 4, fill: '#ad5f6c' }} />
                                     <Line type="monotone" dataKey="absent" stroke="#e07a7a" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3, fill: '#e07a7a' }} />
                                 </LineChart>
@@ -328,46 +340,42 @@ export function HRDashboard({
                     </div>
                 </div>
 
-                {/* ── Right col: Cards ── */}
+                {/* ══ RIGHT COL (1/3) ══ */}
                 <div className="space-y-5">
 
                     {/* Week calendar */}
-                    <div style={glass.style} className="p-5">
+                    <div style={glassStyle} className="p-5">
                         <SectionHeader title={`ปฏิทินสัปดาห์นี้ · ลาวันนี้ ${leavesToday.length} คน`} icon={CalendarDays} />
                         <WeekCalendar weekDays={weekDays} leavesToday={leavesToday} />
                     </div>
 
                     {/* Pending approvals */}
-                    <div style={glass.style} className="p-5">
+                    <div style={glassStyle} className="p-5">
                         <SectionHeader title={`รออนุมัติใบลา (${pending.length})`} icon={Clock} />
                         {pending.length === 0 ? (
-                            <p className="text-xs text-white/30 italic text-center py-4">ไม่มีใบลารออนุมัติ</p>
+                            <p className="text-sm text-white/30 italic text-center py-4">ไม่มีใบลารออนุมัติ</p>
                         ) : (
                             <div className="space-y-1">
-                                {pending.map(lr => (
-                                    <PendingRow key={lr.id} lr={lr} onDone={removePending} />
-                                ))}
+                                {pending.map(lr => <PendingRow key={lr.id} lr={lr} onDone={removePending} />)}
                             </div>
                         )}
                     </div>
 
                     {/* Anniversaries */}
                     {anniversaries.length > 0 && (
-                        <div style={glass.style} className="p-5">
+                        <div style={glassStyle} className="p-5">
                             <SectionHeader title="ครบรอบปีในเดือนนี้" icon={Cake} />
                             <div className="space-y-2">
                                 {anniversaries.slice(0, 5).map(e => (
                                     <div key={e.id} className="flex items-center gap-3 py-1.5 px-2 rounded-xl hover:bg-white/5 transition-colors">
-                                        <div className="h-8 w-8 rounded-full bg-[#882136]/60 flex items-center justify-center text-xs font-black text-white border border-[#ad5f6c]/30 shrink-0">
+                                        <div className="h-9 w-9 rounded-full bg-[#882136]/60 flex items-center justify-center text-sm font-black text-white border border-[#ad5f6c]/30 shrink-0">
                                             {e.first_name_th?.charAt(0)}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-bold text-white truncate">
-                                                {e.first_name_th} {e.last_name_th}
-                                            </p>
-                                            <p className="text-xs text-white/40">{e.department}</p>
+                                            <p className="text-base font-bold text-white truncate">{e.first_name_th} {e.last_name_th}</p>
+                                            <p className="text-sm text-white/40">{e.department}</p>
                                         </div>
-                                        <span className="text-xs font-black text-[#ad5f6c] shrink-0">{e.years} ปี</span>
+                                        <span className="text-base font-black text-[#ad5f6c] shrink-0">{e.years} ปี</span>
                                     </div>
                                 ))}
                             </div>
@@ -376,32 +384,19 @@ export function HRDashboard({
 
                     {/* Expiring contracts */}
                     {contractsExpiring.length > 0 && (
-                        <div style={glass.style} className="p-5">
-                            <div className="flex items-center gap-2 mb-3">
-                                <AlertTriangle size={15} className="text-amber-400" />
-                                <h2 className="text-xs font-black text-white/60 uppercase tracking-[0.18em]">
-                                    สัญญาใกล้หมด ({contractsExpiring.length} คน)
-                                </h2>
-                            </div>
+                        <div style={glassStyle} className="p-5">
+                            <SectionHeader title={`สัญญาใกล้หมด (${contractsExpiring.length} คน)`} icon={AlertTriangle} warn />
                             <div className="space-y-2">
                                 {contractsExpiring.slice(0, 4).map(e => {
-                                    const daysLeft = Math.ceil(
-                                        (new Date(e.end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-                                    )
+                                    const daysLeft = Math.ceil((new Date(e.end_date).getTime() - Date.now()) / 86400000)
                                     return (
                                         <div key={e.id} className="flex items-center gap-2 py-1.5 px-2 rounded-xl hover:bg-white/5 transition-colors">
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-bold text-white truncate">
-                                                    {e.first_name_th} {e.last_name_th}
-                                                </p>
-                                                <p className="text-xs text-white/40 truncate">{e.department}</p>
+                                                <p className="text-base font-bold text-white truncate">{e.first_name_th} {e.last_name_th}</p>
+                                                <p className="text-sm text-white/40 truncate">{e.department}</p>
                                             </div>
-                                            <span className={cn(
-                                                'text-xs font-black px-2 py-0.5 rounded-full shrink-0',
-                                                daysLeft <= 7
-                                                    ? 'bg-red-500/20 text-red-300'
-                                                    : 'bg-amber-500/20 text-amber-300'
-                                            )}>
+                                            <span className={cn('text-sm font-black px-2.5 py-0.5 rounded-full shrink-0',
+                                                daysLeft <= 7 ? 'bg-red-500/20 text-red-300' : 'bg-amber-500/20 text-amber-300')}>
                                                 {daysLeft} วัน
                                             </span>
                                         </div>
@@ -410,7 +405,6 @@ export function HRDashboard({
                             </div>
                         </div>
                     )}
-
                 </div>
             </div>
         </div>
