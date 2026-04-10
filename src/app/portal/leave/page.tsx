@@ -1,164 +1,184 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useTransition } from 'react'
 import {
-    CalendarDays, Plus, Clock, CheckCircle2, XCircle, AlertCircle,
-    ChevronDown, X, Loader2, FileText
+    CalendarDays, Plus, Clock, CheckCircle2, XCircle,
+    ChevronDown, X, Loader2, FileText, AlertCircle, ChevronRight,
 } from 'lucide-react'
+import { submitLeaveRequestAsCurrentUser } from '@/lib/leave-approval-actions'
+import { cn } from '@/lib/utils'
 
-// ---- Types ----
-interface LeaveBalance {
-    leaveType: string
-    year: number
-    entitledDays: number
-    usedDays: number
-    remainingDays: number
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const glass: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.13)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255,255,255,0.22)',
+    borderRadius: '16px',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+}
+const inputCls = 'w-full bg-black/20 border border-white/15 rounded-xl px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:border-[#ad5f6c] focus:ring-1 focus:ring-[#ad5f6c]/40 transition-colors'
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const LEAVE_LABELS: Record<string, string> = {
+    sick: 'ลาป่วย', personal: 'ลากิจ', annual: 'ลาพักร้อน',
+    maternity: 'ลาคลอด', ordination: 'ลาบวช',
+}
+const LEAVE_COLORS: Record<string, string> = {
+    sick: 'bg-red-500/20 text-red-300 border-red-500/30',
+    personal: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    annual: 'bg-green-500/20 text-green-300 border-green-500/30',
+    maternity: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
+    ordination: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+}
+const ROLE_LABELS: Record<string, string> = {
+    supervisor: 'หัวหน้าแผนก',
+    manager: 'หัวหน้าฝ่าย',
+    hr: 'HR Admin',
+    md: 'MD',
 }
 
-interface LeaveRequest {
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface ApprovalStep {
     id: string
-    leaveType: string
-    startDate: string
-    endDate: string
-    totalDays: number
+    approver_role: string
+    status: string
+    comment: string | null
+    acted_at: string | null
+    approver: { first_name_th: string; last_name_th: string } | null
+}
+interface LeaveReq {
+    id: string
+    leave_type: string
+    start_date: string
+    end_date: string
+    total_days: number
     reason: string
     status: string
-    rejectionReason?: string
-    approver?: { name: string }
-    approvedAt?: string
-    createdAt: string
+    current_step: number | null
+    created_at: string
+    leave_approvals: ApprovalStep[]
 }
 
-// ---- Constants ----
-const LEAVE_TYPE_LABELS: Record<string, string> = {
-    sick: 'ลาป่วย',
-    personal: 'ลากิจ',
-    annual: 'ลาพักร้อน',
-    maternity: 'ลาคลอด',
-    ordination: 'ลาบวช',
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function fmt(d: string) {
+    return new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
+}
+function calcDays(start: string, end: string): number {
+    let count = 0
+    const cur = new Date(start)
+    cur.setHours(0, 0, 0, 0)
+    const endD = new Date(end)
+    endD.setHours(0, 0, 0, 0)
+    while (cur <= endD) {
+        const dow = cur.getDay()
+        if (dow !== 0 && dow !== 6) count++
+        cur.setDate(cur.getDate() + 1)
+    }
+    return count
 }
 
-const LEAVE_TYPE_COLORS: Record<string, string> = {
-    sick: 'bg-red-100 text-red-700',
-    personal: 'bg-blue-100 text-blue-700',
-    annual: 'bg-green-100 text-green-700',
-    maternity: 'bg-pink-100 text-pink-700',
-    ordination: 'bg-amber-100 text-amber-700',
-}
-
-const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-    pending: {
-        label: 'รออนุมัติ',
-        color: 'bg-amber-100 text-amber-700',
-        icon: <Clock size={14} />,
-    },
-    approved: {
-        label: 'อนุมัติแล้ว',
-        color: 'bg-green-100 text-green-700',
-        icon: <CheckCircle2 size={14} />,
-    },
-    rejected: {
-        label: 'ปฏิเสธ',
-        color: 'bg-red-100 text-red-700',
-        icon: <XCircle size={14} />,
-    },
-    cancelled: {
-        label: 'ยกเลิก',
-        color: 'bg-gray-100 text-gray-600',
-        icon: <X size={14} />,
-    },
-}
-
-function formatDate(date: string): string {
-    return new Date(date).toLocaleDateString('th-TH', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-    })
-}
-
-// ---- Balance Card Component ----
-function BalanceCard({ balance }: { balance: LeaveBalance }) {
-    const pct = balance.entitledDays > 0
-        ? Math.min(100, (balance.usedDays / balance.entitledDays) * 100)
-        : 0
-    const color = LEAVE_TYPE_COLORS[balance.leaveType] || 'bg-gray-100 text-gray-700'
-
+// ─── Approval Timeline ────────────────────────────────────────────────────────
+function ApprovalTimeline({ steps, overall }: { steps: ApprovalStep[]; overall: string }) {
+    if (steps.length === 0 && overall === 'pending') {
+        return <p className="text-[0.8rem] text-white/40 italic">กำลังรอหัวหน้าพิจารณา...</p>
+    }
+    const sorted = [...steps].sort(
+        (a, b) => new Date(a.acted_at ?? a.id).getTime() - new Date(b.acted_at ?? b.id).getTime()
+    )
     return (
-        <div className="bg-white dark:bg-card rounded-xl border border-border p-4 space-y-3">
-            <div className="flex items-center justify-between">
-                <span className={`text-xs font-semibold px-2 py-1 rounded-full ${color}`}>
-                    {LEAVE_TYPE_LABELS[balance.leaveType]}
-                </span>
-                <span className="text-xs text-muted-foreground">ปี {balance.year}</span>
-            </div>
-            <div className="flex items-end justify-between">
-                <div>
-                    <p className="text-2xl font-bold text-foreground">{balance.remainingDays}</p>
-                    <p className="text-xs text-muted-foreground">วันคงเหลือ</p>
-                </div>
-                <div className="text-right text-xs text-muted-foreground">
-                    <p>ใช้ไป {balance.usedDays} / {balance.entitledDays} วัน</p>
-                </div>
-            </div>
-            <div className="w-full bg-muted rounded-full h-1.5">
-                <div
-                    className="h-1.5 rounded-full bg-primary transition-all"
-                    style={{ width: `${pct}%` }}
-                />
-            </div>
+        <div className="flex flex-wrap items-center gap-1.5 mt-2">
+            {sorted.map((s, i) => {
+                const icon = s.status === 'approved'
+                    ? <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
+                    : s.status === 'rejected'
+                        ? <XCircle size={13} className="text-red-400 shrink-0" />
+                        : <Clock size={13} className="text-amber-400 shrink-0" />
+                return (
+                    <div key={s.id} className="flex items-center gap-1">
+                        {i > 0 && <ChevronRight size={12} className="text-white/25" />}
+                        <div className={cn(
+                            'flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.72rem] font-bold border',
+                            s.status === 'approved' ? 'bg-emerald-500/15 border-emerald-500/25 text-emerald-300'
+                                : s.status === 'rejected' ? 'bg-red-500/15 border-red-500/25 text-red-300'
+                                    : 'bg-amber-500/15 border-amber-500/25 text-amber-300'
+                        )}>
+                            {icon}
+                            {ROLE_LABELS[s.approver_role] ?? s.approver_role}
+                        </div>
+                    </div>
+                )
+            })}
         </div>
     )
 }
 
-// ---- Leave Request Row ----
-function LeaveRow({ req }: { req: LeaveRequest }) {
-    const status = STATUS_CONFIG[req.status] || STATUS_CONFIG.pending
+// ─── Leave Card ───────────────────────────────────────────────────────────────
+function LeaveCard({ req }: { req: LeaveReq }) {
+    const [expanded, setExpanded] = useState(false)
+    const statusColor = req.status === 'approved'
+        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+        : req.status === 'rejected'
+            ? 'bg-red-500/20 text-red-300 border-red-500/30'
+            : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+    const statusLabel = req.status === 'approved' ? '✅ อนุมัติแล้ว'
+        : req.status === 'rejected' ? '❌ ปฏิเสธ' : '⏳ รออนุมัติ'
+
+    const rejectedStep = req.leave_approvals.find(s => s.status === 'rejected')
 
     return (
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 py-4 border-b border-border last:border-0">
-            <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${LEAVE_TYPE_COLORS[req.leaveType] || 'bg-gray-100 text-gray-700'}`}>
-                        {LEAVE_TYPE_LABELS[req.leaveType]}
+        <div style={glass} className="p-4 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                    <span className={cn('text-[0.75rem] font-bold px-2.5 py-0.5 rounded-full border',
+                        LEAVE_COLORS[req.leave_type] ?? 'bg-white/10 text-white/50 border-white/10')}>
+                        {LEAVE_LABELS[req.leave_type] ?? req.leave_type}
                     </span>
-                    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${status.color}`}>
-                        {status.icon}
-                        {status.label}
+                    <span className={cn('text-[0.75rem] font-bold px-2.5 py-0.5 rounded-full border', statusColor)}>
+                        {statusLabel}
                     </span>
                 </div>
-                <p className="text-sm font-medium text-foreground">
-                    {formatDate(req.startDate)} – {formatDate(req.endDate)}
-                    <span className="ml-2 text-xs text-muted-foreground">({req.totalDays} วัน)</span>
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">{req.reason}</p>
-                {req.status === 'rejected' && req.rejectionReason && (
-                    <p className="text-xs text-red-600 mt-1 bg-red-50 rounded px-2 py-1">
-                        เหตุผล: {req.rejectionReason}
-                    </p>
-                )}
-                {req.status === 'approved' && req.approver?.name && (
-                    <p className="text-xs text-green-700 mt-1">
-                        อนุมัติโดย: {req.approver.name}
-                    </p>
-                )}
+                <button
+                    onClick={() => setExpanded(v => !v)}
+                    className="shrink-0 text-white/40 hover:text-white/70 transition-colors"
+                >
+                    <ChevronDown size={16} className={cn('transition-transform', expanded && 'rotate-180')} />
+                </button>
             </div>
-            <div className="text-xs text-muted-foreground whitespace-nowrap">
-                ยื่นเมื่อ {formatDate(req.createdAt)}
+
+            <div className="text-[0.9rem] text-white/80 font-medium">
+                {fmt(req.start_date)} – {fmt(req.end_date)}
+                <span className="ml-2 text-white/40 font-normal text-[0.8rem]">({req.total_days} วัน)</span>
             </div>
+
+            <ApprovalTimeline steps={req.leave_approvals} overall={req.status} />
+
+            {rejectedStep?.comment && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                    <p className="text-[0.8rem] text-red-300 font-medium">เหตุผลที่ปฏิเสธ:</p>
+                    <p className="text-[0.85rem] text-red-200 mt-0.5">{rejectedStep.comment}</p>
+                </div>
+            )}
+
+            {expanded && (
+                <div className="pt-2 border-t border-white/10">
+                    <p className="text-[0.8rem] text-white/50 mb-1">เหตุผล:</p>
+                    <p className="text-[0.9rem] text-white/80">{req.reason}</p>
+                    <p className="text-[0.75rem] text-white/30 mt-2">ยื่นเมื่อ {fmt(req.created_at)}</p>
+                </div>
+            )}
         </div>
     )
 }
 
-// ---- Main Page ----
-export default function EmployeeLeavePage() {
-    const [balances, setBalances] = useState<LeaveBalance[]>([])
-    const [requests, setRequests] = useState<LeaveRequest[]>([])
+// ─── Main Page ────────────────────────────────────────────────────────────────
+export default function PortalLeavePage() {
+    const [requests, setRequests] = useState<LeaveReq[]>([])
     const [loading, setLoading] = useState(true)
     const [showForm, setShowForm] = useState(false)
-    const [submitting, setSubmitting] = useState(false)
+    const [isPending, startTransition] = useTransition()
     const [error, setError] = useState('')
-    const [successMsg, setSuccessMsg] = useState('')
+    const [success, setSuccess] = useState('')
 
     // Form state
     const [leaveType, setLeaveType] = useState('sick')
@@ -166,204 +186,179 @@ export default function EmployeeLeavePage() {
     const [endDate, setEndDate] = useState('')
     const [reason, setReason] = useState('')
 
-    const fetchData = useCallback(async () => {
+    const totalDays = startDate && endDate ? calcDays(startDate, endDate) : 0
+
+    const fetchRequests = useCallback(async () => {
         setLoading(true)
         try {
-            const [balRes, reqRes] = await Promise.all([
-                fetch('/api/leave/balances'),
-                fetch('/api/leave/requests'),
-            ])
-            const [balData, reqData] = await Promise.all([balRes.json(), reqRes.json()])
-            if (balData.data) setBalances(balData.data)
-            if (reqData.data) setRequests(reqData.data)
+            const res = await fetch('/api/leave/v2/my-requests')
+            const data = await res.json()
+            if (data.data) setRequests(data.data)
         } catch {
-            setError('ไม่สามารถโหลดข้อมูลได้')
+            /* silently ignore */
         } finally {
             setLoading(false)
         }
     }, [])
 
-    useEffect(() => { fetchData() }, [fetchData])
+    useEffect(() => { fetchRequests() }, [fetchRequests])
 
-    async function handleSubmit(e: React.FormEvent) {
+    function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         if (!leaveType || !startDate || !endDate || !reason.trim()) {
             setError('กรุณากรอกข้อมูลให้ครบถ้วน')
             return
         }
-        setSubmitting(true)
+        if (totalDays <= 0) {
+            setError('วันที่ไม่ถูกต้อง (ต้องเป็นวันทำงาน)')
+            return
+        }
         setError('')
-        try {
-            const res = await fetch('/api/leave/requests', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ leaveType, startDate, endDate, reason }),
+        startTransition(async () => {
+            const result = await submitLeaveRequestAsCurrentUser({
+                leave_type: leaveType,
+                start_date: startDate,
+                end_date: endDate,
+                total_days: totalDays,
+                reason: reason.trim(),
             })
-            const data = await res.json()
-            if (!res.ok) {
-                setError(data.error || 'เกิดข้อผิดพลาด')
+            if ('error' in result) {
+                setError(result.error)
                 return
             }
-            setSuccessMsg('ยื่นใบลาสำเร็จ! รอการอนุมัติจากหัวหน้า')
+            setSuccess('ยื่นใบลาสำเร็จ! ระบบจะแจ้งผู้อนุมัติทันที')
             setShowForm(false)
-            setLeaveType('sick')
-            setStartDate('')
-            setEndDate('')
-            setReason('')
-            fetchData()
-            setTimeout(() => setSuccessMsg(''), 5000)
-        } catch {
-            setError('เกิดข้อผิดพลาดในการส่งข้อมูล')
-        } finally {
-            setSubmitting(false)
-        }
+            setLeaveType('sick'); setStartDate(''); setEndDate(''); setReason('')
+            fetchRequests()
+            setTimeout(() => setSuccess(''), 6000)
+        })
     }
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <Loader2 className="animate-spin text-primary" size={32} />
-            </div>
-        )
-    }
+    const pendingCount = requests.filter(r => r.status === 'pending').length
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="space-y-6 pb-20" style={{ fontSize: '1.2em' }}>
             {/* Header */}
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-white dark:text-foreground flex items-center gap-2">
-                        <CalendarDays size={24} />
-                        การลาของฉัน
-                    </h1>
-                    <p className="text-white/70 dark:text-muted-foreground text-sm mt-1">
-                        ยื่นใบลา ดูโควตา และประวัติการลา
-                    </p>
+                <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-[#882136]/60 flex items-center justify-center text-[#ad5f6c] border border-[#ad5f6c]/20 shrink-0">
+                        <CalendarDays size={20} />
+                    </div>
+                    <div>
+                        <h1 className="text-[1.3rem] font-black text-white tracking-tight">ใบลาของฉัน</h1>
+                        <p className="text-[0.75rem] text-white/40">
+                            {requests.length} รายการทั้งหมด
+                            {pendingCount > 0 && ` · รออนุมัติ ${pendingCount} รายการ`}
+                        </p>
+                    </div>
                 </div>
                 <button
-                    onClick={() => { setShowForm(!showForm); setError('') }}
-                    className="flex items-center gap-2 bg-white text-primary hover:bg-white/90 dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90 font-semibold px-4 py-2 rounded-lg transition-colors text-sm shadow"
+                    onClick={() => { setShowForm(v => !v); setError('') }}
+                    className="flex items-center gap-2 bg-[#882136] hover:bg-[#882136]/80 text-white font-bold px-4 py-2.5 rounded-xl transition-all border border-[#ad5f6c]/30 text-[0.85rem] active:scale-95"
                 >
                     <Plus size={16} />
                     ยื่นใบลา
                 </button>
             </div>
 
-            {/* Success Message */}
-            {successMsg && (
-                <div className="flex items-center gap-2 bg-green-50 text-green-700 border border-green-200 rounded-lg px-4 py-3 text-sm">
+            {/* Success */}
+            {success && (
+                <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded-xl px-4 py-3 text-[0.9rem] font-medium">
                     <CheckCircle2 size={16} />
-                    {successMsg}
+                    {success}
                 </div>
             )}
 
-            {/* Leave Request Form */}
+            {/* Form */}
             {showForm && (
-                <div className="bg-white dark:bg-card rounded-xl border border-border shadow-sm">
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-                        <h2 className="font-bold text-foreground flex items-center gap-2">
+                <div style={glass} className="overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                        <div className="flex items-center gap-2 text-white font-bold">
                             <FileText size={18} />
-                            ยื่นใบลา
-                        </h2>
-                        <button onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground">
+                            <span>ยื่นใบลา</span>
+                        </div>
+                        <button onClick={() => setShowForm(false)} className="text-white/40 hover:text-white">
                             <X size={20} />
                         </button>
                     </div>
-                    <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                    <form onSubmit={handleSubmit} className="p-5 space-y-4">
                         {error && (
-                            <div className="flex items-center gap-2 bg-red-50 text-red-700 border border-red-200 rounded-lg px-4 py-3 text-sm">
-                                <AlertCircle size={16} />
+                            <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-300 rounded-xl px-4 py-3 text-[0.85rem]">
+                                <AlertCircle size={15} />
                                 {error}
                             </div>
                         )}
 
-                        {/* Leave Type */}
-                        <div>
-                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                ประเภทการลา <span className="text-red-500">*</span>
+                        {/* Type */}
+                        <div className="space-y-1.5">
+                            <label className="text-[0.8rem] font-bold text-white/50 uppercase tracking-wider">
+                                ประเภทการลา <span className="text-red-400">*</span>
                             </label>
                             <div className="relative">
                                 <select
                                     value={leaveType}
                                     onChange={e => setLeaveType(e.target.value)}
-                                    className="w-full appearance-none bg-background border border-input rounded-lg px-4 py-2.5 pr-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className={cn(inputCls, 'appearance-none pr-10')}
                                 >
-                                    {Object.entries(LEAVE_TYPE_LABELS).map(([value, label]) => (
-                                        <option key={value} value={value}>{label}</option>
+                                    {Object.entries(LEAVE_LABELS).map(([v, l]) => (
+                                        <option key={v} value={v}>{l}</option>
                                     ))}
                                 </select>
-                                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
                             </div>
-                            {/* Show remaining balance for selected type */}
-                            {(() => {
-                                const bal = balances.find(b => b.leaveType === leaveType)
-                                if (bal) return (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        คงเหลือ: <span className="font-semibold text-foreground">{bal.remainingDays}</span> วัน
-                                        (ใช้ไปแล้ว {bal.usedDays}/{bal.entitledDays} วัน)
-                                    </p>
-                                )
-                            })()}
                         </div>
 
                         {/* Dates */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                    วันที่เริ่มลา <span className="text-red-500">*</span>
+                            <div className="space-y-1.5">
+                                <label className="text-[0.8rem] font-bold text-white/50 uppercase tracking-wider">
+                                    วันที่เริ่ม <span className="text-red-400">*</span>
                                 </label>
-                                <input
-                                    type="date"
-                                    value={startDate}
-                                    onChange={e => setStartDate(e.target.value)}
-                                    min={new Date().toISOString().split('T')[0]}
-                                    className="w-full bg-background border border-input rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    required
-                                />
+                                <input type="date" value={startDate} min={new Date().toISOString().split('T')[0]}
+                                    onChange={e => setStartDate(e.target.value)} className={inputCls} required />
                             </div>
-                            <div>
-                                <label className="block text-sm font-semibold text-foreground mb-2">
-                                    วันที่สิ้นสุด <span className="text-red-500">*</span>
+                            <div className="space-y-1.5">
+                                <label className="text-[0.8rem] font-bold text-white/50 uppercase tracking-wider">
+                                    วันที่สิ้นสุด <span className="text-red-400">*</span>
                                 </label>
-                                <input
-                                    type="date"
-                                    value={endDate}
-                                    onChange={e => setEndDate(e.target.value)}
-                                    min={startDate || new Date().toISOString().split('T')[0]}
-                                    className="w-full bg-background border border-input rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    required
-                                />
+                                <input type="date" value={endDate} min={startDate || new Date().toISOString().split('T')[0]}
+                                    onChange={e => setEndDate(e.target.value)} className={inputCls} required />
                             </div>
                         </div>
+                        {totalDays > 0 && (
+                            <p className="text-[0.85rem] text-[#ad5f6c] font-bold">
+                                จำนวนวันทำงาน: {totalDays} วัน
+                            </p>
+                        )}
 
                         {/* Reason */}
-                        <div>
-                            <label className="block text-sm font-semibold text-foreground mb-2">
-                                เหตุผล <span className="text-red-500">*</span>
+                        <div className="space-y-1.5">
+                            <label className="text-[0.8rem] font-bold text-white/50 uppercase tracking-wider">
+                                เหตุผล <span className="text-red-400">*</span>
                             </label>
                             <textarea
                                 value={reason}
                                 onChange={e => setReason(e.target.value)}
                                 placeholder="กรุณาระบุเหตุผลในการลา"
                                 rows={3}
-                                className="w-full bg-background border border-input rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                                className={cn(inputCls, 'resize-none')}
                                 required
                             />
                         </div>
 
-                        <div className="flex gap-3 pt-2">
+                        <div className="flex gap-3 pt-1">
                             <button
                                 type="submit"
-                                disabled={submitting}
-                                className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold px-6 py-2.5 rounded-lg transition-colors text-sm disabled:opacity-60"
+                                disabled={isPending}
+                                className="flex items-center gap-2 bg-[#882136] hover:bg-[#882136]/80 text-white font-bold px-6 py-2.5 rounded-xl transition-all text-[0.9rem] disabled:opacity-60 active:scale-95"
                             >
-                                {submitting ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
-                                {submitting ? 'กำลังส่ง...' : 'ยื่นใบลา'}
+                                {isPending ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+                                {isPending ? 'กำลังส่ง...' : 'ยื่นใบลา'}
                             </button>
                             <button
                                 type="button"
                                 onClick={() => { setShowForm(false); setError('') }}
-                                className="px-6 py-2.5 rounded-lg border border-border text-foreground hover:bg-muted text-sm font-medium transition-colors"
+                                className="px-6 py-2.5 rounded-xl border border-white/15 text-white/60 hover:text-white hover:border-white/30 text-[0.9rem] font-medium transition-colors"
                             >
                                 ยกเลิก
                             </button>
@@ -372,32 +367,26 @@ export default function EmployeeLeavePage() {
                 </div>
             )}
 
-            {/* Leave Balances */}
-            <div className="bg-white dark:bg-card rounded-xl border border-border shadow-sm">
-                <div className="px-6 py-4 border-b border-border">
-                    <h2 className="font-bold text-foreground">โควตาการลาปีนี้</h2>
+            {/* History */}
+            <div style={glass} className="overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                    <h2 className="text-[1rem] font-bold text-white">ประวัติการลา</h2>
+                    <span className="text-[0.8rem] text-white/35">{requests.length} รายการ</span>
                 </div>
-                <div className="p-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                    {balances.map(bal => (
-                        <BalanceCard key={bal.leaveType} balance={bal} />
-                    ))}
-                </div>
-            </div>
-
-            {/* Leave History */}
-            <div className="bg-white dark:bg-card rounded-xl border border-border shadow-sm">
-                <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-                    <h2 className="font-bold text-foreground">ประวัติการลา</h2>
-                    <span className="text-xs text-muted-foreground">{requests.length} รายการ</span>
-                </div>
-                <div className="px-6">
-                    {requests.length === 0 ? (
-                        <div className="py-12 text-center text-muted-foreground">
-                            <CalendarDays size={40} className="mx-auto mb-3 opacity-30" />
-                            <p className="text-sm">ยังไม่มีรายการลา</p>
+                <div className="p-4">
+                    {loading ? (
+                        <div className="flex justify-center py-12">
+                            <Loader2 className="animate-spin text-[#ad5f6c]" size={28} />
+                        </div>
+                    ) : requests.length === 0 ? (
+                        <div className="text-center py-12 text-white/30">
+                            <CalendarDays size={40} className="mx-auto mb-3 opacity-40" />
+                            <p className="text-[0.9rem]">ยังไม่มีรายการลา</p>
                         </div>
                     ) : (
-                        requests.map(req => <LeaveRow key={req.id} req={req} />)
+                        <div className="space-y-3">
+                            {requests.map(r => <LeaveCard key={r.id} req={r} />)}
+                        </div>
                     )}
                 </div>
             </div>

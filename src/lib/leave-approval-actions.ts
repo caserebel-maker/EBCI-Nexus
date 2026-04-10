@@ -1,6 +1,7 @@
 'use server'
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getSession } from '@/lib/auth'
 import { sendLeaveRequestNotification, sendLeaveDecisionNotification } from '@/lib/leave-email'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
@@ -339,4 +340,58 @@ export async function rejectLeave(
         console.error('rejectLeave error:', err)
         return { error: err.message ?? 'เกิดข้อผิดพลาด' }
     }
+}
+
+// ─── Session-based convenience wrappers ───────────────────────────────────────
+// These look up the caller's employee ID from session + Supabase auth, so
+// client components don't need to know or pass an employeeId.
+
+async function getMyEmployeeId(): Promise<string | null> {
+    const session = await getSession()
+    if (!session) return null
+    if (session.employeeId) return session.employeeId
+
+    // Look up employee by Supabase auth email
+    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(session.id)
+    const email = authUser?.user?.email
+    if (!email) return null
+
+    const { data: emp } = await supabaseAdmin
+        .from('employees')
+        .select('id')
+        .eq('email', email)
+        .eq('status', 'active')
+        .maybeSingle()
+
+    return emp?.id ?? null
+}
+
+export async function submitLeaveRequestAsCurrentUser(leaveData: {
+    leave_type: string
+    start_date: string
+    end_date: string
+    total_days: number
+    reason?: string
+}): Promise<{ success: true; leaveRequestId: string } | { error: string }> {
+    const employeeId = await getMyEmployeeId()
+    if (!employeeId) return { error: 'ไม่พบข้อมูลพนักงาน กรุณาติดต่อ HR' }
+    return submitLeaveRequest(employeeId, leaveData)
+}
+
+export async function approveLeaveAsCurrentUser(
+    leaveRequestId: string,
+    comment?: string
+): Promise<{ success: true; fullyApproved: boolean } | { error: string }> {
+    const approverId = await getMyEmployeeId()
+    if (!approverId) return { error: 'ไม่พบข้อมูลผู้อนุมัติ' }
+    return approveLeave(leaveRequestId, approverId, comment)
+}
+
+export async function rejectLeaveAsCurrentUser(
+    leaveRequestId: string,
+    comment: string
+): Promise<{ success: true } | { error: string }> {
+    const approverId = await getMyEmployeeId()
+    if (!approverId) return { error: 'ไม่พบข้อมูลผู้อนุมัติ' }
+    return rejectLeave(leaveRequestId, approverId, comment)
 }

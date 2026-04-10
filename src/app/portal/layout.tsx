@@ -14,7 +14,7 @@ export default async function EmployeeLayout({
     }
 
     return (
-        <DashboardShell role="employee" userName={session.name}>
+        <DashboardShell role={session.role} userName={session.name}>
             {children}
         </DashboardShell>
     )

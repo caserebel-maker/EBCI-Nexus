@@ -20,7 +20,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
     [ROLES.MANAGER]: [
         { label: 'dashboard.title', href: '/dashboard', icon: LayoutDashboard },
         { label: 'leave.myLeave', href: '/portal/leave', icon: CalendarDays },
-        { label: 'leave.approveLeave', href: '/dashboard/leave/approve', icon: ClipboardCheck },
+        { label: 'leave.approveLeave', href: '/portal/approve', icon: ClipboardCheck },
     ],
     [ROLES.EMPLOYEE]: [
         { label: 'dashboard.portal', href: '/portal', icon: LayoutDashboard },

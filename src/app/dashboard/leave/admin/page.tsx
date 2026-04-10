@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useTransition } from 'react'
 import {
     ShieldCheck, Download, Filter, CheckCircle2, XCircle,
-    Clock, CalendarDays, User, Loader2, X, AlertCircle, ChevronDown
+    Clock, CalendarDays, User, Loader2, X, AlertCircle, ChevronDown, ChevronRight,
 } from 'lucide-react'
+import { approveLeaveAsCurrentUser, rejectLeaveAsCurrentUser } from '@/lib/leave-approval-actions'
+import { cn } from '@/lib/utils'
 
 // ---- Types ----
 interface LeaveRequest {
@@ -152,6 +154,145 @@ function RejectModal({
     )
 }
 
+// ── Types for HR multi-level tab ───────────────────────────────────────────
+interface HrApprovalStep {
+    id: string; approver_role: string; status: string
+    comment: string | null; acted_at: string | null
+    approver: { first_name_th: string; last_name_th: string } | null
+}
+interface HrLeaveReq {
+    id: string; leave_type: string; start_date: string; end_date: string
+    total_days: number; reason: string; status: string; created_at: string
+    employee: { id: string; first_name_th: string; last_name_th: string; nickname: string | null; department: string | null; position: string | null }
+    leave_approvals: HrApprovalStep[]
+}
+
+const HR_ROLE_LABELS: Record<string, string> = {
+    supervisor: 'หัวหน้าแผนก', manager: 'หัวหน้าฝ่าย', hr: 'HR Admin', md: 'MD',
+}
+
+// ── HR Pending Card ────────────────────────────────────────────────────────
+function HrLeaveCard({
+    req, onApprove, onReject, actionId,
+}: {
+    req: HrLeaveReq
+    onApprove: (id: string) => void
+    onReject: (req: HrLeaveReq) => void
+    actionId: string | null
+}) {
+    const sorted = [...req.leave_approvals].sort(
+        (a, b) => new Date(a.acted_at ?? a.id).getTime() - new Date(b.acted_at ?? b.id).getTime()
+    )
+    const isLoading = actionId === req.id
+    const emp = req.employee
+    return (
+        <div className="p-4 border-b border-border last:border-0 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <User size={13} className="text-primary" />
+                    </div>
+                    <div>
+                        <p className="font-semibold text-foreground text-sm">
+                            {emp.first_name_th} {emp.last_name_th}
+                            {emp.nickname && <span className="font-normal text-muted-foreground"> ({emp.nickname})</span>}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{emp.position} · {emp.department}</p>
+                    </div>
+                </div>
+                <span className="shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                    {LEAVE_TYPE_LABELS[req.leave_type] ?? req.leave_type}
+                </span>
+            </div>
+            <div className="text-sm text-muted-foreground">
+                {formatDate(req.start_date)} – {formatDate(req.end_date)}
+                <span className="ml-1 font-semibold text-foreground">({req.total_days} วัน)</span>
+            </div>
+            <div className="bg-muted rounded-md px-3 py-2 text-sm">
+                <p className="text-xs text-muted-foreground">เหตุผล</p>
+                <p className="text-foreground">{req.reason}</p>
+            </div>
+            {/* Approval History */}
+            {sorted.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1">
+                    {sorted.map((s, i) => (
+                        <div key={s.id} className="flex items-center gap-1">
+                            {i > 0 && <ChevronRight size={11} className="text-muted-foreground/50" />}
+                            <span className={cn('text-[0.7rem] font-semibold px-1.5 py-0.5 rounded-full',
+                                s.status === 'approved' ? 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400'
+                                    : s.status === 'rejected' ? 'bg-red-100 text-red-700'
+                                        : 'bg-amber-100 text-amber-700')}>
+                                {s.status === 'approved' ? '✅' : s.status === 'rejected' ? '❌' : '⏳'}{' '}
+                                {HR_ROLE_LABELS[s.approver_role] ?? s.approver_role}
+                            </span>
+                        </div>
+                    ))}
+                    <span className="text-[0.7rem] font-bold text-primary ml-1">← ขั้นของ HR</span>
+                </div>
+            )}
+            <div className="flex gap-2 pt-1">
+                <button
+                    onClick={() => onApprove(req.id)}
+                    disabled={isLoading}
+                    className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg disabled:opacity-60 transition-colors"
+                >
+                    {isLoading ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle2 size={10} />}
+                    อนุมัติ
+                </button>
+                <button
+                    onClick={() => onReject(req)}
+                    disabled={isLoading}
+                    className="flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg disabled:opacity-60 transition-colors"
+                >
+                    <XCircle size={10} />
+                    ปฏิเสธ
+                </button>
+            </div>
+        </div>
+    )
+}
+
+// ── HR Reject Modal ────────────────────────────────────────────────────────
+function HrRejectModal({
+    req, onConfirm, onClose, loading,
+}: {
+    req: HrLeaveReq; onConfirm: (r: string) => void; onClose: () => void; loading: boolean
+}) {
+    const [reason, setReason] = useState('')
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <div className="bg-white dark:bg-card rounded-xl shadow-2xl w-full max-w-md">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+                    <h3 className="font-bold text-foreground flex items-center gap-2">
+                        <XCircle size={18} className="text-red-500" />ปฏิเสธใบลา (HR)
+                    </h3>
+                    <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X size={20} /></button>
+                </div>
+                <div className="p-6 space-y-4">
+                    <div className="bg-muted rounded-lg p-3 text-sm space-y-1">
+                        <p><span className="font-medium">พนักงาน:</span> {req.employee.first_name_th} {req.employee.last_name_th}</p>
+                        <p><span className="font-medium">ประเภท:</span> {LEAVE_TYPE_LABELS[req.leave_type]}</p>
+                        <p><span className="font-medium">วันที่:</span> {formatDate(req.start_date)} – {formatDate(req.end_date)}</p>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-foreground mb-2">เหตุผล <span className="text-red-500">*</span></label>
+                        <textarea value={reason} onChange={e => setReason(e.target.value)}
+                            placeholder="กรุณาระบุเหตุผลที่ปฏิเสธ" rows={3}
+                            className="w-full bg-background border border-input rounded-lg px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none" />
+                    </div>
+                    <div className="flex gap-3">
+                        <button onClick={() => reason.trim() && onConfirm(reason)} disabled={!reason.trim() || loading}
+                            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2.5 rounded-lg text-sm disabled:opacity-60">
+                            {loading ? <Loader2 size={15} className="animate-spin" /> : <XCircle size={15} />}ยืนยันปฏิเสธ
+                        </button>
+                        <button onClick={onClose} className="px-5 py-2.5 rounded-lg border border-border text-foreground hover:bg-muted text-sm font-medium">ยกเลิก</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 // ---- Main Page ----
 export default function LeaveAdminPage() {
     const [requests, setRequests] = useState<LeaveRequest[]>([])
@@ -160,6 +301,14 @@ export default function LeaveAdminPage() {
     const [rejectTarget, setRejectTarget] = useState<LeaveRequest | null>(null)
     const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
     const [exportLoading, setExportLoading] = useState(false)
+
+    // HR multi-level tab
+    const [viewMode, setViewMode] = useState<'all' | 'hr_pending'>('all')
+    const [hrRequests, setHrRequests] = useState<HrLeaveReq[]>([])
+    const [hrLoading, setHrLoading] = useState(false)
+    const [hrRejectTarget, setHrRejectTarget] = useState<HrLeaveReq | null>(null)
+    const [hrActionId, setHrActionId] = useState<string | null>(null)
+    const [, startHrTransition] = useTransition()
 
     // Filters
     const currentYear = new Date().getFullYear()
@@ -194,6 +343,39 @@ export default function LeaveAdminPage() {
     }, [year, month, department, leaveType, status])
 
     useEffect(() => { fetchRequests() }, [fetchRequests])
+
+    const fetchHrRequests = useCallback(async () => {
+        setHrLoading(true)
+        try {
+            const res = await fetch('/api/leave/v2/hr-pending')
+            const data = await res.json()
+            if (data.data) setHrRequests(data.data)
+        } catch { /* ignore */ } finally { setHrLoading(false) }
+    }, [])
+
+    useEffect(() => { if (viewMode === 'hr_pending') fetchHrRequests() }, [viewMode, fetchHrRequests])
+
+    function handleHrApprove(id: string) {
+        setHrActionId(id)
+        startHrTransition(async () => {
+            const result = await approveLeaveAsCurrentUser(id)
+            if ('error' in result) { showToast('error', result.error) }
+            else { showToast('success', result.fullyApproved ? 'อนุมัติเสร็จสิ้น — แจ้งพนักงานแล้ว' : 'อนุมัติแล้ว ส่งต่อขั้นถัดไป'); fetchHrRequests() }
+            setHrActionId(null)
+        })
+    }
+
+    function handleHrRejectConfirm(comment: string) {
+        if (!hrRejectTarget) return
+        const id = hrRejectTarget.id
+        setHrActionId(id)
+        startHrTransition(async () => {
+            const result = await rejectLeaveAsCurrentUser(id, comment)
+            if ('error' in result) { showToast('error', result.error) }
+            else { showToast('success', 'ปฏิเสธใบลา พนักงานได้รับแจ้งแล้ว'); setHrRejectTarget(null); fetchHrRequests() }
+            setHrActionId(null)
+        })
+    }
 
     async function handleApprove(id: string) {
         setActionLoading(id)
@@ -286,6 +468,14 @@ export default function LeaveAdminPage() {
                     loading={actionLoading === rejectTarget.id}
                 />
             )}
+            {hrRejectTarget && (
+                <HrRejectModal
+                    req={hrRejectTarget}
+                    onConfirm={handleHrRejectConfirm}
+                    onClose={() => setHrRejectTarget(null)}
+                    loading={hrActionId === hrRejectTarget.id}
+                />
+            )}
 
             <div className="space-y-6">
                 {/* Header */}
@@ -309,6 +499,72 @@ export default function LeaveAdminPage() {
                     </button>
                 </div>
 
+                {/* View Mode Tabs */}
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setViewMode('all')}
+                        className={cn('px-4 py-2 rounded-lg text-sm font-semibold transition-colors border',
+                            viewMode === 'all'
+                                ? 'bg-primary text-primary-foreground border-primary shadow'
+                                : 'bg-white dark:bg-card border-border text-foreground hover:bg-muted'
+                        )}
+                    >
+                        รายการทั้งหมด
+                    </button>
+                    <button
+                        onClick={() => setViewMode('hr_pending')}
+                        className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors border',
+                            viewMode === 'hr_pending'
+                                ? 'bg-amber-600 text-white border-amber-600 shadow'
+                                : 'bg-white dark:bg-card border-border text-foreground hover:bg-muted'
+                        )}
+                    >
+                        <Clock size={14} />
+                        รออนุมัติโดย HR
+                        {hrRequests.length > 0 && viewMode !== 'hr_pending' && (
+                            <span className="bg-amber-100 text-amber-700 text-xs font-black px-1.5 py-0.5 rounded-full">
+                                {hrRequests.length}
+                            </span>
+                        )}
+                    </button>
+                </div>
+
+                {/* HR Pending View */}
+                {viewMode === 'hr_pending' && (
+                    <div className="bg-white dark:bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+                            <h2 className="font-bold text-foreground flex items-center gap-2">
+                                <Clock size={16} className="text-amber-500" />
+                                ใบลาที่รอ HR อนุมัติ
+                            </h2>
+                            <span className="text-xs text-muted-foreground">{hrRequests.length} รายการ</span>
+                        </div>
+                        {hrLoading ? (
+                            <div className="flex items-center justify-center h-32">
+                                <Loader2 className="animate-spin text-primary" size={24} />
+                            </div>
+                        ) : hrRequests.length === 0 ? (
+                            <div className="py-12 text-center text-muted-foreground">
+                                <CheckCircle2 size={36} className="mx-auto mb-3 opacity-30" />
+                                <p className="text-sm">ไม่มีใบลาที่รอ HR อนุมัติ</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-border">
+                                {hrRequests.map(req => (
+                                    <HrLeaveCard
+                                        key={req.id}
+                                        req={req}
+                                        onApprove={handleHrApprove}
+                                        onReject={setHrRejectTarget}
+                                        actionId={hrActionId}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {viewMode === 'all' && <>
                 {/* Summary Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {[
@@ -536,6 +792,7 @@ export default function LeaveAdminPage() {
                         </>
                     )}
                 </div>
+                </>}
             </div>
         </>
     )
