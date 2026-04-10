@@ -87,11 +87,16 @@ function fullName(firstName: string, lastName: string, nickname?: string | null)
 }
 
 // ─── Metric Card ──────────────────────────────────────────────────────────────
-function MetricCard({ title, value, sub, icon: Icon, accent }: {
-    title: string; value: string | number; sub?: string; icon: any; accent: string
+function MetricCard({ title, value, sub, icon: Icon, accent, href }: {
+    title: string; value: string | number; sub?: string; icon: any; accent: string; href: string
 }) {
+    const router = useRouter()
     return (
-        <div style={metricCardStyle} className="p-3 lg:p-5 flex items-start gap-3">
+        <div
+            style={metricCardStyle}
+            className="p-3 lg:p-5 flex items-start gap-3 cursor-pointer transition-all duration-200 hover:brightness-125 hover:scale-[1.02] active:scale-[0.99]"
+            onClick={() => router.push(href)}
+        >
             <div className={cn('h-10 w-10 lg:h-12 lg:w-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg', accent)}>
                 <Icon size={22} className="text-white" />
             </div>
@@ -511,13 +516,17 @@ export function HRDashboard({
                     {/* Metric Cards */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <MetricCard title="พนักงานทั้งหมด" value={metrics.totalEmployees}
-                            sub={`ปฏิบัติงาน ${metrics.activeEmployees} คน`} icon={Users} accent="bg-[#882136]" />
+                            sub={`ปฏิบัติงาน ${metrics.activeEmployees} คน`} icon={Users} accent="bg-[#882136]"
+                            href="/dashboard/employees" />
                         <MetricCard title="ลาวันนี้" value={metrics.leavingToday}
-                            sub="ได้รับอนุมัติแล้ว" icon={CalendarDays} accent="bg-[#7a3040]" />
+                            sub="ได้รับอนุมัติแล้ว" icon={CalendarDays} accent="bg-[#7a3040]"
+                            href="/dashboard/leave/admin?filter=today" />
                         <MetricCard title="รออนุมัติใบลา" value={metrics.pendingLeaves}
-                            sub="รายการ" icon={Clock} accent="bg-[#9e4050]" />
+                            sub="รายการ" icon={Clock} accent="bg-[#9e4050]"
+                            href="/dashboard/leave/admin?filter=pending" />
                         <MetricCard title="สัญญาหมดใน 30 วัน" value={metrics.expiringContracts}
-                            sub="คน" icon={AlertTriangle} accent="bg-[#6b2030]" />
+                            sub="คน" icon={AlertTriangle} accent="bg-[#6b2030]"
+                            href="/dashboard/employees?filter=contract-expiring" />
                     </div>
 
                     {/* Bar chart – monthly leave */}
