@@ -13,24 +13,25 @@ import {
 import { UrgentBanners } from '@/components/dashboard/urgent-banners'
 import { cn } from '@/lib/utils'
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const glassStyle: React.CSSProperties = {
-    background: 'linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(86,30,35,0.36) 50%, rgba(255,255,255,0.12) 100%)',
+    background: 'rgba(255,255,255,0.13)',
     backdropFilter: 'blur(12px)',
     WebkitBackdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255,255,255,0.25)',
+    border: '1px solid rgba(255,255,255,0.22)',
+    borderTop: '1px solid rgba(255,255,255,0.30)',
     borderRadius: '16px',
-    boxShadow: '0 4px 28px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.15)',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15)',
 }
 
-// Silver/pearl gradient overlay for metric cards
 const metricCardStyle: React.CSSProperties = {
-    background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(86,30,35,0.45) 60%, rgba(255,255,255,0.05) 100%)',
-    backdropFilter: 'blur(14px)',
-    WebkitBackdropFilter: 'blur(14px)',
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.16) 0%, rgba(200,200,220,0.08) 50%, rgba(255,255,255,0.13) 100%)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
     border: '1px solid rgba(255,255,255,0.22)',
+    borderTop: '1px solid rgba(255,255,255,0.30)',
     borderRadius: '16px',
-    boxShadow: '0 6px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.18)',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15)',
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -81,14 +82,14 @@ function MetricCard({ title, value, sub, icon: Icon, accent }: {
     title: string; value: string | number; sub?: string; icon: any; accent: string
 }) {
     return (
-        <div style={metricCardStyle} className="p-5 flex items-start gap-4">
-            <div className={cn('h-13 w-13 h-12 w-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg', accent)}>
-                <Icon size={24} className="text-white" />
+        <div style={metricCardStyle} className="p-3 lg:p-5 flex items-start gap-3">
+            <div className={cn('h-10 w-10 lg:h-12 lg:w-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg', accent)}>
+                <Icon size={22} className="text-white" />
             </div>
-            <div className="min-w-0">
-                <p className="text-sm font-bold text-white/55 uppercase tracking-widest truncate">{title}</p>
-                <p className="text-4xl font-black text-white mt-0.5 leading-none">{value}</p>
-                {sub && <p className="text-sm text-white/45 mt-1">{sub}</p>}
+            <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white/55 leading-tight whitespace-normal">{title}</p>
+                <p className="text-2xl lg:text-3xl font-black text-white mt-0.5 leading-none">{value}</p>
+                {sub && <p className="text-xs lg:text-sm text-white/45 mt-1 leading-tight">{sub}</p>}
             </div>
         </div>
     )
@@ -177,6 +178,79 @@ function DeptDonut({ data, total }: { data: any[]; total: number }) {
     )
 }
 
+// ─── Section Header ───────────────────────────────────────────────────────────
+function SectionHeader({ title, icon: Icon, warn }: { title: string; icon: any; warn?: boolean }) {
+    return (
+        <div className="flex items-center gap-2 mb-4">
+            <Icon size={16} className={warn ? 'text-amber-400' : 'text-[#ad5f6c]'} />
+            <h2 className="text-base lg:text-lg font-semibold text-white/65 tracking-wide">{title}</h2>
+        </div>
+    )
+}
+
+// ─── News Modal ───────────────────────────────────────────────────────────────
+const newsModalOverlayStyle: React.CSSProperties = {
+    background: 'rgba(20,5,8,0.72)',
+    backdropFilter: 'blur(4px)',
+}
+const newsModalStyle: React.CSSProperties = {
+    background: 'linear-gradient(145deg, rgba(255,255,255,0.18) 0%, rgba(200,180,190,0.14) 40%, rgba(255,255,255,0.16) 100%), linear-gradient(145deg, rgba(86,30,35,0.72) 0%, rgba(60,15,20,0.88) 60%, rgba(100,35,45,0.72) 100%)',
+    backdropFilter: 'blur(24px)',
+    border: '1px solid rgba(255,255,255,0.18)',
+    boxShadow: '0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.14)',
+    borderRadius: '1.25rem',
+}
+function NewsModal({ news, onClose }: { news: any; onClose: () => void }) {
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={newsModalOverlayStyle}
+            onClick={onClose}
+        >
+            <div
+                className="w-full max-w-lg max-h-[80vh] flex flex-col animate-[fadeInScale_0.2s_ease-out]"
+                style={newsModalStyle}
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="flex items-start justify-between gap-3 p-6 pb-4 border-b border-white/10">
+                    <div className="flex-1 min-w-0">
+                        <span className={cn(
+                            'inline-block text-xs font-bold px-2.5 py-0.5 rounded-full border mb-2',
+                            PRIORITY_COLOR[news.priority] ?? 'bg-white/10 text-white/50 border-white/10'
+                        )}>
+                            {PRIORITY_LABEL[news.priority] ?? news.priority}
+                        </span>
+                        <h2 className="text-xl font-semibold text-white leading-snug">{news.headline}</h2>
+                        <p className="text-sm text-white/45 mt-1">
+                            {new Date(news.publish_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </p>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-colors text-lg leading-none"
+                        aria-label="ปิด"
+                    >×</button>
+                </div>
+                {/* Body */}
+                <div className="overflow-y-auto p-6 pt-4 space-y-4">
+                    {news.image_url && (
+                        <img
+                            src={news.image_url}
+                            alt={news.headline}
+                            className="w-full rounded-lg object-cover"
+                        />
+                    )}
+                    {news.content
+                        ? <p className="text-base text-white/80 leading-relaxed whitespace-pre-wrap">{news.content}</p>
+                        : <p className="text-sm text-white/35 italic">ไม่มีเนื้อหาเพิ่มเติม</p>
+                    }
+                </div>
+            </div>
+        </div>
+    )
+}
+
 // ─── Day Leave Modal ──────────────────────────────────────────────────────────
 const LEAVE_BADGE: Record<string, string> = {
     sick:       'bg-purple-500/20 text-purple-300 border-purple-500/30',
@@ -203,7 +277,7 @@ function DayLeaveModal({ date, onClose }: { date: Date; onClose: () => void }) {
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
             style={{ animation: 'fadeInModal 0.18s ease' }}
             onClick={onClose}
         >
@@ -223,7 +297,7 @@ function DayLeaveModal({ date, onClose }: { date: Date; onClose: () => void }) {
             {/* Panel */}
             <div
                 style={{
-                    ...glassStyle,
+                    ...newsModalStyle,
                     animation: 'slideUpModal 0.22s cubic-bezier(0.34,1.56,0.64,1)',
                     maxHeight: '80vh',
                 }}
@@ -270,7 +344,7 @@ function DayLeaveModal({ date, onClose }: { date: Date; onClose: () => void }) {
                                             {emp.first_name_th?.charAt(0)}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-white font-bold text-sm truncate group-hover:text-white transition-colors">
+                                            <p className="text-white font-bold text-sm truncate">
                                                 {emp.first_name_th} {emp.last_name_th}
                                             </p>
                                             <p className="text-white/45 text-xs truncate">{emp.department}</p>
@@ -335,16 +409,6 @@ function WeekCalendar({ weekDays, leavesToday, onDayClick }: {
                     </button>
                 )
             })}
-        </div>
-    )
-}
-
-// ─── Section Header ───────────────────────────────────────────────────────────
-function SectionHeader({ title, icon: Icon, warn }: { title: string; icon: any; warn?: boolean }) {
-    return (
-        <div className="flex items-center gap-2 mb-4">
-            <Icon size={16} className={warn ? 'text-amber-400' : 'text-[#ad5f6c]'} />
-            <h2 className="text-sm font-black text-white/65 uppercase tracking-[0.15em]">{title}</h2>
         </div>
     )
 }
@@ -415,15 +479,14 @@ export function HRDashboard({
 }: Props) {
     const [pending, setPending] = useState(pendingLeaves)
     const removePending = (id: string) => setPending(prev => prev.filter(r => r.id !== id))
+    const [selectedNews, setSelectedNews] = useState<any>(null)
     const [selectedDay, setSelectedDay] = useState<Date | null>(null)
     console.log('leaveChartData:', leaveChartData)
 
     return (
         <div className="space-y-6">
-            {/* Day leave modal */}
-            {selectedDay && (
-                <DayLeaveModal date={selectedDay} onClose={() => setSelectedDay(null)} />
-            )}
+            {selectedNews && <NewsModal news={selectedNews} onClose={() => setSelectedNews(null)} />}
+            {selectedDay && <DayLeaveModal date={selectedDay} onClose={() => setSelectedDay(null)} />}
 
             {/* Urgent Banners */}
             <UrgentBanners banners={urgentBanners} />
@@ -510,9 +573,9 @@ export function HRDashboard({
                         ) : (
                             <div className="space-y-2">
                                 {newsAnnouncements.map(a => (
-                                    <div key={a.id} className="flex items-start gap-2.5 py-2 px-2 rounded-xl hover:bg-white/5 transition-colors">
+                                    <div key={a.id} className="flex items-start gap-2.5 py-2 px-2 rounded-xl hover:bg-white/8 cursor-pointer transition-colors" onClick={() => setSelectedNews(a)}>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-base font-bold text-white leading-snug truncate">{a.headline}</p>
+                                            <p className="text-base font-bold text-white leading-snug">{a.headline}</p>
                                             <p className="text-sm text-white/40 mt-0.5">
                                                 {new Date(a.publish_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
                                             </p>
