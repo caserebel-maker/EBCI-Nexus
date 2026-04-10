@@ -15,8 +15,9 @@ export default function AnnouncementPage() {
 
     const handleSubmit = (formData: FormData) => {
         setSuccess(false)
-        if (priority === 'emergency') {
-            if (!confirm("⚠️ CONFIRM EMERGENCY BROADCAST ⚠️\n\nThis will:\n1. Show a sticky banner to ALL employees.\n2. Send an immediate EMAIL to everyone.\n\nAre you sure this is a real emergency?")) {
+        if (priority === 'emergency' || priority === 'urgent') {
+            const label = priority === 'emergency' ? 'ฉุกเฉิน' : 'ด่วน'
+            if (!confirm(`ยืนยันการส่งประกาศประเภท "${label}"\n\nระบบจะ:\n1. แสดง banner บนหน้า Dashboard พนักงานทุกคน\n2. ส่งอีเมลหาพนักงานทุกคนทันที\n\nยืนยันหรือไม่?`)) {
                 return
             }
         }
@@ -91,12 +92,19 @@ export default function AnnouncementPage() {
                 <input type="hidden" name="priority" value={priority} />
 
                 {/* Priority Context Warning */}
-                {priority === 'emergency' && (
-                    <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl flex gap-3 text-amber-500">
+                {(priority === 'emergency' || priority === 'urgent') && (
+                    <div className={cn(
+                        "p-4 rounded-xl flex gap-3",
+                        priority === 'emergency'
+                            ? "bg-red-500/10 border border-red-500/30 text-red-400"
+                            : "bg-amber-500/10 border border-amber-500/30 text-amber-400"
+                    )}>
                         <AlertTriangle className="shrink-0" size={20} />
                         <div className="text-sm">
-                            <strong className="block mb-1 uppercase tracking-wider text-xs">Critical Warning</strong>
-                            This urgency level will trigger an <u>immediate email broadcast</u> to all employees and display a sticky banner on their dashboard. Use only for genuine emergencies.
+                            <strong className="block mb-1 uppercase tracking-wider text-xs">
+                                {priority === 'emergency' ? '⚠️ คำเตือน — ฉุกเฉิน' : '🚨 คำเตือน — ด่วน'}
+                            </strong>
+                            การเผยแพร่ประกาศระดับนี้จะ<u>ส่งอีเมลหาพนักงานที่ปฏิบัติงานทุกคนทันที</u> และแสดง banner บน Dashboard
                         </div>
                     </div>
                 )}
