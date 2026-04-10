@@ -78,8 +78,12 @@ async function handleLeaveAction(id: string, action: 'approve' | 'reject') {
 }
 
 function fullName(firstName: string, lastName: string, nickname?: string | null) {
-    const base = `${firstName} ${lastName}`
-    return nickname ? `${base} (${nickname})` : base
+    return (
+        <>
+            {firstName} {lastName}
+            {nickname && <span className="font-normal opacity-60"> ({nickname})</span>}
+        </>
+    )
 }
 
 // ─── Metric Card ──────────────────────────────────────────────────────────────
