@@ -14,6 +14,8 @@ export interface UpdateEmployeePayload {
     employment_type: string
     status: string
     start_date: string
+    quit_date?: string
+    quit_reason?: string
     // applicants table
     applicant_current_address: string
     applicant_phone: string  // emergency contact
@@ -40,6 +42,8 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
             employment_type: employeeFields.employment_type,
             status: employeeFields.status,
             start_date: employeeFields.start_date,
+            quit_date: employeeFields.quit_date || null,
+            quit_reason: employeeFields.quit_reason || null,
         })
         .eq('id', employeeId)
 

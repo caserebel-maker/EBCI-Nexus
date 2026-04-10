@@ -57,6 +57,8 @@ interface FormState {
     employment_type: string
     status: string
     start_date: string
+    quit_date: string
+    quit_reason: string
     address: string
     emergency_contact: string
 }
@@ -96,6 +98,8 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
         employment_type: employee.employment_type ?? 'full-time',
         status: employee.status ?? 'active',
         start_date: employee.start_date ? employee.start_date.slice(0, 10) : '',
+        quit_date: employee.quit_date ? employee.quit_date.slice(0, 10) : '',
+        quit_reason: employee.quit_reason ?? '',
         address: employee.applicants?.current_address ?? '',
         emergency_contact: employee.applicants?.phone ?? '',
     })
@@ -150,6 +154,8 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
                 employment_type: form.employment_type,
                 status: form.status,
                 start_date: form.start_date,
+                quit_date: form.quit_date || undefined,
+                quit_reason: form.quit_reason || undefined,
                 applicant_current_address: form.address,
                 applicant_phone: form.emergency_contact,
             })
@@ -290,19 +296,42 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
                                 </p>
                             </div>
                             {isEditing ? (
-                                <select className={cn(editSelectClass, 'max-w-[150px]')} value={form.status} onChange={set('status')}>
-                                    <option value="active">ปฏิบัติงาน</option>
-                                    <option value="inactive">ลาออก/พักงาน</option>
-                                </select>
+                                <div className="flex flex-col gap-2 items-end">
+                                    <select className={cn(editSelectClass, 'max-w-[160px]')} value={form.status} onChange={set('status')}>
+                                        <option value="active">ปฏิบัติงาน</option>
+                                        <option value="on_leave">ลา</option>
+                                        <option value="inactive">พ้นสภาพ</option>
+                                    </select>
+                                    {form.status === 'inactive' && (
+                                        <>
+                                            <input
+                                                type="date"
+                                                className={cn(editInputClass, 'max-w-[160px] text-xs')}
+                                                value={form.quit_date}
+                                                onChange={set('quit_date')}
+                                                placeholder="วันที่พ้นสภาพ"
+                                            />
+                                            <select className={cn(editSelectClass, 'max-w-[160px] text-xs')} value={form.quit_reason} onChange={set('quit_reason')}>
+                                                <option value="">— สาเหตุ —</option>
+                                                <option value="resigned">ลาออกเอง</option>
+                                                <option value="retired">เกษียณอายุ</option>
+                                                <option value="contract_ended">สัญญาหมด</option>
+                                                <option value="other">อื่นๆ</option>
+                                            </select>
+                                        </>
+                                    )}
+                                </div>
                             ) : (
                                 <span className={cn(
                                     "px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5",
                                     employee.status === "active"
                                         ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/20"
-                                        : "bg-white/5 text-white/40 border-white/10"
+                                        : employee.status === "on_leave"
+                                        ? "bg-amber-500/20 text-amber-400 border-amber-500/20"
+                                        : "bg-slate-500/15 text-slate-400 border-slate-500/20"
                                 )}>
                                     <span className="h-2 w-2 rounded-full bg-current" />
-                                    {employee.status === "active" ? t('employees.profile.active') : employee.status.toUpperCase()}
+                                    {employee.status === "active" ? t('employees.profile.active') : employee.status === "on_leave" ? "ลา" : "พ้นสภาพ"}
                                 </span>
                             )}
                         </div>

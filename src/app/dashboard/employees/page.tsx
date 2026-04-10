@@ -52,7 +52,9 @@ export default async function EmployeesPage() {
         email: e.email,
         phone: e.phone,
         startDate: new Date(e.start_date || Date.now()),
-        photoPath: e.applicants?.photo_path || null
+        photoPath: e.applicants?.photo_path || null,
+        quitDate: e.quit_date ?? null,
+        quitReason: e.quit_reason ?? null,
     }))
 
     return (

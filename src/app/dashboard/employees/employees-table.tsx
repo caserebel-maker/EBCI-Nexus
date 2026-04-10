@@ -34,6 +34,8 @@ export type Employee = {
     phone?: string | null
     startDate: Date
     photoPath?: string | null
+    quitDate?: string | null
+    quitReason?: string | null
 }
 
 type SortKey = "name_asc" | "name_desc" | "status" | "tenure_desc" | "tenure_asc" | "dept_asc"
@@ -46,6 +48,13 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
     { value: "tenure_asc",  label: "อายุงาน (น้อยไปมาก)" },
     { value: "dept_asc",    label: "ฝ่าย (ก → ฮ)" },
 ]
+
+const QUIT_REASON_LABELS: Record<string, string> = {
+    resigned:         "ลาออกเอง",
+    retired:          "เกษียณอายุ",
+    contract_ended:   "สัญญาหมด",
+    other:            "อื่นๆ",
+}
 
 function sortEmployees(data: Employee[], key: SortKey): Employee[] {
     const sorted = [...data]
@@ -92,15 +101,20 @@ interface EmployeesTableProps {
 export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) {
     const router = useRouter()
     const { t } = useTranslation()
+    const [activeTab, setActiveTab] = useState<'active' | 'inactive'>('active')
     const [searchTerm, setSearchTerm] = useState("")
-    const [statusFilter, setStatusFilter] = useState<string>("all")
     const [deptFilter, setDeptFilter] = useState<string>("all")
     const [sortKey, setSortKey] = useState<SortKey>("name_asc")
 
-    const departments = Array.from(new Set(initialData.map(e => e.department))).sort((a, b) =>
+    const activeEmployees = initialData.filter(e => e.status === 'active' || e.status === 'on_leave')
+    const inactiveEmployees = initialData.filter(e => e.status !== 'active' && e.status !== 'on_leave')
+
+    const tabData = activeTab === 'active' ? activeEmployees : inactiveEmployees
+
+    const departments = Array.from(new Set(tabData.map(e => e.department))).sort((a, b) =>
         a.localeCompare(b, 'th'))
 
-    const filtered = initialData.filter((e) => {
+    const filtered = tabData.filter((e) => {
         const fullTH = `${e.firstNameTH} ${e.lastNameTH}`.toLowerCase()
         const fullEN = `${e.firstNameEN || ""} ${e.lastNameEN || ""}`.toLowerCase()
         const matchSearch =
@@ -108,15 +122,58 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
             fullEN.includes(searchTerm.toLowerCase()) ||
             e.employeeCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
             e.email.toLowerCase().includes(searchTerm.toLowerCase())
-        const matchStatus = statusFilter === "all" || e.status === statusFilter
         const matchDept = deptFilter === "all" || e.department === deptFilter
-        return matchSearch && matchStatus && matchDept
+        return matchSearch && matchDept
     })
 
     const displayData = sortEmployees(filtered, sortKey)
 
+    const handleTabChange = (tab: 'active' | 'inactive') => {
+        setActiveTab(tab)
+        setSearchTerm("")
+        setDeptFilter("all")
+    }
+
     return (
         <div className="space-y-4">
+            {/* Tabs */}
+            <div className="flex gap-2">
+                <button
+                    onClick={() => handleTabChange('active')}
+                    className={cn(
+                        "px-5 py-2.5 rounded-xl text-sm font-semibold border transition-all",
+                        activeTab === 'active'
+                            ? "bg-[#882136]/70 border-[#ad5f6c]/50 text-white shadow-lg"
+                            : "bg-white/5 border-white/10 text-white/50 hover:text-white/80 hover:bg-white/8"
+                    )}
+                >
+                    ปฏิบัติงาน
+                    <span className={cn(
+                        "ml-2 px-1.5 py-0.5 rounded-md text-[11px] font-bold",
+                        activeTab === 'active' ? "bg-white/20 text-white" : "bg-white/10 text-white/40"
+                    )}>
+                        {activeEmployees.length}
+                    </span>
+                </button>
+                <button
+                    onClick={() => handleTabChange('inactive')}
+                    className={cn(
+                        "px-5 py-2.5 rounded-xl text-sm font-semibold border transition-all",
+                        activeTab === 'inactive'
+                            ? "bg-slate-600/70 border-slate-500/50 text-white shadow-lg"
+                            : "bg-white/5 border-white/10 text-white/50 hover:text-white/80 hover:bg-white/8"
+                    )}
+                >
+                    พ้นสภาพ
+                    <span className={cn(
+                        "ml-2 px-1.5 py-0.5 rounded-md text-[11px] font-bold",
+                        activeTab === 'inactive' ? "bg-white/20 text-white" : "bg-white/10 text-white/40"
+                    )}>
+                        {inactiveEmployees.length}
+                    </span>
+                </button>
+            </div>
+
             {/* Toolbar */}
             <div style={silverOverlay} className="flex flex-col gap-3 p-4 shadow-xl">
                 {/* Row 1: Search + Add button */}
@@ -131,7 +188,7 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    {isHrAdmin && (
+                    {isHrAdmin && activeTab === 'active' && (
                         <Link
                             href="/dashboard/employees/new"
                             className="inline-flex items-center gap-2 h-10 px-4 rounded-lg text-sm font-semibold bg-[#882136]/70 hover:bg-[#882136] text-white border border-[#ad5f6c]/30 hover:border-[#ad5f6c]/60 transition-all whitespace-nowrap shrink-0"
@@ -154,18 +211,6 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                         ))}
                     </select>
 
-                    {/* Status filter */}
-                    <select
-                        className="h-10 px-3 rounded-lg border border-white/10 bg-black/20 text-white text-sm focus:outline-none focus:border-primary appearance-none cursor-pointer flex-1 min-w-[120px]"
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                    >
-                        <option value="all" className="bg-slate-900">ทุกสถานะ</option>
-                        <option value="active" className="bg-slate-900">ปฏิบัติงาน</option>
-                        <option value="on_leave" className="bg-slate-900">ลา</option>
-                        <option value="inactive" className="bg-slate-900">ลาออก/พักงาน</option>
-                    </select>
-
                     {/* Sort */}
                     <div className="flex items-center gap-1.5 h-10 px-3 rounded-lg border border-white/10 bg-black/20 flex-1 min-w-[180px]">
                         <ArrowUpDown className="h-3.5 w-3.5 text-white/40 shrink-0" />
@@ -185,86 +230,162 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
             {/* Table */}
             <div style={glassCard} className="overflow-hidden shadow-2xl">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-white/5 text-white/70 font-medium uppercase text-xs">
-                            <tr>
-                                <th className="px-4 py-4 text-center w-10">#</th>
-                                <th className="px-6 py-4">{t('employees.table.name')}</th>
-                                <th className="px-6 py-4">{t('employees.table.position')}</th>
-                                <th className="px-6 py-4">อายุงาน</th>
-                                <th className="px-6 py-4">{t('employees.table.status')}</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/10">
-                            {displayData.length > 0 ? (
-                                displayData.map((employee, idx) => (
-                                    <tr
-                                        key={employee.id}
-                                        onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
-                                        className="hover:bg-white/5 transition-colors cursor-pointer text-white/90"
-                                    >
-                                        <td className="px-4 py-4 text-center text-white/35 font-mono text-xs select-none">
-                                            {idx + 1}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white font-bold border border-white/10 overflow-hidden text-lg shrink-0">
-                                                    {employee.photoPath ? (
-                                                        <img src={employee.photoPath} alt="" className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        (employee.firstNameEN?.charAt(0) ?? employee.firstNameTH.charAt(0))
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <div className="font-semibold text-white">
-                                                        {employee.firstNameTH} {employee.lastNameTH}
-                                                        {employee.nickname && <span className="text-white/45 font-normal ml-1">({employee.nickname})</span>}
-                                                    </div>
-                                                    <div className="text-xs text-white/50 font-mono">{employee.email}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2 text-white">
-                                                <Briefcase className="h-3.5 w-3.5 text-white/50 shrink-0" />
-                                                <span className="truncate max-w-[160px]">{employee.position}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-white/50 text-xs mt-1">
-                                                <Building className="h-3.5 w-3.5 shrink-0" />
-                                                <span className="truncate max-w-[160px]">{employee.department}</span>
-                                                <span className="px-1.5 py-0.5 rounded bg-white/10 text-white/60 font-mono text-[10px] border border-white/10 shrink-0">
-                                                    {employee.employeeCode}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-white/70 text-xs whitespace-nowrap">
-                                            {tenureText(employee.startDate)}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <StatusBadge status={employee.status} />
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
+                    {activeTab === 'active' ? (
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-white/5 text-white/70 font-medium uppercase text-xs">
                                 <tr>
-                                    <td colSpan={5} className="h-64 text-center">
-                                        <div className="flex flex-col items-center justify-center text-white/40">
-                                            <User className="h-12 w-12 mb-4 opacity-50" />
-                                            <p className="text-lg font-medium">ไม่พบพนักงาน</p>
-                                            <p className="text-sm opacity-70">ลองเปลี่ยนเงื่อนไขการค้นหาหรือตัวกรอง</p>
-                                        </div>
-                                    </td>
+                                    <th className="px-4 py-4 text-center w-10">#</th>
+                                    <th className="px-6 py-4">{t('employees.table.name')}</th>
+                                    <th className="px-6 py-4">{t('employees.table.position')}</th>
+                                    <th className="px-6 py-4">อายุงาน</th>
+                                    <th className="px-6 py-4">{t('employees.table.status')}</th>
                                 </tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-white/10">
+                                {displayData.length > 0 ? (
+                                    displayData.map((employee, idx) => (
+                                        <tr
+                                            key={employee.id}
+                                            onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
+                                            className="hover:bg-white/5 transition-colors cursor-pointer text-white/90"
+                                        >
+                                            <td className="px-4 py-4 text-center text-white/35 font-mono text-xs select-none">
+                                                {idx + 1}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <EmployeeNameCell employee={employee} />
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <EmployeePositionCell employee={employee} />
+                                            </td>
+                                            <td className="px-6 py-4 text-white/70 text-xs whitespace-nowrap">
+                                                {tenureText(employee.startDate)}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <StatusBadge status={employee.status} />
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <EmptyRow colSpan={5} />
+                                )}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-white/5 text-white/70 font-medium uppercase text-xs">
+                                <tr>
+                                    <th className="px-4 py-4 text-center w-10">#</th>
+                                    <th className="px-6 py-4">{t('employees.table.name')}</th>
+                                    <th className="px-6 py-4">{t('employees.table.position')}</th>
+                                    <th className="px-6 py-4">อายุงาน</th>
+                                    <th className="px-6 py-4">วันที่พ้นสภาพ</th>
+                                    <th className="px-6 py-4">สาเหตุ</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/10">
+                                {displayData.length > 0 ? (
+                                    displayData.map((employee, idx) => (
+                                        <tr
+                                            key={employee.id}
+                                            onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
+                                            className="hover:bg-white/5 transition-colors cursor-pointer text-white/90"
+                                        >
+                                            <td className="px-4 py-4 text-center text-white/35 font-mono text-xs select-none">
+                                                {idx + 1}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <EmployeeNameCell employee={employee} />
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <EmployeePositionCell employee={employee} />
+                                            </td>
+                                            <td className="px-6 py-4 text-white/70 text-xs whitespace-nowrap">
+                                                {tenureText(employee.startDate)}
+                                            </td>
+                                            <td className="px-6 py-4 text-white/60 text-xs whitespace-nowrap">
+                                                {employee.quitDate
+                                                    ? new Date(employee.quitDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+                                                    : <span className="text-white/25">-</span>
+                                                }
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {employee.quitReason ? (
+                                                    <span className="px-2 py-0.5 rounded bg-slate-500/20 text-slate-300 border border-slate-500/20 text-xs">
+                                                        {QUIT_REASON_LABELS[employee.quitReason] ?? employee.quitReason}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-white/25 text-xs">-</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <EmptyRow colSpan={6} />
+                                )}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             </div>
 
             <div className="text-xs text-white/40 text-center pt-2">
-                แสดง {displayData.length} จาก {initialData.length} คน
+                แสดง {displayData.length} จาก {tabData.length} คน
             </div>
         </div>
+    )
+}
+
+function EmployeeNameCell({ employee }: { employee: Employee }) {
+    return (
+        <div className="flex items-center gap-4">
+            <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white font-bold border border-white/10 overflow-hidden text-lg shrink-0">
+                {employee.photoPath ? (
+                    <img src={employee.photoPath} alt="" className="w-full h-full object-cover" />
+                ) : (
+                    (employee.firstNameEN?.charAt(0) ?? employee.firstNameTH.charAt(0))
+                )}
+            </div>
+            <div>
+                <div className="font-semibold text-white">
+                    {employee.firstNameTH} {employee.lastNameTH}
+                    {employee.nickname && <span className="text-white/45 font-normal ml-1">({employee.nickname})</span>}
+                </div>
+                <div className="text-xs text-white/50 font-mono">{employee.email}</div>
+            </div>
+        </div>
+    )
+}
+
+function EmployeePositionCell({ employee }: { employee: Employee }) {
+    return (
+        <>
+            <div className="flex items-center gap-2 text-white">
+                <Briefcase className="h-3.5 w-3.5 text-white/50 shrink-0" />
+                <span className="truncate max-w-[160px]">{employee.position}</span>
+            </div>
+            <div className="flex items-center gap-2 text-white/50 text-xs mt-1">
+                <Building className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate max-w-[160px]">{employee.department}</span>
+                <span className="px-1.5 py-0.5 rounded bg-white/10 text-white/60 font-mono text-[10px] border border-white/10 shrink-0">
+                    {employee.employeeCode}
+                </span>
+            </div>
+        </>
+    )
+}
+
+function EmptyRow({ colSpan }: { colSpan: number }) {
+    return (
+        <tr>
+            <td colSpan={colSpan} className="h-64 text-center">
+                <div className="flex flex-col items-center justify-center text-white/40">
+                    <User className="h-12 w-12 mb-4 opacity-50" />
+                    <p className="text-lg font-medium">ไม่พบพนักงาน</p>
+                    <p className="text-sm opacity-70">ลองเปลี่ยนเงื่อนไขการค้นหาหรือตัวกรอง</p>
+                </div>
+            </td>
+        </tr>
     )
 }
 
