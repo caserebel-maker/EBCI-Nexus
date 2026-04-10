@@ -620,27 +620,6 @@ export function HRDashboard({
                         )}
                     </div>
 
-                    {/* ── วันเกิดเดือนนี้ ── */}
-                    {birthdays.length > 0 && (
-                        <div style={glassStyle} className="p-5">
-                            <SectionHeader title={`วันเกิดเดือนนี้ (${birthdays.length} คน)`} icon={Gift} />
-                            <div className="space-y-2">
-                                {birthdays.slice(0, 6).map(e => (
-                                    <div key={e.id} className="flex items-center gap-3 py-1.5 px-2 rounded-xl hover:bg-white/5 transition-colors">
-                                        <div className="h-9 w-9 rounded-full bg-[#561e23]/70 flex items-center justify-center text-sm font-black text-white border border-[#ad5f6c]/30 shrink-0">
-                                            {e.first_name_th?.charAt(0)}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-base font-bold text-white truncate">{fullName(e.first_name_th, e.last_name_th, e.nickname)}</p>
-                                            <p className="text-sm text-white/40">{e.dobDay} {MONTHS_TH[e.dobMonth]}</p>
-                                        </div>
-                                        <span className="text-base font-black text-[#e8909a] shrink-0">{e.age} ปี</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
                     {/* Week calendar */}
                     <div style={glassStyle} className="p-5">
                         <SectionHeader title={`ปฏิทินสัปดาห์นี้ · ลาวันนี้ ${leavesToday.length} คน`} icon={CalendarDays} />
@@ -700,6 +679,27 @@ export function HRDashboard({
                                         </div>
                                     )
                                 })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── วันเกิดเดือนนี้ ── */}
+                    {birthdays.length > 0 && (
+                        <div style={glassStyle} className="p-5">
+                            <SectionHeader title={`วันเกิดเดือนนี้ (${birthdays.length} คน)`} icon={Gift} />
+                            <div className="space-y-2">
+                                {birthdays.slice(0, 6).map(e => (
+                                    <div key={e.id} className="flex items-center gap-3 py-1.5 px-2 rounded-xl hover:bg-white/5 transition-colors">
+                                        <div className="h-9 w-9 rounded-full bg-[#561e23]/70 flex items-center justify-center text-sm font-black text-white border border-[#ad5f6c]/30 shrink-0">
+                                            {e.first_name_th?.charAt(0)}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-base font-bold text-white truncate">{fullName(e.first_name_th, e.last_name_th, e.nickname)}</p>
+                                            <p className="text-sm text-white/40">{e.dobDay} {MONTHS_TH[e.dobMonth]}</p>
+                                        </div>
+                                        <span className="text-base font-black text-[#e8909a] shrink-0">{e.age} ปี</span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
