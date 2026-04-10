@@ -587,7 +587,15 @@ export function HRDashboard({
 
                     {/* ── ประกาศข่าวสาร ── */}
                     <div style={glassStyle} className="p-5">
-                        <SectionHeader title="ประกาศข่าวสาร" icon={Megaphone} />
+                        <div className="flex items-center justify-between mb-4">
+                            <SectionHeader title="ประกาศข่าวสาร" icon={Megaphone} />
+                            <button
+                                onClick={() => router.push('/dashboard/announcements')}
+                                className="text-xs font-bold text-white/40 hover:text-white/80 transition-colors shrink-0 -mt-4"
+                            >
+                                ดูทั้งหมด →
+                            </button>
+                        </div>
                         {newsAnnouncements.length === 0 ? (
                             <p className="text-sm text-white/30 italic text-center py-4">ยังไม่มีประกาศ</p>
                         ) : (
