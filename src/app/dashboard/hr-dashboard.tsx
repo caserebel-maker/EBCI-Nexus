@@ -77,6 +77,11 @@ async function handleLeaveAction(id: string, action: 'approve' | 'reject') {
     await fetch(`/api/leave/requests/${id}/${action}`, { method: 'POST' })
 }
 
+function fullName(firstName: string, lastName: string, nickname?: string | null) {
+    const base = `${firstName} ${lastName}`
+    return nickname ? `${base} (${nickname})` : base
+}
+
 // ─── Metric Card ──────────────────────────────────────────────────────────────
 function MetricCard({ title, value, sub, icon: Icon, accent }: {
     title: string; value: string | number; sub?: string; icon: any; accent: string
@@ -345,7 +350,7 @@ function DayLeaveModal({ date, onClose }: { date: Date; onClose: () => void }) {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-white font-bold text-sm truncate">
-                                                {emp.first_name_th} {emp.last_name_th}
+                                                {fullName(emp.first_name_th, emp.last_name_th, emp.nickname)}
                                             </p>
                                             <p className="text-white/45 text-xs truncate">{emp.department}</p>
                                         </div>
@@ -424,7 +429,9 @@ function PendingRow({ lr, onDone }: { lr: any; onDone: (id: string) => void }) {
             onDone(lr.id)
         })
     }
-    const name = lr.employee ? `${lr.employee.first_name_th} ${lr.employee.last_name_th}` : lr.employee_id
+    const name = lr.employee
+        ? fullName(lr.employee.first_name_th, lr.employee.last_name_th, lr.employee.nickname)
+        : lr.employee_id
     if (done) {
         return (
             <div className="flex items-center gap-2 py-2 px-3 rounded-xl text-sm text-white/45 italic">
@@ -603,7 +610,7 @@ export function HRDashboard({
                                             {e.first_name_th?.charAt(0)}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-base font-bold text-white truncate">{e.first_name_th} {e.last_name_th}</p>
+                                            <p className="text-base font-bold text-white truncate">{fullName(e.first_name_th, e.last_name_th, e.nickname)}</p>
                                             <p className="text-sm text-white/40">{e.dobDay} {MONTHS_TH[e.dobMonth]}</p>
                                         </div>
                                         <span className="text-base font-black text-[#e8909a] shrink-0">{e.age} ปี</span>
@@ -642,7 +649,7 @@ export function HRDashboard({
                                             {e.first_name_th?.charAt(0)}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-base font-bold text-white truncate">{e.first_name_th} {e.last_name_th}</p>
+                                            <p className="text-base font-bold text-white truncate">{fullName(e.first_name_th, e.last_name_th, e.nickname)}</p>
                                             <p className="text-sm text-white/40">{e.department}</p>
                                         </div>
                                         <span className="text-base font-black text-[#ad5f6c] shrink-0">{e.years} ปี</span>
@@ -662,7 +669,7 @@ export function HRDashboard({
                                     return (
                                         <div key={e.id} className="flex items-center gap-2 py-1.5 px-2 rounded-xl hover:bg-white/5 transition-colors">
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-base font-bold text-white truncate">{e.first_name_th} {e.last_name_th}</p>
+                                                <p className="text-base font-bold text-white truncate">{fullName(e.first_name_th, e.last_name_th, e.nickname)}</p>
                                                 <p className="text-sm text-white/40 truncate">{e.department}</p>
                                             </div>
                                             <span className={cn('text-sm font-black px-2.5 py-0.5 rounded-full shrink-0',

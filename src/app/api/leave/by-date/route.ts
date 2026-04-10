@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
                 id,
                 first_name_th,
                 last_name_th,
+                nickname,
                 department,
                 position,
                 employee_code

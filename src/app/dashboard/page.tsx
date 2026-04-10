@@ -42,7 +42,7 @@ export default async function AdminDashboard() {
         { data: newsAnnouncements },
     ] = await Promise.all([
         // All employees (include date_of_birth for birthday section)
-        supabaseAdmin.from('employees').select('id, employee_code, first_name_th, last_name_th, department, start_date, status, end_date, title, date_of_birth'),
+        supabaseAdmin.from('employees').select('id, employee_code, first_name_th, last_name_th, nickname, department, start_date, status, end_date, title, date_of_birth'),
 
         // Leaves today (approved)
         supabaseAdmin.from('leave_requests')
@@ -58,7 +58,7 @@ export default async function AdminDashboard() {
 
         // Contracts expiring in 30 days
         supabaseAdmin.from('employees')
-            .select('id, first_name_th, last_name_th, position, department, end_date')
+            .select('id, first_name_th, last_name_th, nickname, position, department, end_date')
             .gte('end_date', now.toISOString())
             .lte('end_date', in30days)
             .eq('status', 'active'),
