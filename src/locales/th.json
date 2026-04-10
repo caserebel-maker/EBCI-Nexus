@@ -82,6 +82,29 @@
             "all": "ทั้งหมด",
             "active": "ปฏิบัติงาน",
             "inactive": "ลาออก/พักงาน"
+        },
+        "profile": {
+            "title": "โปรไฟล์พนักงาน",
+            "backToList": "กลับไปรายการ",
+            "employmentInfo": "ข้อมูลการจ้างงาน",
+            "contactInfo": "ข้อมูลติดต่อ",
+            "quickStats": "สถิติโดยรวม",
+            "attendance": "การเข้างาน",
+            "annualLeave": "วันลาประจำปี",
+            "lastActivity": "กิจกรรมล่าสุด",
+            "recently": "เมื่อเร็วๆ นี้",
+            "joinDate": "วันที่เริ่มงาน",
+            "type": "ประเภทพนักงาน",
+            "permanent": "พนักงานประจำ",
+            "supervisor": "ผู้บังคับบัญชา",
+            "linkedAccount": "บัญชีที่เชื่อมต่อ",
+            "notLinked": "ยังไม่เชื่อมต่อ",
+            "officialEmail": "อีเมลทางการ",
+            "emergencyContact": "ผู้ติดต่อฉุกเฉิน",
+            "addressOverview": "ที่อยู่",
+            "active": "ปฏิบัติงาน",
+            "na": "ไม่มีข้อมูล",
+            "hrLog": "บันทึก HR"
         }
     },
     "announcements": {
