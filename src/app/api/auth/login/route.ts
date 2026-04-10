@@ -32,8 +32,9 @@ export async function POST(request: Request) {
         const meta = data.user.user_metadata ?? {}
         const role: UserRole = (meta.role as UserRole) ?? 'employee'
         const name: string = meta.name ?? meta.full_name ?? data.user.email ?? 'User'
+        const employeeId: string | undefined = meta.employeeId ?? undefined
 
-        const sessionData = JSON.stringify({ id: data.user.id, role, name })
+        const sessionData = JSON.stringify({ id: data.user.id, role, name, employeeId })
         const cookieStore = await cookies()
         cookieStore.set('nexus_session', sessionData, {
             httpOnly: true,
