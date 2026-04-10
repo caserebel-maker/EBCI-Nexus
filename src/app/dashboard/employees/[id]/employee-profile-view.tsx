@@ -49,6 +49,7 @@ interface Props {
 interface FormState {
     first_name_th: string
     last_name_th: string
+    nickname: string
     position: string
     department: string
     phone: string
@@ -87,6 +88,7 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
     const initForm = (): FormState => ({
         first_name_th: employee.first_name_th ?? '',
         last_name_th: employee.last_name_th ?? '',
+        nickname: employee.nickname ?? '',
         position: employee.position ?? '',
         department: employee.department ?? '',
         phone: employee.phone ?? '',
@@ -140,6 +142,7 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
             const result = await updateEmployee(id, {
                 first_name_th: form.first_name_th,
                 last_name_th: form.last_name_th,
+                nickname: form.nickname,
                 position: form.position,
                 department: form.department,
                 phone: form.phone,
@@ -260,12 +263,20 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
                         <div className="flex flex-wrap items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
                                 {isEditing ? (
-                                    <div className="flex gap-2 mb-2">
-                                        <input className={editInputClass} value={form.first_name_th} onChange={set('first_name_th')} placeholder="ชื่อ" />
-                                        <input className={editInputClass} value={form.last_name_th} onChange={set('last_name_th')} placeholder="นามสกุล" />
+                                    <div className="space-y-2 mb-2">
+                                        <div className="flex gap-2">
+                                            <input className={editInputClass} value={form.first_name_th} onChange={set('first_name_th')} placeholder="ชื่อ" />
+                                            <input className={editInputClass} value={form.last_name_th} onChange={set('last_name_th')} placeholder="นามสกุล" />
+                                        </div>
+                                        <input className={editInputClass} value={form.nickname} onChange={set('nickname')} placeholder="ชื่อเล่น (ถ้ามี)" />
                                     </div>
                                 ) : (
-                                    <h1 className="text-3xl font-black text-white uppercase tracking-tight">{displayName}</h1>
+                                    <div>
+                                        <h1 className="text-3xl font-black text-white uppercase tracking-tight">{displayName}</h1>
+                                        {employee.nickname && (
+                                            <p className="text-white/50 text-sm mt-0.5">ชื่อเล่น: <span className="text-white/80 font-semibold">{employee.nickname}</span></p>
+                                        )}
+                                    </div>
                                 )}
                                 <p className="text-white/60 flex items-center gap-2 mt-1 text-sm font-medium flex-wrap">
                                     <span className="px-2 py-0.5 rounded bg-white/5 text-xs font-mono border border-white/10 text-white/40">

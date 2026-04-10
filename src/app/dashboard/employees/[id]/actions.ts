@@ -6,6 +6,7 @@ import { getSession } from '@/lib/auth'
 export interface UpdateEmployeePayload {
     first_name_th: string
     last_name_th: string
+    nickname?: string
     position: string
     department: string
     phone: string
@@ -31,6 +32,7 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
         .update({
             first_name_th: employeeFields.first_name_th,
             last_name_th: employeeFields.last_name_th,
+            nickname: employeeFields.nickname ?? null,
             position: employeeFields.position,
             department: employeeFields.department,
             phone: employeeFields.phone,

@@ -54,6 +54,7 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
         employee_code: '',
         first_name_th: '',
         last_name_th: '',
+        nickname: '',
         title: 'นาย',
         date_of_birth: '',
         position: '',
@@ -89,6 +90,7 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
                 employee_code: form.employee_code,
                 first_name_th: form.first_name_th,
                 last_name_th: form.last_name_th,
+                nickname: form.nickname,
                 title: form.title,
                 date_of_birth: form.date_of_birth,
                 position: form.position,
@@ -178,6 +180,10 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
                     <div>
                         <label className={labelClass}>นามสกุล (ภาษาไทย) {requiredMark}</label>
                         <input className={inputClass} value={form.last_name_th} onChange={set('last_name_th')} placeholder="นามสกุล" required />
+                    </div>
+                    <div>
+                        <label className={labelClass}>ชื่อเล่น</label>
+                        <input className={inputClass} value={form.nickname ?? ''} onChange={set('nickname')} placeholder="เช่น ก้อง, แนน" />
                     </div>
                     <div>
                         <label className={labelClass}>วันเกิด</label>

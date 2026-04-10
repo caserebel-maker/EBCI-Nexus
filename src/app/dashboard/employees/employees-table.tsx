@@ -212,7 +212,10 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <div className="font-semibold text-white">{employee.firstNameTH} {employee.lastNameTH}</div>
+                                                    <div className="font-semibold text-white">
+                                                        {employee.firstNameTH} {employee.lastNameTH}
+                                                        {employee.nickname && <span className="text-white/45 font-normal ml-1">({employee.nickname})</span>}
+                                                    </div>
                                                     <div className="text-xs text-white/50 font-mono">{employee.email}</div>
                                                 </div>
                                             </div>

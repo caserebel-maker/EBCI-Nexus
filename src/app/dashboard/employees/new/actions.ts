@@ -8,6 +8,7 @@ export interface CreateEmployeePayload {
     employee_code: string
     first_name_th: string
     last_name_th: string
+    nickname?: string
     title: string
     date_of_birth: string
     position: string
@@ -66,6 +67,7 @@ export async function createEmployee(payload: CreateEmployeePayload) {
             employee_code: payload.employee_code,
             first_name_th: payload.first_name_th,
             last_name_th: payload.last_name_th,
+            nickname: payload.nickname || null,
             title: payload.title || null,
             date_of_birth: payload.date_of_birth || null,
             position: payload.position,

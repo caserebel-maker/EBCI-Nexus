@@ -45,7 +45,7 @@ export default async function EmployeesPage() {
         lastNameTH: e.last_name_th,
         firstNameEN: e.first_name_en,
         lastNameEN: e.last_name_en,
-        nickname: e.applicants?.nickname || null,
+        nickname: e.nickname || e.applicants?.nickname || null,
         department: e.department,
         position: e.position,
         status: e.status,
