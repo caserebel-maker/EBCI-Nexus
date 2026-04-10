@@ -188,6 +188,7 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                     <table className="w-full text-sm text-left">
                         <thead className="bg-white/5 text-white/70 font-medium uppercase text-xs">
                             <tr>
+                                <th className="px-4 py-4 text-center w-10">#</th>
                                 <th className="px-6 py-4">{t('employees.table.name')}</th>
                                 <th className="px-6 py-4">{t('employees.table.position')}</th>
                                 <th className="px-6 py-4">อายุงาน</th>
@@ -196,12 +197,15 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                         </thead>
                         <tbody className="divide-y divide-white/10">
                             {displayData.length > 0 ? (
-                                displayData.map((employee) => (
+                                displayData.map((employee, idx) => (
                                     <tr
                                         key={employee.id}
                                         onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
                                         className="hover:bg-white/5 transition-colors cursor-pointer text-white/90"
                                     >
+                                        <td className="px-4 py-4 text-center text-white/35 font-mono text-xs select-none">
+                                            {idx + 1}
+                                        </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-4">
                                                 <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white font-bold border border-white/10 overflow-hidden text-lg shrink-0">
@@ -243,7 +247,7 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={4} className="h-64 text-center">
+                                    <td colSpan={5} className="h-64 text-center">
                                         <div className="flex flex-col items-center justify-center text-white/40">
                                             <User className="h-12 w-12 mb-4 opacity-50" />
                                             <p className="text-lg font-medium">ไม่พบพนักงาน</p>
