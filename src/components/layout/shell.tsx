@@ -25,7 +25,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
     const navItems = NAVIGATION_CONFIG[role] || []
 
     return (
-        <div className="flex h-screen overflow-hidden bg-brand-gradient bg-fixed dark:bg-background pt-[52px] lg:pt-0 transition-colors duration-300">
+        <div className="flex h-screen overflow-hidden bg-brand-gradient bg-fixed dark:bg-background pt-[44px] lg:pt-0 transition-colors duration-300">
             {/* Sidebar — hidden on mobile (bottom nav handles navigation), visible on desktop */}
             <aside
                 className={cn(
@@ -110,7 +110,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
             {/* Main Content Area — offset for fixed sidebar on desktop */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent lg:pl-64">
                 {/* Top Navbar */}
-                <header className="h-[52px] lg:h-16 flex items-center px-4 lg:px-8 border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground">
+                <header className="h-[44px] lg:h-16 flex items-center py-1 px-3 lg:px-8 border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground">
                     {/* Mobile Logo — left-aligned */}
                     <Link
                         href={role === 'hr_admin' ? '/dashboard' : '/portal'}
@@ -119,12 +119,22 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                         <img
                             src="/sidebar-logo.png"
                             alt="EBCI NEXUS"
-                            className="h-[46px] drop-shadow-[0_2px_4px_rgba(255,255,255,0.2)] group-active:scale-95 transition-transform"
+                            className="h-[53px] drop-shadow-[0_2px_4px_rgba(255,255,255,0.2)] group-active:scale-95 transition-transform"
                         />
                     </Link>
 
-                    {/* Right: toggles */}
-                    <div className="flex items-center gap-4 relative z-[100] ml-auto">
+                    {/* Right: refresh (mobile only) + toggles */}
+                    <div className="flex items-center gap-3 relative z-[100] ml-auto">
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="lg:hidden p-1.5 rounded-md text-white/80 hover:text-white hover:bg-white/10 active:scale-90 transition-all"
+                            aria-label="Refresh"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                <path d="M3 3v5h5" />
+                            </svg>
+                        </button>
                         <LanguageToggle />
                         <ModeToggle />
                     </div>
