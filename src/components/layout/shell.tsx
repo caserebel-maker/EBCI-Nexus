@@ -112,7 +112,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                 {/* Top Navbar */}
                 <header
                     className="h-auto flex items-center justify-between border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground px-3 lg:px-8 pb-1 lg:py-1"
-                    style={{ paddingTop: 'env(safe-area-inset-top)' }}
+                    style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)', paddingBottom: '8px' }}
                 >
                     {/* Mobile Logo — left-aligned */}
                     <Link
@@ -122,7 +122,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                         <img
                             src="/sidebar-logo.png"
                             alt="EBCI NEXUS"
-                            className="h-[28px] lg:h-10 drop-shadow-[0_2px_4px_rgba(255,255,255,0.2)] group-active:scale-95 transition-transform"
+                            className="h-[42px] lg:h-10 drop-shadow-[0_2px_4px_rgba(255,255,255,0.2)] group-active:scale-95 transition-transform"
                         />
                     </Link>
 
