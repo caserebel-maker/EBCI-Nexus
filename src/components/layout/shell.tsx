@@ -25,7 +25,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
     const navItems = NAVIGATION_CONFIG[role] || []
 
     return (
-        <div className="flex h-screen overflow-hidden bg-brand-gradient bg-fixed dark:bg-background pt-16 lg:pt-0 transition-colors duration-300">
+        <div className="flex h-screen overflow-hidden bg-brand-gradient bg-fixed dark:bg-background pt-[52px] lg:pt-0 transition-colors duration-300">
             {/* Sidebar — hidden on mobile (bottom nav handles navigation), visible on desktop */}
             <aside
                 className={cn(
@@ -110,19 +110,16 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
             {/* Main Content Area — offset for fixed sidebar on desktop */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent lg:pl-64">
                 {/* Top Navbar */}
-                <header className="h-16 relative flex items-center px-4 lg:px-8 border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground">
-                    {/* Left spacer — mobile only, mirrors width of right toggles to keep logo centered */}
-                    <div className="w-[72px] shrink-0 lg:hidden" />
-
-                    {/* Mobile Logo — absolutely centered */}
+                <header className="h-[52px] lg:h-16 flex items-center px-4 lg:px-8 border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground">
+                    {/* Mobile Logo — left-aligned */}
                     <Link
                         href={role === 'hr_admin' ? '/dashboard' : '/portal'}
-                        className="lg:hidden absolute left-1/2 -translate-x-1/2 flex items-center group z-10"
+                        className="lg:hidden flex items-center group"
                     >
                         <img
                             src="/sidebar-logo.png"
                             alt="EBCI NEXUS"
-                            className="h-10 drop-shadow-[0_2px_4px_rgba(255,255,255,0.2)] group-active:scale-95 transition-transform"
+                            className="h-[46px] drop-shadow-[0_2px_4px_rgba(255,255,255,0.2)] group-active:scale-95 transition-transform"
                         />
                     </Link>
 
