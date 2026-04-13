@@ -140,16 +140,13 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                 </header>
 
                 {/* Page Content */}
-                <div className={cn(
-                    "flex-1 overflow-auto p-4 lg:p-8",
-                    role === 'employee' && "pb-20 lg:pb-8"
-                )}>
+                <div className="flex-1 overflow-auto p-4 lg:p-8 pb-20 lg:pb-8">
                     {children}
                 </div>
             </main>
 
-            {/* Mobile Bottom Navigation — employee only */}
-            {role === 'employee' && <PortalBottomNav />}
+            {/* Mobile Bottom Navigation — all roles */}
+            <PortalBottomNav role={role} />
         </div>
     )
 }
