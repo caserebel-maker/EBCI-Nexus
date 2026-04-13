@@ -15,6 +15,15 @@ const kanit = Kanit({
 export const metadata: Metadata = {
   title: 'EBCI Nexus | HR System',
   description: 'Internal HR System for EBCI',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'EBCI Nexus',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
 }
 
 export default function RootLayout({
@@ -25,6 +34,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="theme-color" content="#561e23" />
+        <link rel="apple-touch-icon" href="/sidebar-logo.png" />
         <script dangerouslySetInnerHTML={{
           __html: `
           window.onerror = function(msg, url, lineNo, columnNo, error) {

@@ -101,8 +101,9 @@ export function PortalBottomNav({ role }: PortalBottomNavProps) {
             <div
                 className={cn(
                     'fixed left-0 right-0 z-[70] lg:hidden transition-all duration-300 ease-out',
-                    moreOpen ? 'bottom-[56px] opacity-100' : 'bottom-[56px] opacity-0 pointer-events-none translate-y-4'
+                    moreOpen ? 'opacity-100' : 'opacity-0 pointer-events-none translate-y-4'
                 )}
+                style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}
             >
                 <div
                     className="mx-3 mb-2 rounded-2xl overflow-hidden shadow-2xl border border-white/10"
@@ -158,7 +159,10 @@ export function PortalBottomNav({ role }: PortalBottomNavProps) {
             {/* Bottom Nav Bar */}
             <nav
                 className="fixed bottom-0 left-0 right-0 z-50 lg:hidden"
-                style={{ background: 'linear-gradient(135deg, #561e23 0%, #7a2d35 50%, #ad5f6c 100%)' }}
+                style={{
+                    background: 'linear-gradient(135deg, #561e23 0%, #7a2d35 50%, #ad5f6c 100%)',
+                    paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+                }}
             >
                 <div className="flex items-stretch border-t border-white/10 shadow-[0_-4px_20px_rgba(86,30,35,0.4)]">
                     {/* Regular nav items */}

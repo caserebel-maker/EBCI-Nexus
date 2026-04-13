@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useState } from 'react'
+import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LogOut, Menu, X, ChevronRight, ChevronLeft } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAVIGATION_CONFIG } from '@/config/navigation'
 import { ModeToggle } from '@/components/mode-toggle'
@@ -19,29 +19,21 @@ interface DashboardShellProps {
 
 export function DashboardShell({ children, role, userName }: DashboardShellProps) {
     const pathname = usePathname()
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-
-    const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen)
-    const { t } = useTranslation() // Hook
+    const { t } = useTranslation()
 
     // Navigation Items based on Role (Dynamic)
     const navItems = NAVIGATION_CONFIG[role] || []
 
     return (
         <div className="flex h-screen overflow-hidden bg-brand-gradient bg-fixed dark:bg-background pt-16 lg:pt-0 transition-colors duration-300">
-            {/* Mobile Overlay */}
-            {mobileMenuOpen && (
-                <div className="fixed inset-0 z-40 bg-black/80 lg:hidden" onClick={toggleMobileMenu} />
-            )}
-
-            {/* Sidebar */}
+            {/* Sidebar — hidden on mobile (bottom nav handles navigation), visible on desktop */}
             <aside
                 className={cn(
                     "fixed top-0 left-0 z-50 h-screen flex flex-col transition-all duration-300 ease-in-out",
                     "bg-brand-gradient bg-fixed dark:bg-card border-r border-white/10 dark:border-border",
                     "text-white dark:text-card-foreground",
                     "w-64 shadow-2xl",
-                    mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+                    "-translate-x-full lg:translate-x-0"
                 )}
             >
                 {/* Sidebar Header */}
@@ -118,30 +110,38 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
             {/* Main Content Area — offset for fixed sidebar on desktop */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent lg:pl-64">
                 {/* Top Navbar */}
-                <header className="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground">
-                    <div className="flex items-center gap-4">
-                        <button onClick={toggleMobileMenu} className="lg:hidden p-2 text-white/80 hover:text-white dark:text-muted-foreground dark:hover:text-foreground">
-                            <Menu size={24} />
-                        </button>
-                        {/* Mobile Logo */}
-                        <Link href="/dashboard" className="lg:hidden flex items-center gap-2 group">
-                            <img
-                                src="/sidebar-logo.png"
-                                alt="EBCI NEXUS"
-                                className="h-10 drop-shadow-[0_2px_4px_rgba(255,255,255,0.2)] group-active:scale-95 transition-transform"
-                            />
-                            <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] self-end mb-1">V 1.0</span>
-                        </Link>
-                    </div>
-                    <div className="flex items-center gap-4 relative z-[100]">
+                <header className="h-16 relative flex items-center px-4 lg:px-8 border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground">
+                    {/* Left spacer — mobile only, mirrors width of right toggles to keep logo centered */}
+                    <div className="w-[72px] shrink-0 lg:hidden" />
+
+                    {/* Mobile Logo — absolutely centered */}
+                    <Link
+                        href={role === 'hr_admin' ? '/dashboard' : '/portal'}
+                        className="lg:hidden absolute left-1/2 -translate-x-1/2 flex items-center group z-10"
+                    >
+                        <img
+                            src="/sidebar-logo.png"
+                            alt="EBCI NEXUS"
+                            className="h-10 drop-shadow-[0_2px_4px_rgba(255,255,255,0.2)] group-active:scale-95 transition-transform"
+                        />
+                    </Link>
+
+                    {/* Right: toggles */}
+                    <div className="flex items-center gap-4 relative z-[100] ml-auto">
                         <LanguageToggle />
                         <ModeToggle />
                     </div>
                 </header>
 
                 {/* Page Content */}
-                <div className="flex-1 overflow-auto p-4 lg:p-8 pb-20 lg:pb-8">
+                <div className="flex-1 overflow-auto p-4 lg:p-8">
                     {children}
+                    {/* Mobile bottom nav spacer — height = nav bar + iPhone safe area */}
+                    <div
+                        className="lg:hidden shrink-0"
+                        aria-hidden="true"
+                        style={{ height: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}
+                    />
                 </div>
             </main>
 
