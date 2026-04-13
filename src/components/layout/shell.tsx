@@ -25,7 +25,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
     const navItems = NAVIGATION_CONFIG[role] || []
 
     return (
-        <div className="flex h-screen overflow-hidden bg-brand-gradient bg-fixed dark:bg-background pt-[44px] lg:pt-0 transition-colors duration-300">
+        <div className="flex h-screen overflow-hidden bg-brand-gradient bg-fixed dark:bg-background lg:pt-0 transition-colors duration-300">
             {/* Sidebar — hidden on mobile (bottom nav handles navigation), visible on desktop */}
             <aside
                 className={cn(
@@ -109,9 +109,11 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
 
             {/* Main Content Area — offset for fixed sidebar on desktop */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent lg:pl-64">
-                {/* Top Navbar wrapper — iOS safe area with brand color */}
-                <div style={{ paddingTop: 'env(safe-area-inset-top)', backgroundColor: '#561e23' }}>
-                <header className="h-[36px] lg:h-16 flex items-center justify-between py-1 lg:py-1 px-3 lg:px-8 border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground">
+                {/* Top Navbar */}
+                <header
+                    className="h-auto flex items-center justify-between border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground px-3 lg:px-8 pb-1 lg:py-1"
+                    style={{ paddingTop: 'env(safe-area-inset-top)' }}
+                >
                     {/* Mobile Logo — left-aligned */}
                     <Link
                         href={role === 'hr_admin' ? '/dashboard' : '/portal'}
@@ -140,7 +142,6 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                         <ModeToggle />
                     </div>
                 </header>
-                </div>
 
                 {/* Page Content */}
                 <div className="flex-1 overflow-auto p-4 lg:p-8">

@@ -1,5 +1,5 @@
 import React from 'react'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Kanit } from 'next/font/google'
 import './globals.css'
 import { cn } from '@/lib/utils'
@@ -11,6 +11,12 @@ const kanit = Kanit({
   weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
   variable: '--font-kanit',
 })
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
 
 export const metadata: Metadata = {
   title: 'EBCI Nexus | HR System',
