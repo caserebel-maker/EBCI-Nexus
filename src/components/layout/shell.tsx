@@ -110,7 +110,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
             {/* Main Content Area — offset for fixed sidebar on desktop */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent lg:pl-64">
                 {/* Top Navbar */}
-                <header className="h-[36px] lg:h-16 flex items-center justify-between py-1 lg:py-1 px-3 lg:px-8 border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground">
+                <header className="h-[32px] lg:h-16 flex items-center justify-between py-1 lg:py-1 px-3 lg:px-8 border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground">
                     {/* Mobile Logo — left-aligned */}
                     <Link
                         href={role === 'hr_admin' ? '/dashboard' : '/portal'}
@@ -119,7 +119,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                         <img
                             src="/sidebar-logo.png"
                             alt="EBCI NEXUS"
-                            className="h-[28px] lg:h-10 drop-shadow-[0_2px_4px_rgba(255,255,255,0.2)] group-active:scale-95 transition-transform"
+                            className="h-[26px] lg:h-10 drop-shadow-[0_2px_4px_rgba(255,255,255,0.2)] group-active:scale-95 transition-transform"
                         />
                     </Link>
 
