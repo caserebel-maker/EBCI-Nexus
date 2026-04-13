@@ -9,6 +9,7 @@ import { NAVIGATION_CONFIG } from '@/config/navigation'
 import { ModeToggle } from '@/components/mode-toggle'
 import { LanguageToggle } from '@/components/ui/language-toggle'
 import { useTranslation } from '@/contexts/language-context'
+import { PortalBottomNav } from '@/components/layout/portal-bottom-nav'
 
 interface DashboardShellProps {
     children: React.ReactNode
@@ -139,10 +140,16 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                 </header>
 
                 {/* Page Content */}
-                <div className="flex-1 overflow-auto p-4 lg:p-8">
+                <div className={cn(
+                    "flex-1 overflow-auto p-4 lg:p-8",
+                    role === 'employee' && "pb-20 lg:pb-8"
+                )}>
                     {children}
                 </div>
             </main>
+
+            {/* Mobile Bottom Navigation — employee only */}
+            {role === 'employee' && <PortalBottomNav />}
         </div>
     )
 }
