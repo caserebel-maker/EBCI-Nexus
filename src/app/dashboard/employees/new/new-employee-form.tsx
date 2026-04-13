@@ -9,6 +9,7 @@ import {
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { createEmployee, CreateEmployeePayload } from './actions'
+import { EMPLOYEE_LEVELS } from '@/config/employee-levels'
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const cardStyle: React.CSSProperties = {
@@ -68,6 +69,7 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
         emergency_name: '',
         emergency_phone: '',
         supervisor: '',
+        approval_level: 1,
     })
 
     const set = (field: keyof typeof form) =>
@@ -103,6 +105,7 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
                 address: form.address,
                 emergency_name: form.emergency_name,
                 emergency_phone: form.emergency_phone,
+                approval_level: form.approval_level,
             })
             if (result.error) {
                 showToast('error', `เกิดข้อผิดพลาด: ${result.error}`)
@@ -241,6 +244,18 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
                             <option value="active">ปฏิบัติงาน</option>
                             <option value="inactive">ลาออก / พักงาน</option>
                             <option value="probation">ทดลองงาน</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className={labelClass}>ระดับพนักงาน (Level)</label>
+                        <select
+                            className={selectClass}
+                            value={form.approval_level ?? 1}
+                            onChange={(e) => setForm(prev => ({ ...prev, approval_level: Number(e.target.value) }))}
+                        >
+                            {Object.entries(EMPLOYEE_LEVELS).map(([lvl, { label }]) => (
+                                <option key={lvl} value={lvl}>{label}</option>
+                            ))}
                         </select>
                     </div>
                 </div>

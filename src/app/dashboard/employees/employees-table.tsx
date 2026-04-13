@@ -1,11 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { Search, User, Building, Briefcase, ArrowUpDown, UserPlus } from "lucide-react"
+import { Search, User, Building, Briefcase, ArrowUpDown, UserPlus, Layers } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { useTranslation } from "@/contexts/language-context"
+import { LEVEL_BADGE_COLORS, LEVEL_SHORT, EMPLOYEE_LEVELS } from "@/config/employee-levels"
 
 const glassCard: React.CSSProperties = {
     background: 'rgba(255,255,255,0.06)',
@@ -36,6 +37,7 @@ export type Employee = {
     photoPath?: string | null
     quitDate?: string | null
     quitReason?: string | null
+    approvalLevel?: number | null
 }
 
 type SortKey = "name_asc" | "name_desc" | "status" | "tenure_desc" | "tenure_asc" | "dept_asc"
@@ -104,6 +106,7 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
     const [activeTab, setActiveTab] = useState<'active' | 'inactive'>('active')
     const [searchTerm, setSearchTerm] = useState("")
     const [deptFilter, setDeptFilter] = useState<string>("all")
+    const [levelFilter, setLevelFilter] = useState<string>("all")
     const [sortKey, setSortKey] = useState<SortKey>("name_asc")
 
     const activeEmployees = initialData.filter(e => e.status === 'active' || e.status === 'on_leave')
@@ -123,7 +126,8 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
             e.employeeCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
             e.email.toLowerCase().includes(searchTerm.toLowerCase())
         const matchDept = deptFilter === "all" || e.department === deptFilter
-        return matchSearch && matchDept
+        const matchLevel = levelFilter === "all" || String(e.approvalLevel ?? 1) === levelFilter
+        return matchSearch && matchDept && matchLevel
     })
 
     const displayData = sortEmployees(filtered, sortKey)
@@ -132,6 +136,7 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
         setActiveTab(tab)
         setSearchTerm("")
         setDeptFilter("all")
+        setLevelFilter("all")
     }
 
     return (
@@ -210,6 +215,21 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                             <option key={dept} value={dept} className="bg-slate-900">{dept}</option>
                         ))}
                     </select>
+
+                    {/* Level filter */}
+                    <div className="flex items-center gap-1.5 h-10 px-3 rounded-lg border border-white/10 bg-black/20 flex-1 min-w-[160px]">
+                        <Layers className="h-3.5 w-3.5 text-white/40 shrink-0" />
+                        <select
+                            className="bg-transparent text-white text-sm focus:outline-none cursor-pointer w-full appearance-none"
+                            value={levelFilter}
+                            onChange={(e) => setLevelFilter(e.target.value)}
+                        >
+                            <option value="all" className="bg-slate-900">ทุก Level</option>
+                            {Object.entries(EMPLOYEE_LEVELS).map(([lvl, { label }]) => (
+                                <option key={lvl} value={lvl} className="bg-slate-900">{label}</option>
+                            ))}
+                        </select>
+                    </div>
 
                     {/* Sort */}
                     <div className="flex items-center gap-1.5 h-10 px-3 rounded-lg border border-white/10 bg-black/20 flex-1 min-w-[180px]">
@@ -337,6 +357,9 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
 }
 
 function EmployeeNameCell({ employee }: { employee: Employee }) {
+    const lvl = employee.approvalLevel ?? 1
+    const badgeColor = LEVEL_BADGE_COLORS[lvl] ?? LEVEL_BADGE_COLORS[1]
+    const badgeLabel = LEVEL_SHORT[lvl] ?? `Lv.${lvl}`
     return (
         <div className="flex items-center gap-4">
             <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white font-bold border border-white/10 overflow-hidden text-lg shrink-0">
@@ -347,9 +370,14 @@ function EmployeeNameCell({ employee }: { employee: Employee }) {
                 )}
             </div>
             <div>
-                <div className="font-semibold text-white">
-                    {employee.firstNameTH} {employee.lastNameTH}
-                    {employee.nickname && <span className="text-white/45 font-normal ml-1">({employee.nickname})</span>}
+                <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-white">
+                        {employee.firstNameTH} {employee.lastNameTH}
+                        {employee.nickname && <span className="text-white/45 font-normal ml-1">({employee.nickname})</span>}
+                    </span>
+                    <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold border", badgeColor)}>
+                        {badgeLabel}
+                    </span>
                 </div>
                 <div className="text-xs text-white/50 font-mono">{employee.email}</div>
             </div>

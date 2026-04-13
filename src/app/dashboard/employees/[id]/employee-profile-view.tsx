@@ -10,6 +10,7 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "@/contexts/language-context"
 import { updateEmployee, uploadEmployeePhoto } from "./actions"
+import { EMPLOYEE_LEVELS, LEVEL_BADGE_COLORS } from "@/config/employee-levels"
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const glassCard: React.CSSProperties = {
@@ -61,6 +62,7 @@ interface FormState {
     quit_reason: string
     address: string
     emergency_contact: string
+    approval_level: number
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -102,6 +104,7 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
         quit_reason: employee.quit_reason ?? '',
         address: employee.applicants?.current_address ?? '',
         emergency_contact: employee.applicants?.phone ?? '',
+        approval_level: employee.approval_level ?? 1,
     })
 
     const [isEditing, setIsEditing] = useState(false)
@@ -156,6 +159,7 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
                 start_date: form.start_date,
                 quit_date: form.quit_date || undefined,
                 quit_reason: form.quit_reason || undefined,
+                approval_level: form.approval_level,
                 applicant_current_address: form.address,
                 applicant_phone: form.emergency_contact,
             })
@@ -278,7 +282,19 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
                                     </div>
                                 ) : (
                                     <div>
-                                        <h1 className="text-3xl font-black text-white uppercase tracking-tight">{displayName}</h1>
+                                        <div className="flex items-center gap-3 flex-wrap">
+                                            <h1 className="text-3xl font-black text-white uppercase tracking-tight">{displayName}</h1>
+                                            {(() => {
+                                                const lvl = employee.approval_level ?? 1
+                                                const color = LEVEL_BADGE_COLORS[lvl] ?? LEVEL_BADGE_COLORS[1]
+                                                const label = EMPLOYEE_LEVELS[lvl]?.label.split('—')[0].trim() ?? `Level ${lvl}`
+                                                return (
+                                                    <span className={cn("px-2.5 py-1 rounded-lg text-xs font-bold border", color)}>
+                                                        {label}
+                                                    </span>
+                                                )
+                                            })()}
+                                        </div>
                                         {employee.nickname && (
                                             <p className="text-white/50 text-sm mt-0.5">ชื่อเล่น: <span className="text-white/80 font-semibold">{employee.nickname}</span></p>
                                         )}
@@ -426,6 +442,23 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
                                     <option value="full-time">Full-time (ประจำ)</option>
                                     <option value="part-time">Part-time (ชั่วคราว)</option>
                                     <option value="contract">Contract (สัญญาจ้าง)</option>
+                                </select>
+                            }
+                        />
+                        <InfoRow
+                            label="ระดับพนักงาน"
+                            value={EMPLOYEE_LEVELS[employee.approval_level ?? 1]?.label ?? `Level ${employee.approval_level ?? 1}`}
+                            icon={Shield}
+                            editing={isEditing && isHrAdmin}
+                            editNode={
+                                <select
+                                    className={editSelectClass}
+                                    value={form.approval_level}
+                                    onChange={(e) => setForm(prev => ({ ...prev, approval_level: Number(e.target.value) }))}
+                                >
+                                    {Object.entries(EMPLOYEE_LEVELS).map(([lvl, { label }]) => (
+                                        <option key={lvl} value={lvl}>{label}</option>
+                                    ))}
                                 </select>
                             }
                         />

@@ -55,6 +55,7 @@ export default async function EmployeesPage() {
         photoPath: e.applicants?.photo_path || null,
         quitDate: e.quit_date ?? null,
         quitReason: e.quit_reason ?? null,
+        approvalLevel: e.approval_level ?? null,
     }))
 
     return (

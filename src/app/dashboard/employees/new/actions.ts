@@ -21,6 +21,7 @@ export interface CreateEmployeePayload {
     address: string
     emergency_name: string
     emergency_phone: string
+    approval_level?: number
 }
 
 export async function createEmployee(payload: CreateEmployeePayload) {
@@ -78,6 +79,7 @@ export async function createEmployee(payload: CreateEmployeePayload) {
             email: payload.email || null,
             phone: payload.phone || null,
             applicant_id: applicantId,
+            approval_level: payload.approval_level ?? 1,
         })
         .select('id')
         .single()
