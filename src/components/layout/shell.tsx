@@ -109,7 +109,8 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
 
             {/* Main Content Area — offset for fixed sidebar on desktop */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent lg:pl-64">
-                {/* Top Navbar */}
+                {/* Top Navbar wrapper — iOS safe area with brand color */}
+                <div style={{ paddingTop: 'env(safe-area-inset-top)', backgroundColor: '#561e23' }}>
                 <header className="h-[36px] lg:h-16 flex items-center justify-between py-1 lg:py-1 px-3 lg:px-8 border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground">
                     {/* Mobile Logo — left-aligned */}
                     <Link
@@ -139,6 +140,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                         <ModeToggle />
                     </div>
                 </header>
+                </div>
 
                 {/* Page Content */}
                 <div className="flex-1 overflow-auto p-4 lg:p-8">
