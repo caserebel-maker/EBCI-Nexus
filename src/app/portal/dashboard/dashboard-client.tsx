@@ -58,6 +58,7 @@ const glass: React.CSSProperties = {
     WebkitBackdropFilter: 'blur(12px)',
     border: '1px solid rgba(255,255,255,0.15)',
     borderRadius: '16px',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.2)',
 }
 
 function calcTenure(startDate: string): string {
@@ -122,6 +123,11 @@ function isFemale(gender: string | null): boolean {
     return g === 'หญิง' || g === 'female' || g === 'f'
 }
 
+const GENDER_LEAVE_LABEL: Record<string, string> = {
+    maternity:  'ลาคลอด',
+    ordination: 'ลาบวช',
+}
+
 export function PortalDashboardClient({ sessionName, employee, announcement, leaveBalances }: Props) {
     const [modalOpen, setModalOpen] = useState(false)
 
@@ -135,10 +141,10 @@ export function PortalDashboardClient({ sessionName, employee, announcement, lea
     const mainTypes = ['annual', 'sick', 'personal', 'compensation']
     const mainBalances = mainTypes.map(t => leaveBalances.find(b => b.leaveType === t) ?? { leaveType: t, entitledDays: 0, usedDays: 0, remainingDays: 0 })
 
+    // Gender-specific as text row (show if has entitledDays > 0, prefer gender-matched)
     const female = employee ? isFemale(employee.gender) : false
     const genderType = female ? 'maternity' : 'ordination'
-    const genderBalance = leaveBalances.find(b => b.leaveType === genderType)
-        ?? { leaveType: genderType, entitledDays: 0, usedDays: 0, remainingDays: 0 }
+    const genderBalance = leaveBalances.find(b => b.leaveType === genderType && b.entitledDays > 0) ?? null
 
     return (
         <div className="max-w-lg mx-auto space-y-4 pb-4">
@@ -213,16 +219,19 @@ export function PortalDashboardClient({ sessionName, employee, announcement, lea
                     ))}
                 </div>
 
-                {/* Gender-specific circle */}
-                <div className="flex justify-center pt-1">
-                    <div className="flex flex-col items-center gap-1">
-                        <CircleChart
-                            leaveType={genderBalance.leaveType}
-                            remaining={genderBalance.remainingDays}
-                            total={genderBalance.entitledDays}
-                        />
+                {/* Gender-specific text row */}
+                {genderBalance && (
+                    <div className="flex items-center justify-between px-1 pt-1"
+                        style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                        <span className="text-white/55" style={{ fontSize: '12px' }}>
+                            {GENDER_LEAVE_LABEL[genderBalance.leaveType] ?? genderBalance.leaveType}
+                        </span>
+                        <span className="text-white/80 font-medium" style={{ fontSize: '12px' }}>
+                            {genderBalance.remainingDays}
+                            <span className="text-white/35"> / {genderBalance.entitledDays} วัน</span>
+                        </span>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* 3. เมนูด่วน */}
