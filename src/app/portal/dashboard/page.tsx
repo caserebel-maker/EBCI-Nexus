@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import { PortalDashboardClient } from './dashboard-client'
 
+export const dynamic = 'force-dynamic'
+
 const DEFAULT_ENTITLEMENTS: Record<string, number> = {
     annual: 6,
     sick: 30,
@@ -13,18 +15,8 @@ export default async function PortalDashboardPage() {
     const session = await getSession()
     if (!session) redirect('/login')
 
-    const employee = await prisma.employee.findFirst({
-        where: { userId: session.id },
-    })
-
-    const announcement = await prisma.announcement.findFirst({
-        where: {
-            publishStatus: 'published',
-            imagePath: { not: null },
-        },
-        orderBy: { publishDate: 'desc' },
-    })
-
+    let employee = null
+    let announcement = null
     let leaveBalances: {
         leaveType: string
         entitledDays: number
@@ -32,18 +24,42 @@ export default async function PortalDashboardPage() {
         remainingDays: number
     }[] = []
 
-    if (employee) {
-        const year = new Date().getFullYear()
-        const stored = await prisma.leaveBalance.findMany({
-            where: { employeeId: employee.id, year },
+    try {
+        employee = await prisma.employee.findFirst({
+            where: { userId: session.id },
         })
+    } catch (e) {
+        console.error('[dashboard] employee query failed:', e)
+    }
 
-        leaveBalances = ['annual', 'sick', 'personal'].map((leaveType) => {
-            const found = stored.find((b) => b.leaveType === leaveType)
-            const entitled = found?.entitledDays ?? DEFAULT_ENTITLEMENTS[leaveType] ?? 0
-            const used = found?.usedDays ?? 0
-            return { leaveType, entitledDays: entitled, usedDays: used, remainingDays: entitled - used }
+    try {
+        announcement = await prisma.announcement.findFirst({
+            where: {
+                publishStatus: 'published',
+                NOT: { imagePath: null },
+            },
+            orderBy: { publishDate: 'desc' },
         })
+    } catch (e) {
+        console.error('[dashboard] announcement query failed:', e)
+    }
+
+    if (employee) {
+        try {
+            const year = new Date().getFullYear()
+            const stored = await prisma.leaveBalance.findMany({
+                where: { employeeId: employee.id, year },
+            })
+
+            leaveBalances = ['annual', 'sick', 'personal'].map((leaveType) => {
+                const found = stored.find((b) => b.leaveType === leaveType)
+                const entitled = Number(found?.entitledDays ?? DEFAULT_ENTITLEMENTS[leaveType] ?? 0)
+                const used = Number(found?.usedDays ?? 0)
+                return { leaveType, entitledDays: entitled, usedDays: used, remainingDays: entitled - used }
+            })
+        } catch (e) {
+            console.error('[dashboard] leaveBalance query failed:', e)
+        }
     }
 
     return (
@@ -52,11 +68,11 @@ export default async function PortalDashboardPage() {
             employee={
                 employee
                     ? {
-                          firstNameTH: employee.firstNameTH,
-                          lastNameTH: employee.lastNameTH,
-                          position: employee.position,
-                          department: employee.department,
-                          startDate: employee.startDate.toISOString(),
+                          firstNameTH: employee.firstNameTH ?? session.name,
+                          lastNameTH: employee.lastNameTH ?? '',
+                          position: employee.position ?? '',
+                          department: employee.department ?? '',
+                          startDate: employee.startDate?.toISOString() ?? new Date().toISOString(),
                       }
                     : null
             }
