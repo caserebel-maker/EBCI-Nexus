@@ -71,15 +71,30 @@ export default async function PortalDashboardPage() {
             where: { publishStatus: 'published', NOT: { imagePath: null } },
             orderBy: { publishDate: 'desc' },
         })
-        if (ann) {
+        if (ann?.imagePath) {
+            // imagePath may be a Supabase storage path (uuid.jpg) or a local path (/uploads/...)
+            let resolvedPath = ann.imagePath
+            if (!resolvedPath.startsWith('/') && !resolvedPath.startsWith('http')) {
+                const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+                resolvedPath = `${supabaseUrl}/storage/v1/object/public/announcement-images/${resolvedPath}`
+            }
             announcement = {
                 headline: ann.headline,
                 content: ann.content,
-                imagePath: ann.imagePath ?? null,
+                imagePath: resolvedPath,
             }
         }
     } catch (e) {
         console.error('[dashboard] announcement query failed:', e)
+    }
+
+    // Fallback: static featured banner when no DB announcement
+    if (!announcement) {
+        announcement = {
+            headline: 'วันหยุดราชการประจำปี 2026',
+            content: 'ประกาศวันหยุดราชการประจำปี 2026 สำหรับพนักงานทุกท่าน กรุณาวางแผนการลาพักร้อนล่วงหน้า',
+            imagePath: '/uploads/ebciho1.jpg',
+        }
     }
 
     return (
