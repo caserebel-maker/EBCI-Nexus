@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, UserCircle, FileText, Settings, Megaphone, CalendarDays, ClipboardCheck, ShieldCheck } from 'lucide-react'
+import { LayoutDashboard, Users, UserCircle, FileText, Settings, Megaphone, CalendarDays, ClipboardCheck, ShieldCheck, CalendarOff } from 'lucide-react'
 import { ROLES, type UserRole } from './roles'
 
 export interface NavItem {
@@ -13,6 +13,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         { label: 'dashboard.employees', href: '/dashboard/employees', icon: Users },
         { label: 'dashboard.recruitment', href: '/dashboard/recruitment', icon: UserCircle },
         { label: 'dashboard.announcements', href: '/dashboard/hr/announcements', icon: Megaphone },
+        { label: 'dashboard.holidays', href: '/dashboard/holidays', icon: CalendarOff },
         { label: 'leave.title', href: '/dashboard/leave/admin', icon: CalendarDays },
         { label: 'common.view', href: '/dashboard/reports', icon: FileText },
         { label: 'common.actions', href: '/dashboard/settings', icon: Settings },
