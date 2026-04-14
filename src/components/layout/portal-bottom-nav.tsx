@@ -35,13 +35,13 @@ const NAV_CONFIG: Record<Role, NavItem[]> = {
         { label: 'แจ้งเตือน', href: '/dashboard/hr/announcements', icon: Bell },
     ],
     manager: [
-        { label: 'หน้าแรก', href: '/portal', icon: Home, exact: true },
+        { label: 'หน้าแรก', href: '/portal/dashboard', icon: Home, exact: true },
         { label: 'อนุมัติ', href: '/portal/approve', icon: CheckSquare },
         { label: 'ปฏิทิน', href: '/portal/calendar', icon: CalendarDays },
         { label: 'แจ้งเตือน', href: '/portal/notifications', icon: Bell },
     ],
     employee: [
-        { label: 'หน้าแรก', href: '/portal', icon: Home, exact: true },
+        { label: 'หน้าแรก', href: '/portal/dashboard', icon: Home, exact: true },
         { label: 'ปฏิทิน', href: '/portal/calendar', icon: CalendarDays },
         { label: 'ลงเวลา', href: '/portal/checkin', icon: Clock },
         { label: 'แจ้งเตือน', href: '/portal/notifications', icon: Bell },
