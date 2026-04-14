@@ -1,6 +1,7 @@
 import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import { PortalDashboardClient } from './dashboard-client'
 
 export const dynamic = 'force-dynamic'
@@ -15,6 +16,12 @@ const DEFAULT_ENTITLEMENTS: Record<string, number> = {
 }
 
 const ALL_LEAVE_TYPES = ['annual', 'sick', 'personal', 'compensation', 'maternity', 'ordination']
+
+export interface AnnouncementItem {
+    headline: string
+    content: string
+    imagePath: string | null
+}
 
 export default async function PortalDashboardPage() {
     const session = await getSession()
@@ -31,9 +38,10 @@ export default async function PortalDashboardPage() {
         avatarUrl: string | null
     } | null = null
 
-    let announcement: { headline: string; content: string; imagePath: string | null } | null = null
+    let announcements: AnnouncementItem[] = []
     let leaveBalances: { leaveType: string; entitledDays: number; usedDays: number; remainingDays: number }[] = []
 
+    // ── Employee + leave ──────────────────────────────────────────────────────
     try {
         const emp = await prisma.employee.findFirst({
             where: { userId: session.id },
@@ -78,42 +86,41 @@ export default async function PortalDashboardPage() {
         console.error('[dashboard] employee/leave query failed:', e)
     }
 
+    // ── Announcements (up to 5 with image) ───────────────────────────────────
     try {
-        const ann = await prisma.announcement.findFirst({
+        const rows = await prisma.announcement.findMany({
             where: { publishStatus: 'published', NOT: { imagePath: null } },
             orderBy: { publishDate: 'desc' },
+            take: 5,
+            select: { headline: true, content: true, imagePath: true },
         })
-        if (ann?.imagePath) {
-            // imagePath may be a Supabase storage path (uuid.jpg) or a local path (/uploads/...)
-            let resolvedPath = ann.imagePath
-            if (!resolvedPath.startsWith('/') && !resolvedPath.startsWith('http')) {
-                const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+        announcements = rows.map(ann => {
+            let resolvedPath = ann.imagePath ?? null
+            if (resolvedPath && !resolvedPath.startsWith('/') && !resolvedPath.startsWith('http')) {
                 resolvedPath = `${supabaseUrl}/storage/v1/object/public/announcement-images/${resolvedPath}`
             }
-            announcement = {
-                headline: ann.headline,
-                content: ann.content,
-                imagePath: resolvedPath,
-            }
-        }
+            return { headline: ann.headline, content: ann.content, imagePath: resolvedPath }
+        })
     } catch (e) {
-        console.error('[dashboard] announcement query failed:', e)
+        console.error('[dashboard] announcements query failed:', e)
     }
 
-    // Fallback: static featured banner when no DB announcement
-    if (!announcement) {
-        announcement = {
+    // Fallback: static banner when no DB announcements
+    if (announcements.length === 0) {
+        announcements = [{
             headline: 'วันหยุดราชการประจำปี 2026',
             content: 'ประกาศวันหยุดราชการประจำปี 2026 สำหรับพนักงานทุกท่าน กรุณาวางแผนการลาพักร้อนล่วงหน้า',
             imagePath: '/uploads/ebciho1.jpg',
-        }
+        }]
     }
 
     return (
         <PortalDashboardClient
             sessionName={session.name}
             employee={employee}
-            announcement={announcement}
+            announcements={announcements}
             leaveBalances={leaveBalances}
         />
     )

@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { FileText, Clock, Calendar, MapPin, User, Bell, X } from 'lucide-react'
+import { FileText, Clock, Calendar, MapPin, User, Bell, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { PieChart, Pie, Cell, Sector } from 'recharts'
+import type { AnnouncementItem } from './page'
 
 interface Employee {
     firstNameTH: string
@@ -16,12 +17,6 @@ interface Employee {
     avatarUrl: string | null
 }
 
-interface Announcement {
-    headline: string
-    content: string
-    imagePath: string | null
-}
-
 interface LeaveBalance {
     leaveType: string
     entitledDays: number
@@ -32,7 +27,7 @@ interface LeaveBalance {
 interface Props {
     sessionName: string
     employee: Employee | null
-    announcement: Announcement | null
+    announcements: AnnouncementItem[]
     leaveBalances: LeaveBalance[]
 }
 
@@ -67,7 +62,8 @@ function calcTenure(startDate: string): string {
     const y = Math.floor(totalMonths / 12)
     const m = totalMonths % 12
     if (y === 0) return `${m} เดือน`
-    return `${y} ปี`
+    if (m === 0) return `${y} ปี`
+    return `${y} ปี ${m} เดือน`
 }
 
 function isFemale(gender: string | null): boolean {
@@ -76,12 +72,156 @@ function isFemale(gender: string | null): boolean {
     return g === 'หญิง' || g === 'female' || g === 'f'
 }
 
+// ─── Announcement Slideshow ───────────────────────────────────────────────────
+function AnnouncementSlideshow({ announcements }: { announcements: AnnouncementItem[] }) {
+    const [current, setCurrent] = useState(0)
+    const [modalAnn, setModalAnn] = useState<AnnouncementItem | null>(null)
+    const touchStartX = useRef<number | null>(null)
+    const total = announcements.length
+
+    // Auto-play: resets every time `current` changes (manual or auto)
+    useEffect(() => {
+        if (total <= 1) return
+        const id = setInterval(() => {
+            setCurrent(c => (c + 1) % total)
+        }, 7000)
+        return () => clearInterval(id)
+    }, [current, total])
+
+    function goTo(idx: number) {
+        setCurrent(((idx % total) + total) % total)
+    }
+
+    function handleTouchStart(e: React.TouchEvent) {
+        touchStartX.current = e.touches[0].clientX
+    }
+    function handleTouchEnd(e: React.TouchEvent) {
+        if (touchStartX.current === null) return
+        const dx = e.changedTouches[0].clientX - touchStartX.current
+        touchStartX.current = null
+        if (Math.abs(dx) < 40) return // tap, not swipe
+        goTo(dx < 0 ? current + 1 : current - 1)
+    }
+
+    const ann = announcements[current]
+
+    return (
+        <>
+            <div style={{ ...glass, overflow: 'hidden', position: 'relative' }}>
+                {/* Slide area */}
+                <button
+                    className="w-full text-left focus:outline-none block"
+                    onClick={() => ann && setModalAnn(ann)}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                >
+                    <div style={{ aspectRatio: '16/9', overflow: 'hidden', position: 'relative' }}>
+                        {ann?.imagePath ? (
+                            <img
+                                key={current}
+                                src={ann.imagePath}
+                                alt={ann.headline}
+                                className="w-full h-full object-cover"
+                                style={{ animation: 'fadeIn 0.4s ease' }}
+                            />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center"
+                                style={{ background: 'linear-gradient(135deg, #882136 0%, #561e23 100%)' }}>
+                                <span className="text-white/30 text-sm">ไม่มีข่าวสารในขณะนี้</span>
+                            </div>
+                        )}
+                    </div>
+                </button>
+
+                {/* Prev / Next arrows (only when > 1 slide) */}
+                {total > 1 && (
+                    <>
+                        <button
+                            onClick={() => goTo(current - 1)}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full flex items-center justify-center transition-all active:scale-90"
+                            style={{ width: 28, height: 28, background: 'rgba(0,0,0,0.35)', marginTop: -12 }}
+                        >
+                            <ChevronLeft size={16} className="text-white" />
+                        </button>
+                        <button
+                            onClick={() => goTo(current + 1)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full flex items-center justify-center transition-all active:scale-90"
+                            style={{ width: 28, height: 28, background: 'rgba(0,0,0,0.35)', marginTop: -12 }}
+                        >
+                            <ChevronRight size={16} className="text-white" />
+                        </button>
+                    </>
+                )}
+
+                {/* Dot indicator */}
+                {total > 1 && (
+                    <div className="flex justify-center items-center gap-1.5 py-2.5">
+                        {announcements.map((_, i) => (
+                            <button
+                                key={i}
+                                onClick={() => goTo(i)}
+                                className="rounded-full transition-all duration-300"
+                                style={{
+                                    width: i === current ? 18 : 6,
+                                    height: 6,
+                                    background: i === current ? '#fff' : 'rgba(255,255,255,0.3)',
+                                }}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Slide fade-in keyframe */}
+            <style>{`@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }`}</style>
+
+            {/* Modal */}
+            {modalAnn && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                    style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+                    onClick={() => setModalAnn(null)}
+                >
+                    <div
+                        className="w-full max-w-lg max-h-[90vh] overflow-y-auto"
+                        style={{ ...glass, background: 'rgba(15,4,7,0.94)', borderRadius: '20px' }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {modalAnn.imagePath && (
+                            <div className="w-full overflow-hidden" style={{ aspectRatio: '16/9', borderRadius: '20px 20px 0 0' }}>
+                                <img src={modalAnn.imagePath} alt={modalAnn.headline} className="w-full h-full object-cover" />
+                            </div>
+                        )}
+                        <div className="p-5">
+                            <div className="flex items-start justify-between gap-3 mb-3">
+                                <h2 className="text-white font-bold" style={{ fontSize: '18px', lineHeight: 1.3 }}>
+                                    {modalAnn.headline}
+                                </h2>
+                                <button onClick={() => setModalAnn(null)} className="text-white/50 hover:text-white transition-colors shrink-0 mt-0.5">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <p className="text-white/70 leading-relaxed whitespace-pre-wrap" style={{ fontSize: '14px' }}>
+                                {modalAnn.content}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    )
+}
+
 // ─── Donut Chart ──────────────────────────────────────────────────────────────
 const PIE_SEGMENTS = [
     { key: 'annual',   valueKey: 'remainingDays', label: 'พักร้อนคงเหลือ', color: '#60A5FA' },
     { key: 'sick',     valueKey: 'usedDays',      label: 'ป่วย (ใช้ไป)',    color: '#F87171' },
     { key: 'personal', valueKey: 'remainingDays', label: 'กิจคงเหลือ',     color: '#FBBF24' },
 ]
+
+// Recharts v3 types omit activeIndex/activeShape on Pie; cast to bypass
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const PieCompat = Pie as any
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function renderActiveShape(props: any) {
@@ -120,7 +260,7 @@ function LeavePieChart({ leaveBalances }: { leaveBalances: LeaveBalance[] }) {
         <div className="relative" style={{ width: chartSize, height: chartSize }}>
             {hasData ? (
                 <PieChart width={chartSize} height={chartSize}>
-                    <Pie
+                    <PieCompat
                         data={segments}
                         cx={cx}
                         cy={cy}
@@ -133,15 +273,15 @@ function LeavePieChart({ leaveBalances }: { leaveBalances: LeaveBalance[] }) {
                         stroke="rgba(0,0,0,0.15)"
                         activeIndex={activeIndex ?? undefined}
                         activeShape={renderActiveShape}
-                        onMouseEnter={(_, index) => setActiveIndex(index)}
+                        onMouseEnter={(_: unknown, index: number) => setActiveIndex(index)}
                         onMouseLeave={() => setActiveIndex(null)}
-                        onClick={(_, index) => setActiveIndex(activeIndex === index ? null : index)}
+                        onClick={(_: unknown, index: number) => setActiveIndex(activeIndex === index ? null : index)}
                         style={{ cursor: 'pointer' }}
                     >
                         {segments.map((seg, i) => (
                             <Cell key={i} fill={seg.value > 0 ? seg.color : 'rgba(255,255,255,0.06)'} />
                         ))}
-                    </Pie>
+                    </PieCompat>
                 </PieChart>
             ) : (
                 <svg width={chartSize} height={chartSize}>
@@ -176,9 +316,7 @@ function LeavePieChart({ leaveBalances }: { leaveBalances: LeaveBalance[] }) {
 }
 // ──────────────────────────────────────────────────────────────────────────────
 
-export function PortalDashboardClient({ sessionName, employee, announcement, leaveBalances }: Props) {
-    const [modalOpen, setModalOpen] = useState(false)
-
+export function PortalDashboardClient({ sessionName, employee, announcements, leaveBalances }: Props) {
     const displayName = employee
         ? `${employee.firstNameTH} ${employee.lastNameTH}`
         : sessionName
@@ -190,29 +328,8 @@ export function PortalDashboardClient({ sessionName, employee, announcement, lea
     return (
         <div className="max-w-lg mx-auto space-y-4 pb-4">
 
-            {/* 1. ภาพข่าวสาร */}
-            <button
-                className="w-full text-left focus:outline-none"
-                onClick={() => announcement && setModalOpen(true)}
-                disabled={!announcement}
-            >
-                <div style={{ ...glass, overflow: 'hidden' }}>
-                    {announcement?.imagePath ? (
-                        <div className="w-full" style={{ aspectRatio: '16/9', overflow: 'hidden' }}>
-                            <img
-                                src={announcement.imagePath}
-                                alt={announcement.headline}
-                                className="w-full h-full object-cover transition-transform active:scale-95"
-                            />
-                        </div>
-                    ) : (
-                        <div className="w-full flex items-center justify-center"
-                            style={{ aspectRatio: '16/9', background: 'linear-gradient(135deg, #882136 0%, #561e23 100%)' }}>
-                            <span className="text-white/30 text-sm">ไม่มีข่าวสารในขณะนี้</span>
-                        </div>
-                    )}
-                </div>
-            </button>
+            {/* 1. Announcement Slideshow */}
+            <AnnouncementSlideshow announcements={announcements} />
 
             {/* 2. การ์ด Profile 2 คอลัมน์ */}
             <div style={glass} className="p-4">
@@ -220,17 +337,17 @@ export function PortalDashboardClient({ sessionName, employee, announcement, lea
 
                     {/* คอลัมน์ซ้าย: Avatar + ข้อมูล */}
                     <div className="flex flex-col items-center gap-2 shrink-0" style={{ width: '42%' }}>
-                        {/* Avatar */}
+                        {/* Avatar (104px = +30% from 80px) */}
                         {employee?.avatarUrl ? (
                             <img
                                 src={employee.avatarUrl}
                                 alt=""
                                 className="rounded-full object-cover"
-                                style={{ width: 80, height: 80, border: '2px solid rgba(255,255,255,0.2)' }}
+                                style={{ width: 104, height: 104, border: '2px solid rgba(255,255,255,0.2)' }}
                             />
                         ) : (
                             <div style={{
-                                width: 80, height: 80,
+                                width: 104, height: 104,
                                 background: 'linear-gradient(135deg, #882136, #c0392b)',
                                 borderRadius: '50%',
                                 border: '2px solid rgba(255,255,255,0.15)',
@@ -248,7 +365,7 @@ export function PortalDashboardClient({ sessionName, employee, announcement, lea
                                     <p className="text-white/60 mt-1" style={{ fontSize: '11px' }}>
                                         {employee.position}
                                     </p>
-                                    <p className="text-white/45 mt-0.5" style={{ fontSize: '11px' }}>
+                                    <p className="text-white/45 mt-1" style={{ fontSize: '11px' }}>
                                         ฝ่าย : {employee.department}
                                     </p>
                                     <p className="text-white/35 mt-0.5" style={{ fontSize: '11px' }}>
@@ -301,40 +418,6 @@ export function PortalDashboardClient({ sessionName, employee, announcement, lea
                     ))}
                 </div>
             </div>
-
-            {/* Modal */}
-            {modalOpen && announcement && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                    style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
-                    onClick={() => setModalOpen(false)}
-                >
-                    <div
-                        className="w-full max-w-lg max-h-[90vh] overflow-y-auto"
-                        style={{ ...glass, background: 'rgba(15,4,7,0.94)', borderRadius: '20px' }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {announcement.imagePath && (
-                            <div className="w-full overflow-hidden" style={{ aspectRatio: '16/9', borderRadius: '20px 20px 0 0' }}>
-                                <img src={announcement.imagePath} alt={announcement.headline} className="w-full h-full object-cover" />
-                            </div>
-                        )}
-                        <div className="p-5">
-                            <div className="flex items-start justify-between gap-3 mb-3">
-                                <h2 className="text-white font-bold" style={{ fontSize: '18px', lineHeight: 1.3 }}>
-                                    {announcement.headline}
-                                </h2>
-                                <button onClick={() => setModalOpen(false)} className="text-white/50 hover:text-white transition-colors shrink-0 mt-0.5">
-                                    <X size={20} />
-                                </button>
-                            </div>
-                            <p className="text-white/70 leading-relaxed whitespace-pre-wrap" style={{ fontSize: '14px' }}>
-                                {announcement.content}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     )
 }
