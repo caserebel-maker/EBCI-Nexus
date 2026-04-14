@@ -28,6 +28,7 @@ export default async function PortalDashboardPage() {
         startDate: string
         gender: string | null
         nickname: string | null
+        avatarUrl: string | null
     } | null = null
 
     let announcement: { headline: string; content: string; imagePath: string | null } | null = null
@@ -36,10 +37,20 @@ export default async function PortalDashboardPage() {
     try {
         const emp = await prisma.employee.findFirst({
             where: { userId: session.id },
-            include: { applicant: { select: { gender: true, nickname: true } } },
+            include: { applicant: { select: { gender: true, nickname: true, photoPath: true } } },
         })
 
         if (emp) {
+            let avatarUrl: string | null = null
+            if (emp.applicant?.photoPath) {
+                try {
+                    const { data } = await supabaseAdmin.storage
+                        .from('applicant-assets')
+                        .createSignedUrl(emp.applicant.photoPath, 3600)
+                    avatarUrl = data?.signedUrl ?? null
+                } catch { /* fail silently */ }
+            }
+
             employee = {
                 firstNameTH: emp.firstNameTH ?? session.name,
                 lastNameTH: emp.lastNameTH ?? '',
@@ -48,6 +59,7 @@ export default async function PortalDashboardPage() {
                 startDate: emp.startDate?.toISOString() ?? new Date().toISOString(),
                 gender: emp.applicant?.gender ?? null,
                 nickname: emp.applicant?.nickname ?? null,
+                avatarUrl,
             }
 
             const year = new Date().getFullYear()
