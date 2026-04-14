@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { FileText, Clock, Calendar, MapPin, User, Bell, X } from 'lucide-react'
+import { PieChart, Pie, Cell } from 'recharts'
 
 interface Employee {
     firstNameTH: string
@@ -34,15 +35,6 @@ interface Props {
     leaveBalances: LeaveBalance[]
 }
 
-const LEAVE_CONFIG: Record<string, { label: string; color: string }> = {
-    annual:       { label: 'พักร้อน', color: '#60A5FA' },
-    sick:         { label: 'ป่วย',    color: '#34D399' },
-    personal:     { label: 'กิจ',     color: '#FBBF24' },
-    compensation: { label: 'ชดเชย',   color: '#FB923C' },
-    maternity:    { label: 'คลอด',    color: '#F472B6' },
-    ordination:   { label: 'บวช',     color: '#A78BFA' },
-}
-
 const SHORTCUTS = [
     { label: 'โปรไฟล์',   icon: User,     href: '/portal/profile' },
     { label: 'ยื่นใบลา',   icon: FileText,  href: '/portal/leave' },
@@ -51,6 +43,11 @@ const SHORTCUTS = [
     { label: 'ลงเวลา',    icon: MapPin,    href: '/portal/checkin' },
     { label: 'แจ้งเตือน', icon: Bell,      href: '/portal/notifications' },
 ]
+
+const GENDER_LEAVE_LABEL: Record<string, string> = {
+    maternity:  'ลาคลอด',
+    ordination: 'ลาบวช',
+}
 
 const glass: React.CSSProperties = {
     background: 'rgba(255,255,255,0.08)',
@@ -73,60 +70,84 @@ function calcTenure(startDate: string): string {
     return `${y} ปี ${m} เดือน`
 }
 
-function CircleChart({ leaveType, remaining, total }: {
-    leaveType: string
-    remaining: number
-    total: number
-}) {
-    const cfg = LEAVE_CONFIG[leaveType]
-    const r = 17
-    const size = 48
-    const cx = size / 2
-    const cy = size / 2
-    const circumference = 2 * Math.PI * r
-    const pct = total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0
-    const offset = circumference * (1 - pct)
-    const isWarn = total > 0 && remaining <= 3
-    const strokeColor = isWarn ? '#EF4444' : (cfg?.color ?? '#fff')
-
-    return (
-        <div className="flex flex-col items-center gap-1">
-            <div className="relative" style={{ width: size, height: size }}>
-                <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-                    <circle cx={cx} cy={cy} r={r} fill="none"
-                        stroke="rgba(255,255,255,0.12)" strokeWidth="5" />
-                    <circle cx={cx} cy={cy} r={r} fill="none"
-                        stroke={strokeColor} strokeWidth="5"
-                        strokeDasharray={circumference}
-                        strokeDashoffset={total === 0 ? circumference : offset}
-                        strokeLinecap="round"
-                        style={{ transform: `rotate(-90deg)`, transformOrigin: `${cx}px ${cy}px` }}
-                    />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-white font-bold" style={{ fontSize: '12px' }}>
-                        {remaining}
-                    </span>
-                </div>
-            </div>
-            <p className="text-white/75 font-medium text-center" style={{ fontSize: '11px', lineHeight: 1.2 }}>
-                {cfg?.label ?? leaveType}
-            </p>
-            <p className="text-white/35" style={{ fontSize: '10px' }}>/{total} วัน</p>
-        </div>
-    )
-}
-
 function isFemale(gender: string | null): boolean {
     if (!gender) return false
     const g = gender.toLowerCase()
     return g === 'หญิง' || g === 'female' || g === 'f'
 }
 
-const GENDER_LEAVE_LABEL: Record<string, string> = {
-    maternity:  'ลาคลอด',
-    ordination: 'ลาบวช',
+// ─── Donut Chart ──────────────────────────────────────────────────────────────
+const PIE_SEGMENTS = [
+    { key: 'annual',   valueKey: 'remainingDays', label: 'พักร้อนคงเหลือ', color: '#60A5FA' },
+    { key: 'sick',     valueKey: 'usedDays',      label: 'ป่วย (ใช้ไป)',    color: '#F87171' },
+    { key: 'personal', valueKey: 'remainingDays', label: 'กิจคงเหลือ',     color: '#FBBF24' },
+]
+
+function LeavePieChart({ leaveBalances }: { leaveBalances: LeaveBalance[] }) {
+    const segments = PIE_SEGMENTS.map(seg => {
+        const bal = leaveBalances.find(b => b.leaveType === seg.key)
+        const value = seg.valueKey === 'usedDays' ? (bal?.usedDays ?? 0) : (bal?.remainingDays ?? 0)
+        return { ...seg, value: Math.max(0, value) }
+    })
+
+    const hasData = segments.some(s => s.value > 0)
+    const totalRemaining = (leaveBalances.find(b => b.leaveType === 'annual')?.remainingDays ?? 0)
+        + (leaveBalances.find(b => b.leaveType === 'personal')?.remainingDays ?? 0)
+
+    const chartSize = 120
+    const cx = chartSize / 2
+    const cy = chartSize / 2
+
+    return (
+        <div className="flex flex-col items-center gap-2">
+            <div className="relative" style={{ width: chartSize, height: chartSize }}>
+                {hasData ? (
+                    <PieChart width={chartSize} height={chartSize}>
+                        <Pie
+                            data={segments}
+                            cx={cx}
+                            cy={cy}
+                            innerRadius={38}
+                            outerRadius={54}
+                            dataKey="value"
+                            startAngle={90}
+                            endAngle={-270}
+                            strokeWidth={2}
+                            stroke="rgba(0,0,0,0.15)"
+                        >
+                            {segments.map((seg, i) => (
+                                <Cell key={i} fill={seg.value > 0 ? seg.color : 'rgba(255,255,255,0.06)'} />
+                            ))}
+                        </Pie>
+                    </PieChart>
+                ) : (
+                    <svg width={chartSize} height={chartSize}>
+                        <circle cx={cx} cy={cy} r={46} fill="none"
+                            stroke="rgba(255,255,255,0.1)" strokeWidth={16} />
+                    </svg>
+                )}
+                {/* Center label */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-white font-bold" style={{ fontSize: '22px', lineHeight: 1 }}>
+                        {totalRemaining}
+                    </span>
+                    <span className="text-white/50" style={{ fontSize: '10px' }}>วัน</span>
+                </div>
+            </div>
+
+            {/* Legend */}
+            <div className="flex flex-col gap-0.5 w-full">
+                {PIE_SEGMENTS.map(seg => (
+                    <div key={seg.key} className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: seg.color }} />
+                        <span className="text-white/55 truncate" style={{ fontSize: '10px' }}>{seg.label}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
 }
+// ──────────────────────────────────────────────────────────────────────────────
 
 export function PortalDashboardClient({ sessionName, employee, announcement, leaveBalances }: Props) {
     const [modalOpen, setModalOpen] = useState(false)
@@ -138,10 +159,6 @@ export function PortalDashboardClient({ sessionName, employee, announcement, lea
         ? `${employee.firstNameTH.charAt(0)}${employee.lastNameTH.charAt(0)}`
         : sessionName.charAt(0)
 
-    const mainTypes = ['annual', 'sick', 'personal', 'compensation']
-    const mainBalances = mainTypes.map(t => leaveBalances.find(b => b.leaveType === t) ?? { leaveType: t, entitledDays: 0, usedDays: 0, remainingDays: 0 })
-
-    // Gender-specific as text row (show if has entitledDays > 0, prefer gender-matched)
     const female = employee ? isFemale(employee.gender) : false
     const genderType = female ? 'maternity' : 'ordination'
     const genderBalance = leaveBalances.find(b => b.leaveType === genderType && b.entitledDays > 0) ?? null
@@ -173,56 +190,59 @@ export function PortalDashboardClient({ sessionName, employee, announcement, lea
                 </div>
             </button>
 
-            {/* 2. การ์ด Profile + วันลา รวม */}
-            <div style={glass} className="p-4 space-y-4">
-                {/* Profile row */}
-                <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-full flex items-center justify-center shrink-0 text-lg font-bold text-white select-none"
-                        style={{ background: 'linear-gradient(135deg, #882136, #c0392b)' }}>
-                        {initials}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-white font-bold leading-tight truncate" style={{ fontSize: '17px' }}>
-                            {displayName}
-                            {employee?.nickname && (
-                                <span className="text-white/45 font-normal text-sm ml-1.5">({employee.nickname})</span>
-                            )}
-                        </p>
+            {/* 2. การ์ด Profile 2 คอลัมน์ */}
+            <div style={glass} className="p-4">
+                <div className="flex items-start gap-3">
+
+                    {/* คอลัมน์ซ้าย 60% */}
+                    <div className="flex flex-col gap-2 min-w-0" style={{ flex: '0 0 58%' }}>
+                        {/* Avatar + ชื่อ */}
+                        <div className="flex items-center gap-2.5">
+                            <div
+                                className="rounded-full flex items-center justify-center shrink-0 font-bold text-white select-none"
+                                style={{ width: 44, height: 44, background: 'linear-gradient(135deg, #882136, #c0392b)', fontSize: '16px' }}
+                            >
+                                {initials}
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-white font-bold leading-tight" style={{ fontSize: '16px' }}>
+                                    {displayName}
+                                </p>
+                                {employee?.nickname && (
+                                    <p className="text-white/45" style={{ fontSize: '12px' }}>
+                                        ({employee.nickname})
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
                         {employee && (
                             <>
-                                <p className="text-white/65 truncate" style={{ fontSize: '13px' }}>
-                                    {employee.position} • {employee.department}
+                                <p className="text-white/65 leading-snug" style={{ fontSize: '12px' }}>
+                                    {employee.position}
                                 </p>
-                                <p className="text-white/40" style={{ fontSize: '12px' }}>
+                                <p className="text-white/45" style={{ fontSize: '12px' }}>
+                                    {employee.department}
+                                </p>
+                                <p className="text-white/40 mt-1" style={{ fontSize: '11px' }}>
                                     อายุงาน {calcTenure(employee.startDate)}
                                 </p>
                             </>
                         )}
                     </div>
-                </div>
 
-                {/* Divider */}
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }} />
-
-                {/* Leave section header */}
-                <p className="text-white font-semibold" style={{ fontSize: '14px' }}>วันลาคงเหลือ</p>
-
-                {/* 4 main circles */}
-                <div className="grid grid-cols-4 gap-2">
-                    {mainBalances.map(b => (
-                        <CircleChart
-                            key={b.leaveType}
-                            leaveType={b.leaveType}
-                            remaining={b.remainingDays}
-                            total={b.entitledDays}
-                        />
-                    ))}
+                    {/* คอลัมน์ขวา 40% */}
+                    <div className="flex justify-center items-start" style={{ flex: '0 0 42%' }}>
+                        <LeavePieChart leaveBalances={leaveBalances} />
+                    </div>
                 </div>
 
                 {/* Gender-specific text row */}
                 {genderBalance && (
-                    <div className="flex items-center justify-between px-1 pt-1"
-                        style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div
+                        className="flex items-center justify-between px-1 mt-3 pt-2.5"
+                        style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
+                    >
                         <span className="text-white/55" style={{ fontSize: '12px' }}>
                             {GENDER_LEAVE_LABEL[genderBalance.leaveType] ?? genderBalance.leaveType}
                         </span>
@@ -273,7 +293,9 @@ export function PortalDashboardClient({ sessionName, employee, announcement, lea
                         )}
                         <div className="p-5">
                             <div className="flex items-start justify-between gap-3 mb-3">
-                                <h2 className="text-white font-bold" style={{ fontSize: '18px', lineHeight: 1.3 }}>{announcement.headline}</h2>
+                                <h2 className="text-white font-bold" style={{ fontSize: '18px', lineHeight: 1.3 }}>
+                                    {announcement.headline}
+                                </h2>
                                 <button onClick={() => setModalOpen(false)} className="text-white/50 hover:text-white transition-colors shrink-0 mt-0.5">
                                     <X size={20} />
                                 </button>
