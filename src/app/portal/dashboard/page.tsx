@@ -9,82 +9,84 @@ const DEFAULT_ENTITLEMENTS: Record<string, number> = {
     annual: 6,
     sick: 30,
     personal: 3,
+    compensation: 0,
+    maternity: 90,
+    ordination: 15,
 }
+
+const ALL_LEAVE_TYPES = ['annual', 'sick', 'personal', 'compensation', 'maternity', 'ordination']
 
 export default async function PortalDashboardPage() {
     const session = await getSession()
     if (!session) redirect('/login')
 
-    let employee = null
-    let announcement = null
-    let leaveBalances: {
-        leaveType: string
-        entitledDays: number
-        usedDays: number
-        remainingDays: number
-    }[] = []
+    let employee: {
+        firstNameTH: string
+        lastNameTH: string
+        position: string
+        department: string
+        startDate: string
+        gender: string | null
+        nickname: string | null
+    } | null = null
+
+    let announcement: { headline: string; content: string; imagePath: string | null } | null = null
+    let leaveBalances: { leaveType: string; entitledDays: number; usedDays: number; remainingDays: number }[] = []
 
     try {
-        employee = await prisma.employee.findFirst({
+        const emp = await prisma.employee.findFirst({
             where: { userId: session.id },
+            include: { applicant: { select: { gender: true, nickname: true } } },
         })
-    } catch (e) {
-        console.error('[dashboard] employee query failed:', e)
-    }
 
-    try {
-        announcement = await prisma.announcement.findFirst({
-            where: {
-                publishStatus: 'published',
-                NOT: { imagePath: null },
-            },
-            orderBy: { publishDate: 'desc' },
-        })
-    } catch (e) {
-        console.error('[dashboard] announcement query failed:', e)
-    }
+        if (emp) {
+            employee = {
+                firstNameTH: emp.firstNameTH ?? session.name,
+                lastNameTH: emp.lastNameTH ?? '',
+                position: emp.position ?? '',
+                department: emp.department ?? '',
+                startDate: emp.startDate?.toISOString() ?? new Date().toISOString(),
+                gender: emp.applicant?.gender ?? null,
+                nickname: emp.applicant?.nickname ?? null,
+            }
 
-    if (employee) {
-        try {
             const year = new Date().getFullYear()
             const stored = await prisma.leaveBalance.findMany({
-                where: { employeeId: employee.id, year },
+                where: { employeeId: emp.id, year },
             })
 
-            leaveBalances = ['annual', 'sick', 'personal'].map((leaveType) => {
+            leaveBalances = ALL_LEAVE_TYPES.map((leaveType) => {
                 const found = stored.find((b) => b.leaveType === leaveType)
                 const entitled = Number(found?.entitledDays ?? DEFAULT_ENTITLEMENTS[leaveType] ?? 0)
                 const used = Number(found?.usedDays ?? 0)
                 return { leaveType, entitledDays: entitled, usedDays: used, remainingDays: entitled - used }
             })
-        } catch (e) {
-            console.error('[dashboard] leaveBalance query failed:', e)
         }
+    } catch (e) {
+        console.error('[dashboard] employee/leave query failed:', e)
+    }
+
+    try {
+        const ann = await prisma.announcement.findFirst({
+            where: { publishStatus: 'published', NOT: { imagePath: null } },
+            orderBy: { publishDate: 'desc' },
+        })
+        if (ann) {
+            announcement = {
+                headline: ann.headline,
+                content: ann.content,
+                imagePath: ann.imagePath ?? null,
+            }
+        }
+    } catch (e) {
+        console.error('[dashboard] announcement query failed:', e)
     }
 
     return (
         <PortalDashboardClient
             sessionName={session.name}
-            employee={
-                employee
-                    ? {
-                          firstNameTH: employee.firstNameTH ?? session.name,
-                          lastNameTH: employee.lastNameTH ?? '',
-                          position: employee.position ?? '',
-                          department: employee.department ?? '',
-                          startDate: employee.startDate?.toISOString() ?? new Date().toISOString(),
-                      }
-                    : null
-            }
-            announcement={
-                announcement
-                    ? {
-                          headline: announcement.headline,
-                          content: announcement.content,
-                          imagePath: announcement.imagePath ?? null,
-                      }
-                    : null
-            }
+            employee={employee}
+            announcement={announcement}
             leaveBalances={leaveBalances}
         />
     )
