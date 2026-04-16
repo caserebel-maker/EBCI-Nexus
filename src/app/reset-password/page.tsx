@@ -53,7 +53,11 @@ export default function ResetPasswordPage() {
         } else {
             setStatus({ type: 'success', message: 'ตั้งรหัสผ่านสำเร็จ! กำลังพาไปหน้าเข้าสู่ระบบ...' })
             await supabase.auth.signOut()
-            setTimeout(() => { window.location.href = '/login?message=password-set' }, 1500)
+            // Clear all cookies so middleware sees no stale session
+            document.cookie.split(';').forEach(c => {
+                document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')
+            })
+            setTimeout(() => { window.location.replace('/login?message=password-set') }, 1500)
         }
     }
 
