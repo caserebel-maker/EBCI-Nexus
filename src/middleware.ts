@@ -17,11 +17,13 @@ export function middleware(request: NextRequest) {
     if (!sessionCookie) {
         if (PROTECTED_PREFIXES.some(p => pathname.startsWith(p))) {
             const loginUrl = new URL('/login', request.url)
-            if (pathname.startsWith('/portal')) {
-                // Employee entry → send back to portal after login
+            if (pathname.startsWith('/hradmin')) {
+                // HR admin entry → return to hradmin dashboard after login
+                loginUrl.searchParams.set('redirect', '/hradmin/dashboard')
+            } else if (pathname.startsWith('/portal')) {
+                // Employee/manager entry → return to portal after login
                 loginUrl.searchParams.set('redirect', '/portal')
             }
-            // /hradmin entry → no redirect param → shows HR Admin badge
             return NextResponse.redirect(loginUrl)
         }
         return NextResponse.next()

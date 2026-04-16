@@ -6,7 +6,7 @@ import { ROLE_CONFIG, type UserRole } from '@/config/roles'
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        const { email, password } = body
+        const { email, password, redirectTo: requestedRedirect } = body
 
         if (!email || !password) {
             return NextResponse.json(
@@ -47,8 +47,12 @@ export async function POST(request: Request) {
             path: '/',
         })
 
-        const redirectTo = ROLE_CONFIG[role]?.homePath ?? '/portal'
-        console.log(`[Auth] OK: ${email} role=${role} → ${redirectTo}`)
+        const homePath = ROLE_CONFIG[role]?.homePath ?? '/portal'
+        // Use requested redirect if present, but block non-hr_admin from /hradmin paths
+        const redirectTo = (requestedRedirect && !(requestedRedirect.startsWith('/hradmin') && role !== 'hr_admin'))
+            ? requestedRedirect
+            : homePath
+        console.log(`[Auth] OK: ${email} role=${role} → ${redirectTo} (requested=${requestedRedirect ?? 'none'})`)
 
         return NextResponse.json({ success: true, role, redirectTo })
 
