@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { useTranslation } from "@/contexts/language-context"
 import { LEVEL_BADGE_COLORS, LEVEL_SHORT, EMPLOYEE_LEVELS } from "@/config/employee-levels"
+import { DEPARTMENTS } from "@/config/departments"
 
 const glassCard: React.CSSProperties = {
     background: 'rgba(255,255,255,0.06)',
@@ -114,7 +115,8 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
 
     const tabData = activeTab === 'active' ? activeEmployees : inactiveEmployees
 
-    const departments = Array.from(new Set(tabData.map(e => e.department))).sort((a, b) =>
+    const dbDepts = tabData.map(e => e.department).filter(Boolean)
+    const departments = Array.from(new Set([...DEPARTMENTS, ...dbDepts])).sort((a, b) =>
         a.localeCompare(b, 'th'))
 
     const filtered = tabData.filter((e) => {
