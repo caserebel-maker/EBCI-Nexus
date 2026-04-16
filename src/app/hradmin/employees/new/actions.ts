@@ -26,8 +26,10 @@ export interface CreateEmployeePayload {
 }
 
 // ─── Welcome Email Template ────────────────────────────────────────────────────
-function buildWelcomeEmail({ name, resetLink }: { name: string; resetLink: string }): string {
-    return `<!DOCTYPE html>
+// NOTE: No JavaScript event handlers (onerror, onclick etc.) — Gmail strips them
+// and can corrupt HTML rendering. Use table layout for maximum email-client compat.
+function buildWelcomeEmail({ name, resetLink }: { name: string; resetLink: string }): { html: string; text: string } {
+    const html = `<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
@@ -35,58 +37,88 @@ function buildWelcomeEmail({ name, resetLink }: { name: string; resetLink: strin
   <title>ยินดีต้อนรับสู่ EBCI Nexus</title>
 </head>
 <body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
-  <div style="max-width:600px;margin:24px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 16px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;">
 
-    <!-- Header -->
-    <div style="background:linear-gradient(180deg,#561e23 0%,#ad5f6c 100%);padding:36px 32px;text-align:center;">
-      <img src="https://ebci-nexus.vercel.app/sidebar-logo.png" alt="EBCI NEXUS"
-           style="display:block;margin:0 auto;height:60px;width:auto;object-fit:contain;"
-           onerror="this.style.display='none';document.getElementById('logo-text').style.display='block'">
-      <h1 id="logo-text" style="display:none;margin:0;font-size:24px;font-weight:900;color:#ffffff;letter-spacing:3px;text-transform:uppercase;">EBCI NEXUS</h1>
-    </div>
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(180deg,#561e23 0%,#ad5f6c 100%);padding:36px 32px;text-align:center;">
+            <img src="https://ebci-nexus.vercel.app/sidebar-logo.png" alt="EBCI NEXUS" width="60" height="60"
+                 style="display:block;margin:0 auto;height:60px;width:auto;border:0;">
+            <p style="margin:12px 0 0;font-size:11px;color:rgba(255,255,255,0.65);letter-spacing:4px;text-transform:uppercase;">HUMAN RESOURCES</p>
+          </td>
+        </tr>
 
-    <!-- Body -->
-    <div style="padding:40px 36px;">
-      <h2 style="margin:0 0 8px;font-size:22px;font-weight:800;color:#561e23;">ยินดีต้อนรับสู่ EBCI Nexus &#127881;</h2>
-      <p style="margin:0 0 28px;font-size:14px;color:#6b7280;">คุณได้รับการเพิ่มเข้าระบบโดยฝ่าย HR เรียบร้อยแล้ว</p>
+        <!-- Body -->
+        <tr>
+          <td style="padding:40px 36px;">
+            <h2 style="margin:0 0 8px;font-size:22px;font-weight:800;color:#561e23;">ยินดีต้อนรับสู่ EBCI Nexus</h2>
+            <p style="margin:0 0 28px;font-size:14px;color:#6b7280;">คุณได้รับการเพิ่มเข้าระบบโดยฝ่าย HR เรียบร้อยแล้ว</p>
 
-      <p style="margin:0 0 8px;font-size:15px;color:#374151;">สวัสดี <strong>${name}</strong>,</p>
-      <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.75;">
-        บัญชีผู้ใช้งานของคุณใน <strong>EBCI Nexus</strong> ถูกสร้างเรียบร้อยแล้ว<br>
-        กรุณากดปุ่มด้านล่างเพื่อ<strong>ตั้งรหัสผ่าน</strong>และเริ่มใช้งานระบบ
-      </p>
+            <p style="margin:0 0 8px;font-size:15px;color:#374151;">สวัสดี <strong>${name}</strong>,</p>
+            <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.75;">
+              บัญชีผู้ใช้งานของคุณใน <strong>EBCI Nexus</strong> ถูกสร้างเรียบร้อยแล้ว<br>
+              กรุณากดปุ่มด้านล่างเพื่อ<strong>ตั้งรหัสผ่าน</strong>และเริ่มใช้งานระบบ
+            </p>
 
-      <!-- CTA Button -->
-      <div style="text-align:center;margin:0 0 32px;">
-        <a href="${resetLink}"
-           style="display:inline-block;background:linear-gradient(135deg,#7a2d35,#c0392b);color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;padding:15px 40px;border-radius:10px;letter-spacing:0.5px;">
-          ตั้งรหัสผ่านของฉัน &rarr;
-        </a>
-      </div>
+            <!-- CTA Button -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 32px;">
+              <tr><td align="center">
+                <a href="${resetLink}"
+                   style="display:inline-block;background:#882136;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;padding:15px 40px;border-radius:10px;letter-spacing:0.5px;">
+                  ตั้งรหัสผ่านของฉัน &#8594;
+                </a>
+              </td></tr>
+            </table>
 
-      <!-- Warning box -->
-      <div style="background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:16px 20px;margin-bottom:28px;">
-        <p style="margin:0;font-size:13px;color:#b91c1c;line-height:1.7;">
-          &#9888;&#65039; ลิงก์นี้ใช้ได้ภายใน <strong>24 ชั่วโมง</strong> เท่านั้น<br>
-          หากลิงก์หมดอายุ กรุณาติดต่อฝ่าย HR เพื่อขอลิงก์ใหม่
-        </p>
-      </div>
+            <!-- Warning box -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+              <tr><td style="background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:16px 20px;">
+                <p style="margin:0;font-size:13px;color:#b91c1c;line-height:1.7;">
+                  &#9888; ลิงก์นี้ใช้ได้ภายใน <strong>24 ชั่วโมง</strong> เท่านั้น<br>
+                  หากลิงก์หมดอายุ กรุณาติดต่อฝ่าย HR เพื่อขอลิงก์ใหม่
+                </p>
+              </td></tr>
+            </table>
 
-      <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 24px;">
-      <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.7;">
-        หากคุณไม่ได้คาดหวังอีเมลฉบับนี้ กรุณาแจ้งฝ่าย HR ทันที<br>
-        อีเมลฉบับนี้ส่งโดยระบบอัตโนมัติ — กรุณาอย่าตอบกลับ
-      </p>
-    </div>
+            <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.7;">
+              หากคุณไม่ได้คาดหวังอีเมลฉบับนี้ กรุณาแจ้งฝ่าย HR ทันที<br>
+              อีเมลฉบับนี้ส่งโดยระบบอัตโนมัติ — กรุณาอย่าตอบกลับ
+            </p>
+          </td>
+        </tr>
 
-    <!-- Footer -->
-    <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:18px 32px;text-align:center;">
-      <p style="margin:0;font-size:12px;color:#6b7280;">ส่งโดยฝ่าย HR &mdash; <strong>EBCI NEXUS</strong></p>
-    </div>
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:18px 32px;text-align:center;">
+            <p style="margin:0;font-size:12px;color:#6b7280;">ส่งโดยฝ่าย HR &#8212; <strong>EBCI NEXUS</strong></p>
+          </td>
+        </tr>
 
-  </div>
+      </table>
+    </td></tr>
+  </table>
 </body>
 </html>`
+
+    const text = `ยินดีต้อนรับสู่ EBCI Nexus
+
+สวัสดี ${name},
+
+บัญชีผู้ใช้งานของคุณใน EBCI Nexus ถูกสร้างเรียบร้อยแล้ว
+กรุณาคลิกลิงก์ด้านล่างเพื่อตั้งรหัสผ่านและเริ่มใช้งานระบบ:
+
+${resetLink}
+
+⚠ ลิงก์นี้ใช้ได้ภายใน 24 ชั่วโมงเท่านั้น
+หากลิงก์หมดอายุ กรุณาติดต่อฝ่าย HR เพื่อขอลิงก์ใหม่
+
+---
+ส่งโดยฝ่าย HR — EBCI NEXUS
+อีเมลฉบับนี้ส่งโดยระบบอัตโนมัติ — กรุณาอย่าตอบกลับ`
+
+    return { html, text }
 }
 
 // ─── Main Action ───────────────────────────────────────────────────────────────
@@ -211,12 +243,15 @@ export async function createEmployee(payload: CreateEmployeePayload) {
                     const resetLink: string = (linkData as any)?.properties?.action_link ?? ''
 
                     if (resetLink) {
+                        const emailContent = buildWelcomeEmail({ name: fullName, resetLink })
+                        console.log('[createEmployee] html length:', emailContent.html.length, '| text length:', emailContent.text.length)
                         const resend = new Resend(process.env.RESEND_API_KEY)
                         const { data: emailData, error: emailError } = await resend.emails.send({
                             from: 'EBCI Nexus <noreply@ebcinext.com>',
                             to: payload.email,
                             subject: 'ยินดีต้อนรับสู่ EBCI Nexus — ตั้งรหัสผ่านของคุณ',
-                            html: buildWelcomeEmail({ name: fullName, resetLink }),
+                            html: emailContent.html,
+                            text: emailContent.text,
                         })
                         if (emailError) {
                             console.error('[createEmployee] Resend full error:', JSON.stringify(emailError, null, 2))
