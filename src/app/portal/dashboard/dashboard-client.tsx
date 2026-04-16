@@ -54,22 +54,77 @@ const glass: React.CSSProperties = {
     boxShadow: '0 8px 24px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.2)',
 }
 
-function calcTenure(startDate: string): string {
-    const start = new Date(startDate)
-    const now = new Date()
-    const totalMonths =
-        (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth())
-    const y = Math.floor(totalMonths / 12)
-    const m = totalMonths % 12
-    if (y === 0) return `${m} เดือน`
-    if (m === 0) return `${y} ปี`
-    return `${y} ปี ${m} เดือน`
-}
-
 function isFemale(gender: string | null): boolean {
     if (!gender) return false
     const g = gender.toLowerCase()
     return g === 'หญิง' || g === 'female' || g === 'f'
+}
+
+// ─── Welcome Section ──────────────────────────────────────────────────────────
+function WelcomeSection({ employee, sessionName }: { employee: Employee | null; sessionName: string }) {
+    const firstName = employee?.firstNameTH ?? sessionName
+    const lastName  = employee?.lastNameTH ?? ''
+    const nickname  = employee?.nickname ?? null
+    const position  = employee?.position ?? ''
+    const department = employee?.department ?? ''
+    const avatarUrl  = employee?.avatarUrl ?? null
+
+    const displayName = nickname
+        ? `${firstName} (${nickname})`
+        : `${firstName} ${lastName}`.trim()
+
+    const initials = (firstName.charAt(0) + (lastName.charAt(0) || '')).toUpperCase()
+
+    return (
+        <div style={glass} className="p-4 flex items-center gap-3">
+            {/* Avatar */}
+            {avatarUrl ? (
+                <img
+                    src={avatarUrl}
+                    alt=""
+                    className="rounded-full object-cover shrink-0"
+                    style={{ width: 48, height: 48, border: '2px solid rgba(255,255,255,0.2)' }}
+                />
+            ) : (
+                <div
+                    className="rounded-full shrink-0 flex items-center justify-center font-black text-white select-none"
+                    style={{
+                        width: 48, height: 48,
+                        background: 'linear-gradient(135deg, #882136, #c0392b)',
+                        border: '2px solid rgba(255,255,255,0.15)',
+                        fontSize: '18px',
+                    }}
+                >
+                    {initials}
+                </div>
+            )}
+
+            {/* Name + Position */}
+            <div className="flex-1 min-w-0">
+                <p className="text-white font-bold truncate" style={{ fontSize: '15px' }}>
+                    {displayName}
+                </p>
+                {(position || department) && (
+                    <p className="text-white/50 truncate mt-0.5" style={{ fontSize: '11.5px' }}>
+                        {position}
+                        {position && department && <span className="text-white/25 mx-1">•</span>}
+                        {department}
+                    </p>
+                )}
+            </div>
+
+            {/* Greeting bubble */}
+            <div
+                className="shrink-0 text-right px-3 py-2 rounded-xl"
+                style={{ background: 'rgba(136,33,54,0.25)', border: '1px solid rgba(173,95,108,0.25)' }}
+            >
+                <p className="text-white/40" style={{ fontSize: '10px' }}>สวัสดี</p>
+                <p className="text-white font-semibold leading-snug" style={{ fontSize: '12.5px' }}>
+                    วันนี้เป็นอย่างไรบ้าง? 👋
+                </p>
+            </div>
+        </div>
+    )
 }
 
 // ─── Announcement Slideshow ───────────────────────────────────────────────────
@@ -79,7 +134,6 @@ function AnnouncementSlideshow({ announcements }: { announcements: AnnouncementI
     const touchStartX = useRef<number | null>(null)
     const total = announcements.length
 
-    // Auto-play: resets every time `current` changes (manual or auto)
     useEffect(() => {
         if (total <= 1) return
         const id = setInterval(() => {
@@ -99,7 +153,7 @@ function AnnouncementSlideshow({ announcements }: { announcements: AnnouncementI
         if (touchStartX.current === null) return
         const dx = e.changedTouches[0].clientX - touchStartX.current
         touchStartX.current = null
-        if (Math.abs(dx) < 40) return // tap, not swipe
+        if (Math.abs(dx) < 40) return
         goTo(dx < 0 ? current + 1 : current - 1)
     }
 
@@ -108,7 +162,6 @@ function AnnouncementSlideshow({ announcements }: { announcements: AnnouncementI
     return (
         <>
             <div style={{ ...glass, overflow: 'hidden', position: 'relative' }}>
-                {/* Slide area */}
                 <button
                     className="w-full text-left focus:outline-none block"
                     onClick={() => ann && setModalAnn(ann)}
@@ -133,7 +186,6 @@ function AnnouncementSlideshow({ announcements }: { announcements: AnnouncementI
                     </div>
                 </button>
 
-                {/* Prev / Next arrows (only when > 1 slide) */}
                 {total > 1 && (
                     <>
                         <button
@@ -153,7 +205,6 @@ function AnnouncementSlideshow({ announcements }: { announcements: AnnouncementI
                     </>
                 )}
 
-                {/* Dot indicator */}
                 {total > 1 && (
                     <div className="flex justify-center items-center gap-1.5 py-2.5">
                         {announcements.map((_, i) => (
@@ -172,10 +223,8 @@ function AnnouncementSlideshow({ announcements }: { announcements: AnnouncementI
                 )}
             </div>
 
-            {/* Slide fade-in keyframe */}
             <style>{`@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }`}</style>
 
-            {/* Modal */}
             {modalAnn && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -212,14 +261,13 @@ function AnnouncementSlideshow({ announcements }: { announcements: AnnouncementI
     )
 }
 
-// ─── Donut Chart ──────────────────────────────────────────────────────────────
+// ─── Donut Chart (Recharts) ───────────────────────────────────────────────────
 const PIE_SEGMENTS = [
     { key: 'annual',   valueKey: 'remainingDays', label: 'พักร้อนคงเหลือ', color: '#60A5FA' },
     { key: 'sick',     valueKey: 'usedDays',      label: 'ป่วย (ใช้ไป)',    color: '#F87171' },
     { key: 'personal', valueKey: 'remainingDays', label: 'กิจคงเหลือ',     color: '#FBBF24' },
 ]
 
-// Recharts v3 types omit activeIndex/activeShape on Pie; cast to bypass
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const PieCompat = Pie as any
 
@@ -248,79 +296,139 @@ function LeavePieChart({ leaveBalances }: { leaveBalances: LeaveBalance[] }) {
     })
 
     const hasData = segments.some(s => s.value > 0)
-    const totalRemaining = (leaveBalances.find(b => b.leaveType === 'annual')?.remainingDays ?? 0)
-        + (leaveBalances.find(b => b.leaveType === 'personal')?.remainingDays ?? 0)
+    const annualBalance = leaveBalances.find(b => b.leaveType === 'annual')
+    const annualRemaining = annualBalance?.remainingDays ?? 0
+    const annualUsed = annualBalance?.usedDays ?? 0
 
     const activeSeg = activeIndex !== null ? segments[activeIndex] : null
-    const chartSize = 160
+    const chartSize = 150
     const cx = chartSize / 2
     const cy = chartSize / 2
 
     return (
-        <div className="relative" style={{ width: chartSize, height: chartSize }}>
-            {hasData ? (
-                <PieChart width={chartSize} height={chartSize}>
-                    <PieCompat
-                        data={segments}
-                        cx={cx}
-                        cy={cy}
-                        innerRadius={52}
-                        outerRadius={72}
-                        dataKey="value"
-                        startAngle={90}
-                        endAngle={-270}
-                        strokeWidth={2}
-                        stroke="rgba(0,0,0,0.15)"
-                        activeIndex={activeIndex ?? undefined}
-                        activeShape={renderActiveShape}
-                        onMouseEnter={(_: unknown, index: number) => setActiveIndex(index)}
-                        onMouseLeave={() => setActiveIndex(null)}
-                        onClick={(_: unknown, index: number) => setActiveIndex(activeIndex === index ? null : index)}
-                        style={{ cursor: 'pointer' }}
-                    >
-                        {segments.map((seg, i) => (
-                            <Cell key={i} fill={seg.value > 0 ? seg.color : 'rgba(255,255,255,0.06)'} />
-                        ))}
-                    </PieCompat>
-                </PieChart>
-            ) : (
-                <svg width={chartSize} height={chartSize}>
-                    <circle cx={cx} cy={cy} r={62} fill="none"
-                        stroke="rgba(255,255,255,0.1)" strokeWidth={20} />
-                </svg>
-            )}
-            {/* Center label */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                {activeSeg ? (
-                    <>
-                        <span className="rounded-full mb-1"
-                            style={{ width: 8, height: 8, background: activeSeg.color, display: 'inline-block' }} />
-                        <span className="text-white font-bold" style={{ fontSize: '22px', lineHeight: 1 }}>
-                            {activeSeg.value}
-                        </span>
-                        <span className="text-white/50 text-center px-2" style={{ fontSize: '9px', maxWidth: 80 }}>
-                            {activeSeg.label}
-                        </span>
-                    </>
+        <div className="flex flex-col items-center gap-2">
+            <div className="relative" style={{ width: chartSize, height: chartSize }}>
+                {hasData ? (
+                    <PieChart width={chartSize} height={chartSize}>
+                        <PieCompat
+                            data={segments}
+                            cx={cx} cy={cy}
+                            innerRadius={48}
+                            outerRadius={67}
+                            dataKey="value"
+                            startAngle={90}
+                            endAngle={-270}
+                            strokeWidth={2}
+                            stroke="rgba(0,0,0,0.15)"
+                            activeIndex={activeIndex ?? undefined}
+                            activeShape={renderActiveShape}
+                            onMouseEnter={(_: unknown, index: number) => setActiveIndex(index)}
+                            onMouseLeave={() => setActiveIndex(null)}
+                            onClick={(_: unknown, index: number) => setActiveIndex(activeIndex === index ? null : index)}
+                            style={{ cursor: 'pointer' }}
+                        >
+                            {segments.map((seg, i) => (
+                                <Cell key={i} fill={seg.value > 0 ? seg.color : 'rgba(255,255,255,0.06)'} />
+                            ))}
+                        </PieCompat>
+                    </PieChart>
                 ) : (
-                    <>
-                        <span className="text-white font-bold" style={{ fontSize: '26px', lineHeight: 1 }}>
-                            {totalRemaining}
-                        </span>
-                        <span className="text-white/50" style={{ fontSize: '10px' }}>วันคงเหลือ</span>
-                    </>
+                    <svg width={chartSize} height={chartSize}>
+                        <circle cx={cx} cy={cy} r={57} fill="none"
+                            stroke="rgba(255,255,255,0.1)" strokeWidth={18} />
+                    </svg>
                 )}
+
+                {/* Center label */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    {activeSeg ? (
+                        <>
+                            <span className="rounded-full mb-1"
+                                style={{ width: 8, height: 8, background: activeSeg.color, display: 'inline-block' }} />
+                            <span className="text-white font-bold" style={{ fontSize: '20px', lineHeight: 1 }}>
+                                {activeSeg.value}
+                            </span>
+                            <span className="text-white/50 text-center px-2" style={{ fontSize: '9px', maxWidth: 80 }}>
+                                {activeSeg.label}
+                            </span>
+                        </>
+                    ) : (
+                        <>
+                            <span className="text-white font-bold" style={{ fontSize: '24px', lineHeight: 1 }}>
+                                {annualRemaining}
+                            </span>
+                            <span className="text-white/50" style={{ fontSize: '10px' }}>วันคงเหลือ</span>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            {/* Legend */}
+            <div className="flex flex-col gap-1 w-full">
+                {segments.map((seg, i) => (
+                    <button
+                        key={i}
+                        className="flex items-center gap-1.5 text-left w-full"
+                        onMouseEnter={() => setActiveIndex(i)}
+                        onMouseLeave={() => setActiveIndex(null)}
+                        onClick={() => setActiveIndex(activeIndex === i ? null : i)}
+                    >
+                        <span className="rounded-full shrink-0"
+                            style={{ width: 7, height: 7, background: seg.color }} />
+                        <span className="text-white/50 truncate" style={{ fontSize: '10px' }}>
+                            {seg.label}: <span className="text-white/70 font-medium">{seg.value}</span>
+                        </span>
+                    </button>
+                ))}
+            </div>
+
+            {/* ใช้ไป / คงเหลือ annual summary */}
+            <div className="flex gap-3 mt-1">
+                <span className="text-white/40" style={{ fontSize: '10px' }}>
+                    ใช้ไป <span className="text-white/65 font-bold">{annualUsed}</span> วัน
+                </span>
             </div>
         </div>
     )
 }
+
+// ─── Leave Balance Right Panel ────────────────────────────────────────────────
+function LeaveRightPanel({ leaveBalances }: { leaveBalances: LeaveBalance[] }) {
+    const annual = leaveBalances.find(b => b.leaveType === 'annual')
+    const remaining = annual?.remainingDays ?? 0
+    const entitled  = annual?.entitledDays  ?? 6
+    const used      = annual?.usedDays      ?? 0
+    const pct = entitled > 0 ? Math.round((used / entitled) * 100) : 0
+
+    return (
+        <div className="flex flex-col justify-center gap-2 flex-1">
+            <p className="text-white/40 font-bold uppercase tracking-wider" style={{ fontSize: '10px' }}>
+                ลาพักร้อน คงเหลือ
+            </p>
+            <p className="text-white font-black leading-none" style={{ fontSize: '52px' }}>
+                {remaining}
+            </p>
+            <p className="text-white/45" style={{ fontSize: '11px' }}>
+                สิทธิ์ทั้งหมด {entitled} วัน
+            </p>
+            <p className="text-white/35" style={{ fontSize: '11px' }}>
+                ใช้ไปแล้ว {used} วัน
+            </p>
+
+            {/* Progress bar */}
+            <div className="mt-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)', maxWidth: 140 }}>
+                <div
+                    className="h-full rounded-full"
+                    style={{ width: `${pct}%`, background: '#882136' }}
+                />
+            </div>
+            <p className="text-white/25" style={{ fontSize: '10px' }}>{pct}% ของสิทธิ์</p>
+        </div>
+    )
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
-
 export function PortalDashboardClient({ sessionName, employee, announcements, leaveBalances }: Props) {
-    const displayName = employee
-        ? `${employee.firstNameTH} ${employee.lastNameTH}`
-        : sessionName
-
     const female = employee ? isFemale(employee.gender) : false
     const genderType = female ? 'maternity' : 'ordination'
     const genderBalance = leaveBalances.find(b => b.leaveType === genderType && b.entitledDays > 0) ?? null
@@ -328,61 +436,30 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
     return (
         <div className="max-w-lg mx-auto space-y-4 pb-4">
 
-            {/* 1. Announcement Slideshow */}
+            {/* 1. Welcome Section */}
+            <WelcomeSection employee={employee} sessionName={sessionName} />
+
+            {/* 2. Announcement Slideshow (banner ประกาศ) */}
             <AnnouncementSlideshow announcements={announcements} />
 
-            {/* 2. การ์ด Profile 2 คอลัมน์ */}
+            {/* 3. Leave Balance Card — Donut (left) + Big number (right) */}
             <div style={glass} className="p-4">
-                <div className="flex items-center gap-4">
+                <p className="text-white/40 font-bold uppercase tracking-wider mb-3" style={{ fontSize: '10px' }}>
+                    วันลา — ปี {new Date().getFullYear()}
+                </p>
 
-                    {/* คอลัมน์ซ้าย: Avatar + ข้อมูล */}
-                    <div className="flex flex-col items-center gap-2 shrink-0" style={{ width: '42%' }}>
-                        {/* Avatar (104px = +30% from 80px) */}
-                        {employee?.avatarUrl ? (
-                            <img
-                                src={employee.avatarUrl}
-                                alt=""
-                                className="rounded-full object-cover"
-                                style={{ width: 104, height: 104, border: '2px solid rgba(255,255,255,0.2)' }}
-                            />
-                        ) : (
-                            <div style={{
-                                width: 104, height: 104,
-                                background: 'linear-gradient(135deg, #882136, #c0392b)',
-                                borderRadius: '50%',
-                                border: '2px solid rgba(255,255,255,0.15)',
-                            }} />
-                        )}
+                <div className="flex items-start gap-4">
+                    {/* Left: Donut chart */}
+                    <LeavePieChart leaveBalances={leaveBalances} />
 
-                        {/* ชื่อ + ข้อมูล */}
-                        <div className="text-center w-full">
-                            <p className="text-white font-bold leading-snug" style={{ fontSize: '14px' }}>
-                                {displayName}
-                                {employee?.nickname ? ` (${employee.nickname})` : ''}
-                            </p>
-                            {employee && (
-                                <>
-                                    <p className="text-white/60 mt-1" style={{ fontSize: '11px' }}>
-                                        {employee.position}
-                                    </p>
-                                    <p className="text-white/45 mt-1" style={{ fontSize: '11px' }}>
-                                        ฝ่าย : {employee.department}
-                                    </p>
-                                    <p className="text-white/35 mt-0.5" style={{ fontSize: '11px' }}>
-                                        อายุงาน : {calcTenure(employee.startDate)}
-                                    </p>
-                                </>
-                            )}
-                        </div>
-                    </div>
+                    {/* Divider */}
+                    <div className="self-stretch w-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
 
-                    {/* คอลัมน์ขวา: Donut chart */}
-                    <div className="flex flex-1 justify-center items-center">
-                        <LeavePieChart leaveBalances={leaveBalances} />
-                    </div>
+                    {/* Right: Big remaining days */}
+                    <LeaveRightPanel leaveBalances={leaveBalances} />
                 </div>
 
-                {/* Gender-specific text row */}
+                {/* Gender-specific leave row */}
                 {genderBalance && (
                     <div
                         className="flex items-center justify-between px-1 mt-3 pt-2.5"
@@ -399,7 +476,7 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
                 )}
             </div>
 
-            {/* 3. เมนูด่วน */}
+            {/* 4. เมนูด่วน */}
             <div style={glass} className="p-4">
                 <p className="text-white font-bold mb-3" style={{ fontSize: '15px' }}>เมนูด่วน</p>
                 <div className="grid grid-cols-3 gap-3">
