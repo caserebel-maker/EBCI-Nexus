@@ -367,12 +367,30 @@ export function EmployeeProfileView({
     const levelColor = LEVEL_BADGE_COLORS[lvl] ?? LEVEL_BADGE_COLORS[1]
     const levelLabel = EMPLOYEE_LEVELS[lvl]?.label.split('—')[0].trim() ?? `Level ${lvl}`
 
-    // ── Leave chart data ──────────────────────────────────────────────────────
-    const chartData = leaveBalances.map(b => ({
-        name: LEAVE_LABELS[b.leave_type] ?? b.leave_type,
-        ใช้ไปแล้ว: b.used_days,
-        คงเหลือ: b.remaining_days,
-    }))
+    // ── Leave chart data — primary: leave_balances, fallback: leave_requests ──
+    const chartData = (() => {
+        if (leaveBalances.length > 0) {
+            return leaveBalances
+                .filter(b => b.entitled_days > 0 || b.used_days > 0)
+                .map(b => ({
+                    name: LEAVE_LABELS[b.leave_type] ?? b.leave_type,
+                    ใช้ไปแล้ว: b.used_days,
+                    คงเหลือ: Math.max(0, b.remaining_days),
+                    entitled: b.entitled_days,
+                }))
+        }
+        // Fallback: tally approved days from leave_requests
+        const counts: Record<string, number> = {}
+        recentLeaves.filter(l => l.status === 'approved').forEach(l => {
+            counts[l.leave_type] = (counts[l.leave_type] ?? 0) + (l.days ?? 1)
+        })
+        return Object.entries(counts).map(([type, days]) => ({
+            name: LEAVE_LABELS[type] ?? type,
+            ใช้ไปแล้ว: days,
+            คงเหลือ: 0,
+            entitled: days,
+        }))
+    })()
 
     const EMPLOYMENT_LABELS: Record<string, string> = {
         'full-time': 'ประจำ',
@@ -706,16 +724,27 @@ export function EmployeeProfileView({
                                     tick={{ fill: 'rgba(255,255,255,0.60)', fontSize: 13, fontWeight: 600 }}
                                     axisLine={false} tickLine={false} />
                                 <Tooltip content={<LeaveTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                                <Bar dataKey="ใช้ไปแล้ว" stackId="a" fill="#ad5f6c" radius={[0, 0, 0, 0]}>
-                                    <LabelList dataKey="ใช้ไปแล้ว" position="insideRight"
-                                        style={{ fill: '#fff', fontSize: 11, fontWeight: 700 }}
-                                        formatter={(v: any) => v > 0 ? `${v}ว` : ''} />
-                                </Bar>
-                                <Bar dataKey="คงเหลือ" stackId="a" fill="rgba(255,255,255,0.18)"
-                                    radius={[0, 6, 6, 0]}>
+                                <Bar dataKey="ใช้ไปแล้ว" stackId="a" fill="#ad5f6c" radius={[4, 0, 0, 4]} />
+                                <Bar dataKey="คงเหลือ" stackId="a" fill="rgba(255,255,255,0.15)"
+                                    radius={[0, 4, 4, 0]}>
                                     <LabelList dataKey="คงเหลือ" position="right"
-                                        style={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 700 }}
-                                        formatter={(v: any) => v > 0 ? `${v}ว` : ''} />
+                                        content={({ x, y, width, height, index }: any) => {
+                                            const d = chartData[index]
+                                            if (!d) return null
+                                            const label = `${d.ใช้ไปแล้ว}/${d.entitled} วัน`
+                                            return (
+                                                <text
+                                                    x={Number(x) + Number(width) + 8}
+                                                    y={Number(y) + Number(height) / 2 + 4}
+                                                    fill="rgba(255,255,255,0.55)"
+                                                    fontSize={11}
+                                                    fontWeight={700}
+                                                >
+                                                    {label}
+                                                </text>
+                                            )
+                                        }}
+                                    />
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>
@@ -747,22 +776,35 @@ export function EmployeeProfileView({
             {/* ── 6. Danger Zone (hr_admin only) ───────────────────────────── */}
             {isHrAdmin && (
                 <div style={{
-                    background: 'rgba(220,38,38,0.05)',
-                    border: '1px solid rgba(220,38,38,0.20)',
+                    background: 'rgba(220,38,38,0.15)',
+                    border: '1px solid rgba(220,38,38,0.6)',
                     borderRadius: '18px',
                 }} className="p-6">
-                    <SHead icon={AlertCircle} label="Danger Zone" />
+                    {/* Custom header — red title */}
+                    <div className="flex items-center gap-3 mb-5 pb-3 border-b border-red-500/30">
+                        <div className="h-8 w-8 rounded-lg bg-red-500/25 flex items-center justify-center shrink-0">
+                            <AlertCircle size={16} className="text-red-400" />
+                        </div>
+                        <h2 className="text-[1.1rem] font-bold tracking-wide" style={{ color: '#ef4444' }}>
+                            ⚠️ Danger Zone
+                        </h2>
+                    </div>
                     <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
-                        <p className="text-[0.9rem] text-white/40">การลบพนักงานจะลบข้อมูลและบัญชีผู้ใช้ออกจากระบบอย่างถาวร</p>
+                        <p className="text-[0.9rem] text-white/60">
+                            การลบพนักงานจะลบข้อมูลและบัญชีผู้ใช้ออกจากระบบอย่างถาวร ไม่สามารถย้อนกลับได้
+                        </p>
                         <div className="flex gap-3 shrink-0">
                             {!isEditing && (
                                 <button onClick={handleEdit}
-                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[0.95rem] font-semibold bg-[#882136]/40 hover:bg-[#882136]/70 text-[#ad5f6c] hover:text-white border border-[#ad5f6c]/30 transition-all">
+                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[0.95rem] font-semibold text-white border border-white/50 hover:border-white hover:bg-white/10 transition-all">
                                     <Pencil size={15} /> แก้ไขข้อมูล
                                 </button>
                             )}
-                            <button onClick={() => setShowDeleteConfirm(true)}
-                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[0.95rem] font-semibold bg-red-600/15 hover:bg-red-600/35 text-red-400 hover:text-red-300 border border-red-500/30 hover:border-red-500/60 transition-all">
+                            <button
+                                onClick={() => setShowDeleteConfirm(true)}
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[0.95rem] font-semibold text-white transition-all hover:opacity-85 active:scale-95"
+                                style={{ background: '#dc2626', border: '1px solid rgba(220,38,38,0.9)' }}
+                            >
                                 <Trash2 size={15} /> ลบพนักงาน
                             </button>
                         </div>
