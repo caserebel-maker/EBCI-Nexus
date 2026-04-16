@@ -50,10 +50,9 @@ export default function LoginPage() {
                             alt="EBCI Nexus"
                             className="h-20 w-auto opacity-90 drop-shadow-2xl"
                         />
-                        <div className="text-white font-medium text-[10px] md:text-xs uppercase tracking-[0.4em] opacity-80 flex flex-col gap-1.5">
-                            <span>HR Management System</span>
-                            <span>Employee Portal</span>
-                        </div>
+                        <p className="text-white font-medium text-[9px] md:text-[10px] tracking-[0.2em] opacity-80 mt-1">
+                            Human Resource Management System
+                        </p>
                     </div>
 
                     {/* Login Form */}
