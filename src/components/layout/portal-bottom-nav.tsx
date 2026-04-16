@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
     Home, Users, Bell, Megaphone, MoreHorizontal, Clock, CalendarDays,
     ClipboardCheck, CheckSquare, LogOut, FileText, UserCircle,
-    Settings, ChevronRight, X,
+    Settings, ChevronRight, X, UserRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -35,16 +35,16 @@ const NAV_CONFIG: Record<Role, NavItem[]> = {
         { label: 'แจ้งเตือน', href: '/portal/notifications',       icon: Bell },
     ],
     manager: [
-        { label: 'หน้าแรก', href: '/portal/dashboard', icon: Home, exact: true },
-        { label: 'อนุมัติ', href: '/portal/approve', icon: CheckSquare },
-        { label: 'ปฏิทิน', href: '/portal/calendar', icon: CalendarDays },
-        { label: 'แจ้งเตือน', href: '/portal/notifications', icon: Bell },
+        { label: 'หน้าแรก',  href: '/portal/dashboard',      icon: Home,       exact: true },
+        { label: 'โปรไฟล์',  href: '/portal/profile',         icon: UserRound },
+        { label: 'ยื่นใบลา', href: '/portal/leave',           icon: CalendarDays },
+        { label: 'แจ้งเตือน', href: '/portal/notifications',  icon: Bell },
     ],
     employee: [
-        { label: 'หน้าแรก', href: '/portal/dashboard', icon: Home, exact: true },
-        { label: 'ปฏิทิน', href: '/portal/calendar', icon: CalendarDays },
-        { label: 'ลงเวลา', href: '/portal/checkin', icon: Clock },
-        { label: 'แจ้งเตือน', href: '/portal/notifications', icon: Bell },
+        { label: 'หน้าแรก',  href: '/portal/dashboard',      icon: Home,       exact: true },
+        { label: 'โปรไฟล์',  href: '/portal/profile',         icon: UserRound },
+        { label: 'ยื่นใบลา', href: '/portal/leave',           icon: CalendarDays },
+        { label: 'แจ้งเตือน', href: '/portal/notifications',  icon: Bell },
     ],
 }
 
@@ -56,13 +56,14 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     manager: [
-        { label: 'ใบลาของฉัน', desc: 'ดูและยื่นคำขอลา', href: '/portal/leave', icon: CalendarDays },
-        { label: 'โปรไฟล์', desc: 'ข้อมูลส่วนตัว', href: '/portal/profile', icon: UserCircle },
+        { label: 'อนุมัติการลา', desc: 'พิจารณาคำขอลาลูกทีม', href: '/portal/approve',   icon: CheckSquare },
+        { label: 'ปฏิทิน',       desc: 'ดูตารางงาน',           href: '/portal/calendar',  icon: CalendarDays },
+        { label: 'ลงเวลา',       desc: 'เช็คอิน/เช็คเอาท์',   href: '/portal/checkin',   icon: Clock },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     employee: [
-        { label: 'ใบลา', desc: 'ดูและยื่นคำขอลา', href: '/portal/leave', icon: CalendarDays },
-        { label: 'โปรไฟล์', desc: 'ข้อมูลส่วนตัว', href: '/portal/profile', icon: UserCircle },
+        { label: 'ปฏิทิน',  desc: 'ดูตารางงาน',         href: '/portal/calendar', icon: CalendarDays },
+        { label: 'ลงเวลา',  desc: 'เช็คอิน/เช็คเอาท์', href: '/portal/checkin',  icon: Clock },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
 }
