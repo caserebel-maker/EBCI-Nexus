@@ -23,6 +23,57 @@ export interface AnnouncementItem {
     imagePath: string | null
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+type EmpRow = {
+    id: string
+    first_name_th: string | null
+    last_name_th: string | null
+    nickname: string | null
+    position: string | null
+    department: string | null
+    start_date: string | null
+    photo_url: string | null
+    email: string | null
+    applicant_id: string | null
+}
+
+const EMP_SELECT = 'id, first_name_th, last_name_th, nickname, position, department, start_date, photo_url, email, applicant_id'
+
+async function findEmployee(userId: string): Promise<EmpRow | null> {
+    // 1. Try user_id (fastest path once linked)
+    const { data: byId } = await supabaseAdmin
+        .from('employees')
+        .select(EMP_SELECT)
+        .eq('user_id', userId)
+        .maybeSingle()
+
+    if (byId) return byId as EmpRow
+
+    // 2. Fallback: look up auth email → match by employee email
+    const { data: authData } = await supabaseAdmin.auth.admin.getUserById(userId)
+    const userEmail = authData?.user?.email
+    if (!userEmail) return null
+
+    const { data: byEmail } = await supabaseAdmin
+        .from('employees')
+        .select(EMP_SELECT)
+        .eq('email', userEmail)
+        .maybeSingle()
+
+    if (!byEmail) return null
+
+    // Auto-link user_id so next request uses the fast path
+    await supabaseAdmin
+        .from('employees')
+        .update({ user_id: userId })
+        .eq('id', (byEmail as EmpRow).id)
+
+    return byEmail as EmpRow
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default async function PortalDashboardPage() {
     const session = await getSession()
     if (!session) redirect('/login')
@@ -43,42 +94,56 @@ export default async function PortalDashboardPage() {
 
     // ── Employee + leave ──────────────────────────────────────────────────────
     try {
-        const emp = await prisma.employee.findFirst({
-            where: { userId: session.id },
-            include: { applicant: { select: { gender: true, nickname: true, photoPath: true } } },
-        })
+        const emp = await findEmployee(session.id)
 
         if (emp) {
-            // Prefer photo_url (public URL from employee-photos bucket)
-            // Fallback: signed URL from applicant-assets (legacy)
-            let avatarUrl: string | null = null
-            const { data: empRow } = await supabaseAdmin
-                .from('employees')
-                .select('photo_url')
-                .eq('id', emp.id)
-                .single()
-            avatarUrl = empRow?.photo_url ?? null
+            // Photo: prefer employees.photo_url, fallback to applicant signed URL
+            let avatarUrl: string | null = emp.photo_url ?? null
 
-            if (!avatarUrl && emp.applicant?.photoPath) {
-                try {
-                    const { data } = await supabaseAdmin.storage
-                        .from('applicant-assets')
-                        .createSignedUrl(emp.applicant.photoPath, 3600)
-                    avatarUrl = data?.signedUrl ?? null
-                } catch { /* fail silently */ }
+            if (!avatarUrl && emp.applicant_id) {
+                const { data: app } = await supabaseAdmin
+                    .from('applicants')
+                    .select('photo_path')
+                    .eq('id', emp.applicant_id)
+                    .maybeSingle()
+
+                if (app?.photo_path) {
+                    try {
+                        const { data } = await supabaseAdmin.storage
+                            .from('applicant-assets')
+                            .createSignedUrl(app.photo_path, 3600)
+                        avatarUrl = data?.signedUrl ?? null
+                    } catch { /* fail silently */ }
+                }
+            }
+
+            // Gender from applicants table
+            let gender: string | null = null
+            if (emp.applicant_id) {
+                const { data: app } = await supabaseAdmin
+                    .from('applicants')
+                    .select('gender, nickname')
+                    .eq('id', emp.applicant_id)
+                    .maybeSingle()
+                gender = app?.gender ?? null
+                // Use applicant nickname only if employee-level nickname is empty
+                if (!emp.nickname && app?.nickname) {
+                    emp.nickname = app.nickname
+                }
             }
 
             employee = {
-                firstNameTH: emp.firstNameTH ?? session.name,
-                lastNameTH: emp.lastNameTH ?? '',
+                firstNameTH: emp.first_name_th ?? session.name,
+                lastNameTH: emp.last_name_th ?? '',
                 position: emp.position ?? '',
                 department: emp.department ?? '',
-                startDate: emp.startDate?.toISOString() ?? new Date().toISOString(),
-                gender: emp.applicant?.gender ?? null,
-                nickname: emp.applicant?.nickname ?? null,
+                startDate: emp.start_date ?? new Date().toISOString(),
+                gender,
+                nickname: emp.nickname ?? null,
                 avatarUrl,
             }
 
+            // Leave balances (still using Prisma — table exists there)
             const year = new Date().getFullYear()
             const stored = await prisma.leaveBalance.findMany({
                 where: { employeeId: emp.id, year },
@@ -136,13 +201,7 @@ export default async function PortalDashboardPage() {
         cur.setDate(cur.getDate() + 1)
     }
 
-    // ── Attendance (no table yet — default 0) ─────────────────────────────────
-    let lateCount = 0
-    try {
-        // Future: query attendance table when available
-        // const rows = await prisma.attendance.findMany({ where: { employeeId, isLate: true, year } })
-        // lateCount = rows.length
-    } catch { /* no attendance table yet */ }
+    const lateCount = 0 // Future: query attendance table
 
     return (
         <PortalDashboardClient
