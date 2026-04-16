@@ -20,8 +20,8 @@ export const ROLE_CONFIG: Record<UserRole, RoleConfig> = {
     },
     [ROLES.MANAGER]: {
         label: 'Manager',
-        homePath: '/dashboard',
-        allowedPrefixes: ['/dashboard', '/portal', '/leave'],
+        homePath: '/portal',
+        allowedPrefixes: ['/portal', '/leave', '/dashboard/leave/approve'],
     },
     [ROLES.EMPLOYEE]: {
         label: 'Employee',
