@@ -12,7 +12,8 @@ function LoginForm() {
     const searchParams = useSearchParams()
     const redirectAfterLogin = searchParams.get('redirect') ?? null
     // Show HR Admin badge when entering from /hradmin (no redirect param, or redirect=/hradmin)
-    const isAdminEntry = !redirectAfterLogin || redirectAfterLogin.startsWith('/hradmin')
+    const fromParam = searchParams.get('from')
+    const isAdminEntry = redirectAfterLogin?.startsWith('/hradmin') || fromParam === 'hradmin'
 
     const { t } = useTranslation()
 
