@@ -26,13 +26,23 @@ interface MoreItem {
     danger?: boolean
 }
 
+// hr_admin has two variants depending on whether they're in /hradmin or /portal
+const HR_ADMIN_NAV_HRADMIN: NavItem[] = [
+    { label: 'หน้าแรก',   href: '/hradmin/dashboard',        icon: Home,      exact: true },
+    { label: 'พนักงาน',   href: '/hradmin/employees',        icon: Users },
+    { label: 'ประกาศ',    href: '/hradmin/hr/announcements', icon: Megaphone },
+    { label: 'แจ้งเตือน', href: '/portal/notifications',     icon: Bell },
+]
+const HR_ADMIN_NAV_PORTAL: NavItem[] = [
+    { label: 'หน้าแรก',   href: '/portal/dashboard',         icon: Home,      exact: true },
+    { label: 'พนักงาน',   href: '/hradmin/employees',        icon: Users },
+    { label: 'ประกาศ',    href: '/hradmin/hr/announcements', icon: Megaphone },
+    { label: 'แจ้งเตือน', href: '/portal/notifications',     icon: Bell },
+]
+
 const NAV_CONFIG: Record<Role, NavItem[]> = {
-    hr_admin: [
-        { label: 'หน้าแรก',  href: '/portal/dashboard',           icon: Home,      exact: true },
-        { label: 'พนักงาน',  href: '/hradmin/employees',         icon: Users },
-        { label: 'ประกาศ',   href: '/hradmin/hr/announcements',  icon: Megaphone },
-        { label: 'แจ้งเตือน', href: '/portal/notifications',       icon: Bell },
-    ],
+    hr_admin: HR_ADMIN_NAV_PORTAL, // default; overridden dynamically in component
+
     manager: [
         { label: 'หน้าแรก',  href: '/portal/dashboard',      icon: Home,       exact: true },
         { label: 'โปรไฟล์',  href: '/portal/profile',         icon: UserRound },
@@ -77,9 +87,9 @@ export function PortalBottomNav() {
     const pathname = usePathname()
     const [moreOpen, setMoreOpen] = useState(false)
 
-    console.log('[PortalBottomNav] useRole():', role)
-
-    const navItems = NAV_CONFIG[role] ?? NAV_CONFIG.employee
+    const navItems = role === 'hr_admin'
+        ? (pathname?.startsWith('/hradmin') ? HR_ADMIN_NAV_HRADMIN : HR_ADMIN_NAV_PORTAL)
+        : (NAV_CONFIG[role] ?? NAV_CONFIG.employee)
     const moreItems = MORE_CONFIG[role] ?? MORE_CONFIG.employee
 
     const isNavActive = (item: NavItem) =>
