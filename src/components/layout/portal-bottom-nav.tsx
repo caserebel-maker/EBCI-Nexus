@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-    Home, Users, Bell, MoreHorizontal, Clock, CalendarDays,
+    Home, Users, Bell, Megaphone, MoreHorizontal, Clock, CalendarDays,
     ClipboardCheck, CheckSquare, LogOut, FileText, UserCircle,
     Settings, ChevronRight, X,
 } from 'lucide-react'
@@ -29,10 +29,10 @@ interface MoreItem {
 
 const NAV_CONFIG: Record<Role, NavItem[]> = {
     hr_admin: [
-        { label: 'หน้าแรก', href: '/dashboard', icon: Home, exact: true },
-        { label: 'พนักงาน', href: '/dashboard/employees', icon: Users },
-        { label: 'อนุมัติลา', href: '/dashboard/leave/admin', icon: ClipboardCheck },
-        { label: 'แจ้งเตือน', href: '/dashboard/hr/announcements', icon: Bell },
+        { label: 'หน้าแรก',  href: '/portal/dashboard',           icon: Home,      exact: true },
+        { label: 'พนักงาน',  href: '/dashboard/employees',         icon: Users },
+        { label: 'ประกาศ',   href: '/dashboard/hr/announcements',  icon: Megaphone },
+        { label: 'แจ้งเตือน', href: '/portal/notifications',       icon: Bell },
     ],
     manager: [
         { label: 'หน้าแรก', href: '/portal/dashboard', icon: Home, exact: true },
@@ -50,8 +50,9 @@ const NAV_CONFIG: Record<Role, NavItem[]> = {
 
 const MORE_CONFIG: Record<Role, MoreItem[]> = {
     hr_admin: [
-        { label: 'จัดการระบบ', desc: 'ตั้งค่าและการจัดการ', href: '/dashboard/settings', icon: Settings },
-        { label: 'รายงาน', desc: 'ดูรายงานต่าง ๆ', href: '/dashboard/reports', icon: FileText },
+        { label: 'อนุมัติการลา', desc: 'จัดการคำขอลาพนักงาน', href: '/dashboard/leave/admin', icon: ClipboardCheck },
+        { label: 'จัดการระบบ',   desc: 'ตั้งค่าและการจัดการ',  href: '/dashboard/settings',   icon: Settings },
+        { label: 'รายงาน',       desc: 'ดูรายงานต่าง ๆ',        href: '/dashboard/reports',    icon: FileText },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     manager: [
