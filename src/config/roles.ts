@@ -15,13 +15,13 @@ export interface RoleConfig {
 export const ROLE_CONFIG: Record<UserRole, RoleConfig> = {
     [ROLES.HR_ADMIN]: {
         label: 'HR Admin',
-        homePath: '/dashboard',
-        allowedPrefixes: ['/dashboard', '/employees', '/recruitment', '/portal', '/careers', '/leave'],
+        homePath: '/hradmin/dashboard',
+        allowedPrefixes: ['/hradmin', '/employees', '/recruitment', '/portal', '/careers', '/leave'],
     },
     [ROLES.MANAGER]: {
         label: 'Manager',
         homePath: '/portal',
-        allowedPrefixes: ['/portal', '/leave', '/dashboard/leave/approve'],
+        allowedPrefixes: ['/portal', '/leave', '/hradmin/leave/approve'],
     },
     [ROLES.EMPLOYEE]: {
         label: 'Employee',

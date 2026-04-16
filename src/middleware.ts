@@ -2,20 +2,26 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { ROLE_CONFIG, type UserRole } from '@/config/roles'
 
-const PROTECTED_PREFIXES = ['/dashboard', '/portal', '/employees', '/recruitment', '/leave']
+const PROTECTED_PREFIXES = ['/hradmin', '/portal', '/employees', '/recruitment', '/leave']
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
     const sessionCookie = request.cookies.get('nexus_session')?.value
 
+    // ── 0. Root redirect ─────────────────────────────────────────────────────
+    if (pathname === '/') {
+        return NextResponse.redirect(new URL('/portal', request.url))
+    }
+
     // ── 1. No session → redirect to login ────────────────────────────────────
     if (!sessionCookie) {
         if (PROTECTED_PREFIXES.some(p => pathname.startsWith(p))) {
-            // Preserve /portal entry point so login can send user back there
             const loginUrl = new URL('/login', request.url)
             if (pathname.startsWith('/portal')) {
+                // Employee entry → send back to portal after login
                 loginUrl.searchParams.set('redirect', '/portal')
             }
+            // /hradmin entry → no redirect param → shows HR Admin badge
             return NextResponse.redirect(loginUrl)
         }
         return NextResponse.next()
@@ -44,24 +50,24 @@ export function middleware(request: NextRequest) {
     // ── 4. Role-based access control ─────────────────────────────────────────
 
     if (role === 'hr_admin') {
-        // hr_admin: full access to /dashboard and /portal — no restrictions
+        // hr_admin: full access to /hradmin and /portal — no restrictions
         return NextResponse.next()
     }
 
     if (role === 'employee') {
-        // employee: /portal only — block /dashboard
-        if (pathname.startsWith('/dashboard')) {
+        // employee: /portal only — block /hradmin
+        if (pathname.startsWith('/hradmin')) {
             return NextResponse.redirect(new URL('/portal', request.url))
         }
         return NextResponse.next()
     }
 
     if (role === 'manager') {
-        // manager: /portal + /dashboard/leave/approve only
+        // manager: /portal + /hradmin/leave/approve only
         if (
-            pathname.startsWith('/dashboard') &&
-            pathname !== '/dashboard/leave/approve' &&
-            !pathname.startsWith('/dashboard/leave/approve/')
+            pathname.startsWith('/hradmin') &&
+            pathname !== '/hradmin/leave/approve' &&
+            !pathname.startsWith('/hradmin/leave/approve/')
         ) {
             return NextResponse.redirect(new URL('/portal', request.url))
         }
@@ -74,8 +80,9 @@ export function middleware(request: NextRequest) {
 
 export const config = {
     matcher: [
-        '/dashboard',
-        '/dashboard/:path*',
+        '/',
+        '/hradmin',
+        '/hradmin/:path*',
         '/portal',
         '/portal/:path*',
         '/employees',

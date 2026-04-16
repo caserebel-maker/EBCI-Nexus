@@ -43,7 +43,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                 {/* Sidebar Header */}
                 <div className="flex flex-col shrink-0 pt-12 pb-10">
                     <div className="flex flex-col items-center justify-center px-4 w-full">
-                        <Link href="/dashboard" className="flex flex-col items-center gap-4 group">
+                        <Link href="/hradmin" className="flex flex-col items-center gap-4 group">
                             <img
                                 src="/sidebar-logo.png"
                                 alt="EBCI NEXUS"
@@ -70,8 +70,8 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                 {/* Nav Links */}
                 <nav className="p-4 space-y-2 flex-1 overflow-y-auto pb-20">
                     {navItems.map((item, idx) => {
-                        const isActive = item.href === '/dashboard'
-                            ? pathname === '/dashboard'
+                        const isActive = item.href === '/hradmin'
+                            ? pathname === '/hradmin'
                             : pathname?.startsWith(item.href)
 
                         return (
@@ -120,7 +120,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                 >
                     {/* Mobile Logo — left-aligned */}
                     <Link
-                        href={role === 'hr_admin' ? '/dashboard' : '/portal'}
+                        href={role === 'hr_admin' ? '/hradmin' : '/portal'}
                         className="lg:hidden flex items-center group"
                     >
                         <img

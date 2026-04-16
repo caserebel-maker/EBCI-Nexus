@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
                 endDate: end,
                 totalDays,
                 reason,
-                approveUrl: `${appUrl}/dashboard/leave/approve`,
+                approveUrl: `${appUrl}/hradmin/leave/approve`,
             }).catch(console.error)
         }
 

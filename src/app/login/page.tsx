@@ -11,8 +11,8 @@ function LoginForm() {
     const [loading, setLoading] = useState(false)
     const searchParams = useSearchParams()
     const redirectAfterLogin = searchParams.get('redirect') ?? null
-    // Show HR Admin badge when entering from /dashboard (no redirect param, or redirect=/dashboard)
-    const isAdminEntry = !redirectAfterLogin || redirectAfterLogin.startsWith('/dashboard')
+    // Show HR Admin badge when entering from /hradmin (no redirect param, or redirect=/hradmin)
+    const isAdminEntry = !redirectAfterLogin || redirectAfterLogin.startsWith('/hradmin')
 
     const { t } = useTranslation()
 

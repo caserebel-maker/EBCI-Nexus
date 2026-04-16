@@ -113,7 +113,7 @@ async function notifyApprover(
         endDate: lr.end_date,
         totalDays: lr.total_days,
         reason: lr.reason ?? '',
-        approveUrl: `${APP_URL}/dashboard/leave/admin`,
+        approveUrl: `${APP_URL}/hradmin/leave/admin`,
     }).catch(console.error)
 }
 
