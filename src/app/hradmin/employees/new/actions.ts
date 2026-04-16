@@ -39,7 +39,7 @@ function buildWelcomeEmail({ name, resetLink }: { name: string; resetLink: strin
 
     <!-- Header -->
     <div style="background:linear-gradient(180deg,#561e23 0%,#ad5f6c 100%);padding:36px 32px;text-align:center;">
-      <img src="https://ebci-nexus.vercel.app/logo.png" alt="EBCI NEXUS"
+      <img src="https://ebci-nexus.vercel.app/sidebar-logo.png" alt="EBCI NEXUS"
            width="72" height="72"
            style="display:block;margin:0 auto 12px;border-radius:12px;"
            onerror="this.style.display='none'">
