@@ -10,8 +10,9 @@ function LoginForm() {
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const searchParams = useSearchParams()
-    // If coming from /portal (unauthenticated), redirect back there after login
     const redirectAfterLogin = searchParams.get('redirect') ?? null
+    // Show HR Admin badge when entering from /dashboard (no redirect param, or redirect=/dashboard)
+    const isAdminEntry = !redirectAfterLogin || redirectAfterLogin.startsWith('/dashboard')
 
     const { t } = useTranslation()
 
@@ -126,9 +127,28 @@ function LoginForm() {
                             >
                                 {loading ? <Loader2 className="animate-spin h-5 w-5" /> : t('auth.signIn')}
                             </button>
-                            <p className="text-center text-white/30 text-xs mt-6">
-                                Authorized Personnel Only
-                            </p>
+
+                            {isAdminEntry ? (
+                                /* HR Admin badge */
+                                <div className="mt-5 rounded-xl px-4 py-3 text-center"
+                                    style={{
+                                        background: 'rgba(136,33,54,0.18)',
+                                        border: '1px solid rgba(173,95,108,0.40)',
+                                        backdropFilter: 'blur(8px)',
+                                    }}>
+                                    <p className="text-xs font-semibold tracking-wide"
+                                        style={{ color: 'rgba(252,165,165,0.90)' }}>
+                                        🔐&nbsp; HR Administrator Access
+                                    </p>
+                                    <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.38)' }}>
+                                        ระบบสำหรับผู้ดูแลระบบ HR เท่านั้น
+                                    </p>
+                                </div>
+                            ) : (
+                                <p className="text-center text-white/30 text-xs mt-6">
+                                    Authorized Personnel Only
+                                </p>
+                            )}
                         </div>
                     </form>
                 </div>
