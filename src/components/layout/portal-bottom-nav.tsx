@@ -81,8 +81,9 @@ export function PortalBottomNav({ role }: PortalBottomNavProps) {
     const pathname = usePathname()
     const [moreOpen, setMoreOpen] = useState(false)
 
+    console.log('[bottomnav] role:', role, '| navItems:', NAV_CONFIG[role]?.map(i => i.label))
+
     // role comes directly from the server (portal/layout.tsx → DashboardShell → here)
-    // No client-side cookie reading needed
     const navItems = NAV_CONFIG[role] ?? NAV_CONFIG.employee
     const moreItems = MORE_CONFIG[role] ?? MORE_CONFIG.employee
 

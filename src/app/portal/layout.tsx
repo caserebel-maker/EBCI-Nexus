@@ -15,6 +15,7 @@ export default async function EmployeeLayout({
 
     console.log('SESSION OBJECT:', JSON.stringify(session))
     console.log('SESSION ROLE:', session?.role)
+    console.log('[layout] passing role to DashboardShell:', session.role)
 
     return (
         <DashboardShell role={session.role} userName={session.name}>
