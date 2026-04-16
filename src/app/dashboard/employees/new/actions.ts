@@ -1,7 +1,7 @@
 'use server'
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { sendEmail } from '@/lib/email'
+import { Resend } from 'resend'
 import { getSession } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
@@ -207,12 +207,19 @@ export async function createEmployee(payload: CreateEmployeePayload) {
                     const resetLink: string = (linkData as any)?.properties?.action_link ?? ''
 
                     if (resetLink) {
-                        await sendEmail({
+                        const resend = new Resend(process.env.RESEND_API_KEY)
+                        const { data: emailData, error: emailError } = await resend.emails.send({
+                            from: 'onboarding@resend.dev',
                             to: payload.email,
                             subject: 'ยินดีต้อนรับสู่ EBCI Nexus — ตั้งรหัสผ่านของคุณ',
                             html: buildWelcomeEmail({ name: fullName, resetLink }),
                         })
-                        emailSent = true
+                        if (emailError) {
+                            console.error('[createEmployee] Resend full error:', JSON.stringify(emailError, null, 2))
+                        } else {
+                            console.log('[createEmployee] email sent, id:', emailData?.id)
+                            emailSent = true
+                        }
                     }
                 }
 
