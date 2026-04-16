@@ -352,7 +352,7 @@ export function EmployeeProfileView({
 
     const handleDelete = async () => {
         setIsDeleting(true)
-        const result = await deleteEmployee(id)
+        const result = await deleteEmployee(employee.id)
         if (result.error) {
             setIsDeleting(false)
             setShowDeleteConfirm(false)
