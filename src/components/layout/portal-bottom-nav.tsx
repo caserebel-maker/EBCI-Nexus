@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -77,9 +77,33 @@ interface PortalBottomNavProps {
     role: Role
 }
 
-export function PortalBottomNav({ role }: PortalBottomNavProps) {
+/** Read the role stored in nexus_session cookie on the client.
+ *  This overrides the server-passed prop so the nav is always correct
+ *  even when the prop is stale (e.g. cached client bundle). */
+function useSessionRole(fallback: Role): Role {
+    const [role, setRole] = useState<Role>(fallback)
+
+    useEffect(() => {
+        const match = document.cookie
+            .split('; ')
+            .find(c => c.startsWith('nexus_session='))
+        if (!match) return
+        try {
+            const session = JSON.parse(decodeURIComponent(match.split('=').slice(1).join('=')))
+            const r = session?.role as Role
+            if (r && NAV_CONFIG[r]) setRole(r)
+        } catch { /* keep fallback */ }
+    }, [])
+
+    return role
+}
+
+export function PortalBottomNav({ role: roleProp }: PortalBottomNavProps) {
     const pathname = usePathname()
     const [moreOpen, setMoreOpen] = useState(false)
+
+    // Always read from cookie — source of truth for the current logged-in session
+    const role = useSessionRole(roleProp)
 
     const navItems = NAV_CONFIG[role]
     const moreItems = MORE_CONFIG[role]
