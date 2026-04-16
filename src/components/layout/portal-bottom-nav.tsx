@@ -71,8 +71,9 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     employee: [
-        { label: 'ปฏิทิน',  desc: 'ดูตารางงาน',         href: '/portal/calendar', icon: CalendarDays },
-        { label: 'ลงเวลา',  desc: 'เช็คอิน/เช็คเอาท์', href: '/portal/checkin',  icon: Clock },
+        { label: 'ปฏิทิน',       desc: 'ดูตารางงาน',           href: '/portal/calendar',       icon: CalendarDays },
+        { label: 'เช็คอิน',      desc: 'เช็คอิน/เช็คเอาท์',   href: '/portal/checkin',         icon: Clock },
+        { label: 'การแจ้งเตือน', desc: 'ดูการแจ้งเตือนทั้งหมด', href: '/portal/notifications',  icon: Bell },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
 }
@@ -90,7 +91,9 @@ export function PortalBottomNav() {
     const navItems = pathname?.startsWith('/hradmin')
         ? HR_ADMIN_NAV_HRADMIN
         : NAV_CONFIG.employee
-    const moreItems = MORE_CONFIG[role] ?? MORE_CONFIG.employee
+    const moreItems = pathname?.startsWith('/hradmin')
+        ? MORE_CONFIG.hr_admin
+        : MORE_CONFIG.employee
 
     const isNavActive = (item: NavItem) =>
         item.exact ? pathname === item.href : pathname?.startsWith(item.href)
