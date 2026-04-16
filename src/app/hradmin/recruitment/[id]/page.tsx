@@ -86,7 +86,7 @@ export default async function ApplicantDetailPage({ params }: PageProps) {
                     <Home size={12} /> Dashboard
                 </Link>
                 <ChevronRight size={12} />
-                <Link href="/dashboard/recruitment" className="hover:text-white transition-colors">
+                <Link href="/hradmin/recruitment" className="hover:text-white transition-colors">
                     Recruitment
                 </Link>
                 <ChevronRight size={12} />
@@ -97,7 +97,7 @@ export default async function ApplicantDetailPage({ params }: PageProps) {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
                 <div className="flex items-center gap-4">
                     <Link
-                        href="/dashboard/recruitment"
+                        href="/hradmin/recruitment"
                         className="p-2 bg-white/5 hover:bg-white/10 rounded-full border border-white/10 transition-colors text-white"
                     >
                         <ArrowLeft size={20} />

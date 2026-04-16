@@ -17,7 +17,7 @@ export default async function NewEmployeePage() {
             isHrAdmin = session.role === 'hr_admin'
         } catch { /* ignore */ }
     }
-    if (!isHrAdmin) redirect('/dashboard/employees')
+    if (!isHrAdmin) redirect('/hradmin/employees')
 
     // Fetch distinct departments
     const { data: empData } = await supabaseAdmin

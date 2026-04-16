@@ -134,7 +134,7 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
                 if (photoResult.error) {
                     // Non-fatal: employee was created, just warn
                     showToast('error', `เพิ่มพนักงานสำเร็จ แต่อัปโหลดรูปไม่สำเร็จ: ${photoResult.error}`)
-                    setTimeout(() => router.push('/dashboard/employees'), 2500)
+                    setTimeout(() => router.push('/hradmin/employees'), 2500)
                     return
                 }
             }
@@ -142,7 +142,7 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
             showToast('success', result.emailSent
                 ? 'เพิ่มพนักงานสำเร็จ ส่งอีเมลตั้งรหัสผ่านแล้ว'
                 : 'เพิ่มพนักงานสำเร็จ')
-            setTimeout(() => router.push('/dashboard/employees'), 1800)
+            setTimeout(() => router.push('/hradmin/employees'), 1800)
         })
     }
 
@@ -162,13 +162,13 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
             {/* Breadcrumb + Actions */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-2 text-[0.95rem] text-white/70">
-                    <Link href="/dashboard/employees" className="hover:text-white transition-colors">พนักงาน</Link>
+                    <Link href="/hradmin/employees" className="hover:text-white transition-colors">พนักงาน</Link>
                     <span>/</span>
                     <span className="text-white font-medium">เพิ่มพนักงานใหม่</span>
                 </div>
                 <div className="flex items-center gap-3">
                     <Link
-                        href="/dashboard/employees"
+                        href="/hradmin/employees"
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[0.95rem] font-semibold bg-white/10 hover:bg-white/15 text-white/70 hover:text-white border border-white/15 transition-all"
                     >
                         <ArrowLeft size={15} /> ยกเลิก
@@ -380,7 +380,7 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
             {/* Bottom save/cancel */}
             <div className="flex justify-end gap-3 pt-2">
                 <Link
-                    href="/dashboard/employees"
+                    href="/hradmin/employees"
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-[1rem] font-semibold bg-white/10 hover:bg-white/15 text-white/70 hover:text-white border border-white/15 transition-all"
                 >
                     <ArrowLeft size={16} /> ยกเลิก

@@ -235,7 +235,7 @@ export async function createEmployee(payload: CreateEmployeePayload) {
         }
     }
 
-    revalidatePath('/dashboard/employees')
+    revalidatePath('/hradmin/employees')
     return { success: true, id: emp.id, emailSent }
 }
 

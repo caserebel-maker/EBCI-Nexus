@@ -22,7 +22,7 @@ export function OnboardButton({ applicantId, status, existingEmployeeId, existin
     if (existingEmployeeId) {
         return (
             <Link
-                href={`/dashboard/employees/${existingEmployeeId}`}
+                href={`/hradmin/employees/${existingEmployeeId}`}
                 className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/20 transition-all font-bold uppercase tracking-wider text-xs"
             >
                 <CheckCircle size={16} />

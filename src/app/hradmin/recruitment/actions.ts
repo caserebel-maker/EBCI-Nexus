@@ -87,9 +87,9 @@ export async function onboardCandidate(applicantId: string, prevState: any, form
             console.warn("Applicant status update failed but employee was created:", updateError.message)
         }
 
-        revalidatePath('/dashboard/recruitment')
-        revalidatePath(`/dashboard/recruitment/${applicantId}`)
-        revalidatePath('/dashboard/employees')
+        revalidatePath('/hradmin/recruitment')
+        revalidatePath(`/hradmin/recruitment/${applicantId}`)
+        revalidatePath('/hradmin/employees')
 
         return { success: true, employeeId: newEmployee.id }
 

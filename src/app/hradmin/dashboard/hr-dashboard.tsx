@@ -351,7 +351,7 @@ function DayLeaveModal({ date, onClose }: { date: Date; onClose: () => void }) {
                                 return (
                                     <button
                                         key={lr.id}
-                                        onClick={() => { router.push(`/dashboard/employees/${emp.id}`); onClose() }}
+                                        onClick={() => { router.push(`/hradmin/employees/${emp.id}`); onClose() }}
                                         className="w-full flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-white/10 transition-colors text-left group"
                                     >
                                         <div className="h-10 w-10 rounded-full bg-[#561e23]/80 border border-[#ad5f6c]/40 flex items-center justify-center text-white font-black text-sm shrink-0">
@@ -517,16 +517,16 @@ export function HRDashboard({
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <MetricCard title="พนักงานทั้งหมด" value={metrics.totalEmployees}
                             sub={`ปฏิบัติงาน ${metrics.activeEmployees} คน`} icon={Users} accent="bg-[#882136]"
-                            href="/dashboard/employees" />
+                            href="/hradmin/employees" />
                         <MetricCard title="ลาวันนี้" value={metrics.leavingToday}
                             sub="ได้รับอนุมัติแล้ว" icon={CalendarDays} accent="bg-[#7a3040]"
-                            href="/dashboard/leave/admin?filter=today" />
+                            href="/hradmin/leave/admin?filter=today" />
                         <MetricCard title="รออนุมัติใบลา" value={metrics.pendingLeaves}
                             sub="รายการ" icon={Clock} accent="bg-[#9e4050]"
-                            href="/dashboard/leave/admin?filter=pending" />
+                            href="/hradmin/leave/admin?filter=pending" />
                         <MetricCard title="สัญญาหมดใน 30 วัน" value={metrics.expiringContracts}
                             sub="คน" icon={AlertTriangle} accent="bg-[#6b2030]"
-                            href="/dashboard/employees?filter=contract-expiring" />
+                            href="/hradmin/employees?filter=contract-expiring" />
                     </div>
 
                     {/* Bar chart – monthly leave */}
@@ -590,7 +590,7 @@ export function HRDashboard({
                         <div className="flex items-center justify-between mb-4">
                             <SectionHeader title="ประกาศข่าวสาร" icon={Megaphone} />
                             <button
-                                onClick={() => router.push('/dashboard/announcements')}
+                                onClick={() => router.push('/hradmin/hr/announcements')}
                                 className="text-xs font-bold text-white/40 hover:text-white/80 transition-colors shrink-0 -mt-4"
                             >
                                 ดูทั้งหมด →

@@ -102,7 +102,7 @@ export function ApplicantTable({ initialData }: ApplicantTableProps) {
                     sortedData.map((applicant) => (
                         <div
                             key={applicant.id}
-                            onClick={() => router.push(`/dashboard/recruitment/${applicant.id}`)}
+                            onClick={() => router.push(`/hradmin/recruitment/${applicant.id}`)}
                             className="group relative flex flex-col bg-white/10 dark:bg-card backdrop-blur-xl rounded-2xl border border-white/20 dark:border-border overflow-hidden hover:scale-[1.02] hover:border-white/40 transition-all duration-300 cursor-pointer shadow-xl"
                         >
                             {/* Photo / Placeholder */}
