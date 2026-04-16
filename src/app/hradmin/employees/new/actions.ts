@@ -29,66 +29,64 @@ export interface CreateEmployeePayload {
 function buildWelcomeEmail({ name, resetLink }: { name: string; resetLink: string }): string {
     return `<!DOCTYPE html>
 <html lang="th">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:'Sarabun',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ยินดีต้อนรับสู่ EBCI Nexus</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:24px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
 
-        <!-- Header -->
-        <tr>
-          <td style="background:linear-gradient(135deg,#561e23 0%,#882136 60%,#ad5f6c 100%);padding:28px 32px;text-align:center;">
-            <p style="margin:0;font-size:22px;font-weight:900;color:#ffffff;letter-spacing:0.12em;text-transform:uppercase;">EBCI NEXUS</p>
-            <p style="margin:4px 0 0;font-size:11px;color:rgba(255,255,255,0.55);letter-spacing:0.3em;text-transform:uppercase;">Human Resources</p>
-          </td>
-        </tr>
+    <!-- Header -->
+    <div style="background:linear-gradient(180deg,#561e23 0%,#ad5f6c 100%);padding:36px 32px;text-align:center;">
+      <img src="https://ebci-nexus.vercel.app/logo.png" alt="EBCI NEXUS"
+           width="72" height="72"
+           style="display:block;margin:0 auto 12px;border-radius:12px;"
+           onerror="this.style.display='none'">
+      <h1 style="margin:0;font-size:26px;font-weight:900;color:#ffffff;letter-spacing:3px;text-transform:uppercase;">EBCI NEXUS</h1>
+      <p style="margin:6px 0 0;font-size:11px;color:rgba(255,255,255,0.7);letter-spacing:4px;text-transform:uppercase;">HUMAN RESOURCES</p>
+    </div>
 
-        <!-- Body -->
-        <tr>
-          <td style="padding:36px 32px;">
-            <h1 style="margin:0 0 8px;font-size:22px;font-weight:800;color:#882136;">ยินดีต้อนรับสู่ EBCI Nexus 🎉</h1>
-            <p style="margin:0 0 24px;font-size:15px;color:#6b7280;">คุณได้รับการเพิ่มเข้าระบบโดยฝ่าย HR เรียบร้อยแล้ว</p>
+    <!-- Body -->
+    <div style="padding:40px 36px;">
+      <h2 style="margin:0 0 8px;font-size:22px;font-weight:800;color:#561e23;">ยินดีต้อนรับสู่ EBCI Nexus &#127881;</h2>
+      <p style="margin:0 0 28px;font-size:14px;color:#6b7280;">คุณได้รับการเพิ่มเข้าระบบโดยฝ่าย HR เรียบร้อยแล้ว</p>
 
-            <p style="margin:0 0 6px;font-size:15px;color:#374151;">สวัสดี <strong>${name}</strong>,</p>
-            <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
-              บัญชีผู้ใช้งานของคุณใน <strong>EBCI Nexus</strong> ถูกสร้างเรียบร้อยแล้ว<br/>
-              กรุณากดปุ่มด้านล่างเพื่อตั้งรหัสผ่านและเริ่มใช้งานระบบ
-            </p>
+      <p style="margin:0 0 8px;font-size:15px;color:#374151;">สวัสดี <strong>${name}</strong>,</p>
+      <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.75;">
+        บัญชีผู้ใช้งานของคุณใน <strong>EBCI Nexus</strong> ถูกสร้างเรียบร้อยแล้ว<br>
+        กรุณากดปุ่มด้านล่างเพื่อ<strong>ตั้งรหัสผ่าน</strong>และเริ่มใช้งานระบบ
+      </p>
 
-            <!-- CTA Button -->
-            <div style="text-align:center;margin:32px 0;">
-              <a href="${resetLink}"
-                 style="display:inline-block;background:linear-gradient(135deg,#882136,#c0392b);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:10px;letter-spacing:0.05em;">
-                ตั้งรหัสผ่านของฉัน →
-              </a>
-            </div>
+      <!-- CTA Button -->
+      <div style="text-align:center;margin:0 0 32px;">
+        <a href="${resetLink}"
+           style="display:inline-block;background:linear-gradient(135deg,#7a2d35,#c0392b);color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;padding:15px 40px;border-radius:10px;letter-spacing:0.5px;">
+          ตั้งรหัสผ่านของฉัน &rarr;
+        </a>
+      </div>
 
-            <!-- Notice -->
-            <div style="background:#fef3f2;border:1px solid #fecaca;border-radius:8px;padding:14px 18px;margin-bottom:24px;">
-              <p style="margin:0;font-size:13px;color:#b91c1c;line-height:1.6;">
-                ⚠️ ลิงก์นี้ใช้ได้ภายใน <strong>24 ชั่วโมง</strong> เท่านั้น<br/>
-                หากลิงก์หมดอายุ กรุณาติดต่อฝ่าย HR เพื่อขอลิงก์ใหม่
-              </p>
-            </div>
+      <!-- Warning box -->
+      <div style="background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:16px 20px;margin-bottom:28px;">
+        <p style="margin:0;font-size:13px;color:#b91c1c;line-height:1.7;">
+          &#9888;&#65039; ลิงก์นี้ใช้ได้ภายใน <strong>24 ชั่วโมง</strong> เท่านั้น<br>
+          หากลิงก์หมดอายุ กรุณาติดต่อฝ่าย HR เพื่อขอลิงก์ใหม่
+        </p>
+      </div>
 
-            <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
-            <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.6;">
-              หากคุณไม่ได้คาดหวังอีเมลฉบับนี้ กรุณาแจ้งฝ่าย HR ทันที<br/>
-              อีเมลฉบับนี้ส่งโดยระบบอัตโนมัติ — กรุณาอย่าตอบกลับ
-            </p>
-          </td>
-        </tr>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 24px;">
+      <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.7;">
+        หากคุณไม่ได้คาดหวังอีเมลฉบับนี้ กรุณาแจ้งฝ่าย HR ทันที<br>
+        อีเมลฉบับนี้ส่งโดยระบบอัตโนมัติ — กรุณาอย่าตอบกลับ
+      </p>
+    </div>
 
-        <!-- Footer -->
-        <tr>
-          <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:18px 32px;text-align:center;">
-            <p style="margin:0;font-size:12px;color:#6b7280;">ส่งโดยฝ่าย HR — <strong>EBCI NEXUS</strong></p>
-          </td>
-        </tr>
+    <!-- Footer -->
+    <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:18px 32px;text-align:center;">
+      <p style="margin:0;font-size:12px;color:#6b7280;">ส่งโดยฝ่าย HR &mdash; <strong>EBCI NEXUS</strong></p>
+    </div>
 
-      </table>
-    </td></tr>
-  </table>
+  </div>
 </body>
 </html>`
 }
