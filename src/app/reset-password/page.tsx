@@ -53,7 +53,9 @@ export default function ResetPasswordPage() {
         } else {
             setStatus({ type: 'success', message: 'ตั้งรหัสผ่านสำเร็จ! กำลังพาไปหน้าเข้าสู่ระบบ...' })
             await supabase.auth.signOut()
-            // Clear all cookies so middleware sees no stale session
+            // Clear server-side nexus_session cookie via logout API
+            await fetch('/api/auth/logout', { method: 'POST' })
+            // Clear all client-side cookies too
             document.cookie.split(';').forEach(c => {
                 document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')
             })
