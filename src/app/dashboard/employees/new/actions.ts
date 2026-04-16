@@ -238,3 +238,40 @@ export async function createEmployee(payload: CreateEmployeePayload) {
     revalidatePath('/dashboard/employees')
     return { success: true, id: emp.id, emailSent }
 }
+
+// ─── Upload Photo for Newly Created Employee ───────────────────────────────────
+export async function uploadNewEmployeePhoto(employeeId: string, formData: FormData) {
+    const session = await getSession()
+    if (!session || session.role !== 'hr_admin') return { error: 'Unauthorized' }
+
+    const file = formData.get('photo') as File | null
+    if (!file || file.size === 0) return { error: 'No file provided' }
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) return { error: 'ไฟล์ต้องเป็น JPG, PNG หรือ WebP' }
+    if (file.size > 5 * 1024 * 1024) return { error: 'ขนาดไฟล์ต้องไม่เกิน 5 MB' }
+
+    const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
+    const filePath = `employees/${employeeId}/profile.${ext}`
+
+    // Ensure bucket exists (no-op if already exists)
+    await supabaseAdmin.storage.createBucket('employee-photos', { public: false }).catch(() => {})
+
+    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+        .from('employee-photos')
+        .upload(filePath, file, { upsert: true, contentType: file.type })
+
+    if (uploadError) {
+        console.error('[uploadNewEmployeePhoto] storage error:', JSON.stringify(uploadError, null, 2))
+        return { error: uploadError.message }
+    }
+
+    const { error: dbError } = await supabaseAdmin
+        .from('employees')
+        .update({ photo_path: uploadData.path })
+        .eq('id', employeeId)
+
+    if (dbError) return { error: dbError.message }
+
+    return { success: true, path: uploadData.path }
+}

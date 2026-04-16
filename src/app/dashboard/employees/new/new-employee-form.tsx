@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
     ArrowLeft, User, Briefcase, Phone, Mail, MapPin,
-    Building, Calendar, Shield, AlertCircle, CheckCircle2, Save, UserPlus
+    Building, Calendar, Shield, AlertCircle, CheckCircle2, Save, UserPlus, Camera, ImagePlus
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { createEmployee, CreateEmployeePayload } from './actions'
+import { createEmployee, CreateEmployeePayload, uploadNewEmployeePhoto } from './actions'
 import { EMPLOYEE_LEVELS } from '@/config/employee-levels'
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -50,6 +50,20 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
     const router = useRouter()
     const [isPending, startTransition] = useTransition()
     const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
+    const [photoFile, setPhotoFile] = useState<File | null>(null)
+    const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+    const photoInputRef = useRef<HTMLInputElement>(null)
+
+    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('error', 'ขนาดไฟล์ต้องไม่เกิน 5 MB')
+            return
+        }
+        setPhotoFile(file)
+        setPhotoPreview(URL.createObjectURL(file))
+    }
 
     const [form, setForm] = useState<CreateEmployeePayload & { supervisor: string }>({
         employee_code: '',
@@ -109,12 +123,26 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
             })
             if (result.error) {
                 showToast('error', `เกิดข้อผิดพลาด: ${result.error}`)
-            } else {
-                showToast('success', result.emailSent
-                    ? 'เพิ่มพนักงานสำเร็จ ส่งอีเมลตั้งรหัสผ่านแล้ว'
-                    : 'เพิ่มพนักงานสำเร็จ')
-                setTimeout(() => router.push('/dashboard/employees'), 1800)
+                return
             }
+
+            // Upload photo if selected
+            if (photoFile && result.id) {
+                const fd = new FormData()
+                fd.append('photo', photoFile)
+                const photoResult = await uploadNewEmployeePhoto(result.id, fd)
+                if (photoResult.error) {
+                    // Non-fatal: employee was created, just warn
+                    showToast('error', `เพิ่มพนักงานสำเร็จ แต่อัปโหลดรูปไม่สำเร็จ: ${photoResult.error}`)
+                    setTimeout(() => router.push('/dashboard/employees'), 2500)
+                    return
+                }
+            }
+
+            showToast('success', result.emailSent
+                ? 'เพิ่มพนักงานสำเร็จ ส่งอีเมลตั้งรหัสผ่านแล้ว'
+                : 'เพิ่มพนักงานสำเร็จ')
+            setTimeout(() => router.push('/dashboard/employees'), 1800)
         })
     }
 
@@ -163,6 +191,60 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
                 <div>
                     <h1 className="text-[1.4rem] font-bold text-white">เพิ่มพนักงานใหม่</h1>
                     <p className="text-[0.95rem] text-white/45">กรอกข้อมูลพนักงานเพื่อสร้างโปรไฟล์ในระบบ</p>
+                </div>
+            </div>
+
+            {/* ── รูปถ่าย ── */}
+            <div style={cardStyle} className="p-6">
+                <SectionHead icon={Camera} label="รูปถ่ายพนักงาน" />
+                <div className="flex flex-col sm:flex-row items-center gap-6">
+                    {/* Preview */}
+                    <div
+                        className="relative h-32 w-32 rounded-2xl overflow-hidden border-2 border-dashed border-white/20 bg-white/5 flex items-center justify-center shrink-0 cursor-pointer hover:border-[#ad5f6c]/60 transition-colors"
+                        onClick={() => photoInputRef.current?.click()}
+                    >
+                        {photoPreview ? (
+                            <img src={photoPreview} alt="preview" className="h-full w-full object-cover" />
+                        ) : (
+                            <div className="flex flex-col items-center gap-2 text-white/30">
+                                <ImagePlus size={28} />
+                                <span className="text-[0.75rem] font-semibold">อัปโหลดรูป</span>
+                            </div>
+                        )}
+                        {photoPreview && (
+                            <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <Camera size={20} className="text-white" />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Info + button */}
+                    <div className="flex flex-col gap-3">
+                        <p className="text-[1.0rem] text-white/60 leading-relaxed">
+                            รองรับไฟล์ <span className="text-white/80 font-semibold">JPG, PNG, WebP</span><br />
+                            ขนาดไม่เกิน <span className="text-white/80 font-semibold">5 MB</span>
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => photoInputRef.current?.click()}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[0.95rem] font-semibold bg-white/10 hover:bg-white/15 text-white/70 hover:text-white border border-white/15 transition-all w-fit"
+                        >
+                            <ImagePlus size={15} /> {photoPreview ? 'เปลี่ยนรูป' : 'เลือกรูปถ่าย'}
+                        </button>
+                        {photoFile && (
+                            <p className="text-[0.85rem] text-emerald-400 font-semibold flex items-center gap-1.5">
+                                <CheckCircle2 size={14} /> {photoFile.name}
+                            </p>
+                        )}
+                    </div>
+
+                    <input
+                        ref={photoInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={handlePhotoChange}
+                    />
                 </div>
             </div>
 
