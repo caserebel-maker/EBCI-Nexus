@@ -776,34 +776,37 @@ export function EmployeeProfileView({
             {/* ── 6. Danger Zone (hr_admin only) ───────────────────────────── */}
             {isHrAdmin && (
                 <div style={{
-                    background: 'rgba(220,38,38,0.15)',
-                    border: '1px solid rgba(220,38,38,0.6)',
-                    borderRadius: '18px',
-                }} className="p-6">
-                    {/* Custom header — red title */}
-                    <div className="flex items-center gap-3 mb-5 pb-3 border-b border-red-500/30">
-                        <div className="h-8 w-8 rounded-lg bg-red-500/25 flex items-center justify-center shrink-0">
-                            <AlertCircle size={16} className="text-red-400" />
-                        </div>
-                        <h2 className="text-[1.1rem] font-bold tracking-wide" style={{ color: '#ef4444' }}>
-                            ⚠️ Danger Zone
-                        </h2>
+                    background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #b91c1c 100%)',
+                    border: '2px solid #ef4444',
+                    borderRadius: '16px',
+                    padding: '24px',
+                }}>
+                    <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/20">
+                        <AlertCircle size={22} className="text-white shrink-0" />
+                        <h2 className="text-[1.3rem] font-bold text-white tracking-wide">⚠️ Danger Zone</h2>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
-                        <p className="text-[0.9rem] text-white/60">
+                    <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
+                        <p className="text-[0.95rem] font-medium" style={{ color: 'rgba(255,255,255,0.9)' }}>
                             การลบพนักงานจะลบข้อมูลและบัญชีผู้ใช้ออกจากระบบอย่างถาวร ไม่สามารถย้อนกลับได้
                         </p>
                         <div className="flex gap-3 shrink-0">
                             {!isEditing && (
-                                <button onClick={handleEdit}
-                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[0.95rem] font-semibold text-white border border-white/50 hover:border-white hover:bg-white/10 transition-all">
+                                <button
+                                    onClick={handleEdit}
+                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[0.95rem] font-bold text-white transition-all active:scale-95"
+                                    style={{ background: 'transparent', border: '2px solid white' }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
+                                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                >
                                     <Pencil size={15} /> แก้ไขข้อมูล
                                 </button>
                             )}
                             <button
                                 onClick={() => setShowDeleteConfirm(true)}
-                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[0.95rem] font-semibold text-white transition-all hover:opacity-85 active:scale-95"
-                                style={{ background: '#dc2626', border: '1px solid rgba(220,38,38,0.9)' }}
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[0.95rem] font-bold text-white transition-all active:scale-95"
+                                style={{ background: '#ef4444', border: 'none' }}
+                                onMouseEnter={e => (e.currentTarget.style.background = '#dc2626')}
+                                onMouseLeave={e => (e.currentTarget.style.background = '#ef4444')}
                             >
                                 <Trash2 size={15} /> ลบพนักงาน
                             </button>
