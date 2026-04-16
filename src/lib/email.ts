@@ -1,6 +1,6 @@
 import { Resend } from 'resend'
 
-const FROM = 'noreply@ebcinext.com'
+const FROM = 'onboarding@resend.dev'
 
 interface SendEmailParams {
     to: string | string[]
