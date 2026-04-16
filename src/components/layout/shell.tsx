@@ -15,9 +15,10 @@ interface DashboardShellProps {
     children: React.ReactNode
     role: 'hr_admin' | 'manager' | 'employee'
     userName?: string
+    showBottomNav?: boolean
 }
 
-export function DashboardShell({ children, role, userName }: DashboardShellProps) {
+export function DashboardShell({ children, role, userName, showBottomNav = false }: DashboardShellProps) {
     const pathname = usePathname()
     const { t } = useTranslation()
 
@@ -155,8 +156,8 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
                 </div>
             </main>
 
-            {/* Mobile Bottom Navigation — all roles */}
-            <PortalBottomNav />
+            {/* Mobile Bottom Navigation — portal only */}
+            {showBottomNav && <PortalBottomNav />}
         </div>
     )
 }
