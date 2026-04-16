@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 import { useTranslation } from "@/contexts/language-context"
 import { updateEmployee, uploadEmployeePhoto } from "./actions"
 import { EMPLOYEE_LEVELS, LEVEL_BADGE_COLORS } from "@/config/employee-levels"
+import { DEPARTMENTS } from "@/config/departments"
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const glassCard: React.CSSProperties = {
@@ -28,7 +29,7 @@ const silverCard: React.CSSProperties = {
     borderRadius: '16px',
 }
 const editInputClass = "w-full bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-[#ad5f6c] focus:ring-1 focus:ring-[#ad5f6c]/40 transition-colors"
-const editSelectClass = "w-full bg-[#2a0e12] border border-white/20 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-[#ad5f6c] focus:ring-1 focus:ring-[#ad5f6c]/40 transition-colors appearance-none"
+const editSelectClass = "w-full bg-[#1a0608] border border-white/20 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-[#ad5f6c] focus:ring-1 focus:ring-[#ad5f6c]/40 transition-colors appearance-none"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Props {
@@ -376,7 +377,21 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
                                     <Building size={16} />
                                 </div>
                                 {isEditing
-                                    ? <input className={editInputClass} value={form.department} onChange={set('department')} placeholder="แผนก" />
+                                    ? (
+                                        <select
+                                            className={editSelectClass}
+                                            value={form.department}
+                                            onChange={set('department')}
+                                        >
+                                            {/* Show current value if not in canonical list (legacy data) */}
+                                            {form.department && !(DEPARTMENTS as readonly string[]).includes(form.department) && (
+                                                <option value={form.department}>{form.department}</option>
+                                            )}
+                                            {DEPARTMENTS.map(d => (
+                                                <option key={d} value={d}>{d}</option>
+                                            ))}
+                                        </select>
+                                    )
                                     : employee.department
                                 }
                             </div>

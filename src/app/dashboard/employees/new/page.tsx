@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { NewEmployeeForm } from './new-employee-form'
+import { DEPARTMENTS } from '@/config/departments'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,9 +26,10 @@ export default async function NewEmployeePage() {
         .eq('status', 'active')
         .order('first_name_th', { ascending: true })
 
-    const departments = Array.from(
-        new Set((empData ?? []).map((e: any) => e.department).filter(Boolean))
-    ).sort((a, b) => (a as string).localeCompare(b as string, 'th')) as string[]
+    // Merge DB departments with canonical list (dedup + sort)
+    const dbDepts = (empData ?? []).map((e: any) => e.department as string).filter(Boolean)
+    const departments = Array.from(new Set([...DEPARTMENTS, ...dbDepts]))
+        .sort((a, b) => a.localeCompare(b, 'th'))
 
     const supervisors = (empData ?? []).map((e: any) => ({
         id: e.id,
