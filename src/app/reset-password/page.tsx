@@ -60,16 +60,14 @@ export default function ResetPasswordPage() {
         <div style={{ minHeight: '100dvh', background: 'linear-gradient(135deg,#2d0a0e 0%,#561e23 50%,#7a2d35 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
             <div style={{ width: '100%', maxWidth: '420px', background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '20px', padding: '40px 32px', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
 
-                {/* Logo / Header */}
-                <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                {/* Logo */}
+                <div style={{ textAlign: 'center', marginBottom: '28px' }}>
                     <img
                         src="/sidebar-logo.png"
                         alt="EBCI NEXUS"
-                        style={{ height: '56px', width: 'auto', objectFit: 'contain', marginBottom: '12px', display: 'block', margin: '0 auto 12px' }}
+                        style={{ height: '67px', width: 'auto', objectFit: 'contain', display: 'block', margin: '0 auto' }}
                         onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
                     />
-                    <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#ffffff', letterSpacing: '2px' }}>EBCI NEXUS</h1>
-                    <p style={{ margin: '6px 0 0', fontSize: '13px', color: 'rgba(255,255,255,0.55)' }}>ตั้งรหัสผ่านใหม่</p>
                 </div>
 
                 {!ready ? (
