@@ -269,38 +269,37 @@ function MiniDonut({
     color: string
     label: string
 }) {
-    const r = 34
-    const cx = 46
-    const cy = 46
-    const sw = 9
+    const size = 140
+    const cx = size / 2
+    const cy = size / 2
+    const r = 54
+    const sw = 13
     const circ = 2 * Math.PI * r
     const pct = entitled > 0 ? Math.max(0, Math.min(remaining / entitled, 1)) : 0
     const remainingDash = pct * circ
 
     return (
-        <div className="flex flex-col items-center">
-            <div className="relative" style={{ width: 92, height: 92 }}>
-                <svg width={92} height={92} viewBox="0 0 92 92">
-                    {/* Used (gray track) */}
+        <div className="relative" style={{ width: size, height: size }}>
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                {/* Used (gray track) */}
+                <circle cx={cx} cy={cy} r={r} fill="none"
+                    stroke="rgba(255,255,255,0.12)" strokeWidth={sw} />
+                {/* Remaining (colored) */}
+                {remainingDash > 0.5 && (
                     <circle cx={cx} cy={cy} r={r} fill="none"
-                        stroke="rgba(255,255,255,0.12)" strokeWidth={sw} />
-                    {/* Remaining (colored) */}
-                    {remainingDash > 0.5 && (
-                        <circle cx={cx} cy={cy} r={r} fill="none"
-                            stroke={color} strokeWidth={sw} strokeLinecap="round"
-                            strokeDasharray={`${remainingDash} ${circ}`}
-                            transform={`rotate(-90, ${cx}, ${cy})`} />
-                    )}
-                </svg>
-                {/* Center */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-white font-black leading-none" style={{ fontSize: '20px' }}>
-                        {remaining}
-                    </span>
-                    <span className="font-semibold" style={{ fontSize: '9.5px', color: color + 'cc' }}>
-                        {label}
-                    </span>
-                </div>
+                        stroke={color} strokeWidth={sw} strokeLinecap="round"
+                        strokeDasharray={`${remainingDash} ${circ}`}
+                        transform={`rotate(-90, ${cx}, ${cy})`} />
+                )}
+            </svg>
+            {/* Center */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-white font-black leading-none" style={{ fontSize: '28px' }}>
+                    {remaining}
+                </span>
+                <span className="font-semibold mt-1" style={{ fontSize: '14px', color: color + 'dd' }}>
+                    {label}
+                </span>
             </div>
         </div>
     )
@@ -332,9 +331,6 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
 
                 return (
                     <div style={glass} className="p-4">
-                        <p className="text-white/40 font-bold uppercase tracking-wider mb-3" style={{ fontSize: '10px' }}>
-                            วันลา — ปี {new Date().getFullYear()}
-                        </p>
                         <div className="flex items-center justify-around">
                             <MiniDonut
                                 remaining={annualRemaining}
