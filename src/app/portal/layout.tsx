@@ -14,6 +14,8 @@ export default async function EmployeeLayout({
         redirect('/login')
     }
 
+    console.log('[portal/layout] session.role:', session.role, '| name:', session.name)
+
     return (
         <RoleProvider role={session.role}>
             <DashboardShell role={session.role} userName={session.name}>

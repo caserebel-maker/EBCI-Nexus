@@ -77,6 +77,8 @@ export function PortalBottomNav() {
     const pathname = usePathname()
     const [moreOpen, setMoreOpen] = useState(false)
 
+    console.log('[PortalBottomNav] useRole():', role)
+
     const navItems = NAV_CONFIG[role] ?? NAV_CONFIG.employee
     const moreItems = MORE_CONFIG[role] ?? MORE_CONFIG.employee
 

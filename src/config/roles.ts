@@ -15,7 +15,7 @@ export interface RoleConfig {
 export const ROLE_CONFIG: Record<UserRole, RoleConfig> = {
     [ROLES.HR_ADMIN]: {
         label: 'HR Admin',
-        homePath: '/hradmin/dashboard',
+        homePath: '/portal',
         allowedPrefixes: ['/hradmin', '/employees', '/recruitment', '/portal', '/careers', '/leave'],
     },
     [ROLES.MANAGER]: {
