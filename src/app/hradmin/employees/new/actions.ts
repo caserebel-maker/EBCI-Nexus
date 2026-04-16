@@ -191,23 +191,24 @@ export async function createEmployee(payload: CreateEmployeePayload) {
 
             if (authUserId) {
                 // 3. Generate password-reset link (recovery type, valid 24h)
+                // redirectTo tells Supabase where to send the user AFTER verifying the token.
+                // Flow: email link → Supabase /auth/v1/verify → redirect to /reset-password#access_token=...
+                const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://ebci-nexus.vercel.app').replace(/\/$/, '')
                 const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
                     type: 'recovery',
                     email: payload.email,
+                    options: {
+                        redirectTo: `${appUrl}/reset-password`,
+                    },
                 })
 
                 if (linkError) {
                     console.error('[createEmployee] generateLink failed:', linkError.message)
                 } else {
+                    // action_link is the real Supabase verify URL — do NOT replace the origin.
+                    // Supabase must handle the verification; it then redirects to our /reset-password.
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const rawLink: string = (linkData as any)?.properties?.action_link ?? ''
-
-                    // Supabase generateLink uses the project's "Site URL" setting which may
-                    // point to localhost. Replace the origin with the real production URL.
-                    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ebci-nexus.vercel.app'
-                    const resetLink = rawLink
-                        ? rawLink.replace(/^https?:\/\/[^/]+/, appUrl.replace(/\/$/, ''))
-                        : ''
+                    const resetLink: string = (linkData as any)?.properties?.action_link ?? ''
 
                     if (resetLink) {
                         const resend = new Resend(process.env.RESEND_API_KEY)
