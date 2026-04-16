@@ -25,7 +25,7 @@ const cardStyle: React.CSSProperties = {
 const inputClass = "w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-[1.05rem] text-white placeholder-white/30 focus:outline-none focus:border-[#ad5f6c] focus:ring-1 focus:ring-[#ad5f6c]/40 transition-colors"
 const selectClass = "w-full bg-[#1a0608] border border-white/20 rounded-xl px-4 py-2.5 text-[1.05rem] text-white focus:outline-none focus:border-[#ad5f6c] focus:ring-1 focus:ring-[#ad5f6c]/40 transition-colors appearance-none"
 const labelClass = "block text-[0.85rem] font-semibold text-white/60 mb-1.5 uppercase tracking-wide"
-const requiredMark = <span className="text-[#ad5f6c] ml-0.5">*</span>
+const requiredMark = <span style={{ color: '#FBBF24', fontSize: '1.2em', fontWeight: 'bold', marginLeft: '2px' }}>*</span>
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface Props {
@@ -99,6 +99,10 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
         e.preventDefault()
         if (!form.employee_code || !form.first_name_th || !form.last_name_th || !form.position || !form.start_date) {
             showToast('error', 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน')
+            return
+        }
+        if (!form.email) {
+            showToast('error', 'กรุณากรอกอีเมลพนักงาน')
             return
         }
         startTransition(async () => {
@@ -350,8 +354,8 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
                 <SectionHead icon={Phone} label="ข้อมูลติดต่อ" />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
-                        <label className={labelClass}>อีเมล</label>
-                        <input type="email" className={inputClass} value={form.email} onChange={set('email')} placeholder="email@company.com" />
+                        <label className={labelClass}>อีเมล {requiredMark}</label>
+                        <input type="email" className={inputClass} value={form.email} onChange={set('email')} placeholder="email@company.com" required />
                     </div>
                     <div>
                         <label className={labelClass}>เบอร์โทรศัพท์</label>
