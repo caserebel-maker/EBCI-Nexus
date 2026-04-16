@@ -2,13 +2,14 @@
 
 import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Loader2, Mail, Lock } from 'lucide-react'
+import { Loader2, Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import { LanguageToggle } from '@/components/ui/language-toggle'
 import { useTranslation } from '@/contexts/language-context'
 
 function LoginForm() {
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
+    const [showPw, setShowPw] = useState(false)
     const searchParams = useSearchParams()
     const redirectAfterLogin = searchParams.get('redirect') ?? null
     const messageParam = searchParams.get('message')
@@ -122,11 +123,18 @@ function LoginForm() {
                                 <Lock className="absolute left-3 top-3 h-5 w-5 text-white/70" />
                                 <input
                                     name="password"
-                                    type="password"
+                                    type={showPw ? 'text' : 'password'}
                                     required
-                                    className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/60 pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/20 shadow-none"
+                                    className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/60 pl-10 pr-10 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/20 shadow-none"
                                     placeholder={t('auth.password')}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPw(v => !v)}
+                                    className="absolute right-3 top-3 text-white/50 hover:text-white/80 transition-colors"
+                                >
+                                    {showPw ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                </button>
                             </div>
                         </div>
 
