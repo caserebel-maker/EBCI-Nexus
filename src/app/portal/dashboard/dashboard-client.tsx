@@ -95,53 +95,58 @@ function WelcomeSection({ employee, sessionName }: { employee: Employee | null; 
     const tenure = startDate ? calcTenure(startDate) : null
 
     return (
-        <div className="flex items-center gap-3 py-4 px-4">
-            {/* Avatar 56px */}
-            {avatarUrl ? (
-                <img
-                    src={avatarUrl}
-                    alt=""
-                    className="rounded-full object-cover shrink-0"
-                    style={{ width: 56, height: 56, border: '2px solid rgba(255,255,255,0.2)' }}
-                />
-            ) : (
-                <div
-                    className="rounded-full shrink-0 flex items-center justify-center font-black text-white select-none"
-                    style={{
-                        width: 56, height: 56,
-                        background: 'linear-gradient(135deg, #882136, #c0392b)',
-                        border: '2px solid rgba(255,255,255,0.15)',
-                        fontSize: '20px',
-                    }}
-                >
-                    {initials}
-                </div>
-            )}
-
-            {/* Name / Position / Tenure */}
-            <div className="flex-1 min-w-0">
-                <p className="text-white font-semibold truncate" style={{ fontSize: '16px' }}>
-                    {displayName}
+        <>
+            {/* Greeting — bare text, no card */}
+            <div className="py-3 px-4">
+                <p className="text-white font-medium" style={{ fontSize: '15px' }}>
+                    สวัสดี 👋 วันนี้เป็นอย่างไรบ้าง?
                 </p>
-                {(position || department) && (
-                    <p className="text-white/70 truncate mt-0.5" style={{ fontSize: '12px' }}>
-                        {position}
-                        {position && department && <span className="text-white/30 mx-1">•</span>}
-                        {department}
-                    </p>
-                )}
-                {tenure && (
-                    <p className="text-white/50 mt-0.5" style={{ fontSize: '11px' }}>
-                        อายุงาน {tenure}
-                    </p>
-                )}
             </div>
 
-            {/* Greeting — right aligned */}
-            <div className="shrink-0 text-right">
-                <p className="text-white/90 font-semibold" style={{ fontSize: '14px' }}>สวัสดี 👋</p>
-                <p className="text-white/45" style={{ fontSize: '11px' }}>วันนี้เป็นอย่างไรบ้าง?</p>
+            {/* Profile card */}
+            <div style={glass} className="p-4 flex items-center gap-3">
+                {/* Avatar 56px */}
+                {avatarUrl ? (
+                    <img
+                        src={avatarUrl}
+                        alt=""
+                        className="rounded-full object-cover shrink-0"
+                        style={{ width: 56, height: 56, border: '2px solid rgba(255,255,255,0.2)' }}
+                    />
+                ) : (
+                    <div
+                        className="rounded-full shrink-0 flex items-center justify-center font-black text-white select-none"
+                        style={{
+                            width: 56, height: 56,
+                            background: 'linear-gradient(135deg, #882136, #c0392b)',
+                            border: '2px solid rgba(255,255,255,0.15)',
+                            fontSize: '20px',
+                        }}
+                    >
+                        {initials}
+                    </div>
+                )}
+
+                {/* Name / Position / Tenure */}
+                <div className="flex-1 min-w-0">
+                    <p className="text-white font-semibold truncate" style={{ fontSize: '16px' }}>
+                        {displayName}
+                    </p>
+                    {(position || department) && (
+                        <p className="text-white/70 truncate mt-0.5" style={{ fontSize: '12px' }}>
+                            {position}
+                            {position && department && <span className="text-white/30 mx-1">•</span>}
+                            {department}
+                        </p>
+                    )}
+                    {tenure && (
+                        <p className="text-white/60 mt-0.5" style={{ fontSize: '11px' }}>
+                            อายุงาน {tenure}
+                        </p>
+                    )}
+                </div>
             </div>
+        </>
         </div>
     )
 }
