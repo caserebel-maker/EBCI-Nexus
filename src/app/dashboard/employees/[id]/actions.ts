@@ -17,6 +17,7 @@ export interface UpdateEmployeePayload {
     quit_date?: string
     quit_reason?: string
     approval_level?: number
+    supervisor_id?: string | null
     // applicants table
     applicant_current_address: string
     applicant_phone: string  // emergency contact
@@ -46,6 +47,7 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
             quit_date: employeeFields.quit_date || null,
             quit_reason: employeeFields.quit_reason || null,
             ...(employeeFields.approval_level !== undefined && { approval_level: employeeFields.approval_level }),
+            supervisor_id: employeeFields.supervisor_id ?? null,
         })
         .eq('id', employeeId)
 
@@ -122,12 +124,15 @@ export async function uploadEmployeePhoto(employeeId: string, formData: FormData
     if (!allowedTypes.includes(file.type)) return { error: 'ไฟล์ต้องเป็น JPG, PNG หรือ WebP' }
     if (file.size > 5 * 1024 * 1024) return { error: 'ขนาดไฟล์ต้องไม่เกิน 5 MB' }
 
-    const ext = file.name.split('.').pop()
-    const fileName = `${employeeId}-${Date.now()}.${ext}`
+    const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
+    const filePath = `employees/${employeeId}/profile.${ext}`
+
+    // Ensure bucket exists (no-op if already exists)
+    await supabaseAdmin.storage.createBucket('employee-photos', { public: false }).catch(() => {})
 
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-        .from('employee-assets')
-        .upload(fileName, file, { upsert: true })
+        .from('employee-photos')
+        .upload(filePath, file, { upsert: true, contentType: file.type })
 
     if (uploadError) {
         console.error('uploadEmployeePhoto error:', uploadError)

@@ -75,6 +75,12 @@ interface LeaveRequest {
     created_at: string
     reason: string | null
 }
+interface EmployeeOption {
+    id: string
+    first_name_th: string
+    last_name_th: string
+    position: string
+}
 interface Props {
     employee: any
     photoUrl: string | null
@@ -83,6 +89,7 @@ interface Props {
     tenure: string
     leaveBalances: LeaveBalance[]
     recentLeaves: LeaveRequest[]
+    allEmployees: EmployeeOption[]
     id: string
     isHrAdmin: boolean
 }
@@ -103,6 +110,7 @@ interface FormState {
     address: string
     emergency_contact: string
     approval_level: number
+    supervisor_id: string
 }
 
 // ─── Section header ───────────────────────────────────────────────────────────
@@ -153,7 +161,7 @@ function LeaveTooltip({ active, payload, label }: any) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function EmployeeProfileView({
     employee, photoUrl, displayName, supervisorName, tenure,
-    leaveBalances, recentLeaves, id, isHrAdmin
+    leaveBalances, recentLeaves, allEmployees, id, isHrAdmin
 }: Props) {
     const router = useRouter()
 
@@ -173,6 +181,7 @@ export function EmployeeProfileView({
         address: employee.applicants?.current_address ?? '',
         emergency_contact: employee.applicants?.phone ?? '',
         approval_level: employee.approval_level ?? 1,
+        supervisor_id: employee.supervisor_id ?? '',
     })
 
     const [isEditing, setIsEditing] = useState(false)
@@ -231,6 +240,7 @@ export function EmployeeProfileView({
                 approval_level: form.approval_level,
                 applicant_current_address: form.address,
                 applicant_phone: form.emergency_contact,
+                supervisor_id: form.supervisor_id || null,
             })
             if (result.error) {
                 showToast('error', `เกิดข้อผิดพลาด: ${result.error}`)
@@ -370,27 +380,31 @@ export function EmployeeProfileView({
                 <div className="flex flex-col md:flex-row gap-6 items-start">
 
                     {/* Photo */}
-                    <div className="relative shrink-0">
-                        <div className="h-36 w-36 rounded-2xl bg-gradient-to-br from-[#882136] to-[#3a0d14] flex items-center justify-center text-white font-black text-5xl border-2 border-white/20 overflow-hidden shadow-xl">
-                            {(photoPreview || photoUrl)
-                                ? <img src={photoPreview ?? photoUrl!} className="h-full w-full object-cover" alt={currentDisplayName} />
-                                : <span>{currentDisplayName.charAt(0)}</span>
-                            }
+                    <div className="flex flex-col items-center gap-2 shrink-0">
+                        <div className="relative">
+                            <div className="h-36 w-36 rounded-2xl bg-gradient-to-br from-[#882136] to-[#3a0d14] flex items-center justify-center text-white font-black text-5xl border-2 border-white/20 overflow-hidden shadow-xl">
+                                {(photoPreview || photoUrl)
+                                    ? <img src={photoPreview ?? photoUrl!} className="h-full w-full object-cover" alt={currentDisplayName} />
+                                    : <span>{currentDisplayName.charAt(0)}</span>
+                                }
+                            </div>
+                            {photoPreview && isEditing && (
+                                <span className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">ใหม่</span>
+                            )}
                         </div>
                         {isEditing && (
                             <>
-                                <button type="button" onClick={() => photoInputRef.current?.click()}
-                                    className="absolute inset-0 rounded-2xl flex items-end justify-center pb-3 bg-black/50 opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
-                                    <span className="flex items-center gap-1.5 bg-black/75 text-white text-xs font-semibold px-3 py-1.5 rounded-lg">
-                                        <Camera size={13} /> เปลี่ยนรูป
-                                    </span>
+                                <button
+                                    type="button"
+                                    onClick={() => photoInputRef.current?.click()}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/18 border border-white/15 text-white/70 hover:text-white text-[0.82rem] font-semibold transition-all"
+                                >
+                                    <Camera size={13} /> เปลี่ยนรูป
                                 </button>
+                                <p className="text-[0.72rem] text-white/30 text-center">JPG / PNG ไม่เกิน 5 MB</p>
                                 <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp"
                                     className="hidden" onChange={handlePhotoChange} />
                             </>
-                        )}
-                        {photoPreview && isEditing && (
-                            <span className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">ใหม่</span>
                         )}
                     </div>
 
@@ -554,7 +568,21 @@ export function EmployeeProfileView({
                                 </select>
                             }
                         />
-                        <InfoRow label="ผู้บังคับบัญชา" icon={User} value={supervisorName} />
+                        <InfoRow label="ผู้บังคับบัญชา" icon={User}
+                            value={supervisorName}
+                            editing={isEditing}
+                            editNode={
+                                <select className={sel} value={form.supervisor_id}
+                                    onChange={set('supervisor_id')}>
+                                    <option value="">— ไม่ระบุ —</option>
+                                    {allEmployees.map(e => (
+                                        <option key={e.id} value={e.id}>
+                                            {e.first_name_th} {e.last_name_th} — {e.position}
+                                        </option>
+                                    ))}
+                                </select>
+                            }
+                        />
                         <InfoRow label="สถานที่" icon={MapPin} value="Head Office (Nexus)" />
                     </div>
                 </div>

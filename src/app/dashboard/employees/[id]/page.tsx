@@ -62,14 +62,24 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
         photoUrl = data?.signedUrl ?? null
     }
 
+    // ── All employees for supervisor dropdown ──────────────────────────────────
+    const { data: allEmployeesRaw } = await supabaseAdmin
+        .from('employees')
+        .select('id, first_name_th, last_name_th, position')
+        .eq('status', 'active')
+        .neq('id', id)
+        .order('first_name_th', { ascending: true })
+
+    const allEmployees: { id: string; first_name_th: string; last_name_th: string; position: string }[] =
+        allEmployeesRaw ?? []
+
     // ── Supervisor name ────────────────────────────────────────────────────────
     let supervisorName = '—'
     if (employee.supervisor_id) {
-        const { data: sup } = await supabaseAdmin
-            .from('employees')
-            .select('first_name_th, last_name_th')
-            .eq('id', employee.supervisor_id)
-            .single()
+        const sup = allEmployeesRaw?.find(e => e.id === employee.supervisor_id)
+            ?? (employee.supervisor_id
+                ? await supabaseAdmin.from('employees').select('first_name_th, last_name_th').eq('id', employee.supervisor_id).single().then(r => r.data)
+                : null)
         if (sup) supervisorName = `${sup.first_name_th} ${sup.last_name_th}`
     }
 
@@ -120,6 +130,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             tenure={tenure}
             leaveBalances={leaveBalances}
             recentLeaves={recentLeaves}
+            allEmployees={allEmployees}
             id={id}
             isHrAdmin={isHrAdmin}
         />
