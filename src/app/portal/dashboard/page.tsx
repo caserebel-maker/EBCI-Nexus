@@ -116,12 +116,32 @@ export default async function PortalDashboardPage() {
         }]
     }
 
+    // ── Working days this year (Mon–Fri, Jan 1 → today) ──────────────────────
+    const today = new Date()
+    const yearStart = new Date(today.getFullYear(), 0, 1)
+    let workingDays = 0
+    const cur = new Date(yearStart)
+    while (cur <= today) {
+        const dow = cur.getDay()
+        if (dow !== 0 && dow !== 6) workingDays++
+        cur.setDate(cur.getDate() + 1)
+    }
+
+    // ── Attendance (no table yet — default 0) ─────────────────────────────────
+    let lateCount = 0
+    try {
+        // Future: query attendance table when available
+        // const rows = await prisma.attendance.findMany({ where: { employeeId, isLate: true, year } })
+        // lateCount = rows.length
+    } catch { /* no attendance table yet */ }
+
     return (
         <PortalDashboardClient
             sessionName={session.name}
             employee={employee}
             announcements={announcements}
             leaveBalances={leaveBalances}
+            attendanceData={{ lateCount, workingDays }}
         />
     )
 }

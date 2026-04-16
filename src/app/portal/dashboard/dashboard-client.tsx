@@ -23,11 +23,17 @@ interface LeaveBalance {
     remainingDays: number
 }
 
+interface AttendanceData {
+    lateCount: number
+    workingDays: number
+}
+
 interface Props {
     sessionName: string
     employee: Employee | null
     announcements: AnnouncementItem[]
     leaveBalances: LeaveBalance[]
+    attendanceData: AttendanceData
 }
 
 const SHORTCUTS = [
@@ -260,14 +266,28 @@ function AnnouncementSlideshow({ announcements }: { announcements: AnnouncementI
     )
 }
 
-// ─── Mini SVG Donut ───────────────────────────────────────────────────────────
-function MiniDonut({
-    remaining, entitled, color, label,
+// ─── SVG Donut + Popup Card ───────────────────────────────────────────────────
+const popupGlass: React.CSSProperties = {
+    background: 'rgba(20,4,10,0.92)',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
+    border: '1px solid rgba(173,95,108,0.30)',
+    borderRadius: '16px',
+    boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+}
+
+function DonutCard({
+    filled, total, color, centerValue, centerLabel, popupContent, isOpen, onOpen, onClose,
 }: {
-    remaining: number
-    entitled: number
+    filled: number      // colored arc value (e.g. lateCount or remainingDays)
+    total: number       // full circle basis
     color: string
-    label: string
+    centerValue: number
+    centerLabel: string
+    popupContent: React.ReactNode
+    isOpen: boolean
+    onOpen: () => void
+    onClose: () => void
 }) {
     const size = 140
     const cx = size / 2
@@ -275,38 +295,101 @@ function MiniDonut({
     const r = 54
     const sw = 13
     const circ = 2 * Math.PI * r
-    const pct = entitled > 0 ? Math.max(0, Math.min(remaining / entitled, 1)) : 0
-    const remainingDash = pct * circ
+    const pct = total > 0 ? Math.max(0, Math.min(filled / total, 1)) : 0
+    const filledDash = pct * circ
 
     return (
-        <div className="relative" style={{ width: size, height: size }}>
-            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-                {/* Used (gray track) */}
-                <circle cx={cx} cy={cy} r={r} fill="none"
-                    stroke="rgba(255,255,255,0.12)" strokeWidth={sw} />
-                {/* Remaining (colored) */}
-                {remainingDash > 0.5 && (
+        <div className="relative flex flex-col items-center">
+            {/* Donut — clickable */}
+            <button
+                onClick={onOpen}
+                className="relative focus:outline-none active:scale-95 transition-transform"
+                style={{ width: size, height: size }}
+                aria-label={centerLabel}
+            >
+                <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                    {/* Gray track */}
                     <circle cx={cx} cy={cy} r={r} fill="none"
-                        stroke={color} strokeWidth={sw} strokeLinecap="round"
-                        strokeDasharray={`${remainingDash} ${circ}`}
-                        transform={`rotate(-90, ${cx}, ${cy})`} />
-                )}
-            </svg>
-            {/* Center */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-white font-black leading-none" style={{ fontSize: '28px' }}>
-                    {remaining}
-                </span>
-                <span className="font-semibold mt-1" style={{ fontSize: '14px', color: color + 'dd' }}>
-                    {label}
-                </span>
-            </div>
+                        stroke="rgba(255,255,255,0.12)" strokeWidth={sw} />
+                    {/* Colored arc */}
+                    {filledDash > 0.5 && (
+                        <circle cx={cx} cy={cy} r={r} fill="none"
+                            stroke={color} strokeWidth={sw} strokeLinecap="round"
+                            strokeDasharray={`${filledDash} ${circ}`}
+                            transform={`rotate(-90, ${cx}, ${cy})`} />
+                    )}
+                </svg>
+                {/* Center text */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-white font-black leading-none" style={{ fontSize: '28px' }}>
+                        {centerValue}
+                    </span>
+                    <span className="font-semibold mt-1" style={{ fontSize: '14px', color: color + 'dd' }}>
+                        {centerLabel}
+                    </span>
+                </div>
+            </button>
+
+            {/* Popup */}
+            {isOpen && (
+                <>
+                    {/* Backdrop */}
+                    <div
+                        className="fixed inset-0 z-40"
+                        onClick={onClose}
+                    />
+                    {/* Panel — positioned above the donut */}
+                    <div
+                        className="absolute z-50 bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-52 p-4"
+                        style={popupGlass}
+                    >
+                        {popupContent}
+                        {/* Caret */}
+                        <div
+                            className="absolute left-1/2 -translate-x-1/2 -bottom-[7px]"
+                            style={{
+                                width: 0, height: 0,
+                                borderLeft: '7px solid transparent',
+                                borderRight: '7px solid transparent',
+                                borderTop: '7px solid rgba(173,95,108,0.30)',
+                            }}
+                        />
+                    </div>
+                </>
+            )}
+        </div>
+    )
+}
+
+function PopupRow({ label, value, color }: { label: string; value: string; color?: string }) {
+    return (
+        <div className="flex items-center justify-between gap-2">
+            <span className="text-white/55" style={{ fontSize: '12px' }}>{label}</span>
+            <span className="font-bold" style={{ fontSize: '13px', color: color ?? 'white' }}>{value}</span>
         </div>
     )
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-export function PortalDashboardClient({ sessionName, employee, announcements, leaveBalances }: Props) {
+export function PortalDashboardClient({ sessionName, employee, announcements, leaveBalances, attendanceData }: Props) {
+    const [openPopup, setOpenPopup] = useState<'late' | 'leave' | null>(null)
+
+    // ── Attendance data ───────────────────────────────────────────────────────
+    const { lateCount, workingDays } = attendanceData
+    const onTimeDays = Math.max(0, workingDays - lateCount)
+
+    // ── Leave data ────────────────────────────────────────────────────────────
+    const annual   = leaveBalances.find(b => b.leaveType === 'annual')
+    const sick     = leaveBalances.find(b => b.leaveType === 'sick')
+    const personal = leaveBalances.find(b => b.leaveType === 'personal')
+
+    const annualRem   = annual?.remainingDays   ?? 6
+    const sickRem     = sick?.remainingDays     ?? 30
+    const personalRem = personal?.remainingDays ?? 3
+
+    const totalRemaining = annualRem + sickRem + personalRem
+    const totalEntitled  = (annual?.entitledDays ?? 6) + (sick?.entitledDays ?? 30) + (personal?.entitledDays ?? 3)
+
     const female = employee ? isFemale(employee.gender) : false
     const genderType = female ? 'maternity' : 'ordination'
     const genderBalance = leaveBalances.find(b => b.leaveType === genderType && b.entitledDays > 0) ?? null
@@ -317,54 +400,71 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
             {/* 1. Welcome Section */}
             <WelcomeSection employee={employee} sessionName={sessionName} />
 
-            {/* 2. Announcement Slideshow (banner ประกาศ) */}
+            {/* 2. Announcement Slideshow */}
             <AnnouncementSlideshow announcements={announcements} />
 
-            {/* 3. Leave Balance Card — 2 Donut Charts */}
-            {(() => {
-                const annual = leaveBalances.find(b => b.leaveType === 'annual')
-                const sick   = leaveBalances.find(b => b.leaveType === 'sick')
-                const annualRemaining = annual?.remainingDays ?? 6
-                const annualEntitled  = annual?.entitledDays  ?? 6
-                const sickRemaining   = sick?.remainingDays   ?? 30
-                const sickEntitled    = sick?.entitledDays    ?? 30
-
-                return (
-                    <div style={glass} className="p-4">
-                        <div className="flex items-center justify-around">
-                            <MiniDonut
-                                remaining={annualRemaining}
-                                entitled={annualEntitled}
-                                color="#34D399"
-                                label="พักร้อน"
-                            />
-                            <div className="w-px self-stretch" style={{ background: 'rgba(255,255,255,0.08)' }} />
-                            <MiniDonut
-                                remaining={sickRemaining}
-                                entitled={sickEntitled}
-                                color="#60A5FA"
-                                label="ป่วย"
-                            />
-                        </div>
-
-                        {/* Gender-specific leave row */}
-                        {genderBalance && (
-                            <div
-                                className="flex items-center justify-between px-1 mt-3 pt-2.5"
-                                style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
-                            >
-                                <span className="text-white/55" style={{ fontSize: '12px' }}>
-                                    {GENDER_LEAVE_LABEL[genderBalance.leaveType] ?? genderBalance.leaveType}
-                                </span>
-                                <span className="text-white/80 font-medium" style={{ fontSize: '12px' }}>
-                                    {genderBalance.remainingDays}
-                                    <span className="text-white/35"> / {genderBalance.entitledDays} วัน</span>
-                                </span>
+            {/* 3. Donut Card — Late (left) | Leave remaining (right) */}
+            <div style={glass} className="p-4 overflow-visible">
+                <div className="flex items-center justify-around">
+                    {/* Left: การมาสาย */}
+                    <DonutCard
+                        filled={lateCount}
+                        total={workingDays || 1}
+                        color="#F87171"
+                        centerValue={lateCount}
+                        centerLabel="มาสาย"
+                        isOpen={openPopup === 'late'}
+                        onOpen={() => setOpenPopup('late')}
+                        onClose={() => setOpenPopup(null)}
+                        popupContent={
+                            <div className="space-y-2">
+                                <p className="text-white font-bold mb-2" style={{ fontSize: '13px' }}>การมาสาย</p>
+                                <PopupRow label="มาสายในปีนี้"     value={`${lateCount} ครั้ง`}  color="#F87171" />
+                                <PopupRow label="วันทำงานทั้งหมด"  value={`${workingDays} วัน`} />
+                                <PopupRow label="มาตรงเวลา"       value={`${onTimeDays} วัน`}   color="#34D399" />
                             </div>
-                        )}
+                        }
+                    />
+
+                    <div className="w-px self-stretch" style={{ background: 'rgba(255,255,255,0.08)' }} />
+
+                    {/* Right: วันลาคงเหลือ */}
+                    <DonutCard
+                        filled={totalRemaining}
+                        total={totalEntitled || 1}
+                        color="#34D399"
+                        centerValue={totalRemaining}
+                        centerLabel="คงเหลือ"
+                        isOpen={openPopup === 'leave'}
+                        onOpen={() => setOpenPopup('leave')}
+                        onClose={() => setOpenPopup(null)}
+                        popupContent={
+                            <div className="space-y-2">
+                                <p className="text-white font-bold mb-2" style={{ fontSize: '13px' }}>วันลาคงเหลือ</p>
+                                <PopupRow label="พักร้อน" value={`${annualRem} วัน`}   color="#34D399" />
+                                <PopupRow label="ป่วย"    value={`${sickRem} วัน`}     color="#60A5FA" />
+                                <PopupRow label="กิจ"     value={`${personalRem} วัน`} color="#FBBF24" />
+                            </div>
+                        }
+                    />
+                </div>
+
+                {/* Gender-specific leave row */}
+                {genderBalance && (
+                    <div
+                        className="flex items-center justify-between px-1 mt-3 pt-2.5"
+                        style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
+                    >
+                        <span className="text-white/55" style={{ fontSize: '12px' }}>
+                            {GENDER_LEAVE_LABEL[genderBalance.leaveType] ?? genderBalance.leaveType}
+                        </span>
+                        <span className="text-white/80 font-medium" style={{ fontSize: '12px' }}>
+                            {genderBalance.remainingDays}
+                            <span className="text-white/35"> / {genderBalance.entitledDays} วัน</span>
+                        </span>
                     </div>
-                )
-            })()}
+                )}
+            </div>
 
             {/* 4. เมนูด่วน */}
             <div style={glass} className="p-4">
