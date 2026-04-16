@@ -77,23 +77,27 @@ interface PortalBottomNavProps {
     role: Role
 }
 
-/** Read the role stored in nexus_session cookie on the client.
- *  This overrides the server-passed prop so the nav is always correct
- *  even when the prop is stale (e.g. cached client bundle). */
+/** Read role from nexus_role cookie (non-httpOnly, set by login route).
+ *  nexus_session is httpOnly so document.cookie cannot access it.
+ *  nexus_role is a plain string cookie containing just the role value. */
 function useSessionRole(fallback: Role): Role {
     const [role, setRole] = useState<Role>(fallback)
 
     useEffect(() => {
         const match = document.cookie
             .split('; ')
-            .find(c => c.startsWith('nexus_session='))
-        if (!match) return
-        try {
-            const session = JSON.parse(decodeURIComponent(match.split('=').slice(1).join('=')))
-            const r = session?.role as Role
-            if (r && NAV_CONFIG[r]) setRole(r)
-        } catch { /* keep fallback */ }
-    }, [])
+            .find(c => c.startsWith('nexus_role='))
+        const cookieRole = match ? (decodeURIComponent(match.split('=')[1]) as Role) : null
+
+        console.log('[BottomNav] role from prop:', fallback)
+        console.log('[BottomNav] role from cookie (nexus_role):', cookieRole)
+
+        if (cookieRole && NAV_CONFIG[cookieRole]) {
+            setRole(cookieRole)
+        } else {
+            console.warn('[BottomNav] nexus_role cookie not found or invalid, using prop:', fallback)
+        }
+    }, [fallback])
 
     return role
 }
