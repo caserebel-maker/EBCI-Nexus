@@ -87,9 +87,9 @@ export function PortalBottomNav() {
     const pathname = usePathname()
     const [moreOpen, setMoreOpen] = useState(false)
 
-    const navItems = role === 'hr_admin'
-        ? (pathname?.startsWith('/hradmin') ? HR_ADMIN_NAV_HRADMIN : HR_ADMIN_NAV_PORTAL)
-        : (NAV_CONFIG[role] ?? NAV_CONFIG.employee)
+    const navItems = pathname?.startsWith('/hradmin')
+        ? HR_ADMIN_NAV_HRADMIN
+        : NAV_CONFIG.employee
     const moreItems = MORE_CONFIG[role] ?? MORE_CONFIG.employee
 
     const isNavActive = (item: NavItem) =>
