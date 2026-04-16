@@ -66,67 +66,81 @@ function isFemale(gender: string | null): boolean {
 }
 
 // ─── Welcome Section ──────────────────────────────────────────────────────────
+function calcTenure(startDate: string): string {
+    const start = new Date(startDate)
+    const now = new Date()
+    const totalMonths =
+        (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth())
+    const y = Math.floor(totalMonths / 12)
+    const m = totalMonths % 12
+    if (y === 0) return `${m} เดือน`
+    if (m === 0) return `${y} ปี`
+    return `${y} ปี ${m} เดือน`
+}
+
 function WelcomeSection({ employee, sessionName }: { employee: Employee | null; sessionName: string }) {
-    const firstName = employee?.firstNameTH ?? sessionName
-    const lastName  = employee?.lastNameTH ?? ''
-    const nickname  = employee?.nickname ?? null
-    const position  = employee?.position ?? ''
+    const firstName  = employee?.firstNameTH ?? sessionName
+    const lastName   = employee?.lastNameTH ?? ''
+    const nickname   = employee?.nickname ?? null
+    const position   = employee?.position ?? ''
     const department = employee?.department ?? ''
     const avatarUrl  = employee?.avatarUrl ?? null
+    const startDate  = employee?.startDate ?? null
 
     const displayName = nickname
-        ? `${firstName} (${nickname})`
+        ? `${firstName} ${lastName} (${nickname})`.trim()
         : `${firstName} ${lastName}`.trim()
 
     const initials = (firstName.charAt(0) + (lastName.charAt(0) || '')).toUpperCase()
+    const tenure = startDate ? calcTenure(startDate) : null
 
     return (
-        <div style={glass} className="p-4 flex items-center gap-3">
-            {/* Avatar */}
+        <div className="flex items-center gap-3 py-4 px-4">
+            {/* Avatar 56px */}
             {avatarUrl ? (
                 <img
                     src={avatarUrl}
                     alt=""
                     className="rounded-full object-cover shrink-0"
-                    style={{ width: 48, height: 48, border: '2px solid rgba(255,255,255,0.2)' }}
+                    style={{ width: 56, height: 56, border: '2px solid rgba(255,255,255,0.2)' }}
                 />
             ) : (
                 <div
                     className="rounded-full shrink-0 flex items-center justify-center font-black text-white select-none"
                     style={{
-                        width: 48, height: 48,
+                        width: 56, height: 56,
                         background: 'linear-gradient(135deg, #882136, #c0392b)',
                         border: '2px solid rgba(255,255,255,0.15)',
-                        fontSize: '18px',
+                        fontSize: '20px',
                     }}
                 >
                     {initials}
                 </div>
             )}
 
-            {/* Name + Position */}
+            {/* Name / Position / Tenure */}
             <div className="flex-1 min-w-0">
-                <p className="text-white font-bold truncate" style={{ fontSize: '15px' }}>
+                <p className="text-white font-semibold truncate" style={{ fontSize: '16px' }}>
                     {displayName}
                 </p>
                 {(position || department) && (
-                    <p className="text-white/50 truncate mt-0.5" style={{ fontSize: '11.5px' }}>
+                    <p className="text-white/70 truncate mt-0.5" style={{ fontSize: '12px' }}>
                         {position}
-                        {position && department && <span className="text-white/25 mx-1">•</span>}
+                        {position && department && <span className="text-white/30 mx-1">•</span>}
                         {department}
+                    </p>
+                )}
+                {tenure && (
+                    <p className="text-white/50 mt-0.5" style={{ fontSize: '11px' }}>
+                        อายุงาน {tenure}
                     </p>
                 )}
             </div>
 
-            {/* Greeting bubble */}
-            <div
-                className="shrink-0 text-right px-3 py-2 rounded-xl"
-                style={{ background: 'rgba(136,33,54,0.25)', border: '1px solid rgba(173,95,108,0.25)' }}
-            >
-                <p className="text-white/40" style={{ fontSize: '10px' }}>สวัสดี</p>
-                <p className="text-white font-semibold leading-snug" style={{ fontSize: '12.5px' }}>
-                    วันนี้เป็นอย่างไรบ้าง? 👋
-                </p>
+            {/* Greeting — right aligned */}
+            <div className="shrink-0 text-right">
+                <p className="text-white/90 font-semibold" style={{ fontSize: '14px' }}>สวัสดี 👋</p>
+                <p className="text-white/45" style={{ fontSize: '11px' }}>วันนี้เป็นอย่างไรบ้าง?</p>
             </div>
         </div>
     )
