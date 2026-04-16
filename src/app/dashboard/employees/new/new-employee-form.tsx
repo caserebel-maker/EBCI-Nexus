@@ -110,8 +110,10 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
             if (result.error) {
                 showToast('error', `เกิดข้อผิดพลาด: ${result.error}`)
             } else {
-                showToast('success', 'เพิ่มพนักงานสำเร็จ')
-                setTimeout(() => router.push('/dashboard/employees'), 1200)
+                showToast('success', result.emailSent
+                    ? 'เพิ่มพนักงานสำเร็จ ส่งอีเมลตั้งรหัสผ่านแล้ว'
+                    : 'เพิ่มพนักงานสำเร็จ')
+                setTimeout(() => router.push('/dashboard/employees'), 1800)
             }
         })
     }
