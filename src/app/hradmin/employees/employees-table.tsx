@@ -198,7 +198,7 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                     </div>
                     {isHrAdmin && activeTab === 'active' && (
                         <Link
-                            href="/dashboard/employees/new"
+                            href="/hradmin/employees/new"
                             className="inline-flex items-center gap-2 h-10 px-4 rounded-lg text-sm font-semibold bg-[#882136]/70 hover:bg-[#882136] text-white border border-[#ad5f6c]/30 hover:border-[#ad5f6c]/60 transition-all whitespace-nowrap shrink-0"
                         >
                             <UserPlus size={15} /> + เพิ่มพนักงาน
@@ -269,7 +269,7 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                                     displayData.map((employee, idx) => (
                                         <tr
                                             key={employee.id}
-                                            onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
+                                            onClick={() => router.push(`/hradmin/employees/${employee.employeeCode}`)}
                                             className="hover:bg-white/5 transition-colors cursor-pointer text-white/90"
                                         >
                                             <td className="px-4 py-4 text-center text-white/35 font-mono text-xs select-none">
@@ -311,7 +311,7 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                                     displayData.map((employee, idx) => (
                                         <tr
                                             key={employee.id}
-                                            onClick={() => router.push(`/dashboard/employees/${employee.id}`)}
+                                            onClick={() => router.push(`/hradmin/employees/${employee.employeeCode}`)}
                                             className="hover:bg-white/5 transition-colors cursor-pointer text-white/90"
                                         >
                                             <td className="px-4 py-4 text-center text-white/35 font-mono text-xs select-none">

@@ -158,6 +158,104 @@ function LeaveTooltip({ active, payload, label }: any) {
     )
 }
 
+const LEAVE_PAGE_SIZE = 10
+
+// ─── Leave History Sub-component ─────────────────────────────────────────────
+function LeaveHistory({ leaves }: { leaves: LeaveRequest[] }) {
+    const years = Array.from(new Set(leaves.map(l => new Date(l.start_date).getFullYear()))).sort((a, b) => b - a)
+    const [yearFilter, setYearFilter] = useState<string>('all')
+    const [typeFilter, setTypeFilter] = useState<string>('all')
+    const [statusFilter, setStatusFilter] = useState<string>('all')
+    const [page, setPage] = useState(1)
+
+    const filtered = leaves.filter(l => {
+        const y = String(new Date(l.start_date).getFullYear())
+        return (yearFilter === 'all' || y === yearFilter)
+            && (typeFilter === 'all' || l.leave_type === typeFilter)
+            && (statusFilter === 'all' || l.status === statusFilter)
+    })
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / LEAVE_PAGE_SIZE))
+    const pageData = filtered.slice((page - 1) * LEAVE_PAGE_SIZE, page * LEAVE_PAGE_SIZE)
+
+    const selCls = "h-9 px-3 rounded-lg border border-white/12 bg-white/6 text-white/80 text-[0.85rem] focus:outline-none focus:border-[#ad5f6c] appearance-none cursor-pointer"
+
+    return (
+        <div className="space-y-4">
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2">
+                <select className={selCls} value={yearFilter} onChange={e => { setYearFilter(e.target.value); setPage(1) }}>
+                    <option value="all" className="bg-[#1a0608]">ทุกปี</option>
+                    {years.map(y => <option key={y} value={String(y)} className="bg-[#1a0608]">{y + 543}</option>)}
+                </select>
+                <select className={selCls} value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setPage(1) }}>
+                    <option value="all" className="bg-[#1a0608]">ทุกประเภท</option>
+                    {Object.entries(LEAVE_LABELS).map(([v, l]) => <option key={v} value={v} className="bg-[#1a0608]">{l}</option>)}
+                </select>
+                <select className={selCls} value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }}>
+                    <option value="all" className="bg-[#1a0608]">ทุกสถานะ</option>
+                    <option value="approved" className="bg-[#1a0608]">อนุมัติ</option>
+                    <option value="pending" className="bg-[#1a0608]">รออนุมัติ</option>
+                    <option value="rejected" className="bg-[#1a0608]">ไม่อนุมัติ</option>
+                </select>
+                <span className="ml-auto text-[0.82rem] text-white/35 self-center">{filtered.length} รายการ</span>
+            </div>
+
+            {/* List */}
+            {pageData.length === 0 ? (
+                <p className="text-white/30 text-[0.95rem] text-center py-8">ไม่พบรายการ</p>
+            ) : (
+                <div className="space-y-2">
+                    {pageData.map(lr => (
+                        <div key={lr.id}
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 px-3 rounded-xl hover:bg-white/5 transition-colors border border-white/5">
+                            <div className="flex items-center gap-3">
+                                <div className="h-9 w-9 rounded-lg bg-[#882136]/30 flex items-center justify-center shrink-0">
+                                    <Calendar size={16} className="text-[#ad5f6c]" />
+                                </div>
+                                <div>
+                                    <p className="text-[1rem] font-semibold text-white">
+                                        {LEAVE_LABELS[lr.leave_type] ?? lr.leave_type}
+                                        <span className="text-white/40 font-normal ml-2 text-[0.85rem]">{lr.days} วัน</span>
+                                    </p>
+                                    <p className="text-[0.85rem] text-white/40">
+                                        {fmtDate(lr.start_date)}
+                                        {lr.end_date && lr.end_date !== lr.start_date && ` — ${fmtDate(lr.end_date)}`}
+                                    </p>
+                                    {lr.reason && <p className="text-[0.8rem] text-white/30 mt-0.5 truncate max-w-xs">{lr.reason}</p>}
+                                </div>
+                            </div>
+                            <span className={cn(
+                                "text-[0.8rem] font-bold px-3 py-1 rounded-full border w-fit shrink-0",
+                                LEAVE_STATUS_STYLE[lr.status] ?? 'bg-white/10 text-white/50 border-white/15'
+                            )}>
+                                {LEAVE_STATUS_LABEL[lr.status] ?? lr.status}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-2">
+                    <button
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="px-3 py-1.5 rounded-lg text-[0.85rem] font-semibold bg-white/8 hover:bg-white/14 text-white/60 hover:text-white border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    >ก่อนหน้า</button>
+                    <span className="text-[0.85rem] text-white/40 px-2">{page} / {totalPages}</span>
+                    <button
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                        className="px-3 py-1.5 rounded-lg text-[0.85rem] font-semibold bg-white/8 hover:bg-white/14 text-white/60 hover:text-white border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    >ถัดไป</button>
+                </div>
+            )}
+        </div>
+    )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function EmployeeProfileView({
     employee, photoUrl, displayName, supervisorName, tenure,
@@ -260,7 +358,7 @@ export function EmployeeProfileView({
             setShowDeleteConfirm(false)
             showToast('error', `ลบไม่สำเร็จ: ${result.error}`)
         } else {
-            router.push('/dashboard/employees')
+            router.push('/hradmin/employees')
         }
     }
 
@@ -341,7 +439,7 @@ export function EmployeeProfileView({
             {/* ── Breadcrumb + Actions ──────────────────────────────────────── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-2 text-[0.95rem] text-white/70">
-                    <Link href="/dashboard/employees" className="hover:text-white transition-colors">พนักงาน</Link>
+                    <Link href="/hradmin/employees" className="hover:text-white transition-colors">พนักงาน</Link>
                     <ChevronRight size={14} />
                     <span className="text-white font-medium">โปรไฟล์พนักงาน</span>
                 </div>
@@ -367,7 +465,7 @@ export function EmployeeProfileView({
                         </>
                     )}
                     {!isEditing && (
-                        <Link href="/dashboard/employees"
+                        <Link href="/hradmin/employees"
                             className="inline-flex items-center gap-2 text-[0.95rem] font-medium text-white/60 hover:text-white transition-colors">
                             <ArrowLeft size={15} /> กลับ
                         </Link>
@@ -636,42 +734,13 @@ export function EmployeeProfileView({
                 )}
             </div>
 
-            {/* ── 5. Recent Leave History ───────────────────────────────────── */}
+            {/* ── 5. Leave History (full, with filter + pagination) ─────────── */}
             <div style={glass} className="p-6 shadow-xl">
-                <SHead icon={Calendar} label="ประวัติใบลาล่าสุด" />
+                <SHead icon={Calendar} label="ประวัติใบลาทั้งหมด" />
                 {recentLeaves.length === 0 ? (
                     <p className="text-white/30 text-[0.95rem] text-center py-8">ยังไม่มีประวัติใบลา</p>
                 ) : (
-                    <div className="space-y-2">
-                        {recentLeaves.map(lr => (
-                            <div key={lr.id}
-                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 px-3 rounded-xl hover:bg-white/5 transition-colors border border-white/5">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-9 w-9 rounded-lg bg-[#882136]/30 flex items-center justify-center shrink-0">
-                                        <Calendar size={16} className="text-[#ad5f6c]" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[1rem] font-semibold text-white">
-                                            {LEAVE_LABELS[lr.leave_type] ?? lr.leave_type}
-                                            <span className="text-white/40 font-normal ml-2 text-[0.85rem]">
-                                                {lr.days} วัน
-                                            </span>
-                                        </p>
-                                        <p className="text-[0.85rem] text-white/40">
-                                            {fmtDate(lr.start_date)}
-                                            {lr.end_date && lr.end_date !== lr.start_date && ` — ${fmtDate(lr.end_date)}`}
-                                        </p>
-                                    </div>
-                                </div>
-                                <span className={cn(
-                                    "text-[0.8rem] font-bold px-3 py-1 rounded-full border w-fit shrink-0",
-                                    LEAVE_STATUS_STYLE[lr.status] ?? 'bg-white/10 text-white/50 border-white/15'
-                                )}>
-                                    {LEAVE_STATUS_LABEL[lr.status] ?? lr.status}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
+                    <LeaveHistory leaves={recentLeaves} />
                 )}
             </div>
 

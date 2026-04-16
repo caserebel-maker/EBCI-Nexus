@@ -43,7 +43,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
                 role
             )
         `)
-        .eq('id', id)
+        .eq('employee_code', id)
         .single()
 
     if (error || !employee) {
@@ -72,7 +72,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
         .from('employees')
         .select('id, first_name_th, last_name_th, position')
         .eq('status', 'active')
-        .neq('id', id)
+        .neq('id', employee.id)
         .order('first_name_th', { ascending: true })
 
     const allEmployees: { id: string; first_name_th: string; last_name_th: string; position: string }[] =
@@ -92,18 +92,17 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
     const { data: leaveBalancesRaw } = await supabaseAdmin
         .from('leave_balances')
         .select('leave_type, entitled_days, used_days, remaining_days')
-        .eq('employee_id', id)
+        .eq('employee_id', employee.id)
 
     const leaveBalances: { leave_type: string; entitled_days: number; used_days: number; remaining_days: number }[] =
         leaveBalancesRaw ?? []
 
-    // ── Recent leave requests (last 5) ─────────────────────────────────────────
+    // ── All leave requests ─────────────────────────────────────────────────────
     const { data: recentLeavesRaw } = await supabaseAdmin
         .from('leave_requests')
         .select('id, leave_type, start_date, end_date, days, status, created_at, reason')
-        .eq('employee_id', id)
+        .eq('employee_id', employee.id)
         .order('created_at', { ascending: false })
-        .limit(5)
 
     const recentLeaves: {
         id: string
