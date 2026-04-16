@@ -13,7 +13,8 @@ export default async function EmployeeLayout({
         redirect('/login')
     }
 
-    console.log(`[portal/layout] session.role=${session.role} name=${session.name}`)
+    console.log('SESSION OBJECT:', JSON.stringify(session))
+    console.log('SESSION ROLE:', session?.role)
 
     return (
         <DashboardShell role={session.role} userName={session.name}>
