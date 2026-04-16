@@ -95,58 +95,59 @@ function WelcomeSection({ employee, sessionName }: { employee: Employee | null; 
     const tenure = startDate ? calcTenure(startDate) : null
 
     return (
-        <>
-            {/* Greeting — bare text, no card */}
-            <div className="py-3 px-4">
-                <p className="text-white font-medium" style={{ fontSize: '15px' }}>
-                    สวัสดี 👋 วันนี้เป็นอย่างไรบ้าง?
-                </p>
-            </div>
+        /* Horizontal card: photo fills left, info on right */
+        <div style={{ ...glass, overflow: 'hidden', display: 'flex', minHeight: 110 }}>
 
-            {/* Profile card */}
-            <div style={glass} className="p-4 flex items-center gap-3">
-                {/* Avatar 56px */}
+            {/* Photo panel — left, fills height */}
+            <div className="shrink-0 relative" style={{ width: 110 }}>
                 {avatarUrl ? (
                     <img
                         src={avatarUrl}
                         alt=""
-                        className="rounded-full object-cover shrink-0"
-                        style={{ width: 56, height: 56, border: '2px solid rgba(255,255,255,0.2)' }}
+                        style={{
+                            position: 'absolute', inset: 0,
+                            width: '100%', height: '100%',
+                            objectFit: 'cover',
+                        }}
                     />
                 ) : (
                     <div
-                        className="rounded-full shrink-0 flex items-center justify-center font-black text-white select-none"
+                        className="absolute inset-0 flex items-center justify-center font-black text-white select-none"
                         style={{
-                            width: 56, height: 56,
-                            background: 'linear-gradient(135deg, #882136, #c0392b)',
-                            border: '2px solid rgba(255,255,255,0.15)',
-                            fontSize: '20px',
+                            background: 'linear-gradient(160deg, #882136 0%, #c0392b 100%)',
+                            fontSize: '32px',
                         }}
                     >
                         {initials}
                     </div>
                 )}
-
-                {/* Name / Position / Tenure */}
-                <div className="flex-1 min-w-0">
-                    <p className="text-white font-semibold truncate" style={{ fontSize: '16px' }}>
-                        {displayName}
-                    </p>
-                    {(position || department) && (
-                        <p className="text-white/70 truncate mt-0.5" style={{ fontSize: '12px' }}>
-                            {position}
-                            {position && department && <span className="text-white/30 mx-1">•</span>}
-                            {department}
-                        </p>
-                    )}
-                    {tenure && (
-                        <p className="text-white/60 mt-0.5" style={{ fontSize: '11px' }}>
-                            อายุงาน {tenure}
-                        </p>
-                    )}
-                </div>
+                {/* Subtle right-edge fade so photo blends into card */}
+                <div className="absolute inset-y-0 right-0 w-6"
+                    style={{ background: 'linear-gradient(to right, transparent, rgba(30,6,12,0.45))' }} />
             </div>
-        </>
+
+            {/* Info panel — right */}
+            <div className="flex-1 min-w-0 flex flex-col justify-center px-4 py-3 gap-1">
+                <p className="text-white/55 font-medium" style={{ fontSize: '12px' }}>
+                    สวัสดี 👋
+                </p>
+                <p className="text-white font-bold leading-snug truncate" style={{ fontSize: '17px' }}>
+                    {displayName}
+                </p>
+                {(position || department) && (
+                    <p className="text-white/65 truncate" style={{ fontSize: '12px' }}>
+                        {position}
+                        {position && department && <span className="text-white/30 mx-1.5">·</span>}
+                        {department}
+                    </p>
+                )}
+                {tenure && (
+                    <p className="text-white/45 mt-0.5" style={{ fontSize: '11px' }}>
+                        อายุงาน {tenure}
+                    </p>
+                )}
+            </div>
+        </div>
     )
 }
 
