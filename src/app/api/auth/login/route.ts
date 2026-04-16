@@ -30,7 +30,11 @@ export async function POST(request: Request) {
         }
 
         const meta = data.user.user_metadata ?? {}
-        const role: UserRole = (meta.role as UserRole) ?? 'employee'
+        const appMeta = data.user.app_metadata ?? {}
+        // Check user_metadata first, fallback to app_metadata (Supabase stores admin roles there)
+        const rawRole = meta.role ?? appMeta.role ?? (appMeta.claims_admin ? 'hr_admin' : undefined)
+        const role: UserRole = (rawRole as UserRole) ?? 'employee'
+        console.log(`[Auth] user_metadata.role=${meta.role} app_metadata.role=${appMeta.role} → resolved=${role}`)
         const name: string = meta.name ?? meta.full_name ?? data.user.email ?? 'User'
         const employeeId: string | undefined = meta.employeeId ?? undefined
 

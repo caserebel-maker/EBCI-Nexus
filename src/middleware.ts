@@ -19,12 +19,15 @@ export function middleware(request: NextRequest) {
     // ── 2. Parse session ──────────────────────────────────────────────────────
     let role: UserRole | null = null
     try {
-        role = JSON.parse(sessionCookie).role
+        const parsed = JSON.parse(sessionCookie)
+        role = parsed.role
+        console.log(`[middleware] path=${pathname} raw_session_keys=${Object.keys(parsed).join(',')} role=${role}`)
     } catch {
         return NextResponse.redirect(new URL('/login', request.url))
     }
 
     if (!role || !ROLE_CONFIG[role]) {
+        console.log(`[middleware] unknown role="${role}", redirecting to /login`)
         return NextResponse.redirect(new URL('/login', request.url))
     }
 

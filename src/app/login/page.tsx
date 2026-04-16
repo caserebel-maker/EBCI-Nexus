@@ -51,8 +51,8 @@ export default function LoginPage() {
                             className="h-20 w-auto opacity-90 drop-shadow-2xl"
                         />
                         <div className="text-white font-medium text-[10px] md:text-xs uppercase tracking-[0.4em] opacity-80 flex flex-col gap-1.5">
-                            <span>{t('dashboard.hrSystem')}</span>
-                            <span>{t('dashboard.title')}</span>
+                            <span>HR Management System</span>
+                            <span>Employee Portal</span>
                         </div>
                     </div>
 
