@@ -209,7 +209,7 @@ export async function createEmployee(payload: CreateEmployeePayload) {
                     if (resetLink) {
                         const resend = new Resend(process.env.RESEND_API_KEY)
                         const { data: emailData, error: emailError } = await resend.emails.send({
-                            from: 'onboarding@resend.dev',
+                            from: 'EBCI Nexus <noreply@ebcinext.com>',
                             to: payload.email,
                             subject: 'ยินดีต้อนรับสู่ EBCI Nexus — ตั้งรหัสผ่านของคุณ',
                             html: buildWelcomeEmail({ name: fullName, resetLink }),
