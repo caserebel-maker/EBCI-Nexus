@@ -3,48 +3,86 @@
 import { useState, useTransition, useRef } from "react"
 import {
     ArrowLeft, User, Phone, Mail, MapPin, Building, Briefcase,
-    Calendar, Clock, Shield, Bell, FileText, ChevronRight,
-    MessageSquare, Pencil, X, Check, AlertCircle, CheckCircle2, Camera, Trash2
+    Calendar, Shield, ChevronRight, Pencil, X, Check,
+    AlertCircle, CheckCircle2, Camera, Trash2, Clock, FileText
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { useTranslation } from "@/contexts/language-context"
 import { updateEmployee, uploadEmployeePhoto, deleteEmployee } from "./actions"
 import { EMPLOYEE_LEVELS, LEVEL_BADGE_COLORS } from "@/config/employee-levels"
 import { DEPARTMENTS } from "@/config/departments"
+import {
+    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList
+} from "recharts"
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
-const glassCard: React.CSSProperties = {
+const glass: React.CSSProperties = {
     background: 'rgba(255,255,255,0.06)',
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
+    backdropFilter: 'blur(14px)',
+    WebkitBackdropFilter: 'blur(14px)',
     border: '1px solid rgba(255,255,255,0.12)',
-    borderRadius: '16px',
+    borderRadius: '18px',
 }
 const silverCard: React.CSSProperties = {
     background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(200,200,220,0.04) 50%, rgba(255,255,255,0.07) 100%)',
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255,255,255,0.12)',
-    borderRadius: '16px',
+    backdropFilter: 'blur(14px)',
+    WebkitBackdropFilter: 'blur(14px)',
+    border: '1px solid rgba(255,255,255,0.13)',
+    borderRadius: '18px',
 }
-const editInputClass = "w-full bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-[#ad5f6c] focus:ring-1 focus:ring-[#ad5f6c]/40 transition-colors"
-const editSelectClass = "w-full bg-[#1a0608] border border-white/20 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-[#ad5f6c] focus:ring-1 focus:ring-[#ad5f6c]/40 transition-colors appearance-none"
+const inp = "w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-[1rem] text-white placeholder-white/30 focus:outline-none focus:border-[#ad5f6c] focus:ring-1 focus:ring-[#ad5f6c]/40 transition-colors"
+const sel = "w-full bg-[#1a0608] border border-white/20 rounded-xl px-3 py-2 text-[1rem] text-white focus:outline-none focus:border-[#ad5f6c] focus:ring-1 focus:ring-[#ad5f6c]/40 transition-colors appearance-none"
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const LEAVE_LABELS: Record<string, string> = {
+    annual: 'ลาพักร้อน',
+    sick: 'ลาป่วย',
+    personal: 'ลากิจ',
+    maternity: 'ลาคลอด',
+    ordination: 'ลาบวช',
+    other: 'อื่นๆ',
+}
+const LEAVE_STATUS_STYLE: Record<string, string> = {
+    approved: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    pending: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    rejected: 'bg-red-500/20 text-red-400 border-red-500/30',
+}
+const LEAVE_STATUS_LABEL: Record<string, string> = {
+    approved: 'อนุมัติ',
+    pending: 'รออนุมัติ',
+    rejected: 'ไม่อนุมัติ',
+}
+
+function fmtDate(d: string) {
+    return new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
+interface LeaveBalance {
+    leave_type: string
+    entitled_days: number
+    used_days: number
+    remaining_days: number
+}
+interface LeaveRequest {
+    id: string
+    leave_type: string
+    start_date: string
+    end_date: string
+    days: number
+    status: string
+    created_at: string
+    reason: string | null
+}
 interface Props {
     employee: any
     photoUrl: string | null
     displayName: string
-    stats: {
-        attendance: string
-        leave: { annual: number; sick: number }
-        supervisor: string
-        emergencyContact: string
-        lastLogin: string
-        notes: string
-    }
+    supervisorName: string
+    tenure: string
+    leaveBalances: LeaveBalance[]
+    recentLeaves: LeaveRequest[]
     id: string
     isHrAdmin: boolean
 }
@@ -67,29 +105,56 @@ interface FormState {
     approval_level: number
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-function InfoRow({
-    label, value, icon: Icon, editing, editNode
-}: {
+// ─── Section header ───────────────────────────────────────────────────────────
+function SHead({ icon: Icon, label }: { icon: any; label: string }) {
+    return (
+        <div className="flex items-center gap-3 mb-5 pb-3 border-b border-white/10">
+            <div className="h-8 w-8 rounded-lg bg-[#882136]/40 flex items-center justify-center text-[#ad5f6c] shrink-0">
+                <Icon size={16} />
+            </div>
+            <h2 className="text-[1.1rem] font-bold text-white tracking-wide">{label}</h2>
+        </div>
+    )
+}
+
+// ─── Info row ─────────────────────────────────────────────────────────────────
+function InfoRow({ label, value, icon: Icon, editing, editNode }: {
     label: string; value: string; icon: any; editing?: boolean; editNode?: React.ReactNode
 }) {
     return (
-        <div className="flex items-start justify-between py-3 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors gap-3">
-            <div className="flex items-center gap-3 text-white/40 shrink-0 pt-1">
-                <Icon size={16} className="text-primary-light" />
-                <span className="text-xs font-bold uppercase tracking-widest">{label}</span>
+        <div className="flex items-start justify-between py-3 border-b border-white/5 last:border-0 px-2 hover:bg-white/5 rounded-lg transition-colors gap-4">
+            <div className="flex items-center gap-2.5 text-white/40 shrink-0 pt-0.5">
+                <Icon size={15} className="text-[#ad5f6c]" />
+                <span className="text-[0.8rem] font-bold uppercase tracking-widest">{label}</span>
             </div>
             {editing && editNode
                 ? <div className="flex-1 min-w-0">{editNode}</div>
-                : <span className="text-sm font-bold text-white text-right">{value}</span>
+                : <span className="text-[1rem] font-semibold text-white text-right">{value || '—'}</span>
             }
         </div>
     )
 }
 
+// ─── Recharts custom tooltip ──────────────────────────────────────────────────
+function LeaveTooltip({ active, payload, label }: any) {
+    if (!active || !payload?.length) return null
+    return (
+        <div style={{ background: 'rgba(20,4,10,0.95)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '10px 14px' }}>
+            <p className="text-white font-bold text-sm mb-1">{label}</p>
+            {payload.map((p: any) => (
+                <p key={p.name} className="text-xs" style={{ color: p.fill }}>
+                    {p.name}: <span className="font-bold">{p.value} วัน</span>
+                </p>
+            ))}
+        </div>
+    )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
-export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id, isHrAdmin }: Props) {
-    const { t } = useTranslation()
+export function EmployeeProfileView({
+    employee, photoUrl, displayName, supervisorName, tenure,
+    leaveBalances, recentLeaves, id, isHrAdmin
+}: Props) {
     const router = useRouter()
 
     const initForm = (): FormState => ({
@@ -120,8 +185,9 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
 
-    const set = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-        setForm(prev => ({ ...prev, [field]: e.target.value }))
+    const set = (field: keyof FormState) =>
+        (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+            setForm(prev => ({ ...prev, [field]: e.target.value }))
 
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -140,7 +206,6 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
 
     const handleSave = () => {
         startTransition(async () => {
-            // Upload photo first if a new file was selected
             if (photoFile) {
                 const fd = new FormData()
                 fd.append('photo', photoFile)
@@ -150,7 +215,6 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
                     return
                 }
             }
-
             const result = await updateEmployee(id, {
                 first_name_th: form.first_name_th,
                 last_name_th: form.last_name_th,
@@ -191,26 +255,44 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
     }
 
     const currentDisplayName = isEditing ? `${form.first_name_th} ${form.last_name_th}` : displayName
+    const lvl = employee.approval_level ?? 1
+    const levelColor = LEVEL_BADGE_COLORS[lvl] ?? LEVEL_BADGE_COLORS[1]
+    const levelLabel = EMPLOYEE_LEVELS[lvl]?.label.split('—')[0].trim() ?? `Level ${lvl}`
+
+    // ── Leave chart data ──────────────────────────────────────────────────────
+    const chartData = leaveBalances.map(b => ({
+        name: LEAVE_LABELS[b.leave_type] ?? b.leave_type,
+        ใช้ไปแล้ว: b.used_days,
+        คงเหลือ: b.remaining_days,
+    }))
+
+    const EMPLOYMENT_LABELS: Record<string, string> = {
+        'full-time': 'ประจำ',
+        'part-time': 'นอกเวลา',
+        'contract': 'สัญญาจ้าง',
+        'probation': 'ทดลองงาน',
+    }
 
     return (
-        <div className="space-y-6 max-w-6xl mx-auto pb-20">
-            {/* Delete Confirm Dialog */}
+        <div className="space-y-6 max-w-5xl mx-auto pb-24" style={{ fontSize: '1.05rem' }}>
+
+            {/* ── Delete Confirm Dialog ─────────────────────────────────────── */}
             {showDeleteConfirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm">
                     <div style={{
                         background: 'rgba(20,4,10,0.96)',
-                        backdropFilter: 'blur(16px)',
-                        border: '1px solid rgba(220,38,38,0.35)',
-                        borderRadius: '16px',
-                        boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
-                    }} className="w-full max-w-md p-6 space-y-5">
+                        backdropFilter: 'blur(20px)',
+                        border: '1px solid rgba(220,38,38,0.40)',
+                        borderRadius: '18px',
+                        boxShadow: '0 24px 64px rgba(0,0,0,0.7)',
+                    }} className="w-full max-w-md p-7 space-y-5">
                         <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0">
-                                <Trash2 size={20} className="text-red-400" />
+                            <div className="h-11 w-11 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0">
+                                <Trash2 size={22} className="text-red-400" />
                             </div>
-                            <h2 className="text-lg font-bold text-white">ยืนยันการลบพนักงาน</h2>
+                            <h2 className="text-[1.2rem] font-bold text-white">ยืนยันการลบพนักงาน</h2>
                         </div>
-                        <p className="text-sm text-white/70 leading-relaxed">
+                        <p className="text-[1rem] text-white/70 leading-relaxed">
                             คุณต้องการลบ <span className="text-white font-bold">{displayName}</span> ออกจากระบบใช่หรือไม่?<br />
                             <span className="text-red-400 font-semibold">การกระทำนี้ไม่สามารถย้อนกลับได้</span>
                         </p>
@@ -218,16 +300,16 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
                             <button
                                 onClick={() => setShowDeleteConfirm(false)}
                                 disabled={isDeleting}
-                                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white/10 hover:bg-white/15 text-white/70 hover:text-white border border-white/15 transition-all disabled:opacity-50"
+                                className="flex-1 px-4 py-2.5 rounded-xl text-[1rem] font-semibold bg-white/10 hover:bg-white/15 text-white/70 hover:text-white border border-white/15 transition-all disabled:opacity-50"
                             >
                                 ยกเลิก
                             </button>
                             <button
                                 onClick={handleDelete}
                                 disabled={isDeleting}
-                                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold bg-red-600/80 hover:bg-red-600 text-white border border-red-500/40 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                                className="flex-1 px-4 py-2.5 rounded-xl text-[1rem] font-semibold bg-red-600/80 hover:bg-red-600 text-white border border-red-500/40 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
                             >
-                                <Trash2 size={14} />
+                                <Trash2 size={15} />
                                 {isDeleting ? 'กำลังลบ...' : 'ลบพนักงาน'}
                             </button>
                         </div>
@@ -235,390 +317,359 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
                 </div>
             )}
 
-            {/* Toast */}
+            {/* ── Toast ────────────────────────────────────────────────────── */}
             {toast && (
                 <div className={cn(
-                    'fixed top-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-xl text-sm font-semibold transition-all',
+                    'fixed top-6 right-6 z-50 flex items-center gap-2 px-5 py-3 rounded-xl shadow-xl text-[1rem] font-semibold',
                     toast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
                 )}>
-                    {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                    {toast.type === 'success' ? <CheckCircle2 size={17} /> : <AlertCircle size={17} />}
                     {toast.msg}
                 </div>
             )}
 
-            {/* Breadcrumbs & Actions */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-2 text-sm text-white/90">
-                    <Link href="/dashboard/employees" className="hover:text-white transition-colors">
-                        {t('dashboard.employees')}
-                    </Link>
+            {/* ── Breadcrumb + Actions ──────────────────────────────────────── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-2 text-[0.95rem] text-white/70">
+                    <Link href="/dashboard/employees" className="hover:text-white transition-colors">พนักงาน</Link>
                     <ChevronRight size={14} />
-                    <span className="text-white font-medium">{t('employees.profile.title')}</span>
+                    <span className="text-white font-medium">โปรไฟล์พนักงาน</span>
                 </div>
                 <div className="flex items-center gap-3">
                     {isHrAdmin && !isEditing && (
                         <button
                             onClick={handleEdit}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-[#882136]/60 hover:bg-[#882136]/80 text-white border border-[#ad5f6c]/30 hover:border-[#ad5f6c]/60 transition-all"
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[0.95rem] font-semibold bg-[#882136]/60 hover:bg-[#882136]/80 text-white border border-[#ad5f6c]/30 hover:border-[#ad5f6c]/60 transition-all"
                         >
                             <Pencil size={14} /> แก้ไขข้อมูล
                         </button>
                     )}
                     {isEditing && (
                         <>
-                            <button
-                                onClick={handleCancel}
-                                disabled={isPending}
-                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white/10 hover:bg-white/15 text-white/70 hover:text-white border border-white/15 transition-all disabled:opacity-50"
-                            >
+                            <button onClick={handleCancel} disabled={isPending}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[0.95rem] font-semibold bg-white/10 hover:bg-white/15 text-white/70 hover:text-white border border-white/15 transition-all disabled:opacity-50">
                                 <X size={14} /> ยกเลิก
                             </button>
-                            <button
-                                onClick={handleSave}
-                                disabled={isPending}
-                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-600/80 hover:bg-emerald-600 text-white border border-emerald-500/40 transition-all disabled:opacity-60"
-                            >
+                            <button onClick={handleSave} disabled={isPending}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[0.95rem] font-semibold bg-emerald-600/80 hover:bg-emerald-600 text-white border border-emerald-500/40 transition-all disabled:opacity-60">
                                 <Check size={14} /> {isPending ? 'กำลังบันทึก...' : 'บันทึก'}
                             </button>
                         </>
                     )}
                     {!isEditing && (
-                        <Link
-                            href="/dashboard/employees"
-                            className="inline-flex items-center gap-2 text-sm font-medium text-white/70 hover:text-white transition-colors"
-                        >
-                            <ArrowLeft size={16} /> {t('employees.profile.backToList')}
+                        <Link href="/dashboard/employees"
+                            className="inline-flex items-center gap-2 text-[0.95rem] font-medium text-white/60 hover:text-white transition-colors">
+                            <ArrowLeft size={15} /> กลับ
                         </Link>
                     )}
                 </div>
             </div>
 
-            {/* Header / Identity Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div style={silverCard} className="lg:col-span-2 flex flex-col md:flex-row gap-6 p-6 shadow-xl">
+            {/* ── 1. HERO SECTION ──────────────────────────────────────────── */}
+            <div style={silverCard} className="p-6 shadow-2xl">
+                <div className="flex flex-col md:flex-row gap-6 items-start">
+
+                    {/* Photo */}
                     <div className="relative shrink-0">
-                        <div className="h-32 w-32 md:h-40 md:w-40 rounded-2xl bg-brand-gradient flex items-center justify-center text-white font-bold text-4xl border-2 border-white/20 overflow-hidden shadow-inner">
+                        <div className="h-36 w-36 rounded-2xl bg-gradient-to-br from-[#882136] to-[#3a0d14] flex items-center justify-center text-white font-black text-5xl border-2 border-white/20 overflow-hidden shadow-xl">
                             {(photoPreview || photoUrl)
                                 ? <img src={photoPreview ?? photoUrl!} className="h-full w-full object-cover" alt={currentDisplayName} />
-                                : currentDisplayName.charAt(0)
+                                : <span>{currentDisplayName.charAt(0)}</span>
                             }
                         </div>
                         {isEditing && (
                             <>
-                                <button
-                                    type="button"
-                                    onClick={() => photoInputRef.current?.click()}
-                                    className="absolute inset-0 rounded-2xl flex items-end justify-center pb-3 bg-black/40 opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
-                                >
-                                    <span className="flex items-center gap-1.5 bg-black/70 text-white text-xs font-semibold px-3 py-1.5 rounded-lg">
+                                <button type="button" onClick={() => photoInputRef.current?.click()}
+                                    className="absolute inset-0 rounded-2xl flex items-end justify-center pb-3 bg-black/50 opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
+                                    <span className="flex items-center gap-1.5 bg-black/75 text-white text-xs font-semibold px-3 py-1.5 rounded-lg">
                                         <Camera size={13} /> เปลี่ยนรูป
                                     </span>
                                 </button>
-                                <input
-                                    ref={photoInputRef}
-                                    type="file"
-                                    accept="image/jpeg,image/png,image/webp"
-                                    className="hidden"
-                                    onChange={handlePhotoChange}
-                                />
+                                <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp"
+                                    className="hidden" onChange={handlePhotoChange} />
                             </>
                         )}
                         {photoPreview && isEditing && (
                             <span className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">ใหม่</span>
                         )}
                     </div>
-                    <div className="flex-1 space-y-4">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                                {isEditing ? (
-                                    <div className="space-y-2 mb-2">
-                                        <div className="flex gap-2">
-                                            <input className={editInputClass} value={form.first_name_th} onChange={set('first_name_th')} placeholder="ชื่อ" />
-                                            <input className={editInputClass} value={form.last_name_th} onChange={set('last_name_th')} placeholder="นามสกุล" />
-                                        </div>
-                                        <input className={editInputClass} value={form.nickname} onChange={set('nickname')} placeholder="ชื่อเล่น (ถ้ามี)" />
-                                    </div>
-                                ) : (
-                                    <div>
-                                        <div className="flex items-center gap-3 flex-wrap">
-                                            <h1 className="text-3xl font-black text-white uppercase tracking-tight">{displayName}</h1>
-                                            {(() => {
-                                                const lvl = employee.approval_level ?? 1
-                                                const color = LEVEL_BADGE_COLORS[lvl] ?? LEVEL_BADGE_COLORS[1]
-                                                const label = EMPLOYEE_LEVELS[lvl]?.label.split('—')[0].trim() ?? `Level ${lvl}`
-                                                return (
-                                                    <span className={cn("px-2.5 py-1 rounded-lg text-xs font-bold border", color)}>
-                                                        {label}
-                                                    </span>
-                                                )
-                                            })()}
-                                        </div>
+
+                    {/* Info */}
+                    <div className="flex-1 space-y-3">
+                        {/* Name row */}
+                        {isEditing ? (
+                            <div className="space-y-2">
+                                <div className="flex gap-2">
+                                    <input className={inp} value={form.first_name_th} onChange={set('first_name_th')} placeholder="ชื่อ" />
+                                    <input className={inp} value={form.last_name_th} onChange={set('last_name_th')} placeholder="นามสกุล" />
+                                </div>
+                                <input className={inp} value={form.nickname} onChange={set('nickname')} placeholder="ชื่อเล่น (ถ้ามี)" />
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <h1 className="text-[1.8rem] font-black text-white leading-tight">
+                                        {displayName}
                                         {employee.nickname && (
-                                            <p className="text-white/50 text-sm mt-0.5">ชื่อเล่น: <span className="text-white/80 font-semibold">{employee.nickname}</span></p>
+                                            <span className="text-white/45 font-normal text-[1.2rem] ml-2">({employee.nickname})</span>
                                         )}
-                                    </div>
-                                )}
-                                <p className="text-white/60 flex items-center gap-2 mt-1 text-sm font-medium flex-wrap">
-                                    <span className="px-2 py-0.5 rounded bg-white/5 text-xs font-mono border border-white/10 text-white/40">
-                                        {employee.employee_code}
+                                    </h1>
+                                    <span className={cn("px-2.5 py-1 rounded-lg text-xs font-bold border", levelColor)}>
+                                        {levelLabel}
                                     </span>
-                                    <span>•</span>
-                                    {isEditing
-                                        ? <input className={cn(editInputClass, 'max-w-[180px] text-xs')} value={form.position} onChange={set('position')} placeholder="ตำแหน่ง" />
-                                        : <span className="font-bold text-primary-light uppercase tracking-wider text-xs">{employee.position}</span>
-                                    }
-                                </p>
+                                    {/* Status badge */}
+                                    <span className={cn(
+                                        "px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5",
+                                        employee.status === "active" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/25"
+                                            : employee.status === "on_leave" ? "bg-amber-500/20 text-amber-400 border-amber-500/25"
+                                                : "bg-slate-500/15 text-slate-400 border-slate-500/20"
+                                    )}>
+                                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                                        {employee.status === "active" ? "ปฏิบัติงาน" : employee.status === "on_leave" ? "ลา" : "พ้นสภาพ"}
+                                    </span>
+                                </div>
+                                {isEditing
+                                    ? <input className={cn(inp, 'mt-2 max-w-xs text-sm')} value={form.position} onChange={set('position')} placeholder="ตำแหน่ง" />
+                                    : <p className="text-[#ad5f6c] font-bold text-[1rem] mt-0.5">{employee.position} — {employee.department}</p>
+                                }
                             </div>
-                            {isEditing ? (
-                                <div className="flex flex-col gap-2 items-end">
-                                    <select className={cn(editSelectClass, 'max-w-[160px]')} value={form.status} onChange={set('status')}>
-                                        <option value="active">ปฏิบัติงาน</option>
-                                        <option value="on_leave">ลา</option>
-                                        <option value="inactive">พ้นสภาพ</option>
+                        )}
+
+                        {/* Badge row */}
+                        <div className="flex flex-wrap gap-2 pt-1">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/70 text-[0.85rem] font-semibold">
+                                <Briefcase size={13} className="text-[#ad5f6c]" />
+                                {employee.employee_code}
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/70 text-[0.85rem] font-semibold">
+                                <Clock size={13} className="text-[#ad5f6c]" />
+                                อายุงาน {tenure}
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/70 text-[0.85rem] font-semibold">
+                                <User size={13} className="text-[#ad5f6c]" />
+                                {isEditing
+                                    ? <select className="bg-transparent text-white/70 focus:outline-none text-[0.85rem]" value={form.employment_type} onChange={set('employment_type')}>
+                                        <option value="full-time">ประจำ</option>
+                                        <option value="part-time">นอกเวลา</option>
+                                        <option value="contract">สัญญาจ้าง</option>
+                                        <option value="probation">ทดลองงาน</option>
                                     </select>
-                                    {form.status === 'inactive' && (
-                                        <>
-                                            <input
-                                                type="date"
-                                                className={cn(editInputClass, 'max-w-[160px] text-xs')}
-                                                value={form.quit_date}
-                                                onChange={set('quit_date')}
-                                                placeholder="วันที่พ้นสภาพ"
-                                            />
-                                            <select className={cn(editSelectClass, 'max-w-[160px] text-xs')} value={form.quit_reason} onChange={set('quit_reason')}>
-                                                <option value="">— สาเหตุ —</option>
-                                                <option value="resigned">ลาออกเอง</option>
-                                                <option value="retired">เกษียณอายุ</option>
-                                                <option value="contract_ended">สัญญาหมด</option>
-                                                <option value="other">อื่นๆ</option>
-                                            </select>
-                                        </>
+                                    : EMPLOYMENT_LABELS[employee.employment_type] ?? employee.employment_type
+                                }
+                            </span>
+                        </div>
+
+                        {/* Status + Department edit */}
+                        {isEditing && (
+                            <div className="flex flex-wrap gap-2 pt-1">
+                                <select className={cn(sel, 'max-w-[160px]')} value={form.status} onChange={set('status')}>
+                                    <option value="active">ปฏิบัติงาน</option>
+                                    <option value="on_leave">ลา</option>
+                                    <option value="inactive">พ้นสภาพ</option>
+                                </select>
+                                <select className={cn(sel, 'max-w-[200px]')} value={form.department} onChange={set('department')}>
+                                    {form.department && !(DEPARTMENTS as readonly string[]).includes(form.department) && (
+                                        <option value={form.department}>{form.department}</option>
                                     )}
-                                </div>
-                            ) : (
-                                <span className={cn(
-                                    "px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5",
-                                    employee.status === "active"
-                                        ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/20"
-                                        : employee.status === "on_leave"
-                                        ? "bg-amber-500/20 text-amber-400 border-amber-500/20"
-                                        : "bg-slate-500/15 text-slate-400 border-slate-500/20"
-                                )}>
-                                    <span className="h-2 w-2 rounded-full bg-current" />
-                                    {employee.status === "active" ? t('employees.profile.active') : employee.status === "on_leave" ? "ลา" : "พ้นสภาพ"}
-                                </span>
-                            )}
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                            <div className="flex items-center gap-3 text-sm text-white/70">
-                                <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-primary-light border border-white/5 shrink-0">
-                                    <Mail size={16} />
-                                </div>
-                                {isEditing
-                                    ? <input className={editInputClass} value={form.email} onChange={set('email')} placeholder="อีเมล" type="email" />
-                                    : employee.email
-                                }
-                            </div>
-                            <div className="flex items-center gap-3 text-sm text-white/70">
-                                <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-primary-light border border-white/5 shrink-0">
-                                    <Phone size={16} />
-                                </div>
-                                {isEditing
-                                    ? <input className={editInputClass} value={form.phone} onChange={set('phone')} placeholder="เบอร์โทร" />
-                                    : (employee.phone || "-")
-                                }
-                            </div>
-                            <div className="flex items-center gap-3 text-sm text-white/70">
-                                <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-primary-light border border-white/5 shrink-0">
-                                    <Building size={16} />
-                                </div>
-                                {isEditing
-                                    ? (
-                                        <select
-                                            className={editSelectClass}
-                                            value={form.department}
-                                            onChange={set('department')}
-                                        >
-                                            {/* Show current value if not in canonical list (legacy data) */}
-                                            {form.department && !(DEPARTMENTS as readonly string[]).includes(form.department) && (
-                                                <option value={form.department}>{form.department}</option>
-                                            )}
-                                            {DEPARTMENTS.map(d => (
-                                                <option key={d} value={d}>{d}</option>
-                                            ))}
+                                    {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                                </select>
+                                {form.status === 'inactive' && (
+                                    <>
+                                        <input type="date" className={cn(inp, 'max-w-[160px]')} value={form.quit_date} onChange={set('quit_date')} />
+                                        <select className={cn(sel, 'max-w-[160px]')} value={form.quit_reason} onChange={set('quit_reason')}>
+                                            <option value="">— สาเหตุ —</option>
+                                            <option value="resigned">ลาออกเอง</option>
+                                            <option value="retired">เกษียณอายุ</option>
+                                            <option value="contract_ended">สัญญาหมด</option>
+                                            <option value="other">อื่นๆ</option>
                                         </select>
-                                    )
-                                    : employee.department
-                                }
+                                    </>
+                                )}
                             </div>
-                            <div className="flex items-center gap-3 text-sm text-white/70">
-                                <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center text-primary-light border border-white/5 shrink-0">
-                                    <MapPin size={16} />
-                                </div>
-                                Head Office (Nexus)
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Quick Stats Card */}
-                <div style={glassCard} className="p-6 space-y-6 shadow-xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-8 opacity-5 transition-opacity group-hover:opacity-10">
-                        <Clock size={120} />
-                    </div>
-                    <h3 className="text-sm font-black text-primary-light uppercase tracking-[0.2em] flex items-center gap-2">
-                        <Clock size={16} /> {t('employees.profile.quickStats')}
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4 relative z-10">
-                        <div className="space-y-1">
-                            <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest">{t('employees.profile.attendance')}</p>
-                            <p className="text-2xl font-black text-white">{stats.attendance}</p>
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest">{t('employees.profile.annualLeave')}</p>
-                            <p className="text-2xl font-black text-white">{stats.leave.annual}d</p>
-                        </div>
-                    </div>
-                    <div className="pt-4 border-t border-white/10 relative z-10">
-                        <p className="text-[10px] uppercase font-bold text-white/30 tracking-widest mb-2">{t('employees.profile.lastActivity')}</p>
-                        <p className="text-xs text-white font-bold flex items-center gap-2">
-                            <Shield size={12} className="text-emerald-500" />
-                            {t('employees.profile.recently')}
-                        </p>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* Employment & Detailed Information */}
+            {/* ── 2+3. Contact & Work Info ──────────────────────────────────── */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div style={silverCard} className="p-6 shadow-xl space-y-6">
-                    <h2 className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-2">
-                        <FileText size={20} className="text-primary-light" /> {t('employees.profile.employmentInfo')}
-                    </h2>
-                    <div className="space-y-1">
-                        <InfoRow
-                            label={t('employees.profile.joinDate')}
-                            value={new Date(employee.start_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
-                            icon={Calendar}
+
+                {/* Contact */}
+                <div style={glass} className="p-6 shadow-xl">
+                    <SHead icon={Phone} label="ข้อมูลติดต่อ" />
+                    <div className="space-y-0.5">
+                        <InfoRow label="อีเมล" icon={Mail}
+                            value={employee.email || '—'}
                             editing={isEditing}
-                            editNode={<input type="date" className={editInputClass} value={form.start_date} onChange={set('start_date')} />}
+                            editNode={<input type="email" className={inp} value={form.email} onChange={set('email')} placeholder="อีเมล" />}
                         />
-                        <InfoRow
-                            label={t('employees.profile.type')}
-                            value={employee.employment_type?.toUpperCase() || t('employees.profile.permanent').toUpperCase()}
-                            icon={User}
+                        <InfoRow label="โทรศัพท์" icon={Phone}
+                            value={employee.phone || '—'}
                             editing={isEditing}
-                            editNode={
-                                <select className={editSelectClass} value={form.employment_type} onChange={set('employment_type')}>
-                                    <option value="full-time">Full-time (ประจำ)</option>
-                                    <option value="part-time">Part-time (ชั่วคราว)</option>
-                                    <option value="contract">Contract (สัญญาจ้าง)</option>
-                                </select>
-                            }
+                            editNode={<input className={inp} value={form.phone} onChange={set('phone')} placeholder="เบอร์โทร" />}
                         />
-                        <InfoRow
-                            label="ระดับพนักงาน"
+                        <InfoRow label="ผู้ติดต่อฉุกเฉิน" icon={AlertCircle}
+                            value={employee.applicants?.phone || '—'}
+                            editing={isEditing}
+                            editNode={<input className={inp} value={form.emergency_contact} onChange={set('emergency_contact')} placeholder="เบอร์ผู้ติดต่อฉุกเฉิน" />}
+                        />
+                        <div className="pt-3 mt-1 border-t border-white/8">
+                            <p className="text-[0.75rem] font-bold text-white/30 uppercase tracking-widest mb-2">ที่อยู่</p>
+                            {isEditing ? (
+                                <textarea className={cn(inp, 'min-h-[72px] resize-none')} value={form.address}
+                                    onChange={set('address')} placeholder="ที่อยู่" />
+                            ) : (
+                                <p className="text-[0.95rem] text-white/60 leading-relaxed">
+                                    {employee.applicants?.current_address || '—'}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Work info */}
+                <div style={glass} className="p-6 shadow-xl">
+                    <SHead icon={Briefcase} label="ข้อมูลการทำงาน" />
+                    <div className="space-y-0.5">
+                        <InfoRow label="วันเริ่มงาน" icon={Calendar}
+                            value={fmtDate(employee.start_date)}
+                            editing={isEditing}
+                            editNode={<input type="date" className={inp} value={form.start_date} onChange={set('start_date')} />}
+                        />
+                        <InfoRow label="แผนก" icon={Building}
+                            value={employee.department || '—'}
+                        />
+                        <InfoRow label="ตำแหน่ง" icon={Briefcase}
+                            value={employee.position || '—'}
+                        />
+                        <InfoRow label="ระดับพนักงาน" icon={Shield}
                             value={EMPLOYEE_LEVELS[employee.approval_level ?? 1]?.label ?? `Level ${employee.approval_level ?? 1}`}
-                            icon={Shield}
                             editing={isEditing && isHrAdmin}
                             editNode={
-                                <select
-                                    className={editSelectClass}
-                                    value={form.approval_level}
-                                    onChange={(e) => setForm(prev => ({ ...prev, approval_level: Number(e.target.value) }))}
-                                >
+                                <select className={sel} value={form.approval_level}
+                                    onChange={e => setForm(prev => ({ ...prev, approval_level: Number(e.target.value) }))}>
                                     {Object.entries(EMPLOYEE_LEVELS).map(([lvl, { label }]) => (
                                         <option key={lvl} value={lvl}>{label}</option>
                                     ))}
                                 </select>
                             }
                         />
-                        <InfoRow
-                            label={t('employees.profile.supervisor')}
-                            value={stats.supervisor}
-                            icon={Shield}
-                        />
-                        <InfoRow
-                            label={t('employees.profile.linkedAccount')}
-                            value={employee.User?.username || t('employees.profile.notLinked')}
-                            icon={Briefcase}
-                        />
+                        <InfoRow label="ผู้บังคับบัญชา" icon={User} value={supervisorName} />
+                        <InfoRow label="สถานที่" icon={MapPin} value="Head Office (Nexus)" />
                     </div>
                 </div>
+            </div>
 
-                <div style={silverCard} className="p-6 shadow-xl space-y-6">
-                    <h2 className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-2">
-                        <Bell size={20} className="text-primary-light" /> {t('employees.profile.contactInfo')}
-                    </h2>
-                    <div className="space-y-1">
-                        <InfoRow
-                            label={t('employees.profile.officialEmail')}
-                            value={employee.email}
-                            icon={Mail}
-                            editing={isEditing}
-                            editNode={<input type="email" className={editInputClass} value={form.email} onChange={set('email')} />}
-                        />
-                        <InfoRow
-                            label={t('employees.profile.emergencyContact')}
-                            value={stats.emergencyContact === 'N/A' ? t('employees.profile.na') : stats.emergencyContact}
-                            icon={Phone}
-                            editing={isEditing}
-                            editNode={<input className={editInputClass} value={form.emergency_contact} onChange={set('emergency_contact')} placeholder="ผู้ติดต่อฉุกเฉิน" />}
-                        />
-                        <div className="pt-4 mt-2 border-t border-white/10">
-                            <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-3">
-                                {t('employees.profile.addressOverview')}
-                            </p>
-                            {isEditing ? (
-                                <textarea
-                                    className={cn(editInputClass, 'min-h-[72px] resize-none')}
-                                    value={form.address}
-                                    onChange={set('address')}
-                                    placeholder="ที่อยู่"
-                                />
-                            ) : (
-                                <p className="text-sm text-white/70 leading-relaxed italic">
-                                    {employee.applicants?.current_address || t('employees.profile.na')}
-                                </p>
-                            )}
+            {/* ── 4. Leave Statistics Chart ─────────────────────────────────── */}
+            <div style={glass} className="p-6 shadow-xl">
+                <SHead icon={FileText} label="สถิติการลา" />
+                {chartData.length === 0 ? (
+                    <p className="text-white/30 text-[0.95rem] text-center py-8">ยังไม่มีข้อมูลวันลา</p>
+                ) : (
+                    <div className="h-[220px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                                data={chartData}
+                                layout="vertical"
+                                margin={{ top: 0, right: 48, left: 8, bottom: 0 }}
+                                barCategoryGap="30%"
+                            >
+                                <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 12 }}
+                                    axisLine={false} tickLine={false} />
+                                <YAxis type="category" dataKey="name" width={80}
+                                    tick={{ fill: 'rgba(255,255,255,0.60)', fontSize: 13, fontWeight: 600 }}
+                                    axisLine={false} tickLine={false} />
+                                <Tooltip content={<LeaveTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                                <Bar dataKey="ใช้ไปแล้ว" stackId="a" fill="#ad5f6c" radius={[0, 0, 0, 0]}>
+                                    <LabelList dataKey="ใช้ไปแล้ว" position="insideRight"
+                                        style={{ fill: '#fff', fontSize: 11, fontWeight: 700 }}
+                                        formatter={(v: any) => v > 0 ? `${v}ว` : ''} />
+                                </Bar>
+                                <Bar dataKey="คงเหลือ" stackId="a" fill="rgba(255,255,255,0.18)"
+                                    radius={[0, 6, 6, 0]}>
+                                    <LabelList dataKey="คงเหลือ" position="right"
+                                        style={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 700 }}
+                                        formatter={(v: any) => v > 0 ? `${v}ว` : ''} />
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                )}
+                {/* Legend */}
+                {chartData.length > 0 && (
+                    <div className="flex items-center gap-5 mt-3 pl-2">
+                        <div className="flex items-center gap-2 text-[0.85rem] text-white/50">
+                            <span className="h-2.5 w-5 rounded-sm bg-[#ad5f6c]" /> ใช้ไปแล้ว
+                        </div>
+                        <div className="flex items-center gap-2 text-[0.85rem] text-white/50">
+                            <span className="h-2.5 w-5 rounded-sm bg-white/18 border border-white/20" /> คงเหลือ
                         </div>
                     </div>
-                </div>
+                )}
             </div>
 
-            {/* HR Internal Notes */}
-            <div style={glassCard} className="p-6 shadow-xl">
-                <h2 className="text-lg font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <MessageSquare size={20} className="text-primary-light" /> {t('employees.profile.hrLog')}
-                </h2>
-                <div className="bg-white/5 border border-dashed border-white/10 p-5 rounded-xl text-sm text-white/40 italic">
-                    {stats.notes}
-                </div>
-                <p className="mt-4 text-[10px] text-white/20 uppercase tracking-[0.2em]">
-                    * System generated log based on conversion from Applicant ID: {id}
-                </p>
+            {/* ── 5. Recent Leave History ───────────────────────────────────── */}
+            <div style={glass} className="p-6 shadow-xl">
+                <SHead icon={Calendar} label="ประวัติใบลาล่าสุด" />
+                {recentLeaves.length === 0 ? (
+                    <p className="text-white/30 text-[0.95rem] text-center py-8">ยังไม่มีประวัติใบลา</p>
+                ) : (
+                    <div className="space-y-2">
+                        {recentLeaves.map(lr => (
+                            <div key={lr.id}
+                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 px-3 rounded-xl hover:bg-white/5 transition-colors border border-white/5">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-9 w-9 rounded-lg bg-[#882136]/30 flex items-center justify-center shrink-0">
+                                        <Calendar size={16} className="text-[#ad5f6c]" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[1rem] font-semibold text-white">
+                                            {LEAVE_LABELS[lr.leave_type] ?? lr.leave_type}
+                                            <span className="text-white/40 font-normal ml-2 text-[0.85rem]">
+                                                {lr.days} วัน
+                                            </span>
+                                        </p>
+                                        <p className="text-[0.85rem] text-white/40">
+                                            {fmtDate(lr.start_date)}
+                                            {lr.end_date && lr.end_date !== lr.start_date && ` — ${fmtDate(lr.end_date)}`}
+                                        </p>
+                                    </div>
+                                </div>
+                                <span className={cn(
+                                    "text-[0.8rem] font-bold px-3 py-1 rounded-full border w-fit shrink-0",
+                                    LEAVE_STATUS_STYLE[lr.status] ?? 'bg-white/10 text-white/50 border-white/15'
+                                )}>
+                                    {LEAVE_STATUS_LABEL[lr.status] ?? lr.status}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
-            {/* Danger Zone — hr_admin only */}
+            {/* ── 6. Danger Zone (hr_admin only) ───────────────────────────── */}
             {isHrAdmin && (
                 <div style={{
-                    background: 'rgba(220,38,38,0.06)',
+                    background: 'rgba(220,38,38,0.05)',
                     border: '1px solid rgba(220,38,38,0.20)',
-                    borderRadius: '16px',
-                }} className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h3 className="text-sm font-bold text-red-400 flex items-center gap-2 mb-1">
-                            <AlertCircle size={16} /> Danger Zone
-                        </h3>
-                        <p className="text-xs text-white/40">การลบพนักงานจะลบข้อมูลและบัญชีผู้ใช้ออกจากระบบถาวร</p>
+                    borderRadius: '18px',
+                }} className="p-6">
+                    <SHead icon={AlertCircle} label="Danger Zone" />
+                    <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
+                        <p className="text-[0.9rem] text-white/40">การลบพนักงานจะลบข้อมูลและบัญชีผู้ใช้ออกจากระบบอย่างถาวร</p>
+                        <div className="flex gap-3 shrink-0">
+                            {!isEditing && (
+                                <button onClick={handleEdit}
+                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[0.95rem] font-semibold bg-[#882136]/40 hover:bg-[#882136]/70 text-[#ad5f6c] hover:text-white border border-[#ad5f6c]/30 transition-all">
+                                    <Pencil size={15} /> แก้ไขข้อมูล
+                                </button>
+                            )}
+                            <button onClick={() => setShowDeleteConfirm(true)}
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[0.95rem] font-semibold bg-red-600/15 hover:bg-red-600/35 text-red-400 hover:text-red-300 border border-red-500/30 hover:border-red-500/60 transition-all">
+                                <Trash2 size={15} /> ลบพนักงาน
+                            </button>
+                        </div>
                     </div>
-                    <button
-                        onClick={() => setShowDeleteConfirm(true)}
-                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 border border-red-500/30 hover:border-red-500/60 transition-all shrink-0"
-                    >
-                        <Trash2 size={15} /> ลบพนักงาน
-                    </button>
                 </div>
             )}
         </div>
