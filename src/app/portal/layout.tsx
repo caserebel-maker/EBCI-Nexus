@@ -1,4 +1,5 @@
 import { DashboardShell } from '@/components/layout/shell'
+import { RoleProvider } from '@/contexts/role-context'
 import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 
@@ -13,13 +14,11 @@ export default async function EmployeeLayout({
         redirect('/login')
     }
 
-    console.log('SESSION OBJECT:', JSON.stringify(session))
-    console.log('SESSION ROLE:', session?.role)
-    console.log('[layout] passing role to DashboardShell:', session.role)
-
     return (
-        <DashboardShell role={session.role} userName={session.name}>
-            {children}
-        </DashboardShell>
+        <RoleProvider role={session.role}>
+            <DashboardShell role={session.role} userName={session.name}>
+                {children}
+            </DashboardShell>
+        </RoleProvider>
     )
 }

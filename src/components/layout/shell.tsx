@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LogOut } from 'lucide-react'
@@ -20,10 +20,6 @@ interface DashboardShellProps {
 export function DashboardShell({ children, role, userName }: DashboardShellProps) {
     const pathname = usePathname()
     const { t } = useTranslation()
-
-    useEffect(() => {
-        console.log('[shell] role prop received:', role)
-    }, [role])
 
     // Navigation Items based on Role (Dynamic)
     const navItems = NAVIGATION_CONFIG[role] || []
@@ -160,7 +156,7 @@ export function DashboardShell({ children, role, userName }: DashboardShellProps
             </main>
 
             {/* Mobile Bottom Navigation — all roles */}
-            <PortalBottomNav role={role} />
+            <PortalBottomNav />
         </div>
     )
 }

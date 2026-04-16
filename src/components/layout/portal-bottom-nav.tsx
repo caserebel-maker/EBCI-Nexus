@@ -5,12 +5,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
     Home, Users, Bell, Megaphone, MoreHorizontal, Clock, CalendarDays,
-    ClipboardCheck, CheckSquare, LogOut, FileText, UserCircle,
+    ClipboardCheck, CheckSquare, LogOut, FileText,
     Settings, ChevronRight, X, UserRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-type Role = 'hr_admin' | 'manager' | 'employee'
+import { useRole, type Role } from '@/contexts/role-context'
 
 interface NavItem {
     label: string
@@ -73,17 +72,11 @@ async function handleLogout() {
     window.location.href = '/login'
 }
 
-interface PortalBottomNavProps {
-    role: Role
-}
-
-export function PortalBottomNav({ role }: PortalBottomNavProps) {
+export function PortalBottomNav() {
+    const role = useRole()
     const pathname = usePathname()
     const [moreOpen, setMoreOpen] = useState(false)
 
-    console.log('[bottomnav] role:', role, '| navItems:', NAV_CONFIG[role]?.map(i => i.label))
-
-    // role comes directly from the server (portal/layout.tsx → DashboardShell → here)
     const navItems = NAV_CONFIG[role] ?? NAV_CONFIG.employee
     const moreItems = MORE_CONFIG[role] ?? MORE_CONFIG.employee
 

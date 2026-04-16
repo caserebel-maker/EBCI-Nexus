@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
 
 export default function PortalRoot() {
-    redirect('/portal/hradmin')
+    redirect('/hradmin')
 }
