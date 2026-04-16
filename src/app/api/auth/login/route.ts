@@ -40,20 +40,9 @@ export async function POST(request: Request) {
 
         const sessionData = JSON.stringify({ id: data.user.id, role, name, employeeId })
         const cookieStore = await cookies()
-        const isProduction = process.env.NODE_ENV === 'production'
-
-        // Main session — httpOnly (secure, server-readable only)
         cookieStore.set('nexus_session', sessionData, {
             httpOnly: true,
-            secure: isProduction,
-            maxAge: 60 * 60 * 24 * 7,
-            path: '/',
-        })
-
-        // Role indicator — NOT httpOnly so client components can read it for UI (not sensitive)
-        cookieStore.set('nexus_role', role, {
-            httpOnly: false,
-            secure: isProduction,
+            secure: process.env.NODE_ENV === 'production',
             maxAge: 60 * 60 * 24 * 7,
             path: '/',
         })

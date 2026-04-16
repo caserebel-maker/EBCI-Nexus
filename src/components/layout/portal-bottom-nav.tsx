@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -77,40 +77,14 @@ interface PortalBottomNavProps {
     role: Role
 }
 
-/** Read role from nexus_role cookie (non-httpOnly, set by login route).
- *  nexus_session is httpOnly so document.cookie cannot access it.
- *  nexus_role is a plain string cookie containing just the role value. */
-function useSessionRole(fallback: Role): Role {
-    const [role, setRole] = useState<Role>(fallback)
-
-    useEffect(() => {
-        const match = document.cookie
-            .split('; ')
-            .find(c => c.startsWith('nexus_role='))
-        const cookieRole = match ? (decodeURIComponent(match.split('=')[1]) as Role) : null
-
-        console.log('[BottomNav] role from prop:', fallback)
-        console.log('[BottomNav] role from cookie (nexus_role):', cookieRole)
-
-        if (cookieRole && NAV_CONFIG[cookieRole]) {
-            setRole(cookieRole)
-        } else {
-            console.warn('[BottomNav] nexus_role cookie not found or invalid, using prop:', fallback)
-        }
-    }, [fallback])
-
-    return role
-}
-
-export function PortalBottomNav({ role: roleProp }: PortalBottomNavProps) {
+export function PortalBottomNav({ role }: PortalBottomNavProps) {
     const pathname = usePathname()
     const [moreOpen, setMoreOpen] = useState(false)
 
-    // Always read from cookie — source of truth for the current logged-in session
-    const role = useSessionRole(roleProp)
-
-    const navItems = NAV_CONFIG[role]
-    const moreItems = MORE_CONFIG[role]
+    // role comes directly from the server (portal/layout.tsx → DashboardShell → here)
+    // No client-side cookie reading needed
+    const navItems = NAV_CONFIG[role] ?? NAV_CONFIG.employee
+    const moreItems = MORE_CONFIG[role] ?? MORE_CONFIG.employee
 
     const isNavActive = (item: NavItem) =>
         item.exact ? pathname === item.href : pathname?.startsWith(item.href)

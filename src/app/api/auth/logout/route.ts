@@ -4,6 +4,5 @@ import { cookies } from 'next/headers'
 export async function POST(request: Request) {
     const cookieStore = await cookies()
     cookieStore.delete('nexus_session')
-    cookieStore.delete('nexus_role')
     return NextResponse.json({ success: true, redirectTo: '/login' })
 }
