@@ -49,8 +49,17 @@ export default async function PortalDashboardPage() {
         })
 
         if (emp) {
+            // Prefer photo_url (public URL from employee-photos bucket)
+            // Fallback: signed URL from applicant-assets (legacy)
             let avatarUrl: string | null = null
-            if (emp.applicant?.photoPath) {
+            const { data: empRow } = await supabaseAdmin
+                .from('employees')
+                .select('photo_url')
+                .eq('id', emp.id)
+                .single()
+            avatarUrl = empRow?.photo_url ?? null
+
+            if (!avatarUrl && emp.applicant?.photoPath) {
                 try {
                     const { data } = await supabaseAdmin.storage
                         .from('applicant-assets')

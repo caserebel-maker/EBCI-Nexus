@@ -35,6 +35,7 @@ export type Employee = {
     email: string
     phone?: string | null
     startDate: Date
+    photoUrl?: string | null
     photoPath?: string | null
     quitDate?: string | null
     quitReason?: string | null
@@ -365,8 +366,8 @@ function EmployeeNameCell({ employee }: { employee: Employee }) {
     return (
         <div className="flex items-center gap-4">
             <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white font-bold border border-white/10 overflow-hidden text-lg shrink-0">
-                {employee.photoPath ? (
-                    <img src={employee.photoPath} alt="" className="w-full h-full object-cover" />
+                {(employee.photoUrl || employee.photoPath) ? (
+                    <img src={employee.photoUrl ?? employee.photoPath!} alt="" className="w-full h-full object-cover" />
                 ) : (
                     (employee.firstNameEN?.charAt(0) ?? employee.firstNameTH.charAt(0))
                 )}
