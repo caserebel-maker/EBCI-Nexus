@@ -254,8 +254,8 @@ export async function uploadNewEmployeePhoto(employeeId: string, formData: FormD
     const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
     const filePath = `employees/${employeeId}/profile.${ext}`
 
-    // Ensure bucket exists (no-op if already exists)
-    await supabaseAdmin.storage.createBucket('employee-photos', { public: false }).catch(() => {})
+    // Ensure bucket exists as public (no-op if already exists)
+    await supabaseAdmin.storage.createBucket('employee-photos', { public: true }).catch(() => {})
 
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
         .from('employee-photos')
@@ -266,12 +266,16 @@ export async function uploadNewEmployeePhoto(employeeId: string, formData: FormD
         return { error: uploadError.message }
     }
 
+    const { data: { publicUrl } } = supabaseAdmin.storage
+        .from('employee-photos')
+        .getPublicUrl(uploadData.path)
+
     const { error: dbError } = await supabaseAdmin
         .from('employees')
-        .update({ photo_path: uploadData.path })
+        .update({ photo_path: uploadData.path, photo_url: publicUrl })
         .eq('id', employeeId)
 
     if (dbError) return { error: dbError.message }
 
-    return { success: true, path: uploadData.path }
+    return { success: true, path: uploadData.path, url: publicUrl }
 }

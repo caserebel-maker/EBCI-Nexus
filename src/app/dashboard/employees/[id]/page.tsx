@@ -27,6 +27,8 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
         .from('employees')
         .select(`
             *,
+            photo_url,
+            photo_path,
             applicants (
                 photo_path,
                 nickname,
@@ -52,14 +54,17 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
     const displayName = `${employee.first_name_th} ${employee.last_name_th}`
 
     // ── Photo URL ──────────────────────────────────────────────────────────────
-    let photoUrl: string | null = null
-    const photoPath = employee.photo_path || employee.applicants?.photo_path
-    if (photoPath) {
-        const bucket = employee.photo_path ? 'employee-photos' : 'applicant-assets'
-        const { data } = await supabaseAdmin.storage
-            .from(bucket)
-            .createSignedUrl(photoPath, 3600)
-        photoUrl = data?.signedUrl ?? null
+    // Prefer photo_url (public URL stored after upload to employee-photos bucket)
+    // Fall back to signed URL from applicants bucket (legacy / applicant photo)
+    let photoUrl: string | null = employee.photo_url ?? null
+    if (!photoUrl) {
+        const legacyPath = employee.applicants?.photo_path
+        if (legacyPath) {
+            const { data } = await supabaseAdmin.storage
+                .from('applicant-assets')
+                .createSignedUrl(legacyPath, 3600)
+            photoUrl = data?.signedUrl ?? null
+        }
     }
 
     // ── All employees for supervisor dropdown ──────────────────────────────────
