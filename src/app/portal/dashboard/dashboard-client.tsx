@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { FileText, Clock, Calendar, MapPin, User, Bell, X, ChevronLeft, ChevronRight } from 'lucide-react'
-import { PieChart, Pie, Cell, Sector } from 'recharts'
 import type { AnnouncementItem } from './page'
 
 interface Employee {
@@ -261,168 +260,48 @@ function AnnouncementSlideshow({ announcements }: { announcements: AnnouncementI
     )
 }
 
-// ─── Donut Chart (Recharts) ───────────────────────────────────────────────────
-const PIE_SEGMENTS = [
-    { key: 'annual',   valueKey: 'remainingDays', label: 'พักร้อนคงเหลือ', color: '#60A5FA' },
-    { key: 'sick',     valueKey: 'usedDays',      label: 'ป่วย (ใช้ไป)',    color: '#F87171' },
-    { key: 'personal', valueKey: 'remainingDays', label: 'กิจคงเหลือ',     color: '#FBBF24' },
-]
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const PieCompat = Pie as any
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function renderActiveShape(props: any) {
-    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props
-    return (
-        <Sector
-            cx={cx} cy={cy}
-            innerRadius={innerRadius - 3}
-            outerRadius={outerRadius + 6}
-            startAngle={startAngle}
-            endAngle={endAngle}
-            fill={fill}
-        />
-    )
-}
-
-function LeavePieChart({ leaveBalances }: { leaveBalances: LeaveBalance[] }) {
-    const [activeIndex, setActiveIndex] = useState<number | null>(null)
-
-    const segments = PIE_SEGMENTS.map(seg => {
-        const bal = leaveBalances.find(b => b.leaveType === seg.key)
-        const value = seg.valueKey === 'usedDays' ? (bal?.usedDays ?? 0) : (bal?.remainingDays ?? 0)
-        return { ...seg, value: Math.max(0, value) }
-    })
-
-    const hasData = segments.some(s => s.value > 0)
-    const annualBalance = leaveBalances.find(b => b.leaveType === 'annual')
-    const annualRemaining = annualBalance?.remainingDays ?? 0
-    const annualUsed = annualBalance?.usedDays ?? 0
-
-    const activeSeg = activeIndex !== null ? segments[activeIndex] : null
-    const chartSize = 150
-    const cx = chartSize / 2
-    const cy = chartSize / 2
+// ─── Mini SVG Donut ───────────────────────────────────────────────────────────
+function MiniDonut({
+    remaining, entitled, color, label,
+}: {
+    remaining: number
+    entitled: number
+    color: string
+    label: string
+}) {
+    const r = 34
+    const cx = 46
+    const cy = 46
+    const sw = 9
+    const circ = 2 * Math.PI * r
+    const pct = entitled > 0 ? Math.max(0, Math.min(remaining / entitled, 1)) : 0
+    const remainingDash = pct * circ
 
     return (
-        <div className="flex flex-col items-center gap-2">
-            <div className="relative" style={{ width: chartSize, height: chartSize }}>
-                {hasData ? (
-                    <PieChart width={chartSize} height={chartSize}>
-                        <PieCompat
-                            data={segments}
-                            cx={cx} cy={cy}
-                            innerRadius={48}
-                            outerRadius={67}
-                            dataKey="value"
-                            startAngle={90}
-                            endAngle={-270}
-                            strokeWidth={2}
-                            stroke="rgba(0,0,0,0.15)"
-                            activeIndex={activeIndex ?? undefined}
-                            activeShape={renderActiveShape}
-                            onMouseEnter={(_: unknown, index: number) => setActiveIndex(index)}
-                            onMouseLeave={() => setActiveIndex(null)}
-                            onClick={(_: unknown, index: number) => setActiveIndex(activeIndex === index ? null : index)}
-                            style={{ cursor: 'pointer' }}
-                        >
-                            {segments.map((seg, i) => (
-                                <Cell key={i} fill={seg.value > 0 ? seg.color : 'rgba(255,255,255,0.06)'} />
-                            ))}
-                        </PieCompat>
-                    </PieChart>
-                ) : (
-                    <svg width={chartSize} height={chartSize}>
-                        <circle cx={cx} cy={cy} r={57} fill="none"
-                            stroke="rgba(255,255,255,0.1)" strokeWidth={18} />
-                    </svg>
-                )}
-
-                {/* Center label */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    {activeSeg ? (
-                        <>
-                            <span className="rounded-full mb-1"
-                                style={{ width: 8, height: 8, background: activeSeg.color, display: 'inline-block' }} />
-                            <span className="text-white font-bold" style={{ fontSize: '20px', lineHeight: 1 }}>
-                                {activeSeg.value}
-                            </span>
-                            <span className="text-white/50 text-center px-2" style={{ fontSize: '9px', maxWidth: 80 }}>
-                                {activeSeg.label}
-                            </span>
-                        </>
-                    ) : (
-                        <>
-                            <span className="text-white font-bold" style={{ fontSize: '24px', lineHeight: 1 }}>
-                                {annualRemaining}
-                            </span>
-                            <span className="text-white/50" style={{ fontSize: '10px' }}>วันคงเหลือ</span>
-                        </>
+        <div className="flex flex-col items-center">
+            <div className="relative" style={{ width: 92, height: 92 }}>
+                <svg width={92} height={92} viewBox="0 0 92 92">
+                    {/* Used (gray track) */}
+                    <circle cx={cx} cy={cy} r={r} fill="none"
+                        stroke="rgba(255,255,255,0.12)" strokeWidth={sw} />
+                    {/* Remaining (colored) */}
+                    {remainingDash > 0.5 && (
+                        <circle cx={cx} cy={cy} r={r} fill="none"
+                            stroke={color} strokeWidth={sw} strokeLinecap="round"
+                            strokeDasharray={`${remainingDash} ${circ}`}
+                            transform={`rotate(-90, ${cx}, ${cy})`} />
                     )}
+                </svg>
+                {/* Center */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-white font-black leading-none" style={{ fontSize: '20px' }}>
+                        {remaining}
+                    </span>
+                    <span className="font-semibold" style={{ fontSize: '9.5px', color: color + 'cc' }}>
+                        {label}
+                    </span>
                 </div>
             </div>
-
-            {/* Legend */}
-            <div className="flex flex-col gap-1 w-full">
-                {segments.map((seg, i) => (
-                    <button
-                        key={i}
-                        className="flex items-center gap-1.5 text-left w-full"
-                        onMouseEnter={() => setActiveIndex(i)}
-                        onMouseLeave={() => setActiveIndex(null)}
-                        onClick={() => setActiveIndex(activeIndex === i ? null : i)}
-                    >
-                        <span className="rounded-full shrink-0"
-                            style={{ width: 7, height: 7, background: seg.color }} />
-                        <span className="text-white/50 truncate" style={{ fontSize: '10px' }}>
-                            {seg.label}: <span className="text-white/70 font-medium">{seg.value}</span>
-                        </span>
-                    </button>
-                ))}
-            </div>
-
-            {/* ใช้ไป / คงเหลือ annual summary */}
-            <div className="flex gap-3 mt-1">
-                <span className="text-white/40" style={{ fontSize: '10px' }}>
-                    ใช้ไป <span className="text-white/65 font-bold">{annualUsed}</span> วัน
-                </span>
-            </div>
-        </div>
-    )
-}
-
-// ─── Leave Balance Right Panel ────────────────────────────────────────────────
-function LeaveRightPanel({ leaveBalances }: { leaveBalances: LeaveBalance[] }) {
-    const annual = leaveBalances.find(b => b.leaveType === 'annual')
-    const remaining = annual?.remainingDays ?? 0
-    const entitled  = annual?.entitledDays  ?? 6
-    const used      = annual?.usedDays      ?? 0
-    const pct = entitled > 0 ? Math.round((used / entitled) * 100) : 0
-
-    return (
-        <div className="flex flex-col justify-center gap-2 flex-1">
-            <p className="text-white/40 font-bold uppercase tracking-wider" style={{ fontSize: '10px' }}>
-                ลาพักร้อน คงเหลือ
-            </p>
-            <p className="text-white font-black leading-none" style={{ fontSize: '52px' }}>
-                {remaining}
-            </p>
-            <p className="text-white/45" style={{ fontSize: '11px' }}>
-                สิทธิ์ทั้งหมด {entitled} วัน
-            </p>
-            <p className="text-white/35" style={{ fontSize: '11px' }}>
-                ใช้ไปแล้ว {used} วัน
-            </p>
-
-            {/* Progress bar */}
-            <div className="mt-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)', maxWidth: 140 }}>
-                <div
-                    className="h-full rounded-full"
-                    style={{ width: `${pct}%`, background: '#882136' }}
-                />
-            </div>
-            <p className="text-white/25" style={{ fontSize: '10px' }}>{pct}% ของสิทธิ์</p>
         </div>
     )
 }
@@ -442,39 +321,54 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
             {/* 2. Announcement Slideshow (banner ประกาศ) */}
             <AnnouncementSlideshow announcements={announcements} />
 
-            {/* 3. Leave Balance Card — Donut (left) + Big number (right) */}
-            <div style={glass} className="p-4">
-                <p className="text-white/40 font-bold uppercase tracking-wider mb-3" style={{ fontSize: '10px' }}>
-                    วันลา — ปี {new Date().getFullYear()}
-                </p>
+            {/* 3. Leave Balance Card — 2 Donut Charts */}
+            {(() => {
+                const annual = leaveBalances.find(b => b.leaveType === 'annual')
+                const sick   = leaveBalances.find(b => b.leaveType === 'sick')
+                const annualRemaining = annual?.remainingDays ?? 6
+                const annualEntitled  = annual?.entitledDays  ?? 6
+                const sickRemaining   = sick?.remainingDays   ?? 30
+                const sickEntitled    = sick?.entitledDays    ?? 30
 
-                <div className="flex items-start gap-4">
-                    {/* Left: Donut chart */}
-                    <LeavePieChart leaveBalances={leaveBalances} />
+                return (
+                    <div style={glass} className="p-4">
+                        <p className="text-white/40 font-bold uppercase tracking-wider mb-3" style={{ fontSize: '10px' }}>
+                            วันลา — ปี {new Date().getFullYear()}
+                        </p>
+                        <div className="flex items-center justify-around">
+                            <MiniDonut
+                                remaining={annualRemaining}
+                                entitled={annualEntitled}
+                                color="#34D399"
+                                label="พักร้อน"
+                            />
+                            <div className="w-px self-stretch" style={{ background: 'rgba(255,255,255,0.08)' }} />
+                            <MiniDonut
+                                remaining={sickRemaining}
+                                entitled={sickEntitled}
+                                color="#60A5FA"
+                                label="ป่วย"
+                            />
+                        </div>
 
-                    {/* Divider */}
-                    <div className="self-stretch w-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
-
-                    {/* Right: Big remaining days */}
-                    <LeaveRightPanel leaveBalances={leaveBalances} />
-                </div>
-
-                {/* Gender-specific leave row */}
-                {genderBalance && (
-                    <div
-                        className="flex items-center justify-between px-1 mt-3 pt-2.5"
-                        style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
-                    >
-                        <span className="text-white/55" style={{ fontSize: '12px' }}>
-                            {GENDER_LEAVE_LABEL[genderBalance.leaveType] ?? genderBalance.leaveType}
-                        </span>
-                        <span className="text-white/80 font-medium" style={{ fontSize: '12px' }}>
-                            {genderBalance.remainingDays}
-                            <span className="text-white/35"> / {genderBalance.entitledDays} วัน</span>
-                        </span>
+                        {/* Gender-specific leave row */}
+                        {genderBalance && (
+                            <div
+                                className="flex items-center justify-between px-1 mt-3 pt-2.5"
+                                style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
+                            >
+                                <span className="text-white/55" style={{ fontSize: '12px' }}>
+                                    {GENDER_LEAVE_LABEL[genderBalance.leaveType] ?? genderBalance.leaveType}
+                                </span>
+                                <span className="text-white/80 font-medium" style={{ fontSize: '12px' }}>
+                                    {genderBalance.remainingDays}
+                                    <span className="text-white/35"> / {genderBalance.entitledDays} วัน</span>
+                                </span>
+                            </div>
+                        )}
                     </div>
-                )}
-            </div>
+                )
+            })()}
 
             {/* 4. เมนูด่วน */}
             <div style={glass} className="p-4">
