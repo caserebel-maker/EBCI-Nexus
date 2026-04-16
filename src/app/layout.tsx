@@ -5,6 +5,8 @@ import './globals.css'
 import { cn } from '@/lib/utils'
 import { ThemeProvider } from "@/components/theme-provider"
 import { Providers } from "@/components/providers"
+import { RoleProvider } from '@/contexts/role-context'
+import { getSession } from '@/lib/auth'
 
 const kanit = Kanit({
   subsets: ['latin', 'thai'],
@@ -32,11 +34,12 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const session = await getSession()
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -60,7 +63,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <Providers>
-            {children}
+            <RoleProvider role={session?.role ?? 'employee'}>
+              {children}
+            </RoleProvider>
           </Providers>
         </ThemeProvider>
       </body>

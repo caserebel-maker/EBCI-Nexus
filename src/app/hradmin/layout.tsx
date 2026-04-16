@@ -32,7 +32,7 @@ export default async function AdminLayout({
     }
 
     return (
-        <DashboardShell role={session.role as 'hr_admin' | 'manager'} userName={session.name}>
+        <DashboardShell role={session.role as 'hr_admin' | 'manager'} userName={session.name} showBottomNav>
             <EmergencyBanner emergency={emergency} />
             {children}
         </DashboardShell>
