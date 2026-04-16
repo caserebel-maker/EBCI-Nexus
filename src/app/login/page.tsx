@@ -1,15 +1,17 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Loader2, Mail, Lock } from 'lucide-react'
 import { LanguageToggle } from '@/components/ui/language-toggle'
 import { useTranslation } from '@/contexts/language-context'
 
-export default function LoginPage() {
+function LoginForm() {
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
-
-
+    const searchParams = useSearchParams()
+    // If coming from /portal (unauthenticated), redirect back there after login
+    const redirectAfterLogin = searchParams.get('redirect') ?? null
 
     const { t } = useTranslation()
 
@@ -76,8 +78,8 @@ export default function LoginPage() {
                                 throw new Error(result.error || t('auth.errorCredentials'))
                             }
 
-                            // Success -> Redirect
-                            window.location.href = result.redirectTo
+                            // Success → use redirect param if present, otherwise role-based home
+                            window.location.href = redirectAfterLogin ?? result.redirectTo
                         } catch (err) {
                             console.error("Login Error:", err)
                             setError((err as Error).message)
@@ -137,5 +139,13 @@ export default function LoginPage() {
                 </p>
             </div>
         </div>
+    )
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense>
+            <LoginForm />
+        </Suspense>
     )
 }

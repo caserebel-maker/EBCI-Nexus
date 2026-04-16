@@ -11,7 +11,12 @@ export function middleware(request: NextRequest) {
     // ── 1. No session → redirect to login ────────────────────────────────────
     if (!sessionCookie) {
         if (PROTECTED_PREFIXES.some(p => pathname.startsWith(p))) {
-            return NextResponse.redirect(new URL('/login', request.url))
+            // Preserve /portal entry point so login can send user back there
+            const loginUrl = new URL('/login', request.url)
+            if (pathname.startsWith('/portal')) {
+                loginUrl.searchParams.set('redirect', '/portal')
+            }
+            return NextResponse.redirect(loginUrl)
         }
         return NextResponse.next()
     }
