@@ -177,15 +177,23 @@ export async function createEmployee(payload: CreateEmployeePayload) {
                 },
             })
 
+            let authUserId: string | null = null
+
             if (authError) {
                 if (authError.message?.includes('already been registered')) {
-                    console.log('[createEmployee] email already exists in auth, skipping')
+                    // Email already in Auth — look up the existing user to continue the flow
+                    console.log('[createEmployee] email already exists in auth, fetching existing user')
+                    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
+                    const existing = existingUsers?.users?.find(u => u.email === payload.email)
+                    if (existing) authUserId = existing.id
                 } else {
                     console.error('[createEmployee] auth.admin.createUser failed:', authError.message)
                 }
             } else if (authData.user) {
-                const authUserId = authData.user.id
+                authUserId = authData.user.id
+            }
 
+            if (authUserId) {
                 // 3. Generate password-reset link (recovery type, valid 24h)
                 const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
                     type: 'recovery',
