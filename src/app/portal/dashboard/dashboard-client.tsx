@@ -147,7 +147,6 @@ function WelcomeSection({ employee, sessionName }: { employee: Employee | null; 
                 </div>
             </div>
         </>
-        </div>
     )
 }
 
