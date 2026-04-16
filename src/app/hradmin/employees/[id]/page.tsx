@@ -11,6 +11,7 @@ interface PageProps {
 
 export default async function EmployeeDetailPage({ params }: PageProps) {
     const { id } = await params
+    console.log(`[employee-detail] requested id="${id}"`)
 
     // Resolve role from session cookie
     const cookieStore = await cookies()
@@ -23,39 +24,39 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
         } catch { /* ignore */ }
     }
 
-    const { data: employee, error } = await supabaseAdmin
-        .from('employees')
-        .select(`
-            *,
-            photo_url,
-            photo_path,
-            applicants (
-                photo_path,
-                nickname,
-                phone,
-                email,
-                current_address,
-                applicant_educations (*),
-                applicant_experiences (*)
-            ),
-            User:user_id (
-                username,
-                role
-            )
-        `)
-        .eq('employee_code', id)
-        .single()
+    // ── Fetch employee — try employee_code first, fallback to UUID ─────────────
+    // employee_code: text ID used in URLs (e.g. EMP001)
+    // id (UUID): legacy links may still use this
+    const SELECT = `*, applicants (photo_path, nickname, phone, email, current_address)`
 
-    if (error || !employee) {
-        if (error) console.error("Supabase Error:", error)
-        notFound()
+    let employee: any = null
+    const { data: byCode, error: codeError } = await supabaseAdmin
+        .from('employees')
+        .select(SELECT)
+        .eq('employee_code', id)
+        .maybeSingle()
+
+    if (byCode) {
+        employee = byCode
+    } else {
+        console.error(`[employee-detail] employee_code lookup failed for "${id}":`, JSON.stringify(codeError))
+        // Fallback: try UUID (old links)
+        const { data: byUuid, error: uuidError } = await supabaseAdmin
+            .from('employees')
+            .select(SELECT)
+            .eq('id', id)
+            .maybeSingle()
+        if (byUuid) {
+            employee = byUuid
+        } else {
+            console.error(`[employee-detail] UUID lookup also failed for "${id}":`, JSON.stringify(uuidError))
+            notFound()
+        }
     }
 
     const displayName = `${employee.first_name_th} ${employee.last_name_th}`
 
     // ── Photo URL ──────────────────────────────────────────────────────────────
-    // Prefer photo_url (public URL stored after upload to employee-photos bucket)
-    // Fall back to signed URL from applicants bucket (legacy / applicant photo)
     let photoUrl: string | null = employee.photo_url ?? null
     if (!photoUrl) {
         const legacyPath = employee.applicants?.photo_path
@@ -82,9 +83,12 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
     let supervisorName = '—'
     if (employee.supervisor_id) {
         const sup = allEmployeesRaw?.find(e => e.id === employee.supervisor_id)
-            ?? (employee.supervisor_id
-                ? await supabaseAdmin.from('employees').select('first_name_th, last_name_th').eq('id', employee.supervisor_id).single().then(r => r.data)
-                : null)
+            ?? (await supabaseAdmin
+                .from('employees')
+                .select('first_name_th, last_name_th')
+                .eq('id', employee.supervisor_id)
+                .single()
+                .then(r => r.data))
         if (sup) supervisorName = `${sup.first_name_th} ${sup.last_name_th}`
     }
 
