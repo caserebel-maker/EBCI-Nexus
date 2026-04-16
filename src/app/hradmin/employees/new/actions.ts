@@ -204,7 +204,14 @@ export async function createEmployee(payload: CreateEmployeePayload) {
                     console.error('[createEmployee] generateLink failed:', linkError.message)
                 } else {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const resetLink: string = (linkData as any)?.properties?.action_link ?? ''
+                    const rawLink: string = (linkData as any)?.properties?.action_link ?? ''
+
+                    // Supabase generateLink uses the project's "Site URL" setting which may
+                    // point to localhost. Replace the origin with the real production URL.
+                    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ebci-nexus.vercel.app'
+                    const resetLink = rawLink
+                        ? rawLink.replace(/^https?:\/\/[^/]+/, appUrl.replace(/\/$/, ''))
+                        : ''
 
                     if (resetLink) {
                         const resend = new Resend(process.env.RESEND_API_KEY)
