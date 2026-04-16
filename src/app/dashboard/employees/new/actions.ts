@@ -178,7 +178,11 @@ export async function createEmployee(payload: CreateEmployeePayload) {
             })
 
             if (authError) {
-                console.error('[createEmployee] auth.admin.createUser failed:', authError.message)
+                if (authError.message?.includes('already been registered')) {
+                    console.log('[createEmployee] email already exists in auth, skipping')
+                } else {
+                    console.error('[createEmployee] auth.admin.createUser failed:', authError.message)
+                }
             } else if (authData.user) {
                 const authUserId = authData.user.id
 
