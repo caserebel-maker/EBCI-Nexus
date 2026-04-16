@@ -46,21 +46,30 @@ export default function ResetPasswordPage() {
 
         setLoading(true)
         const { error } = await supabase.auth.updateUser({ password })
-        setLoading(false)
 
         if (error) {
+            setLoading(false)
             setStatus({ type: 'error', message: error.message })
-        } else {
-            setStatus({ type: 'success', message: 'ตั้งรหัสผ่านสำเร็จ! กำลังพาไปหน้าเข้าสู่ระบบ...' })
-            await supabase.auth.signOut()
-            // Clear server-side nexus_session cookie via logout API
-            await fetch('/api/auth/logout', { method: 'POST' })
-            // Clear all client-side cookies too
-            document.cookie.split(';').forEach(c => {
-                document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')
-            })
-            setTimeout(() => { window.location.replace('/login?message=password-set') }, 1500)
+            return
         }
+
+        // ── Cleanup: clear ALL sessions before redirecting ────────────────────
+        // 1. Sign out Supabase client session (clears localStorage/Supabase cookies)
+        await supabase.auth.signOut()
+
+        // 2. Clear server-side nexus_session + sb-* cookies via API route
+        await fetch('/api/auth/logout', { method: 'POST' })
+
+        // 3. Expire all client-visible cookies (belt & suspenders)
+        document.cookie.split(';').forEach(c => {
+            document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')
+        })
+
+        // Show success briefly, then hard-navigate (not router.push — forces full reload
+        // so middleware reads fresh cookies instead of cached state)
+        setStatus({ type: 'success', message: 'ตั้งรหัสผ่านสำเร็จ! กำลังพาไปหน้าเข้าสู่ระบบ...' })
+        setLoading(false)
+        setTimeout(() => { window.location.replace('/login?message=password-set') }, 1200)
     }
 
     return (
