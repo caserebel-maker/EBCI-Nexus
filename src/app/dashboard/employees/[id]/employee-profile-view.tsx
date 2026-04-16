@@ -4,12 +4,13 @@ import { useState, useTransition, useRef } from "react"
 import {
     ArrowLeft, User, Phone, Mail, MapPin, Building, Briefcase,
     Calendar, Clock, Shield, Bell, FileText, ChevronRight,
-    MessageSquare, Pencil, X, Check, AlertCircle, CheckCircle2, Camera
+    MessageSquare, Pencil, X, Check, AlertCircle, CheckCircle2, Camera, Trash2
 } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "@/contexts/language-context"
-import { updateEmployee, uploadEmployeePhoto } from "./actions"
+import { updateEmployee, uploadEmployeePhoto, deleteEmployee } from "./actions"
 import { EMPLOYEE_LEVELS, LEVEL_BADGE_COLORS } from "@/config/employee-levels"
 import { DEPARTMENTS } from "@/config/departments"
 
@@ -89,6 +90,7 @@ function InfoRow({
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id, isHrAdmin }: Props) {
     const { t } = useTranslation()
+    const router = useRouter()
 
     const initForm = (): FormState => ({
         first_name_th: employee.first_name_th ?? '',
@@ -115,6 +117,8 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
     const [photoPreview, setPhotoPreview] = useState<string | null>(null)
     const [photoFile, setPhotoFile] = useState<File | null>(null)
     const photoInputRef = useRef<HTMLInputElement>(null)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
 
     const set = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
         setForm(prev => ({ ...prev, [field]: e.target.value }))
@@ -174,10 +178,63 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
         })
     }
 
+    const handleDelete = async () => {
+        setIsDeleting(true)
+        const result = await deleteEmployee(id)
+        if (result.error) {
+            setIsDeleting(false)
+            setShowDeleteConfirm(false)
+            showToast('error', `ลบไม่สำเร็จ: ${result.error}`)
+        } else {
+            router.push('/dashboard/employees')
+        }
+    }
+
     const currentDisplayName = isEditing ? `${form.first_name_th} ${form.last_name_th}` : displayName
 
     return (
         <div className="space-y-6 max-w-6xl mx-auto pb-20">
+            {/* Delete Confirm Dialog */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div style={{
+                        background: 'rgba(20,4,10,0.96)',
+                        backdropFilter: 'blur(16px)',
+                        border: '1px solid rgba(220,38,38,0.35)',
+                        borderRadius: '16px',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+                    }} className="w-full max-w-md p-6 space-y-5">
+                        <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0">
+                                <Trash2 size={20} className="text-red-400" />
+                            </div>
+                            <h2 className="text-lg font-bold text-white">ยืนยันการลบพนักงาน</h2>
+                        </div>
+                        <p className="text-sm text-white/70 leading-relaxed">
+                            คุณต้องการลบ <span className="text-white font-bold">{displayName}</span> ออกจากระบบใช่หรือไม่?<br />
+                            <span className="text-red-400 font-semibold">การกระทำนี้ไม่สามารถย้อนกลับได้</span>
+                        </p>
+                        <div className="flex gap-3 pt-1">
+                            <button
+                                onClick={() => setShowDeleteConfirm(false)}
+                                disabled={isDeleting}
+                                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white/10 hover:bg-white/15 text-white/70 hover:text-white border border-white/15 transition-all disabled:opacity-50"
+                            >
+                                ยกเลิก
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold bg-red-600/80 hover:bg-red-600 text-white border border-red-500/40 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                            >
+                                <Trash2 size={14} />
+                                {isDeleting ? 'กำลังลบ...' : 'ลบพนักงาน'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Toast */}
             {toast && (
                 <div className={cn(
@@ -542,6 +599,28 @@ export function EmployeeProfileView({ employee, photoUrl, displayName, stats, id
                     * System generated log based on conversion from Applicant ID: {id}
                 </p>
             </div>
+
+            {/* Danger Zone — hr_admin only */}
+            {isHrAdmin && (
+                <div style={{
+                    background: 'rgba(220,38,38,0.06)',
+                    border: '1px solid rgba(220,38,38,0.20)',
+                    borderRadius: '16px',
+                }} className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h3 className="text-sm font-bold text-red-400 flex items-center gap-2 mb-1">
+                            <AlertCircle size={16} /> Danger Zone
+                        </h3>
+                        <p className="text-xs text-white/40">การลบพนักงานจะลบข้อมูลและบัญชีผู้ใช้ออกจากระบบถาวร</p>
+                    </div>
+                    <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 border border-red-500/30 hover:border-red-500/60 transition-all shrink-0"
+                    >
+                        <Trash2 size={15} /> ลบพนักงาน
+                    </button>
+                </div>
+            )}
         </div>
     )
 }

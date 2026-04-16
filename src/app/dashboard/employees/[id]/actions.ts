@@ -74,6 +74,41 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
     return { success: true }
 }
 
+export async function deleteEmployee(employeeId: string) {
+    const session = await getSession()
+    if (!session || session.role !== 'hr_admin') {
+        return { error: 'Unauthorized' }
+    }
+
+    // Get user_id before deleting the row
+    const { data: emp } = await supabaseAdmin
+        .from('employees')
+        .select('user_id')
+        .eq('id', employeeId)
+        .single()
+
+    // Delete employee row
+    const { error: delError } = await supabaseAdmin
+        .from('employees')
+        .delete()
+        .eq('id', employeeId)
+
+    if (delError) {
+        console.error('deleteEmployee error:', delError)
+        return { error: delError.message }
+    }
+
+    // Delete Supabase Auth user if linked (non-fatal)
+    if (emp?.user_id) {
+        const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(emp.user_id)
+        if (authError) {
+            console.error('[deleteEmployee] auth.admin.deleteUser failed:', authError.message)
+        }
+    }
+
+    return { success: true }
+}
+
 export async function uploadEmployeePhoto(employeeId: string, formData: FormData) {
     const session = await getSession()
     if (!session || session.role !== 'hr_admin') {
