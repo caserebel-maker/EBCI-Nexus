@@ -11,6 +11,7 @@ function LoginForm() {
     const [loading, setLoading] = useState(false)
     const searchParams = useSearchParams()
     const redirectAfterLogin = searchParams.get('redirect') ?? null
+    const messageParam = searchParams.get('message')
     // Show HR Admin badge when entering from /hradmin (no redirect param, or redirect=/hradmin)
     const fromParam = searchParams.get('from')
     const isAdminEntry = redirectAfterLogin?.startsWith('/hradmin') || fromParam === 'hradmin'
@@ -91,6 +92,12 @@ function LoginForm() {
                             setLoading(false)
                         }
                     }} className="space-y-6">
+
+                        {messageParam === 'password-set' && !error && (
+                            <div className="bg-emerald-500/20 text-emerald-100 text-sm p-3 rounded-lg border border-emerald-500/40 text-center backdrop-blur-sm">
+                                ✓ ตั้งรหัสผ่านเรียบร้อยแล้ว กรุณาเข้าสู่ระบบ
+                            </div>
+                        )}
 
                         {error && (
                             <div className="bg-red-500/20 text-red-100 text-sm p-3 rounded-lg border border-red-500/50 text-center backdrop-blur-sm">
