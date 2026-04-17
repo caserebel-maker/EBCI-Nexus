@@ -19,6 +19,7 @@ interface NavItem {
 }
 
 interface MoreItem {
+    accent?: 'blue' | 'amber'
     label: string
     desc?: string
     href?: string
@@ -61,7 +62,7 @@ const NAV_CONFIG: Record<Role, NavItem[]> = {
 const HR_ADMIN_PORTAL_MORE: MoreItem[] = [
     { label: 'ปฏิทิน',       desc: 'ดูตารางงาน',           href: '/portal/calendar',       icon: CalendarDays },
     { label: 'เช็คอิน',      desc: 'เช็คอิน/เช็คเอาท์',   href: '/portal/checkin',         icon: Clock },
-    { label: 'กลับเป็น HR Admin', desc: 'สลับกลับโหมดแอดมิน', href: '/hradmin/dashboard', icon: RefreshCw },
+    { label: 'กลับเป็น HR Admin', desc: 'สลับกลับโหมดแอดมิน', href: '/hradmin/dashboard', icon: RefreshCw, accent: 'amber' },
     { label: 'ออกจากระบบ', icon: LogOut, danger: true },
 ]
 
@@ -70,7 +71,7 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'อนุมัติการลา', desc: 'จัดการคำขอลาพนักงาน', href: '/hradmin/leave/admin', icon: ClipboardCheck },
         { label: 'จัดการระบบ',   desc: 'ตั้งค่าและการจัดการ',  href: '/hradmin/settings',   icon: Settings },
         { label: 'รายงาน',       desc: 'ดูรายงานต่าง ๆ',        href: '/hradmin/reports',    icon: FileText },
-        { label: 'ดูในฐานะพนักงาน', desc: 'สลับไปโหมดพนักงาน', href: '/portal/dashboard', icon: RefreshCw },
+        { label: 'ดูในฐานะพนักงาน', desc: 'สลับไปโหมดพนักงาน', href: '/portal/dashboard', icon: RefreshCw, accent: 'blue' },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     manager: [
@@ -156,21 +157,29 @@ export function PortalBottomNav() {
                                     </button>
                                 )
                             }
+                            const accentClass = item.accent === 'blue'
+                                ? 'bg-blue-500/90 hover:bg-blue-500 active:bg-blue-600 ring-1 ring-blue-400/50 shadow-lg shadow-blue-500/20'
+                                : item.accent === 'amber'
+                                    ? 'bg-amber-500/90 hover:bg-amber-500 active:bg-amber-600 ring-1 ring-amber-400/50 shadow-lg shadow-amber-500/20'
+                                    : 'hover:bg-white/10 active:bg-white/15'
+                            const iconBgClass = item.accent
+                                ? 'bg-white/20'
+                                : 'bg-white/10'
                             return (
                                 <Link
                                     key={idx}
                                     href={item.href!}
                                     onClick={() => setMoreOpen(false)}
-                                    className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/10 active:bg-white/15 transition-colors"
+                                    className={cn("flex items-center gap-3 px-3 py-3 rounded-xl transition-colors", accentClass)}
                                 >
-                                    <span className="flex items-center justify-center w-9 h-9 rounded-full bg-white/10">
+                                    <span className={cn("flex items-center justify-center w-9 h-9 rounded-full", iconBgClass)}>
                                         <item.icon size={18} className="text-white" />
                                     </span>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-white font-semibold text-sm">{item.label}</p>
-                                        {item.desc && <p className="text-white/45 text-xs">{item.desc}</p>}
+                                        {item.desc && <p className={cn("text-xs", item.accent ? "text-white/80" : "text-white/45")}>{item.desc}</p>}
                                     </div>
-                                    <ChevronRight size={14} className="text-white/30" />
+                                    <ChevronRight size={14} className={item.accent ? "text-white/70" : "text-white/30"} />
                                 </Link>
                             )
                         })}
