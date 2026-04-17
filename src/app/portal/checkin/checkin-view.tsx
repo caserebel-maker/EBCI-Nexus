@@ -40,6 +40,7 @@ export function CheckinView({ office, todayCheckin }: Props) {
     const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
 
     const isCheckedIn = !!todayCheckin && !todayCheckin.checked_out_at
+    const isFullyCheckedOut = !!todayCheckin && !!todayCheckin.checked_out_at
 
     // Auto-request GPS on mount (if not already checked in)
     useEffect(() => {
@@ -174,6 +175,40 @@ export function CheckinView({ office, todayCheckin }: Props) {
                         {loading ? <Loader2 className="animate-spin" size={18} /> : <LogOut size={18} />}
                         เช็คเอาท์
                     </button>
+                </div>
+            ) : isFullyCheckedOut ? (
+                <div
+                    className="rounded-2xl p-6 border border-slate-500/40 bg-slate-500/10"
+                    style={{ backdropFilter: 'blur(8px)' }}
+                >
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="h-12 w-12 rounded-full bg-slate-500/20 flex items-center justify-center">
+                            <CheckCircle2 size={24} className="text-slate-300" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-slate-200/70">เสร็จสิ้นการทำงานวันนี้แล้ว</p>
+                            <p className="text-lg font-bold text-white">
+                                {todayCheckin!.type === 'office' ? '🏢 ออฟฟิศ' : '🏠 WFH'}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="mt-4 space-y-1 text-sm">
+                        <div className="flex justify-between text-white/70">
+                            <span>เช็คอิน</span>
+                            <span className="font-mono">
+                                {new Date(todayCheckin!.checked_in_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                        </div>
+                        <div className="flex justify-between text-white/70">
+                            <span>เช็คเอาท์</span>
+                            <span className="font-mono">
+                                {new Date(todayCheckin!.checked_out_at!).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                        </div>
+                    </div>
+                    <p className="text-[11px] text-white/40 text-center mt-4">
+                        ขอบคุณสำหรับการทำงานวันนี้ 🙏
+                    </p>
                 </div>
             ) : (
                 <>
