@@ -85,8 +85,12 @@ function LoginForm() {
                                 throw new Error(result.error || t('auth.errorCredentials'))
                             }
 
-                            // Success → use redirect param if present, otherwise role-based home
-                            window.location.href = redirectAfterLogin ?? result.redirectTo
+                            // Success → HR Admin always goes to their homePath (ignore redirect param)
+                            // Other roles: use redirect param if present, otherwise role-based home
+                            const target = result.role === 'hr_admin'
+                                ? result.redirectTo
+                                : (redirectAfterLogin ?? result.redirectTo)
+                            window.location.href = target
                         } catch (err) {
                             console.error("Login Error:", err)
                             setError((err as Error).message)
