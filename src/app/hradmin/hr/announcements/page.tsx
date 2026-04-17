@@ -146,7 +146,7 @@ export default function AnnouncementPage() {
 
                 <div className="space-y-2">
                     <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">{t('announcements.form.image')}</label>
-                    <div className="bg-gray-200 text-gray-900 rounded-xl p-6 text-center hover:bg-white transition-all group cursor-pointer relative flex flex-col items-center justify-center gap-2 border-2 border-transparent hover:border-primary/20 shadow-lg active:scale-[0.99] h-48">
+                    <div className="bg-gray-200 text-gray-900 rounded-xl p-6 text-center hover:bg-white transition-all group cursor-pointer relative flex flex-col items-center justify-center gap-2 border-2 border-transparent hover:border-primary/20 shadow-lg active:scale-[0.99] min-h-48 overflow-hidden">
                         <input
                             type="file"
                             name="image"
@@ -176,7 +176,7 @@ export default function AnnouncementPage() {
                             <span className="text-[10px] text-gray-600 mt-1">PNG, JPG up to 10MB</span>
                         </div>
                         <div id="preview-container" className="hidden relative z-0 pointer-events-none w-full">
-                            <img id="preview-image" src="" alt="Preview" className="max-h-64 rounded-lg mx-auto shadow-lg object-contain w-full" />
+                            <img id="preview-image" src="" alt="Preview" className="max-h-40 rounded-lg mx-auto shadow-lg object-contain w-auto" />
                             <p className="text-xs text-emerald-400 mt-2 font-bold uppercase tracking-wider">Image Selected</p>
                         </div>
                     </div>
