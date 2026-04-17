@@ -85,7 +85,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                 </div>
 
                 {/* Nav Links */}
-                <nav className="p-4 space-y-2 flex-1 overflow-y-auto pb-20">
+                <nav className="p-4 space-y-2 flex-1 overflow-y-auto pb-36">
                     {navItems.map((item, idx) => {
                         const isActive = item.href === '/hradmin'
                             ? pathname === '/hradmin'

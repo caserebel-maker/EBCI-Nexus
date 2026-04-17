@@ -21,12 +21,14 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
     ],
     [ROLES.MANAGER]: [
         { label: 'dashboard.title', href: '/hradmin/dashboard', icon: LayoutDashboard },
+        { label: 'เช็คอิน', href: '/portal/checkin', icon: MapPin },
         { label: 'leave.myLeave', href: '/portal/leave', icon: CalendarDays },
         { label: 'leave.approveLeave', href: '/portal/approve', icon: ClipboardCheck },
         { label: 'dashboard.announcements', href: '/portal/announcements', icon: Megaphone },
     ],
     [ROLES.EMPLOYEE]: [
         { label: 'dashboard.portal', href: '/portal', icon: LayoutDashboard },
+        { label: 'เช็คอิน', href: '/portal/checkin', icon: MapPin },
         { label: 'recruitment.personalInfo', href: '/portal/profile', icon: UserCircle },
         { label: 'leave.myLeave', href: '/portal/leave', icon: CalendarDays },
         { label: 'dashboard.announcements', href: '/portal/announcements', icon: Megaphone },
