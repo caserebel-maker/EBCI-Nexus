@@ -253,7 +253,7 @@ export function CheckinView({ office, todayCheckin }: Props) {
                     {/* WFH button */}
                     <button
                         onClick={() => handleCheckin('wfh')}
-                        disabled={loading || gpsState !== 'success'}
+                        disabled={loading}
                         className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all bg-blue-600/80 hover:bg-blue-600 text-white border border-blue-500/40 disabled:opacity-60"
                     >
                         {loading ? <Loader2 className="animate-spin" size={18} /> : <Home size={18} />}
