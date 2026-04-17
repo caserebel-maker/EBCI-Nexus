@@ -1,5 +1,9 @@
 'use client'
 
+import dynamic from 'next/dynamic'
+
+const CheckinMap = dynamic(() => import('@/components/checkin/checkin-map').then(m => m.CheckinMap), { ssr: false, loading: () => <div className="h-64 rounded-2xl bg-white/5 animate-pulse flex items-center justify-center text-white/40 text-sm">กำลังโหลดแผนที่...</div> })
+
 import { useState, useEffect } from 'react'
 import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -212,6 +216,19 @@ export function CheckinView({ office, todayCheckin }: Props) {
                 </div>
             ) : (
                 <>
+                    {/* Map */}
+                    {office && (
+                        <CheckinMap
+                            officeLat={office.latitude}
+                            officeLng={office.longitude}
+                            officeName={office.name}
+                            radiusMeters={office.radius_meters}
+                            userLat={gps?.lat ?? null}
+                            userLng={gps?.lng ?? null}
+                            distanceMeters={gps && office ? Math.round(Math.sqrt(Math.pow((gps.lat - office.latitude) * 111000, 2) + Math.pow((gps.lng - office.longitude) * 111000 * Math.cos(office.latitude * Math.PI / 180), 2))) : null}
+                        />
+                    )}
+
                     {/* GPS status card */}
                     <div
                         className="rounded-2xl p-6 border border-white/10 bg-white/5"

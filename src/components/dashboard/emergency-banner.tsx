@@ -16,11 +16,11 @@ export function EmergencyBanner({ emergency }: { emergency: any }) {
                         <AlertTriangle size={24} className="animate-bounce" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Critical Emergency Alert</p>
-                        <h2 className="text-lg font-black uppercase leading-tight">{emergency.headline}</h2>
+                        <p className="text-[10px] lg:text-xs font-black uppercase tracking-[0.2em] opacity-60">Critical Emergency Alert</p>
+                        <h2 className="text-lg lg:text-xl font-black uppercase leading-tight">{emergency.headline}</h2>
                     </div>
                 </div>
-                <div className="hidden md:block max-w-md text-sm font-medium opacity-80 line-clamp-2">
+                <div className="hidden md:block max-w-md text-sm lg:text-base font-medium opacity-80 line-clamp-2">
                     {emergency.content}
                 </div>
                 <button

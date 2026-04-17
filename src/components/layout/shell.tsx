@@ -45,7 +45,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                 )}
             >
                 {/* Sidebar Header */}
-                <div className="flex flex-col shrink-0 pt-12 pb-10">
+                <div className="flex flex-col shrink-0 pt-12 pb-10 lg:pt-6 lg:pb-4">
                     <div className="flex flex-col items-center justify-center px-4 w-full">
                         <Link href="/hradmin" className="flex flex-col items-center gap-4 group">
                             <img
@@ -59,9 +59,9 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                 </div>
 
                 {/* User Profile Card (Large, 4 rows) */}
-                <div className="px-5 pb-5 pt-0 shrink-0 flex flex-col items-center text-center">
+                <div className="px-5 pb-5 pt-0 shrink-0 flex flex-col items-center text-center lg:pb-2">
                     {/* Row 1: Profile Photo */}
-                    <div className="h-22 w-22 rounded-full overflow-hidden shadow-xl shadow-black/50 ring-2 ring-white/25 bg-white/10 mb-3" style={{ height: '88px', width: '88px' }}>
+                    <div className="h-22 w-22 rounded-full overflow-hidden shadow-xl shadow-black/50 ring-2 ring-white/25 bg-white/10 mb-3 lg:h-16 lg:w-16 lg:mb-2" style={{}}>
                         {profile?.photoUrl ? (
                             <img src={profile.photoUrl} alt={profile.fullName} className="h-full w-full object-cover" />
                         ) : (
@@ -85,7 +85,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                 </div>
 
                 {/* Nav Links */}
-                <nav className="p-4 space-y-2 flex-1 overflow-y-auto pb-36">
+                <nav className="p-4 space-y-2 lg:space-y-1 flex-1 overflow-y-auto min-h-0 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
                     {navItems.map((item, idx) => {
                         const isActive = item.href === '/hradmin'
                             ? pathname === '/hradmin'
@@ -112,15 +112,17 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
 
                 {/* Mode Switcher (HR Admin only) */}
                 {role === 'hr_admin' && (
-                    <div className="absolute bottom-[72px] w-full p-4">
+                    <div className="shrink-0 w-full p-4 border-t border-white/10">
                         <Link
                             href={pathname?.startsWith('/hradmin') ? '/portal/dashboard' : '/hradmin/dashboard'}
                             className={cn(
-                                "flex items-center gap-3 w-full px-3 py-2.5 rounded-md transition-colors",
-                                "text-white/80 hover:bg-white/10 hover:text-white"
+                                "flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-lg transition-all font-semibold shadow-lg",
+                                pathname?.startsWith('/hradmin')
+                                    ? "bg-blue-500/90 hover:bg-blue-500 text-white shadow-blue-500/30 ring-1 ring-blue-400/50"
+                                    : "bg-amber-500/90 hover:bg-amber-500 text-white shadow-amber-500/30 ring-1 ring-amber-400/50"
                             )}
                         >
-                            <RefreshCw size={18} />
+                            <RefreshCw size={16} />
                             <span className="text-sm">
                                 {pathname?.startsWith('/hradmin') ? 'ดูในฐานะพนักงาน' : 'กลับเป็น HR Admin'}
                             </span>
@@ -129,7 +131,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                 )}
 
                 {/* Sign Out (Bottom) */}
-                <div className="absolute bottom-0 w-full p-4">
+                <div className="shrink-0 w-full p-4">
                     <button
                         onClick={async () => {
                             await fetch('/api/auth/logout', { method: 'POST' })
