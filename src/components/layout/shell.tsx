@@ -3,7 +3,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LogOut } from 'lucide-react'
+import { LogOut, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAVIGATION_CONFIG } from '@/config/navigation'
 import { ModeToggle } from '@/components/mode-toggle'
@@ -89,6 +89,24 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                         )
                     })}
                 </nav>
+
+                {/* Mode Switcher (HR Admin only) */}
+                {role === 'hr_admin' && (
+                    <div className="absolute bottom-[72px] w-full p-4 border-t border-white/10 dark:border-border">
+                        <Link
+                            href={pathname?.startsWith('/hradmin') ? '/portal/dashboard' : '/hradmin/dashboard'}
+                            className={cn(
+                                "flex items-center gap-3 w-full px-3 py-2.5 rounded-md transition-colors",
+                                "text-white/80 hover:bg-white/10 hover:text-white"
+                            )}
+                        >
+                            <RefreshCw size={18} />
+                            <span className="text-sm">
+                                {pathname?.startsWith('/hradmin') ? 'ดูในฐานะพนักงาน' : 'กลับเป็น HR Admin'}
+                            </span>
+                        </Link>
+                    </div>
+                )}
 
                 {/* Sign Out (Bottom) */}
                 <div className="absolute bottom-0 w-full p-4 border-t border-white/10 dark:border-border">

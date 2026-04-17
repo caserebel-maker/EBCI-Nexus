@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
     Home, Users, Bell, Megaphone, MoreHorizontal, Clock, CalendarDays,
     ClipboardCheck, CheckSquare, LogOut, FileText,
-    Settings, ChevronRight, X, UserRound,
+    Settings, ChevronRight, X, UserRound, RefreshCw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRole, type Role } from '@/contexts/role-context'
@@ -57,11 +57,20 @@ const NAV_CONFIG: Record<Role, NavItem[]> = {
     ],
 }
 
+// Variant of hr_admin More menu when viewing in /portal — offers switch back to admin
+const HR_ADMIN_PORTAL_MORE: MoreItem[] = [
+    { label: 'ปฏิทิน',       desc: 'ดูตารางงาน',           href: '/portal/calendar',       icon: CalendarDays },
+    { label: 'เช็คอิน',      desc: 'เช็คอิน/เช็คเอาท์',   href: '/portal/checkin',         icon: Clock },
+    { label: 'กลับเป็น HR Admin', desc: 'สลับกลับโหมดแอดมิน', href: '/hradmin/dashboard', icon: RefreshCw },
+    { label: 'ออกจากระบบ', icon: LogOut, danger: true },
+]
+
 const MORE_CONFIG: Record<Role, MoreItem[]> = {
     hr_admin: [
         { label: 'อนุมัติการลา', desc: 'จัดการคำขอลาพนักงาน', href: '/hradmin/leave/admin', icon: ClipboardCheck },
         { label: 'จัดการระบบ',   desc: 'ตั้งค่าและการจัดการ',  href: '/hradmin/settings',   icon: Settings },
         { label: 'รายงาน',       desc: 'ดูรายงานต่าง ๆ',        href: '/hradmin/reports',    icon: FileText },
+        { label: 'ดูในฐานะพนักงาน', desc: 'สลับไปโหมดพนักงาน', href: '/portal/dashboard', icon: RefreshCw },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     manager: [
@@ -93,7 +102,7 @@ export function PortalBottomNav() {
         : NAV_CONFIG.employee
     const moreItems = pathname?.startsWith('/hradmin')
         ? MORE_CONFIG.hr_admin
-        : MORE_CONFIG.employee
+        : (role === 'hr_admin' ? HR_ADMIN_PORTAL_MORE : MORE_CONFIG.employee)
 
     const isNavActive = (item: NavItem) =>
         item.exact ? pathname === item.href : pathname?.startsWith(item.href)
