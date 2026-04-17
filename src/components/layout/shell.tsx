@@ -184,6 +184,27 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
 
                 {/* Page Content */}
                 <div className="flex-1 overflow-auto p-4 lg:p-8">
+                    {/* Mobile Identity Header — shown on every page */}
+                    <div className="lg:hidden flex items-center gap-3 mb-4">
+                        <div className="h-14 w-14 rounded-full overflow-hidden shadow-md shadow-black/30 ring-2 ring-white/20 bg-white/10 shrink-0">
+                            {profile?.photoUrl ? (
+                                <img src={profile.photoUrl} alt={profile.fullName} className="h-full w-full object-cover" />
+                            ) : (
+                                <div className="h-full w-full flex items-center justify-center text-lg font-bold text-white">
+                                    {(profile?.fullName ?? userName ?? 'U').charAt(0).toUpperCase()}
+                                </div>
+                            )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-white truncate leading-tight">
+                                {profile?.fullName ?? userName ?? 'User'}
+                            </p>
+                            <p className="text-[11px] text-white/60 truncate mt-0.5">
+                                {profile?.email ?? ''} &middot; {profile?.roleLabel ?? role}
+                            </p>
+                        </div>
+                    </div>
+
                     {children}
                     {/* Mobile bottom nav spacer — height = nav bar + iPhone safe area */}
                     <div
