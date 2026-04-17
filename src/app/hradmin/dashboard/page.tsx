@@ -203,6 +203,28 @@ export default async function AdminDashboard() {
         return d
     })
 
+    // Fetch today's checkins for attendance widget
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+    const endOfToday = new Date()
+    endOfToday.setHours(23, 59, 59, 999)
+    const { data: todayCheckins } = await supabaseAdmin
+        .from('checkins')
+        .select('employee_id, type')
+        .gte('checked_in_at', startOfToday.toISOString())
+        .lte('checked_in_at', endOfToday.toISOString())
+
+    const checkinMap = new Map<string, string>()
+    for (const c of todayCheckins ?? []) {
+        checkinMap.set(c.employee_id, c.type as string)
+    }
+    const attendanceStats = {
+        officeCount: Array.from(checkinMap.values()).filter(t => t === 'office').length,
+        wfhCount: Array.from(checkinMap.values()).filter(t => t === 'wfh').length,
+        checkedInCount: checkinMap.size,
+        totalActive: (employees ?? []).filter(e => e.status === 'active').length,
+    }
+
     return (
         <HRDashboard
             metrics={{
@@ -212,6 +234,7 @@ export default async function AdminDashboard() {
                 pendingLeaves: (leavesPending ?? []).length,
                 expiringContracts: (contractsExpiring ?? []).length,
             }}
+            attendanceStats={attendanceStats}
             leaveChartData={leaveChartData}
             deptData={deptData}
             attendanceData={attendanceData}

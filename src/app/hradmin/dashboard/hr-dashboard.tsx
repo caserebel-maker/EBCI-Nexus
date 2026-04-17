@@ -60,6 +60,12 @@ interface Metrics {
 }
 interface Props {
     metrics: Metrics
+    attendanceStats?: {
+        officeCount: number
+        wfhCount: number
+        checkedInCount: number
+        totalActive: number
+    }
     leaveChartData: any[]
     deptData: any[]
     attendanceData: any[]
@@ -489,7 +495,7 @@ const PRIORITY_COLOR: Record<string, string> = {
 const MONTHS_TH = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
 
 export function HRDashboard({
-    metrics, leaveChartData, deptData, attendanceData,
+    metrics, attendanceStats, leaveChartData, deptData, attendanceData,
     pendingLeaves, contractsExpiring, anniversaries,
     weekDays, leavesToday, urgentBanners, newsAnnouncements, birthdays,
 }: Props) {
@@ -528,6 +534,9 @@ export function HRDashboard({
                             sub="คน" icon={AlertTriangle} accent="bg-[#6b2030]"
                             href="/hradmin/employees?filter=contract-expiring" />
                     </div>
+
+                    {/* Attendance widget */}
+                    {attendanceStats && <AttendanceWidget stats={attendanceStats} />}
 
                     {/* Bar chart – monthly leave */}
                     <div style={glassStyle} className="p-6">
