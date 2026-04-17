@@ -146,6 +146,7 @@ export async function checkOut() {
 }
 
 export async function getTodayCheckin() {
+    console.log('[getTodayCheckin] start')
     const employeeId = await getEmployeeId()
     if (!employeeId) return null
 
