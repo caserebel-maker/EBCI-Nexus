@@ -10,9 +10,20 @@ export async function publishAnnouncement(formData: FormData) {
     const content  = formData.get('content')  as string
     const priority = formData.get('priority') as string
     const imageFile = formData.get('image')   as File | null
+    const expiresInput = formData.get('expires_at') as string | null
 
     if (!headline || !content || !priority) {
         return { error: 'Missing required fields' }
+    }
+
+    // Default: emergency/urgent → 7 days, others → null (no auto-expire)
+    let expiresAt: string | null = null
+    if (expiresInput) {
+        expiresAt = new Date(expiresInput + 'T23:59:59').toISOString()
+    } else if (priority === 'emergency' || priority === 'urgent') {
+        const d = new Date()
+        d.setDate(d.getDate() + 7)
+        expiresAt = d.toISOString()
     }
 
     console.log('--- START publishAnnouncement ---', { headline, priority })
@@ -43,7 +54,9 @@ export async function publishAnnouncement(formData: FormData) {
                 priority,
                 image_path: imagePath,
                 publishStatus: 'published',
+                publish_status: 'published',
                 publish_date: now,
+                expires_at: expiresAt,
                 created_by: 'HR Admin',
                 created_at: now,
                 updated_at: now,

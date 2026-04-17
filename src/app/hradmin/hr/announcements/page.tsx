@@ -131,6 +131,20 @@ export default function AnnouncementPage() {
                 </div>
 
                 <div className="space-y-2">
+                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+                        วันหมดอายุ (Optional)
+                    </label>
+                    <input
+                        type="date"
+                        name="expires_at"
+                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                        ถ้าไม่ระบุ ประกาศ emergency จะหมดอายุภายใน 7 วัน • ประกาศทั่วไปจะยังแสดงในหน้ารวมประกาศ
+                    </p>
+                </div>
+
+                <div className="space-y-2">
                     <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">{t('announcements.form.image')}</label>
                     <div className="bg-gray-200 text-gray-900 rounded-xl p-6 text-center hover:bg-white transition-all group cursor-pointer relative flex flex-col items-center justify-center gap-2 border-2 border-transparent hover:border-primary/20 shadow-lg active:scale-[0.99] h-48">
                         <input
