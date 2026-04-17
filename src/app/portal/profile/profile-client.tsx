@@ -13,7 +13,7 @@ const STATUS_STYLES: Record<string, { label: string; bg: string; text: string }>
     pending:   { label: 'รออนุมัติ', bg: 'rgba(251,191,36,0.18)',  text: '#FCD34D' },
     approved:  { label: 'อนุมัติ',   bg: 'rgba(52,211,153,0.18)',  text: '#34D399' },
     rejected:  { label: 'ปฏิเสธ',   bg: 'rgba(248,113,113,0.18)', text: '#F87171' },
-    cancelled: { label: 'ยกเลิก',   bg: 'rgba(255,255,255,0.08)', text: 'rgba(255,255,255,0.4)' },
+    cancelled: { label: 'ยกเลิก',   bg: 'rgba(255,255,255,0.20)', text: 'rgba(255,255,255,0.4)' },
 }
 const EMPLOYMENT_LABELS: Record<string, string> = {
     'full-time': 'พนักงานประจำ', contract: 'สัญญาจ้าง', intern: 'ฝึกงาน',
@@ -21,7 +21,7 @@ const EMPLOYMENT_LABELS: Record<string, string> = {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const glass: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.09)',
+    background: 'rgba(255,255,255,0.16)',
     backdropFilter: 'blur(14px)',
     WebkitBackdropFilter: 'blur(14px)',
     border: '1px solid rgba(255,255,255,0.15)',
@@ -79,7 +79,7 @@ function LeaveDonut({
             </div>
             <div className="text-center">
                 <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.80)', fontWeight: 600 }}>{label}</p>
-                <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.40)', marginTop: 2 }}>
+                <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
                     ใช้ {used} / {entitled} วัน
                 </p>
             </div>
@@ -93,14 +93,14 @@ function InfoRow({ icon: Icon, label, value }: {
 }) {
     return (
         <div className="flex items-center gap-3 py-3"
-            style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            style={{ borderBottom: '1px solid rgba(255,255,255,0.18)' }}>
             <div className="shrink-0 flex items-center justify-center rounded-full"
-                style={{ width: 36, height: 36, background: 'rgba(255,255,255,0.07)' }}>
-                <Icon size={16} style={{ color: 'rgba(255,255,255,0.50)' }} />
+                style={{ width: 36, height: 36, background: 'rgba(255,255,255,0.18)' }}>
+                <Icon size={16} style={{ color: '#fcd34d' }} />
             </div>
             <div className="min-w-0 flex-1">
-                <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.40)' }}>{label}</p>
-                <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.85)', fontWeight: 500 }} className="truncate">
+                <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.75)' }}>{label}</p>
+                <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.98)', fontWeight: 500 }} className="truncate">
                     {value}
                 </p>
             </div>
@@ -114,9 +114,9 @@ function Badge({ children, accent }: { children: React.ReactNode; accent?: boole
         <span className="inline-flex items-center px-3 py-1 rounded-full font-medium"
             style={{
                 fontSize: '12px',
-                background: accent ? 'rgba(136,33,54,0.35)' : 'rgba(255,255,255,0.09)',
-                border: `1px solid ${accent ? 'rgba(173,95,108,0.35)' : 'rgba(255,255,255,0.13)'}`,
-                color: accent ? '#fca5a5' : 'rgba(255,255,255,0.65)',
+                background: accent ? 'rgba(136,33,54,0.35)' : 'rgba(255,255,255,0.16)',
+                border: `1px solid ${accent ? 'rgba(173,95,108,0.35)' : 'rgba(255,255,255,0.25)'}`,
+                color: accent ? '#fca5a5' : 'rgba(255,255,255,0.90)',
             }}>
             {children}
         </span>
@@ -127,7 +127,7 @@ function Badge({ children, accent }: { children: React.ReactNode; accent?: boole
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
     return (
         <div className="flex flex-col items-center justify-center py-4 rounded-2xl"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.20)' }}>
             <span className="font-black leading-none" style={{ fontSize: '32px', color }}>{value}</span>
             <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', marginTop: 6 }}>{label}</span>
         </div>
@@ -169,7 +169,7 @@ export function ProfileClient({
             <div style={glass} className="p-5">
                 {/* Avatar + name */}
                 <div className="flex flex-col items-center text-center gap-3 pb-4"
-                    style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.20)' }}>
                     {/* Photo */}
                     {avatarUrl ? (
                         <img src={avatarUrl} alt=""
@@ -219,7 +219,7 @@ export function ProfileClient({
                     {startDate && <InfoRow icon={Calendar}  label="วันเริ่มงาน"      value={fmtDate(startDate)} />}
                     {managerName && <InfoRow icon={User}    label="ผู้บังคับบัญชา"   value={managerName} />}
                     {!email && !phone && !startDate && !managerName && (
-                        <p className="text-center py-3" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>
+                        <p className="text-center py-3" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.90)' }}>
                             ไม่มีข้อมูลติดต่อ
                         </p>
                     )}
@@ -246,20 +246,20 @@ export function ProfileClient({
                         })}
                     </div>
                 ) : (
-                    <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>ไม่มีข้อมูลวันลา</p>
+                    <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.90)' }}>ไม่มีข้อมูลวันลา</p>
                 )}
 
                 {/* Legend */}
                 {leaveBalances.length > 0 && (
                     <div className="flex justify-center gap-4 mt-4 pt-3"
-                        style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                        style={{ borderTop: '1px solid rgba(255,255,255,0.18)' }}>
                         {leaveBalances.map(b => {
                             const meta = LEAVE_META[b.leaveType]
                             if (!meta) return null
                             return (
                                 <div key={b.leaveType} className="flex items-center gap-1.5">
                                     <span className="rounded-full" style={{ width: 8, height: 8, background: meta.color, display: 'inline-block' }} />
-                                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.50)' }}>{meta.label}</span>
+                                    <span style={{ fontSize: '11px', color: '#fcd34d' }}>{meta.label}</span>
                                 </div>
                             )
                         })}
@@ -275,7 +275,7 @@ export function ProfileClient({
                     <StatCard label="มาสาย"     value={0} color="#F87171" />
                     <StatCard label="ขาด"       value={0} color="rgba(255,255,255,0.35)" />
                 </div>
-                <p className="text-center mt-3" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.22)' }}>
+                <p className="text-center mt-3" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)' }}>
                     รอเชื่อมต่อระบบลงเวลา
                 </p>
             </div>
@@ -301,7 +301,7 @@ export function ProfileClient({
                             return (
                                 <div key={req.id}
                                     className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3"
-                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                    style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.20)' }}>
                                     {/* Color dot + type */}
                                     <div className="flex items-center gap-2.5 min-w-0">
                                         <span className="shrink-0 rounded-full"
