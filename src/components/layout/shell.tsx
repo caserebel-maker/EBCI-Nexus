@@ -22,8 +22,9 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
     const pathname = usePathname()
     const { t } = useTranslation()
 
-    // Navigation Items based on Role (Dynamic)
-    const navItems = NAVIGATION_CONFIG[role] || []
+    // Navigation Items — HR Admin in /portal sees employee nav (their "portal mode")
+    const effectiveRole = (role === 'hr_admin' && pathname?.startsWith('/portal')) ? 'employee' : role
+    const navItems = NAVIGATION_CONFIG[effectiveRole] || []
 
     return (
         <div className="flex h-screen overflow-hidden bg-brand-gradient bg-fixed dark:bg-background lg:pt-0 transition-colors duration-300">
