@@ -18,11 +18,14 @@ export default async function EmployeeLayout({
 
     let emergency = null
     try {
+        // Only show emergency banner if: priority=emergency + published + not expired
+        const nowIso = new Date().toISOString()
         const { data } = await supabaseAdmin
             .from('announcements')
             .select('*')
             .eq('priority', 'emergency')
             .eq('publish_status', 'published')
+            .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
             .order('publish_date', { ascending: false })
             .limit(1)
             .maybeSingle()
