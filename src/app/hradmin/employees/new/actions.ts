@@ -23,6 +23,7 @@ export interface CreateEmployeePayload {
     emergency_name: string
     emergency_phone: string
     approval_level?: number
+    access_role?: 'employee' | 'manager' | 'hr_admin'
 }
 
 // ─── Welcome Email Template ────────────────────────────────────────────────────
@@ -199,7 +200,7 @@ export async function createEmployee(payload: CreateEmployeePayload) {
                 email: payload.email,
                 email_confirm: true,
                 user_metadata: {
-                    role: 'employee',
+                    role: payload.access_role ?? 'employee',
                     name: fullName,
                     employeeId: emp.id,
                 },

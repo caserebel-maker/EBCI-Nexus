@@ -4,7 +4,7 @@ import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
     ArrowLeft, User, Briefcase, Phone, Mail, MapPin,
-    Building, Calendar, Shield, AlertCircle, CheckCircle2, Save, UserPlus, Camera, ImagePlus
+    Building, Calendar, Shield, ShieldAlert, AlertCircle, CheckCircle2, Save, UserPlus, Camera, ImagePlus
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -84,6 +84,7 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
         emergency_phone: '',
         supervisor: '',
         approval_level: 1,
+        access_role: 'employee' as 'employee' | 'manager' | 'hr_admin',
     })
 
     const set = (field: keyof typeof form) =>
@@ -105,6 +106,15 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
             showToast('error', 'กรุณากรอกอีเมลพนักงาน')
             return
         }
+        if (form.access_role === 'hr_admin') {
+            const ok = window.confirm(
+                '⚠️ คุณกำลังจะสร้าง HR Admin ใหม่\n\n' +
+                'HR Admin มีสิทธิ์สูงสุด สามารถเข้าถึงข้อมูลพนักงานทุกคน ' +
+                'แก้ไข/ลบข้อมูล และสร้างพนักงานใหม่ได้\n\n' +
+                'ยืนยันการสร้าง HR Admin?'
+            )
+            if (!ok) return
+        }
         startTransition(async () => {
             const result = await createEmployee({
                 employee_code: form.employee_code,
@@ -124,6 +134,7 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
                 emergency_name: form.emergency_name,
                 emergency_phone: form.emergency_phone,
                 approval_level: form.approval_level,
+                access_role: form.access_role,
             })
             if (result.error) {
                 showToast('error', `เกิดข้อผิดพลาด: ${result.error}`)
@@ -346,6 +357,94 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
                             ))}
                         </select>
                     </div>
+                </div>
+            </div>
+
+            {/* ── ระดับการเข้าถึงระบบ ── */}
+            <div style={cardStyle} className="p-6">
+                <SectionHead icon={Shield} label="ระดับการเข้าถึงระบบ" />
+                <div className="space-y-3">
+                    <label className={cn(
+                        "flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all",
+                        form.access_role === 'employee'
+                            ? "bg-emerald-500/10 border-emerald-500/40"
+                            : "bg-white/5 border-white/15 hover:bg-white/10"
+                    )}>
+                        <input
+                            type="radio"
+                            name="access_role"
+                            value="employee"
+                            checked={form.access_role === 'employee'}
+                            onChange={() => setForm(p => ({ ...p, access_role: 'employee' }))}
+                            className="mt-1 accent-emerald-500"
+                        />
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                                <span className="text-[1.05rem] font-semibold text-white">พนักงานทั่วไป</span>
+                                <span className="text-[0.75rem] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Default</span>
+                            </div>
+                            <p className="text-[0.9rem] text-white/55 mt-1">
+                                เข้าถึงเฉพาะ /portal — ดูข้อมูลตัวเอง ยื่นใบลา ดูปฏิทิน
+                            </p>
+                        </div>
+                    </label>
+
+                    <label className={cn(
+                        "flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all",
+                        form.access_role === 'manager'
+                            ? "bg-blue-500/10 border-blue-500/40"
+                            : "bg-white/5 border-white/15 hover:bg-white/10"
+                    )}>
+                        <input
+                            type="radio"
+                            name="access_role"
+                            value="manager"
+                            checked={form.access_role === 'manager'}
+                            onChange={() => setForm(p => ({ ...p, access_role: 'manager' }))}
+                            className="mt-1 accent-blue-500"
+                        />
+                        <div className="flex-1">
+                            <span className="text-[1.05rem] font-semibold text-white">ผู้จัดการ (Manager)</span>
+                            <p className="text-[0.9rem] text-white/55 mt-1">
+                                เข้า /portal + อนุมัติใบลาของทีม (/hradmin/leave/approve)
+                            </p>
+                        </div>
+                    </label>
+
+                    <label className={cn(
+                        "flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all",
+                        form.access_role === 'hr_admin'
+                            ? "bg-red-500/10 border-red-500/40"
+                            : "bg-white/5 border-white/15 hover:bg-white/10"
+                    )}>
+                        <input
+                            type="radio"
+                            name="access_role"
+                            value="hr_admin"
+                            checked={form.access_role === 'hr_admin'}
+                            onChange={() => setForm(p => ({ ...p, access_role: 'hr_admin' }))}
+                            className="mt-1 accent-red-500"
+                        />
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                                <span className="text-[1.05rem] font-semibold text-white">HR Admin</span>
+                                <span className="text-[0.75rem] px-2 py-0.5 rounded bg-red-500/20 text-red-300 flex items-center gap-1">
+                                    <ShieldAlert size={11} /> สิทธิ์สูงสุด
+                                </span>
+                            </div>
+                            <p className="text-[0.9rem] text-white/55 mt-1">
+                                เข้า /hradmin ทั้งหมด — จัดการพนักงาน อนุมัติใบลา ประกาศข่าว ฯลฯ
+                            </p>
+                            {form.access_role === 'hr_admin' && (
+                                <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+                                    <p className="text-[0.85rem] text-red-300 leading-relaxed">
+                                        ⚠️ <strong>ตรวจสอบอีกครั้ง:</strong> HR Admin เข้าถึงข้อมูลลับได้ทั้งหมด
+                                        ใช้เฉพาะผู้ที่ได้รับมอบหมายจริงเท่านั้น
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </label>
                 </div>
             </div>
 
