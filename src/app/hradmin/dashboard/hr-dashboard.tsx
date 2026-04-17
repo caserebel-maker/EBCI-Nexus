@@ -12,7 +12,6 @@ import {
 } from 'recharts'
 import { UrgentBanners } from '@/components/dashboard/urgent-banners'
 import { cn } from '@/lib/utils'
-import { AttendanceWidget } from '@/components/dashboard/attendance-widget'
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const glassStyle: React.CSSProperties = {
@@ -529,9 +528,6 @@ export function HRDashboard({
                             sub="คน" icon={AlertTriangle} accent="bg-[#6b2030]"
                             href="/hradmin/employees?filter=contract-expiring" />
                     </div>
-
-                    {/* Attendance widget */}
-                    <AttendanceWidget />
 
                     {/* Bar chart – monthly leave */}
                     <div style={glassStyle} className="p-6">
