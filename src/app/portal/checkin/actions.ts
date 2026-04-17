@@ -148,6 +148,7 @@ export async function checkOut() {
 export async function getTodayCheckin() {
     console.log('[getTodayCheckin] start')
     const employeeId = await getEmployeeId()
+    console.log('[getTodayCheckin] employeeId:', employeeId)
     if (!employeeId) return null
 
     const today = new Date()
@@ -162,5 +163,6 @@ export async function getTodayCheckin() {
         .limit(1)
         .maybeSingle()
 
+    console.log('[getTodayCheckin] data:', JSON.stringify(data))
     return data
 }
