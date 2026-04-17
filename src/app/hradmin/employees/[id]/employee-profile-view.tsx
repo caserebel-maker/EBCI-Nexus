@@ -18,17 +18,17 @@ import {
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const glass: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.06)',
+    background: 'rgba(255,255,255,0.16)',
     backdropFilter: 'blur(14px)',
     WebkitBackdropFilter: 'blur(14px)',
-    border: '1px solid rgba(255,255,255,0.12)',
+    border: '1px solid rgba(255,255,255,0.22)',
     borderRadius: '18px',
 }
 const silverCard: React.CSSProperties = {
-    background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(200,200,220,0.04) 50%, rgba(255,255,255,0.07) 100%)',
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.20) 0%, rgba(200,200,220,0.04) 50%, rgba(255,255,255,0.18) 100%)',
     backdropFilter: 'blur(14px)',
     WebkitBackdropFilter: 'blur(14px)',
-    border: '1px solid rgba(255,255,255,0.13)',
+    border: '1px solid rgba(255,255,255,0.65)',
     borderRadius: '18px',
 }
 const inp = "w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-[1rem] text-white placeholder-white/30 focus:outline-none focus:border-[#ad5f6c] focus:ring-1 focus:ring-[#ad5f6c]/40 transition-colors"
@@ -117,7 +117,7 @@ interface FormState {
 function SHead({ icon: Icon, label }: { icon: any; label: string }) {
     return (
         <div className="flex items-center gap-3 mb-5 pb-3 border-b border-white/10">
-            <div className="h-8 w-8 rounded-lg bg-[#882136]/40 flex items-center justify-center text-[#ad5f6c] shrink-0">
+            <div className="h-8 w-8 rounded-lg bg-white/15 ring-1 ring-white/25 flex items-center justify-center text-white shrink-0">
                 <Icon size={16} />
             </div>
             <h2 className="text-[1.1rem] font-bold text-white tracking-wide">{label}</h2>
@@ -131,8 +131,8 @@ function InfoRow({ label, value, icon: Icon, editing, editNode }: {
 }) {
     return (
         <div className="flex items-start justify-between py-3 border-b border-white/5 last:border-0 px-2 hover:bg-white/5 rounded-lg transition-colors gap-4">
-            <div className="flex items-center gap-2.5 text-white/40 shrink-0 pt-0.5">
-                <Icon size={15} className="text-[#ad5f6c]" />
+            <div className="flex items-center gap-2.5 text-white/75 shrink-0 pt-0.5">
+                <Icon size={15} className="text-amber-300" />
                 <span className="text-[0.8rem] font-bold uppercase tracking-widest">{label}</span>
             </div>
             {editing && editNode
@@ -147,7 +147,7 @@ function InfoRow({ label, value, icon: Icon, editing, editNode }: {
 function LeaveTooltip({ active, payload, label }: any) {
     if (!active || !payload?.length) return null
     return (
-        <div style={{ background: 'rgba(20,4,10,0.95)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '10px 14px' }}>
+        <div style={{ background: 'rgba(20,4,10,0.95)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '10px 14px' }}>
             <p className="text-white font-bold text-sm mb-1">{label}</p>
             {payload.map((p: any) => (
                 <p key={p.name} className="text-xs" style={{ color: p.fill }}>
@@ -178,7 +178,7 @@ function LeaveHistory({ leaves }: { leaves: LeaveRequest[] }) {
     const totalPages = Math.max(1, Math.ceil(filtered.length / LEAVE_PAGE_SIZE))
     const pageData = filtered.slice((page - 1) * LEAVE_PAGE_SIZE, page * LEAVE_PAGE_SIZE)
 
-    const selCls = "h-9 px-3 rounded-lg border border-white/12 bg-white/6 text-white/80 text-[0.85rem] focus:outline-none focus:border-[#ad5f6c] appearance-none cursor-pointer"
+    const selCls = "h-9 px-3 rounded-lg border border-white/12 bg-white/6 text-white/96 text-[0.85rem] focus:outline-none focus:border-[#ad5f6c] appearance-none cursor-pointer"
 
     return (
         <div className="space-y-4">
@@ -198,12 +198,12 @@ function LeaveHistory({ leaves }: { leaves: LeaveRequest[] }) {
                     <option value="pending" className="bg-[#1a0608]">รออนุมัติ</option>
                     <option value="rejected" className="bg-[#1a0608]">ไม่อนุมัติ</option>
                 </select>
-                <span className="ml-auto text-[0.82rem] text-white/35 self-center">{filtered.length} รายการ</span>
+                <span className="ml-auto text-[0.82rem] text-white/92 self-center">{filtered.length} รายการ</span>
             </div>
 
             {/* List */}
             {pageData.length === 0 ? (
-                <p className="text-white/30 text-[0.95rem] text-center py-8">ไม่พบรายการ</p>
+                <p className="text-white/65 text-[0.95rem] text-center py-8">ไม่พบรายการ</p>
             ) : (
                 <div className="space-y-2">
                     {pageData.map(lr => (
@@ -211,23 +211,23 @@ function LeaveHistory({ leaves }: { leaves: LeaveRequest[] }) {
                             className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 px-3 rounded-xl hover:bg-white/5 transition-colors border border-white/5">
                             <div className="flex items-center gap-3">
                                 <div className="h-9 w-9 rounded-lg bg-[#882136]/30 flex items-center justify-center shrink-0">
-                                    <Calendar size={16} className="text-[#ad5f6c]" />
+                                    <Calendar size={16} className="text-amber-300" />
                                 </div>
                                 <div>
                                     <p className="text-[1rem] font-semibold text-white">
                                         {LEAVE_LABELS[lr.leave_type] ?? lr.leave_type}
-                                        <span className="text-white/40 font-normal ml-2 text-[0.85rem]">{lr.days} วัน</span>
+                                        <span className="text-white/75 font-normal ml-2 text-[0.85rem]">{lr.days} วัน</span>
                                     </p>
-                                    <p className="text-[0.85rem] text-white/40">
+                                    <p className="text-[0.85rem] text-white/75">
                                         {fmtDate(lr.start_date)}
                                         {lr.end_date && lr.end_date !== lr.start_date && ` — ${fmtDate(lr.end_date)}`}
                                     </p>
-                                    {lr.reason && <p className="text-[0.8rem] text-white/30 mt-0.5 truncate max-w-xs">{lr.reason}</p>}
+                                    {lr.reason && <p className="text-[0.8rem] text-white/65 mt-0.5 truncate max-w-xs">{lr.reason}</p>}
                                 </div>
                             </div>
                             <span className={cn(
                                 "text-[0.8rem] font-bold px-3 py-1 rounded-full border w-fit shrink-0",
-                                LEAVE_STATUS_STYLE[lr.status] ?? 'bg-white/10 text-white/50 border-white/15'
+                                LEAVE_STATUS_STYLE[lr.status] ?? 'bg-white/10 text-white/82 border-white/15'
                             )}>
                                 {LEAVE_STATUS_LABEL[lr.status] ?? lr.status}
                             </span>
@@ -242,13 +242,13 @@ function LeaveHistory({ leaves }: { leaves: LeaveRequest[] }) {
                     <button
                         onClick={() => setPage(p => Math.max(1, p - 1))}
                         disabled={page === 1}
-                        className="px-3 py-1.5 rounded-lg text-[0.85rem] font-semibold bg-white/8 hover:bg-white/14 text-white/60 hover:text-white border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        className="px-3 py-1.5 rounded-lg text-[0.85rem] font-semibold bg-white/8 hover:bg-white/14 text-white/88 hover:text-white border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                     >ก่อนหน้า</button>
-                    <span className="text-[0.85rem] text-white/40 px-2">{page} / {totalPages}</span>
+                    <span className="text-[0.85rem] text-white/75 px-2">{page} / {totalPages}</span>
                     <button
                         onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                         disabled={page === totalPages}
-                        className="px-3 py-1.5 rounded-lg text-[0.85rem] font-semibold bg-white/8 hover:bg-white/14 text-white/60 hover:text-white border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        className="px-3 py-1.5 rounded-lg text-[0.85rem] font-semibold bg-white/8 hover:bg-white/14 text-white/88 hover:text-white border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                     >ถัดไป</button>
                 </div>
             )}
@@ -418,7 +418,7 @@ export function EmployeeProfileView({
                             </div>
                             <h2 className="text-[1.2rem] font-bold text-white">ยืนยันการลบพนักงาน</h2>
                         </div>
-                        <p className="text-[1rem] text-white/70 leading-relaxed">
+                        <p className="text-[1rem] text-white/92 leading-relaxed">
                             คุณต้องการลบ <span className="text-white font-bold">{displayName}</span> ออกจากระบบใช่หรือไม่?<br />
                             <span className="text-red-400 font-semibold">การกระทำนี้ไม่สามารถย้อนกลับได้</span>
                         </p>
@@ -426,7 +426,7 @@ export function EmployeeProfileView({
                             <button
                                 onClick={() => setShowDeleteConfirm(false)}
                                 disabled={isDeleting}
-                                className="flex-1 px-4 py-2.5 rounded-xl text-[1rem] font-semibold bg-white/10 hover:bg-white/15 text-white/70 hover:text-white border border-white/15 transition-all disabled:opacity-50"
+                                className="flex-1 px-4 py-2.5 rounded-xl text-[1rem] font-semibold bg-white/10 hover:bg-white/15 text-white/92 hover:text-white border border-white/15 transition-all disabled:opacity-50"
                             >
                                 ยกเลิก
                             </button>
@@ -456,7 +456,7 @@ export function EmployeeProfileView({
 
             {/* ── Breadcrumb + Actions ──────────────────────────────────────── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-2 text-[0.95rem] text-white/70">
+                <div className="flex items-center gap-2 text-[0.95rem] text-white/92">
                     <Link href="/hradmin/employees" className="hover:text-white transition-colors">พนักงาน</Link>
                     <ChevronRight size={14} />
                     <span className="text-white font-medium">โปรไฟล์พนักงาน</span>
@@ -473,7 +473,7 @@ export function EmployeeProfileView({
                     {isEditing && (
                         <>
                             <button onClick={handleCancel} disabled={isPending}
-                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[0.95rem] font-semibold bg-white/10 hover:bg-white/15 text-white/70 hover:text-white border border-white/15 transition-all disabled:opacity-50">
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[0.95rem] font-semibold bg-white/10 hover:bg-white/15 text-white/92 hover:text-white border border-white/15 transition-all disabled:opacity-50">
                                 <X size={14} /> ยกเลิก
                             </button>
                             <button onClick={handleSave} disabled={isPending}
@@ -484,7 +484,7 @@ export function EmployeeProfileView({
                     )}
                     {!isEditing && (
                         <Link href="/hradmin/employees"
-                            className="inline-flex items-center gap-2 text-[0.95rem] font-medium text-white/60 hover:text-white transition-colors">
+                            className="inline-flex items-center gap-2 text-[0.95rem] font-medium text-white/88 hover:text-white transition-colors">
                             <ArrowLeft size={15} /> กลับ
                         </Link>
                     )}
@@ -513,11 +513,11 @@ export function EmployeeProfileView({
                                 <button
                                     type="button"
                                     onClick={() => photoInputRef.current?.click()}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/18 border border-white/15 text-white/70 hover:text-white text-[0.82rem] font-semibold transition-all"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/18 border border-white/15 text-white/92 hover:text-white text-[0.82rem] font-semibold transition-all"
                                 >
                                     <Camera size={13} /> เปลี่ยนรูป
                                 </button>
-                                <p className="text-[0.72rem] text-white/30 text-center">JPG / PNG ไม่เกิน 5 MB</p>
+                                <p className="text-[0.72rem] text-white/65 text-center">JPG / PNG ไม่เกิน 5 MB</p>
                                 <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp"
                                     className="hidden" onChange={handlePhotoChange} />
                             </>
@@ -541,7 +541,7 @@ export function EmployeeProfileView({
                                     <h1 className="text-[1.8rem] font-black text-white leading-tight">
                                         {displayName}
                                         {employee.nickname && (
-                                            <span className="text-white/45 font-normal text-[1.2rem] ml-2">({employee.nickname})</span>
+                                            <span className="text-white/78 font-normal text-[1.2rem] ml-2">({employee.nickname})</span>
                                         )}
                                     </h1>
                                     <span className={cn("px-2.5 py-1 rounded-lg text-xs font-bold border", levelColor)}>
@@ -567,18 +567,18 @@ export function EmployeeProfileView({
 
                         {/* Badge row */}
                         <div className="flex flex-wrap gap-2 pt-1">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/70 text-[0.85rem] font-semibold">
-                                <Briefcase size={13} className="text-[#ad5f6c]" />
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/92 text-[0.85rem] font-semibold">
+                                <Briefcase size={13} className="text-amber-300" />
                                 {employee.employee_code}
                             </span>
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/70 text-[0.85rem] font-semibold">
-                                <Clock size={13} className="text-[#ad5f6c]" />
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/92 text-[0.85rem] font-semibold">
+                                <Clock size={13} className="text-amber-300" />
                                 อายุงาน {tenure}
                             </span>
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/70 text-[0.85rem] font-semibold">
-                                <User size={13} className="text-[#ad5f6c]" />
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/92 text-[0.85rem] font-semibold">
+                                <User size={13} className="text-amber-300" />
                                 {isEditing
-                                    ? <select className="bg-transparent text-white/70 focus:outline-none text-[0.85rem]" value={form.employment_type} onChange={set('employment_type')}>
+                                    ? <select className="bg-transparent text-white/92 focus:outline-none text-[0.85rem]" value={form.employment_type} onChange={set('employment_type')}>
                                         <option value="full-time">ประจำ</option>
                                         <option value="part-time">นอกเวลา</option>
                                         <option value="contract">สัญญาจ้าง</option>
@@ -644,12 +644,12 @@ export function EmployeeProfileView({
                             editNode={<input className={inp} value={form.emergency_contact} onChange={set('emergency_contact')} placeholder="เบอร์ผู้ติดต่อฉุกเฉิน" />}
                         />
                         <div className="pt-3 mt-1 border-t border-white/8">
-                            <p className="text-[0.75rem] font-bold text-white/30 uppercase tracking-widest mb-2">ที่อยู่</p>
+                            <p className="text-[0.75rem] font-bold text-white/65 uppercase tracking-widest mb-2">ที่อยู่</p>
                             {isEditing ? (
                                 <textarea className={cn(inp, 'min-h-[72px] resize-none')} value={form.address}
                                     onChange={set('address')} placeholder="ที่อยู่" />
                             ) : (
-                                <p className="text-[0.95rem] text-white/60 leading-relaxed">
+                                <p className="text-[0.95rem] text-white/88 leading-relaxed">
                                     {employee.applicants?.current_address || '—'}
                                 </p>
                             )}
@@ -708,7 +708,7 @@ export function EmployeeProfileView({
             <div style={glass} className="p-6 shadow-xl">
                 <SHead icon={FileText} label="สถิติการลา" />
                 {chartData.length === 0 ? (
-                    <p className="text-white/30 text-[0.95rem] text-center py-8">ยังไม่มีข้อมูลวันลา</p>
+                    <p className="text-white/65 text-[0.95rem] text-center py-8">ยังไม่มีข้อมูลวันลา</p>
                 ) : (
                     <div className="h-[220px]">
                         <ResponsiveContainer width="100%" height="100%">
@@ -718,14 +718,14 @@ export function EmployeeProfileView({
                                 margin={{ top: 0, right: 48, left: 8, bottom: 0 }}
                                 barCategoryGap="30%"
                             >
-                                <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 12 }}
+                                <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.75)', fontSize: 12 }}
                                     axisLine={false} tickLine={false} />
                                 <YAxis type="category" dataKey="name" width={80}
-                                    tick={{ fill: 'rgba(255,255,255,0.60)', fontSize: 13, fontWeight: 600 }}
+                                    tick={{ fill: '#fcd34d', fontSize: 13, fontWeight: 600 }}
                                     axisLine={false} tickLine={false} />
-                                <Tooltip content={<LeaveTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                                <Tooltip content={<LeaveTooltip />} cursor={{ fill: 'rgba(255,255,255,0.22)' }} />
                                 <Bar dataKey="ใช้ไปแล้ว" stackId="a" fill="#ad5f6c" radius={[4, 0, 0, 4]} />
-                                <Bar dataKey="คงเหลือ" stackId="a" fill="rgba(255,255,255,0.15)"
+                                <Bar dataKey="คงเหลือ" stackId="a" fill="rgba(255,255,255,0.25)"
                                     radius={[0, 4, 4, 0]}>
                                     <LabelList dataKey="คงเหลือ" position="right"
                                         content={({ x, y, width, height, index }: any) => {
@@ -736,7 +736,7 @@ export function EmployeeProfileView({
                                                 <text
                                                     x={Number(x) + Number(width) + 8}
                                                     y={Number(y) + Number(height) / 2 + 4}
-                                                    fill="rgba(255,255,255,0.55)"
+                                                    fill="rgba(255,255,255,0.85)"
                                                     fontSize={11}
                                                     fontWeight={700}
                                                 >
@@ -753,10 +753,10 @@ export function EmployeeProfileView({
                 {/* Legend */}
                 {chartData.length > 0 && (
                     <div className="flex items-center gap-5 mt-3 pl-2">
-                        <div className="flex items-center gap-2 text-[0.85rem] text-white/50">
+                        <div className="flex items-center gap-2 text-[0.85rem] text-white/82">
                             <span className="h-2.5 w-5 rounded-sm bg-[#ad5f6c]" /> ใช้ไปแล้ว
                         </div>
-                        <div className="flex items-center gap-2 text-[0.85rem] text-white/50">
+                        <div className="flex items-center gap-2 text-[0.85rem] text-white/82">
                             <span className="h-2.5 w-5 rounded-sm bg-white/18 border border-white/20" /> คงเหลือ
                         </div>
                     </div>
@@ -767,7 +767,7 @@ export function EmployeeProfileView({
             <div style={glass} className="p-6 shadow-xl">
                 <SHead icon={Calendar} label="ประวัติใบลาทั้งหมด" />
                 {recentLeaves.length === 0 ? (
-                    <p className="text-white/30 text-[0.95rem] text-center py-8">ยังไม่มีประวัติใบลา</p>
+                    <p className="text-white/65 text-[0.95rem] text-center py-8">ยังไม่มีประวัติใบลา</p>
                 ) : (
                     <LeaveHistory leaves={recentLeaves} />
                 )}
@@ -786,7 +786,7 @@ export function EmployeeProfileView({
                         <h2 className="text-[1.3rem] font-bold text-white tracking-wide">⚠️ Danger Zone</h2>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
-                        <p className="text-[0.95rem] font-medium" style={{ color: 'rgba(255,255,255,0.9)' }}>
+                        <p className="text-[0.95rem] font-medium" style={{ color: 'rgba(255,255,255,0.98)' }}>
                             การลบพนักงานจะลบข้อมูลและบัญชีผู้ใช้ออกจากระบบอย่างถาวร ไม่สามารถย้อนกลับได้
                         </p>
                         <div className="flex gap-3 shrink-0">
@@ -795,7 +795,7 @@ export function EmployeeProfileView({
                                     onClick={handleEdit}
                                     className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[0.95rem] font-bold text-white transition-all active:scale-95"
                                     style={{ background: 'transparent', border: '2px solid white' }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
+                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.20)')}
                                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                                 >
                                     <Pencil size={15} /> แก้ไขข้อมูล
