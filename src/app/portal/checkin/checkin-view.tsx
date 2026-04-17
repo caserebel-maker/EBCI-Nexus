@@ -87,16 +87,16 @@ export function CheckinView({ office, todayCheckin }: Props) {
     }
 
     const handleCheckin = async (type: 'office' | 'wfh') => {
-        if (!gps) {
+        if (type === 'office' && !gps) {
             showToast('error', 'กรุณารอระบบตรวจตำแหน่งก่อน')
             return
         }
         setLoading(true)
         const result = await checkIn({
             type,
-            latitude: gps.lat,
-            longitude: gps.lng,
-            accuracy: gps.accuracy,
+            latitude: gps?.lat ?? null,
+            longitude: gps?.lng ?? null,
+            accuracy: gps?.accuracy ?? null,
         })
         setLoading(false)
         if (result.error) {
