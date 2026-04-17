@@ -38,7 +38,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
             <aside
                 className={cn(
                     "fixed top-0 left-0 z-50 h-screen flex flex-col transition-all duration-300 ease-in-out",
-                    "bg-brand-gradient bg-fixed dark:bg-card border-r border-white/10 dark:border-border",
+                    "bg-brand-gradient bg-fixed dark:bg-card",
                     "text-white dark:text-card-foreground",
                     "w-64 shadow-2xl",
                     "-translate-x-full lg:translate-x-0"
@@ -59,9 +59,9 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                 </div>
 
                 {/* User Profile Card (Large, 4 rows) */}
-                <div className="p-5 border-b border-white/10 dark:border-border shrink-0 flex flex-col items-center text-center">
+                <div className="px-5 pb-5 pt-0 shrink-0 flex flex-col items-center text-center">
                     {/* Row 1: Profile Photo */}
-                    <div className="h-20 w-20 rounded-full overflow-hidden shadow-lg shadow-black/40 ring-2 ring-white/20 bg-white/10 mb-3">
+                    <div className="h-22 w-22 rounded-full overflow-hidden shadow-xl shadow-black/50 ring-2 ring-white/25 bg-white/10 mb-3" style={{ height: '88px', width: '88px' }}>
                         {profile?.photoUrl ? (
                             <img src={profile.photoUrl} alt={profile.fullName} className="h-full w-full object-cover" />
                         ) : (
@@ -112,7 +112,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
 
                 {/* Mode Switcher (HR Admin only) */}
                 {role === 'hr_admin' && (
-                    <div className="absolute bottom-[72px] w-full p-4 border-t border-white/10 dark:border-border">
+                    <div className="absolute bottom-[72px] w-full p-4">
                         <Link
                             href={pathname?.startsWith('/hradmin') ? '/portal/dashboard' : '/hradmin/dashboard'}
                             className={cn(
@@ -129,7 +129,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                 )}
 
                 {/* Sign Out (Bottom) */}
-                <div className="absolute bottom-0 w-full p-4 border-t border-white/10 dark:border-border">
+                <div className="absolute bottom-0 w-full p-4">
                     <button
                         onClick={async () => {
                             await fetch('/api/auth/logout', { method: 'POST' })
@@ -137,7 +137,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                         }}
                         className={cn(
                             "flex items-center gap-3 w-full px-3 py-2.5 rounded-md transition-colors",
-                            "text-white hover:bg-white/10 hover:text-white dark:text-destructive dark:hover:bg-destructive/10"
+                            "text-red-300 hover:bg-red-500/20 hover:text-red-200 font-semibold"
                         )}
                     >
                         <LogOut size={20} />

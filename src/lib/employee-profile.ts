@@ -22,23 +22,16 @@ export async function getEmployeeProfile(
 ): Promise<EmployeeProfile> {
     const roleLabel = ROLE_LABELS[role] ?? 'User'
 
-    // No employeeId? Return fallback
-    if (!employeeId) {
-        return {
-            id: '',
-            fullName: fallbackName,
-            email: fallbackEmail,
-            photoUrl: null,
-            roleLabel,
-        }
-    }
-
     try {
-        const { data } = await supabaseAdmin
+        // Try by employeeId first; fallback to email lookup for legacy users
+        // whose auth.user_metadata doesn't contain employeeId
+        const query = supabaseAdmin
             .from('employees')
             .select('id, first_name_th, last_name_th, nickname, email, photo_url')
-            .eq('id', employeeId)
-            .maybeSingle()
+
+        const { data } = employeeId
+            ? await query.eq('id', employeeId).maybeSingle()
+            : await query.eq('email', fallbackEmail).maybeSingle()
 
         if (!data) {
             return {
