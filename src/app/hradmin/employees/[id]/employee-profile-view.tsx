@@ -560,7 +560,7 @@ export function EmployeeProfileView({
                                 </div>
                                 {isEditing
                                     ? <input className={cn(inp, 'mt-2 max-w-xs text-sm')} value={form.position} onChange={set('position')} placeholder="ตำแหน่ง" />
-                                    : <p className="text-[#ad5f6c] font-bold text-[1rem] mt-0.5">{employee.position} — {employee.department}</p>
+                                    : <p className="text-amber-100/90 font-bold text-[1rem] mt-0.5">{employee.position} — {employee.department}</p>
                                 }
                             </div>
                         )}
