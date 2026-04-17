@@ -5,6 +5,24 @@ import { getSession } from '@/lib/auth'
 import { haversineDistance } from '@/lib/geo'
 import { revalidatePath } from 'next/cache'
 
+// Helper: resolve employee_id from session (with email fallback for legacy users)
+async function getEmployeeId(): Promise<string | null> {
+    const session = await getSession()
+    if (!session) return null
+    if (session.employeeId) return session.employeeId
+
+    // Fallback: look up by email (session.name = email for legacy users)
+    const email = session.name
+    if (!email || !email.includes('@')) return null
+
+    const { data } = await supabaseAdmin
+        .from('employees')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle()
+    return data?.id ?? null
+}
+
 export interface CheckInPayload {
     type: 'office' | 'wfh'
     latitude: number
@@ -14,9 +32,9 @@ export interface CheckInPayload {
 }
 
 export async function checkIn(payload: CheckInPayload) {
-    const session = await getSession()
-    if (!session?.employeeId) {
-        return { error: 'ไม่พบข้อมูลพนักงาน — กรุณา login ใหม่' }
+    const employeeId = await getEmployeeId()
+    if (!employeeId) {
+        return { error: 'ไม่พบข้อมูลพนักงาน — กรุณาติดต่อ HR' }
     }
 
     // Check if already checked in today (without checkout)
@@ -25,7 +43,7 @@ export async function checkIn(payload: CheckInPayload) {
     const { data: openCheckin } = await supabaseAdmin
         .from('checkins')
         .select('id')
-        .eq('employee_id', session.employeeId)
+        .eq('employee_id', employeeId)
         .is('checked_out_at', null)
         .gte('checked_in_at', today.toISOString())
         .maybeSingle()
@@ -68,7 +86,7 @@ export async function checkIn(payload: CheckInPayload) {
     const { data, error } = await supabaseAdmin
         .from('checkins')
         .insert({
-            employee_id: session.employeeId,
+            employee_id: employeeId,
             type: actualType,
             latitude: payload.latitude,
             longitude: payload.longitude,
@@ -95,8 +113,8 @@ export async function checkIn(payload: CheckInPayload) {
 }
 
 export async function checkOut() {
-    const session = await getSession()
-    if (!session?.employeeId) {
+    const employeeId = await getEmployeeId()
+    if (!employeeId) {
         return { error: 'ไม่พบข้อมูลพนักงาน' }
     }
 
@@ -106,7 +124,7 @@ export async function checkOut() {
     const { data: openCheckin } = await supabaseAdmin
         .from('checkins')
         .select('id')
-        .eq('employee_id', session.employeeId)
+        .eq('employee_id', employeeId)
         .is('checked_out_at', null)
         .gte('checked_in_at', today.toISOString())
         .order('checked_in_at', { ascending: false })
@@ -129,8 +147,8 @@ export async function checkOut() {
 }
 
 export async function getTodayCheckin() {
-    const session = await getSession()
-    if (!session?.employeeId) return null
+    const employeeId = await getEmployeeId()
+    if (!employeeId) return null
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -138,7 +156,7 @@ export async function getTodayCheckin() {
     const { data } = await supabaseAdmin
         .from('checkins')
         .select('*')
-        .eq('employee_id', session.employeeId)
+        .eq('employee_id', employeeId)
         .gte('checked_in_at', today.toISOString())
         .order('checked_in_at', { ascending: false })
         .limit(1)
