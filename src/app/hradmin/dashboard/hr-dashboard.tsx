@@ -11,6 +11,7 @@ import {
     PieChart, Pie, Cell, LineChart, Line, CartesianGrid
 } from 'recharts'
 import { UrgentBanners } from '@/components/dashboard/urgent-banners'
+import { AttendanceWidget } from '@/components/dashboard/attendance-widget'
 import { cn } from '@/lib/utils'
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
