@@ -1,6 +1,7 @@
 import { DashboardShell } from '@/components/layout/shell'
 import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import { getEmployeeProfile } from '@/lib/employee-profile'
 
 export default async function AdminLayout({
     children,
@@ -13,8 +14,20 @@ export default async function AdminLayout({
         redirect('/login')
     }
 
+    const profile = await getEmployeeProfile(
+        session.employeeId,
+        session.name,
+        session.name,
+        session.role
+    )
+
     return (
-        <DashboardShell role={session.role as 'hr_admin' | 'manager'} userName={session.name} showBottomNav>
+        <DashboardShell
+            role={session.role as 'hr_admin' | 'manager'}
+            userName={session.name}
+            profile={profile}
+            showBottomNav
+        >
             {children}
         </DashboardShell>
     )

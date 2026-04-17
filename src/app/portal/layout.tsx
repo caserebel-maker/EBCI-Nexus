@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { EmergencyBanner } from '@/components/dashboard/emergency-banner'
+import { getEmployeeProfile } from '@/lib/employee-profile'
 
 export default async function EmployeeLayout({
     children,
@@ -30,8 +31,20 @@ export default async function EmployeeLayout({
         // non-critical
     }
 
+    const profile = await getEmployeeProfile(
+        session.employeeId,
+        session.name,
+        session.name,
+        session.role
+    )
+
     return (
-        <DashboardShell role={session.role} userName={session.name} showBottomNav>
+        <DashboardShell
+            role={session.role}
+            userName={session.name}
+            profile={profile}
+            showBottomNav
+        >
             <EmergencyBanner emergency={emergency} />
             {children}
         </DashboardShell>

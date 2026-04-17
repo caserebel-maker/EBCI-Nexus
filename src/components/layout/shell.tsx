@@ -16,9 +16,15 @@ interface DashboardShellProps {
     role: 'hr_admin' | 'manager' | 'employee'
     userName?: string
     showBottomNav?: boolean
+    profile?: {
+        fullName: string
+        email: string
+        photoUrl: string | null
+        roleLabel: string
+    }
 }
 
-export function DashboardShell({ children, role, userName, showBottomNav = false }: DashboardShellProps) {
+export function DashboardShell({ children, role, userName, showBottomNav = false, profile }: DashboardShellProps) {
     const pathname = usePathname()
     const { t } = useTranslation()
 
@@ -52,17 +58,30 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                     </div>
                 </div>
 
-                {/* User Profile (Top) */}
-                <div className="p-4 border-b border-white/10 dark:border-border shrink-0">
-                    <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-white/20 dark:bg-muted flex items-center justify-center text-sm font-bold text-white dark:text-primary">
-                            {userName ? userName.charAt(0).toUpperCase() : 'U'}
-                        </div>
-                        <div className="overflow-hidden">
-                            <p className="text-sm font-bold truncate">{userName || 'User'}</p>
-                            <p className="text-xs text-white/90 dark:text-muted-foreground capitalize font-medium">{role.replace('_', ' ')}</p>
-                        </div>
+                {/* User Profile Card (Large, 4 rows) */}
+                <div className="p-5 border-b border-white/10 dark:border-border shrink-0 flex flex-col items-center text-center">
+                    {/* Row 1: Profile Photo */}
+                    <div className="h-20 w-20 rounded-full overflow-hidden shadow-lg shadow-black/40 ring-2 ring-white/20 bg-white/10 mb-3">
+                        {profile?.photoUrl ? (
+                            <img src={profile.photoUrl} alt={profile.fullName} className="h-full w-full object-cover" />
+                        ) : (
+                            <div className="h-full w-full flex items-center justify-center text-2xl font-bold text-white">
+                                {(profile?.fullName ?? userName ?? 'U').charAt(0).toUpperCase()}
+                            </div>
+                        )}
                     </div>
+                    {/* Row 2: Full Name */}
+                    <p className="text-sm font-bold text-white leading-tight mb-1">
+                        {profile?.fullName ?? userName ?? 'User'}
+                    </p>
+                    {/* Row 3: Email */}
+                    <p className="text-[11px] text-white/60 truncate w-full mb-1">
+                        {profile?.email ?? ''}
+                    </p>
+                    {/* Row 4: Role */}
+                    <p className="text-[11px] font-semibold text-white/80">
+                        Role: {profile?.roleLabel ?? role}
+                    </p>
                 </div>
 
                 {/* Nav Links */}
