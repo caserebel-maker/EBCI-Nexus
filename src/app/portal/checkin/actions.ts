@@ -37,14 +37,13 @@ export async function checkIn(payload: CheckInPayload) {
         return { error: 'ไม่พบข้อมูลพนักงาน — กรุณาติดต่อ HR' }
     }
 
-    // Check if already checked in today (without checkout)
+    // Guard: 1 check-in per day (Option 1 — strict)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const { data: openCheckin } = await supabaseAdmin
         .from('checkins')
         .select('id')
         .eq('employee_id', employeeId)
-        .is('checked_out_at', null)
         .gte('checked_in_at', today.toISOString())
         .maybeSingle()
 
