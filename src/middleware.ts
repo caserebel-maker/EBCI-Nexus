@@ -34,7 +34,6 @@ export function middleware(request: NextRequest) {
     try {
         const parsed = JSON.parse(sessionCookie)
         role = parsed.role
-        console.log(`[middleware] path=${pathname} raw_session_keys=${Object.keys(parsed).join(',')} role=${role}`)
     } catch {
         return NextResponse.redirect(new URL('/login', request.url))
     }
