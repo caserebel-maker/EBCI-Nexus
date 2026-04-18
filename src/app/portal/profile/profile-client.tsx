@@ -126,10 +126,10 @@ function Badge({ children, accent }: { children: React.ReactNode; accent?: boole
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
     return (
-        <div className="flex flex-col items-center justify-center py-4 rounded-2xl"
+        <div className="flex flex-col items-center justify-center py-4 px-2 rounded-2xl"
             style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.20)' }}>
             <span className="font-black leading-none" style={{ fontSize: '32px', color }}>{value}</span>
-            <span style={{ fontSize: '24px', color: 'rgba(255,255,255,0.45)', marginTop: 6 }}>{label}</span>
+            <span className="whitespace-nowrap" style={{ fontSize: '18px', color: 'rgba(255,255,255,0.55)', marginTop: 8 }}>{label}</span>
         </div>
     )
 }
