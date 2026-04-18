@@ -134,7 +134,7 @@ function DeptDonut({ data, total }: { data: any[]; total: number }) {
     const [activeIndex, setActiveIndex] = useState<number | null>(null)
 
     return (
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col items-center gap-4">
             {/* Pie — ใช้ fixed px height แทน "100%" เพื่อให้ recharts render bars/cells ถูกต้อง */}
             <div className="shrink-0 relative" style={{ width: 180, height: 180 }}>
                 <ResponsiveContainer width={180} height={180}>
