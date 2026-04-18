@@ -204,7 +204,7 @@ function SectionHeader({ title, icon: Icon, warn }: { title: string; icon: any; 
             <div className={warn ? 'h-7 w-7 rounded-lg bg-amber-500/20 ring-1 ring-amber-400/40 flex items-center justify-center' : 'h-7 w-7 rounded-lg bg-white/15 ring-1 ring-white/25 flex items-center justify-center'}>
                 <Icon size={14} className={warn ? 'text-amber-300' : 'text-amber-300'} />
             </div>
-            <h2 className="text-sm 2xl:text-base lg:text-lg font-semibold text-white/80 tracking-wide">{title}</h2>
+            <h2 className="text-xs 2xl:text-sm lg:text-base font-semibold text-white/80 tracking-wide">{title}</h2>
         </div>
     )
 }
@@ -600,7 +600,7 @@ export function HRDashboard({
                         <div className="flex flex-col gap-2 mb-3">
                             <div className="flex items-center gap-2">
                                 <Megaphone size={16} className="text-[#ad5f6c]" />
-                                <h2 className="text-base lg:text-lg font-semibold text-white/65 tracking-wide whitespace-nowrap">ประกาศข่าวสาร</h2>
+                                <h2 className="text-xs 2xl:text-sm lg:text-base font-semibold text-white/80 tracking-wide whitespace-nowrap">ประกาศข่าวสาร</h2>
                             </div>
                             <button
                                 onClick={() => router.push('/hradmin/hr/announcements')}
@@ -622,7 +622,7 @@ export function HRDashboard({
                                             {PRIORITY_LABEL[a.priority] ?? a.priority}
                                         </span>
                                         <p className="text-xs 2xl:text-sm font-bold text-white/85 group-hover:text-white leading-snug transition-colors">{a.headline}</p>
-                                        <p className="text-[11px] 2xl:text-xs text-white/40 mt-0.5">
+                                        <p className="text-xs 2xl:text-sm font-semibold text-white mt-1">
                                             {new Date(a.publish_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
                                         </p>
                                     </div>
@@ -661,7 +661,7 @@ export function HRDashboard({
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-xs 2xl:text-sm font-bold text-white leading-tight">{fullName(e.first_name_th, e.last_name_th, e.nickname)}</p>
-                                            <p className="text-[11px] 2xl:text-xs text-white/40 mt-0.5">{e.department}</p>
+                                            <p className="text-xs 2xl:text-sm font-semibold text-white mt-1">{e.department}</p>
                                         </div>
                                         <span className="text-xs 2xl:text-sm font-black text-amber-300 shrink-0">{e.years} ปี</span>
                                     </div>
@@ -697,18 +697,18 @@ export function HRDashboard({
                     {/* ── วันเกิดเดือนนี้ ── */}
                     {birthdays.length > 0 && (
                         <div style={glassStyle} className="p-5">
-                            <div className="flex items-center gap-2 mb-4"><div className="h-7 w-7 rounded-lg bg-white/15 ring-1 ring-white/25 flex items-center justify-center"><Gift size={14} className="text-amber-300" /></div><h2 className="text-base lg:text-lg font-semibold text-white/65 tracking-wide">วันเกิดเดือนนี้ ({birthdays.length} คน)</h2></div>
+                            <div className="flex items-center gap-2 mb-4"><div className="h-7 w-7 rounded-lg bg-white/15 ring-1 ring-white/25 flex items-center justify-center"><Gift size={14} className="text-amber-300" /></div><h2 className="text-xs 2xl:text-sm lg:text-base font-semibold text-white/80 tracking-wide">วันเกิดเดือนนี้ ({birthdays.length} คน)</h2></div>
                             <div className="space-y-2">
                                 {birthdays.slice(0, 6).map(e => (
                                     <div key={e.id} className="flex items-center gap-2 py-1.5 px-2 rounded-xl hover:bg-white/5 transition-colors">
-                                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center text-xs font-black text-white shadow-lg shadow-rose-900/30 shrink-0">
+                                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#561e23] to-[#882136] flex items-center justify-center text-xs font-black text-white shadow-lg shadow-black/40 ring-1 ring-white/20 shrink-0">
                                             {e.first_name_th?.charAt(0)}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-xs 2xl:text-sm font-bold text-white leading-tight">{fullName(e.first_name_th, e.last_name_th, e.nickname)}</p>
-                                            <p className="text-[11px] 2xl:text-xs text-white/40 mt-0.5">{e.dobDay} {MONTHS_TH[e.dobMonth]}</p>
+                                            <p className="text-xs 2xl:text-sm font-semibold text-white mt-1">{e.dobDay} {MONTHS_TH[e.dobMonth]}</p>
                                         </div>
-                                        <span className="text-xs 2xl:text-sm font-black text-[#e8909a] shrink-0">{e.age} ปี</span>
+                                        <span className="text-xs 2xl:text-sm font-black text-white/90 shrink-0">{e.age} ปี</span>
                                     </div>
                                 ))}
                             </div>
