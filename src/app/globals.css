@@ -69,7 +69,7 @@
 }
 
 @theme {
-  --font-sans: var(--font-kanit);
+  --font-sans: var(--font-plex);
 
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -114,7 +114,7 @@ html {
 }
 
 body {
-  font-family: var(--font-kanit), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-plex), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   @apply bg-background text-foreground antialiased;
 }
 

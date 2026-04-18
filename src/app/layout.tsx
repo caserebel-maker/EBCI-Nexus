@@ -1,6 +1,6 @@
 import React from 'react'
 import type { Metadata, Viewport } from 'next'
-import { Kanit } from 'next/font/google'
+import { IBM_Plex_Sans_Thai } from 'next/font/google'
 import './globals.css'
 import { cn } from '@/lib/utils'
 import { ThemeProvider } from "@/components/theme-provider"
@@ -8,10 +8,10 @@ import { Providers } from "@/components/providers"
 import { RoleProvider } from '@/contexts/role-context'
 import { getSession } from '@/lib/auth'
 
-const kanit = Kanit({
+const ibmPlexSansThai = IBM_Plex_Sans_Thai({
   subsets: ['latin', 'thai'],
-  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
-  variable: '--font-kanit',
+  weight: ['100', '200', '300', '400', '500', '600', '700'],
+  variable: '--font-plex',
 })
 
 export const viewport: Viewport = {
@@ -55,7 +55,7 @@ export default async function RootLayout({
           console.log('Layout Bootstrapped');
         `}} />
       </head>
-      <body className={cn(kanit.variable, "font-sans bg-background text-foreground min-h-screen")}>
+      <body className={cn(ibmPlexSansThai.variable, "font-sans bg-background text-foreground min-h-screen")}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
