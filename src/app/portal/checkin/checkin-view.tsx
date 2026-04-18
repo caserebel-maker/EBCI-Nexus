@@ -139,7 +139,7 @@ export function CheckinView({ office, todayCheckin }: Props) {
 
             {/* Header */}
             <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-[#882136]/60 flex items-center justify-center text-[#ad5f6c] border border-[#ad5f6c]/20">
+                <div className="h-10 w-10 rounded-xl bg-white/15 flex items-center justify-center text-amber-300 ring-1 ring-white/25">
                     <MapPin size={20} />
                 </div>
                 <div>
