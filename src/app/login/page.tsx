@@ -46,15 +46,15 @@ function LoginForm() {
             </div>
 
             {/* 2. Glassmorphism Card (Switched to White Glass Theme) */}
-            <div className="relative z-10 w-full max-w-md p-8 mx-4">
-                <div className="backdrop-blur-sm bg-white/10 border border-white/20 rounded-2xl shadow-2xl overflow-hidden p-8 animate-in fade-in zoom-in duration-500">
+            <div className="relative z-10 w-full max-w-[422px] p-8 mx-4">
+                <div className="backdrop-blur-sm bg-white/10 border border-white/20 rounded-2xl shadow-2xl overflow-hidden p-5 animate-in fade-in zoom-in duration-500">
 
                     {/* Header */}
-                    <div className="text-center mb-10 flex flex-col items-center">
+                    <div className="text-center mb-6 flex flex-col items-center">
                         <img
                             src="/sidebar-logo.png"
                             alt="EBCI Nexus"
-                            className="h-20 w-auto opacity-90 drop-shadow-2xl"
+                            className="h-12 w-auto opacity-90 drop-shadow-2xl"
                         />
                         <p className="text-white font-medium text-[9px] md:text-[10px] tracking-[0.2em] opacity-80 mt-1">
                             Human Resource Management System
@@ -112,32 +112,32 @@ function LoginForm() {
 
                         <div className="space-y-4">
                             <div className="relative">
-                                <Mail className="absolute left-3 top-3 h-5 w-5 text-white/70" />
+                                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-white/70" />
                                 <input
                                     name="email"
                                     type="email"
                                     required
                                     autoComplete="email"
-                                    className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/60 pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/20 shadow-none"
+                                    className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/60 pl-9 pr-3 py-2 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/20 shadow-none text-[15px]"
                                     placeholder={t('auth.email')}
                                 />
                             </div>
 
                             <div className="relative">
-                                <Lock className="absolute left-3 top-3 h-5 w-5 text-white/70" />
+                                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-white/70" />
                                 <input
                                     name="password"
                                     type={showPw ? 'text' : 'password'}
                                     required
-                                    className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/60 pl-10 pr-10 py-3 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/20 shadow-none"
+                                    className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/60 pl-9 pr-9 py-2 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/20 shadow-none text-[15px]"
                                     placeholder={t('auth.password')}
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPw(v => !v)}
-                                    className="absolute right-3 top-3 text-white/50 hover:text-white/80 transition-colors"
+                                    className="absolute right-3 top-2.5 text-white/50 hover:text-white/80 transition-colors"
                                 >
-                                    {showPw ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                    {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
                             </div>
                         </div>
@@ -146,9 +146,9 @@ function LoginForm() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-gradient-to-r from-[#561e23] to-[#ad5f6c] hover:from-[#ad5f6c] hover:to-[#c47080] text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transform transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center border border-white/10"
+                                className="w-full bg-gradient-to-r from-[#561e23] to-[#ad5f6c] hover:from-[#ad5f6c] hover:to-[#c47080] text-white font-bold py-2.5 px-4 rounded-xl shadow-lg transform transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center border border-white/10 text-[15px]"
                             >
-                                {loading ? <Loader2 className="animate-spin h-5 w-5" /> : t('auth.signIn')}
+                                {loading ? <Loader2 className="animate-spin h-4 w-4" /> : t('auth.signIn')}
                             </button>
 
                             {isAdminEntry ? (
@@ -177,7 +177,7 @@ function LoginForm() {
                 </div>
 
                 {/* Footer Credit */}
-                <p className="text-center text-white/40 text-xs mt-8 font-light">
+                <p className="text-center text-white/40 text-xs mt-5 font-light">
                     © 2026 EBCI Group. All rights reserved.
                 </p>
             </div>
