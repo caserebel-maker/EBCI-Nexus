@@ -137,7 +137,7 @@ function InfoRow({ label, value, icon: Icon, editing, editNode }: {
             </div>
             {editing && editNode
                 ? <div className="flex-1 min-w-0">{editNode}</div>
-                : <span className="text-[1rem] font-semibold text-white text-right">{value || '—'}</span>
+                : <span className="text-[0.95rem] font-semibold text-white text-right break-all">{value || '—'}</span>
             }
         </div>
     )
@@ -643,7 +643,7 @@ export function EmployeeProfileView({
                             editing={isEditing}
                             editNode={<input className={inp} value={form.emergency_contact} onChange={set('emergency_contact')} placeholder="เบอร์ผู้ติดต่อฉุกเฉิน" />}
                         />
-                        <div className="pt-3 mt-1 border-t border-white/8">
+                        <div className="pt-3 mt-1 border-t border-white/8 px-3">
                             <p className="text-[0.75rem] font-bold text-white/65 uppercase tracking-widest mb-2">ที่อยู่</p>
                             {isEditing ? (
                                 <textarea className={cn(inp, 'min-h-[72px] resize-none')} value={form.address}

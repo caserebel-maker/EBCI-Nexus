@@ -416,9 +416,6 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
     return (
         <div className="max-w-lg mx-auto space-y-4 pb-4">
 
-            {/* 1. Welcome Section */}
-            <WelcomeSection employee={employee} sessionName={sessionName} />
-
             {/* 2. Announcement Slideshow */}
             <AnnouncementSlideshow announcements={announcements} />
 

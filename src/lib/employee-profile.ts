@@ -3,9 +3,14 @@ import { supabaseAdmin } from './supabase-admin'
 export interface EmployeeProfile {
     id: string
     fullName: string           // "อาทิตย์ จันทร์วิภาสวงศ์ (มด)"
+    nickname: string | null
     email: string
     photoUrl: string | null
     roleLabel: string          // "HR Admin" / "Manager" / "Employee"
+    position: string | null
+    department: string | null
+    startDate: string | null   // ISO date
+    dateOfBirth: string | null // ISO date
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -27,7 +32,7 @@ export async function getEmployeeProfile(
         // whose auth.user_metadata doesn't contain employeeId
         const query = supabaseAdmin
             .from('employees')
-            .select('id, first_name_th, last_name_th, nickname, email, photo_url')
+            .select('id, first_name_th, last_name_th, nickname, email, photo_url, position, department, start_date, date_of_birth')
 
         const { data } = employeeId
             ? await query.eq('id', employeeId).maybeSingle()
@@ -37,9 +42,14 @@ export async function getEmployeeProfile(
             return {
                 id: employeeId,
                 fullName: fallbackName,
+                nickname: null,
                 email: fallbackEmail,
                 photoUrl: null,
                 roleLabel,
+                position: null,
+                department: null,
+                startDate: null,
+                dateOfBirth: null,
             }
         }
 
@@ -52,18 +62,28 @@ export async function getEmployeeProfile(
         return {
             id: data.id,
             fullName,
+            nickname: data.nickname ?? null,
             email: data.email ?? fallbackEmail,
             photoUrl: data.photo_url ?? null,
             roleLabel,
+            position: data.position ?? null,
+            department: data.department ?? null,
+            startDate: data.start_date ?? null,
+            dateOfBirth: data.date_of_birth ?? null,
         }
     } catch (err) {
         console.error('[getEmployeeProfile] error:', err)
         return {
             id: employeeId,
             fullName: fallbackName,
+            nickname: null,
             email: fallbackEmail,
             photoUrl: null,
             roleLabel,
+            position: null,
+            department: null,
+            startDate: null,
+            dateOfBirth: null,
         }
     }
 }

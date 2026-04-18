@@ -1,5 +1,23 @@
 'use client'
 
+import { getGreeting } from '@/lib/greeting'
+
+// Calculate tenure in Thai (e.g. "10 ปี 2 เดือน")
+function calcTenure(startDate: string): string {
+    const start = new Date(startDate)
+    const now = new Date()
+    let years = now.getFullYear() - start.getFullYear()
+    let months = now.getMonth() - start.getMonth()
+    if (months < 0) { years--; months += 12 }
+    if (now.getDate() < start.getDate()) { months-- }
+    if (months < 0) { years--; months += 12 }
+    if (years <= 0 && months <= 0) return 'น้อยกว่า 1 เดือน'
+    const parts: string[] = []
+    if (years > 0) parts.push(`${years} ปี`)
+    if (months > 0) parts.push(`${months} เดือน`)
+    return parts.join(' ')
+}
+
 import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -16,15 +34,21 @@ interface DashboardShellProps {
     role: 'hr_admin' | 'manager' | 'employee'
     userName?: string
     showBottomNav?: boolean
+    emergencyBanner?: React.ReactNode
     profile?: {
         fullName: string
+        nickname: string | null
         email: string
         photoUrl: string | null
         roleLabel: string
+        position: string | null
+        department: string | null
+        startDate: string | null
+        dateOfBirth: string | null
     }
 }
 
-export function DashboardShell({ children, role, userName, showBottomNav = false, profile }: DashboardShellProps) {
+export function DashboardShell({ children, role, userName, showBottomNav = false, profile, emergencyBanner }: DashboardShellProps) {
     const pathname = usePathname()
     const { t } = useTranslation()
 
@@ -188,24 +212,45 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
 
                 {/* Page Content */}
                 <div className="flex-1 overflow-auto p-4 lg:p-8">
+                    {/* Emergency Banner — top priority, mobile only */}
+                    {emergencyBanner && <div className="lg:hidden mb-4">{emergencyBanner}</div>}
+
                     {/* Mobile Identity Header — shown on every page */}
-                    <div className="lg:hidden flex items-center gap-3 mb-4">
-                        <div className="h-14 w-14 rounded-full overflow-hidden shadow-md shadow-black/30 ring-2 ring-white/20 bg-white/10 shrink-0">
-                            {profile?.photoUrl ? (
-                                <img src={profile.photoUrl} alt={profile.fullName} className="h-full w-full object-cover" />
-                            ) : (
-                                <div className="h-full w-full flex items-center justify-center text-lg font-bold text-white">
-                                    {(profile?.fullName ?? userName ?? 'U').charAt(0).toUpperCase()}
-                                </div>
-                            )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-white truncate leading-tight">
-                                {profile?.fullName ?? userName ?? 'User'}
-                            </p>
-                            <p className="text-[11px] text-white/60 truncate mt-0.5">
-                                {profile?.email ?? ''} &middot; {profile?.roleLabel ?? role}
-                            </p>
+                    <div className="lg:hidden mb-4">
+                        {/* Greeting — daily/payday/birthday */}
+                        <p className="text-xs text-amber-300/90 font-semibold mb-3 pb-3 leading-snug text-center border-b border-white/10">
+                            {getGreeting({ nickname: profile?.nickname, dateOfBirth: profile?.dateOfBirth })}
+                        </p>
+                        <div className="flex items-center gap-3">
+                            <div className="h-14 w-14 rounded-full overflow-hidden shadow-md shadow-black/30 ring-2 ring-white/20 bg-white/10 shrink-0">
+                                {profile?.photoUrl ? (
+                                    <img src={profile.photoUrl} alt={profile.fullName} className="h-full w-full object-cover" />
+                                ) : (
+                                    <div className="h-full w-full flex items-center justify-center text-lg font-bold text-white">
+                                        {(profile?.fullName ?? userName ?? 'U').charAt(0).toUpperCase()}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-bold text-white truncate leading-tight">
+                                    {profile?.fullName ?? userName ?? 'User'}
+                                </p>
+                                {(profile?.position || profile?.department) && (
+                                    <p className="text-xs text-white/70 truncate mt-1">
+                                        {profile?.position}
+                                        {profile?.position && profile?.department && <span className="text-white/30 mx-1.5">·</span>}
+                                        {profile?.department}
+                                    </p>
+                                )}
+                                {profile?.startDate && (
+                                    <p className="text-xs text-white/55 truncate mt-0.5">
+                                        อายุงาน {calcTenure(profile.startDate)}
+                                    </p>
+                                )}
+                                <p className="text-xs text-white/55 truncate mt-0.5">
+                                    {profile?.email ?? ''} &middot; {profile?.roleLabel ?? role}
+                                </p>
+                            </div>
                         </div>
                     </div>
 

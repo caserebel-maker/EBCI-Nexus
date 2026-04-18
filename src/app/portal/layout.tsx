@@ -47,8 +47,8 @@ export default async function EmployeeLayout({
             userName={session.name}
             profile={profile}
             showBottomNav
+            emergencyBanner={<EmergencyBanner emergency={emergency} />}
         >
-            <EmergencyBanner emergency={emergency} />
             {children}
         </DashboardShell>
     )
