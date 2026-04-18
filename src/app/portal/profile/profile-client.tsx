@@ -113,7 +113,7 @@ function Badge({ children, accent }: { children: React.ReactNode; accent?: boole
     return (
         <span className="inline-flex items-center px-3 py-1 rounded-full font-medium"
             style={{
-                fontSize: '24px',
+                fontSize: '16px',
                 background: accent ? 'rgba(136,33,54,0.35)' : 'rgba(255,255,255,0.16)',
                 border: `1px solid ${accent ? 'rgba(173,95,108,0.35)' : 'rgba(255,255,255,0.25)'}`,
                 color: accent ? '#fca5a5' : 'rgba(255,255,255,0.90)',
@@ -174,15 +174,15 @@ export function ProfileClient({
                     {avatarUrl ? (
                         <img src={avatarUrl} alt=""
                             className="rounded-full object-cover"
-                            style={{ width: 96, height: 96, border: '3px solid rgba(255,255,255,0.2)', boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }} />
+                            style={{ width: 144, height: 144, border: '3px solid rgba(255,255,255,0.2)', boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }} />
                     ) : (
                         <div className="rounded-full flex items-center justify-center font-black text-white select-none"
                             style={{
-                                width: 96, height: 96,
+                                width: 144, height: 144,
                                 background: 'linear-gradient(135deg, #882136, #c0392b)',
                                 border: '3px solid rgba(255,255,255,0.15)',
                                 boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-                                fontSize: '30px',
+                                fontSize: '45px',
                             }}>
                             {initials}
                         </div>
