@@ -30,7 +30,7 @@ const glass: React.CSSProperties = {
 }
 
 const sectionTitle: React.CSSProperties = {
-    fontSize: '15px',
+    fontSize: '19px',
     fontWeight: 700,
     color: 'rgba(255,255,255,0.9)',
     marginBottom: '16px',
@@ -78,8 +78,8 @@ function LeaveDonut({
                 </div>
             </div>
             <div className="text-center">
-                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.80)', fontWeight: 600 }}>{label}</p>
-                <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
+                <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.80)', fontWeight: 600 }}>{label}</p>
+                <p style={{ fontSize: '19px', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
                     ใช้ {used} / {entitled} วัน
                 </p>
             </div>
@@ -99,8 +99,8 @@ function InfoRow({ icon: Icon, label, value }: {
                 <Icon size={16} style={{ color: '#fcd34d' }} />
             </div>
             <div className="min-w-0 flex-1">
-                <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.75)' }}>{label}</p>
-                <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.98)', fontWeight: 500 }} className="truncate">
+                <p style={{ fontSize: '19px', color: 'rgba(255,255,255,0.75)' }}>{label}</p>
+                <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.98)', fontWeight: 500 }} className="truncate">
                     {value}
                 </p>
             </div>
@@ -113,7 +113,7 @@ function Badge({ children, accent }: { children: React.ReactNode; accent?: boole
     return (
         <span className="inline-flex items-center px-3 py-1 rounded-full font-medium"
             style={{
-                fontSize: '12px',
+                fontSize: '24px',
                 background: accent ? 'rgba(136,33,54,0.35)' : 'rgba(255,255,255,0.16)',
                 border: `1px solid ${accent ? 'rgba(173,95,108,0.35)' : 'rgba(255,255,255,0.25)'}`,
                 color: accent ? '#fca5a5' : 'rgba(255,255,255,0.90)',
@@ -129,7 +129,7 @@ function StatCard({ label, value, color }: { label: string; value: number; color
         <div className="flex flex-col items-center justify-center py-4 rounded-2xl"
             style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.20)' }}>
             <span className="font-black leading-none" style={{ fontSize: '32px', color }}>{value}</span>
-            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', marginTop: 6 }}>{label}</span>
+            <span style={{ fontSize: '24px', color: 'rgba(255,255,255,0.45)', marginTop: 6 }}>{label}</span>
         </div>
     )
 }
@@ -190,11 +190,11 @@ export function ProfileClient({
 
                     {/* Name */}
                     <div>
-                        <h1 className="text-white font-bold leading-snug" style={{ fontSize: '20px' }}>
+                        <h1 className="text-white font-bold leading-snug" style={{ fontSize: '24px' }}>
                             {displayName}
                         </h1>
                         {(position || department) && (
-                            <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>
+                            <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>
                                 {position}
                                 {position && department && (
                                     <span style={{ color: 'rgba(255,255,255,0.25)', margin: '0 6px' }}>—</span>
@@ -219,7 +219,7 @@ export function ProfileClient({
                     {startDate && <InfoRow icon={Calendar}  label="วันเริ่มงาน"      value={fmtDate(startDate)} />}
                     {managerName && <InfoRow icon={User}    label="ผู้บังคับบัญชา"   value={managerName} />}
                     {!email && !phone && !startDate && !managerName && (
-                        <p className="text-center py-3" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.90)' }}>
+                        <p className="text-center py-3" style={{ fontSize: '17px', color: 'rgba(255,255,255,0.90)' }}>
                             ไม่มีข้อมูลติดต่อ
                         </p>
                     )}
@@ -246,7 +246,7 @@ export function ProfileClient({
                         })}
                     </div>
                 ) : (
-                    <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.90)' }}>ไม่มีข้อมูลวันลา</p>
+                    <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.90)' }}>ไม่มีข้อมูลวันลา</p>
                 )}
 
                 {/* Legend */}
@@ -259,7 +259,7 @@ export function ProfileClient({
                             return (
                                 <div key={b.leaveType} className="flex items-center gap-1.5">
                                     <span className="rounded-full" style={{ width: 8, height: 8, background: meta.color, display: 'inline-block' }} />
-                                    <span style={{ fontSize: '11px', color: '#fcd34d' }}>{meta.label}</span>
+                                    <span style={{ fontSize: '19px', color: '#fcd34d' }}>{meta.label}</span>
                                 </div>
                             )
                         })}
@@ -275,7 +275,7 @@ export function ProfileClient({
                     <StatCard label="มาสาย"     value={0} color="#F87171" />
                     <StatCard label="ขาด"       value={0} color="rgba(255,255,255,0.35)" />
                 </div>
-                <p className="text-center mt-3" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)' }}>
+                <p className="text-center mt-3" style={{ fontSize: '19px', color: 'rgba(255,255,255,0.55)' }}>
                     รอเชื่อมต่อระบบลงเวลา
                 </p>
             </div>
@@ -285,14 +285,14 @@ export function ProfileClient({
                 <div className="flex items-center justify-between mb-4">
                     <p style={sectionTitle}>ประวัติใบลาล่าสุด</p>
                     <Link href="/portal/leave"
-                        style={{ fontSize: '13px', color: 'rgba(173,95,108,0.9)', fontWeight: 600 }}
+                        style={{ fontSize: '17px', color: 'rgba(173,95,108,0.9)', fontWeight: 600 }}
                         className="hover:text-white transition-colors">
                         ดูทั้งหมด →
                     </Link>
                 </div>
 
                 {recentLeaves.length === 0 ? (
-                    <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.30)' }}>ยังไม่มีประวัติใบลา</p>
+                    <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.30)' }}>ยังไม่มีประวัติใบลา</p>
                 ) : (
                     <div className="space-y-2">
                         {recentLeaves.map(req => {
@@ -307,21 +307,21 @@ export function ProfileClient({
                                         <span className="shrink-0 rounded-full"
                                             style={{ width: 8, height: 8, background: meta?.color ?? '#94a3b8', display: 'inline-block' }} />
                                         <div className="min-w-0">
-                                            <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.80)', fontWeight: 600 }}>
+                                            <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.80)', fontWeight: 600 }}>
                                                 {meta?.label ?? req.leaveType}
                                             </p>
-                                            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.38)', marginTop: 1 }}>
+                                            <p style={{ fontSize: '19px', color: 'rgba(255,255,255,0.38)', marginTop: 1 }}>
                                                 {fmtDate(req.startDate)} – {fmtDate(req.endDate)}
                                             </p>
                                         </div>
                                     </div>
                                     {/* Days + status */}
                                     <div className="flex items-center gap-2 shrink-0">
-                                        <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)' }}>
+                                        <span style={{ fontSize: '17px', color: 'rgba(255,255,255,0.45)' }}>
                                             {req.totalDays} วัน
                                         </span>
                                         <span className="px-2.5 py-0.5 rounded-full font-semibold"
-                                            style={{ fontSize: '12px', background: st.bg, color: st.text }}>
+                                            style={{ fontSize: '24px', background: st.bg, color: st.text }}>
                                             {st.label}
                                         </span>
                                     </div>
