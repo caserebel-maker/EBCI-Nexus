@@ -130,7 +130,7 @@ function InfoRow({ label, value, icon: Icon, editing, editNode }: {
     label: string; value: string; icon: any; editing?: boolean; editNode?: React.ReactNode
 }) {
     return (
-        <div className="flex items-start justify-between py-3 border-b border-white/5 last:border-0 px-2 hover:bg-white/5 rounded-lg transition-colors gap-4">
+        <div className="flex items-start justify-between py-3 border-b border-white/5 last:border-0 px-3 hover:bg-white/5 rounded-lg transition-colors gap-4">
             <div className="flex items-center gap-2.5 text-white/75 shrink-0 pt-0.5">
                 <Icon size={15} className="text-amber-300" />
                 <span className="text-[0.8rem] font-bold uppercase tracking-widest">{label}</span>
@@ -625,7 +625,7 @@ export function EmployeeProfileView({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                 {/* Contact */}
-                <div style={glass} className="p-6 shadow-xl">
+                <div style={glass} className="p-4 shadow-xl">
                     <SHead icon={Phone} label="ข้อมูลติดต่อ" />
                     <div className="space-y-0.5">
                         <InfoRow label="อีเมล" icon={Mail}
@@ -658,7 +658,7 @@ export function EmployeeProfileView({
                 </div>
 
                 {/* Work info */}
-                <div style={glass} className="p-6 shadow-xl">
+                <div style={glass} className="p-4 shadow-xl">
                     <SHead icon={Briefcase} label="ข้อมูลการทำงาน" />
                     <div className="space-y-0.5">
                         <InfoRow label="วันเริ่มงาน" icon={Calendar}
@@ -705,7 +705,7 @@ export function EmployeeProfileView({
             </div>
 
             {/* ── 4. Leave Statistics Chart ─────────────────────────────────── */}
-            <div style={glass} className="p-6 shadow-xl">
+            <div style={glass} className="p-4 shadow-xl">
                 <SHead icon={FileText} label="สถิติการลา" />
                 {chartData.length === 0 ? (
                     <p className="text-white/65 text-[0.95rem] text-center py-8">ยังไม่มีข้อมูลวันลา</p>
@@ -764,7 +764,7 @@ export function EmployeeProfileView({
             </div>
 
             {/* ── 5. Leave History (full, with filter + pagination) ─────────── */}
-            <div style={glass} className="p-6 shadow-xl">
+            <div style={glass} className="p-4 shadow-xl">
                 <SHead icon={Calendar} label="ประวัติใบลาทั้งหมด" />
                 {recentLeaves.length === 0 ? (
                     <p className="text-white/65 text-[0.95rem] text-center py-8">ยังไม่มีประวัติใบลา</p>
