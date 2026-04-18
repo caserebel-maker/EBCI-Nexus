@@ -45,13 +45,13 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                 )}
             >
                 {/* Sidebar Header */}
-                <div className="flex flex-col shrink-0 pt-12 pb-10 lg:pt-6 lg:pb-4">
+                <div className="flex flex-col shrink-0 pt-3 pb-1 2xl:pt-6 2xl:pb-4">
                     <div className="flex flex-col items-center justify-center px-4 w-full">
-                        <Link href="/hradmin" className="flex flex-col items-center gap-4 group">
+                        <Link href="/hradmin" className="flex flex-col items-center gap-1 2xl:gap-4 group">
                             <img
                                 src="/sidebar-logo.png"
                                 alt="EBCI NEXUS"
-                                className="transition-all duration-300 drop-shadow-[0_4px_6px_rgba(255,255,255,0.25)] h-16"
+                                className="transition-all duration-300 drop-shadow-[0_4px_6px_rgba(255,255,255,0.25)] h-12 2xl:h-16"
                             />
                             <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.5em] ml-1 group-hover:text-white/40 transition-colors">V 1.0</span>
                         </Link>
@@ -59,9 +59,9 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                 </div>
 
                 {/* User Profile Card (Large, 4 rows) */}
-                <div className="px-5 pb-5 pt-0 shrink-0 flex flex-col items-center text-center lg:pb-2">
+                <div className="px-5 pb-2 pt-0 shrink-0 flex flex-col items-center text-center 2xl:pb-3">
                     {/* Row 1: Profile Photo */}
-                    <div className="h-22 w-22 rounded-full overflow-hidden shadow-xl shadow-black/50 ring-2 ring-white/25 bg-white/10 mb-3 lg:h-16 lg:w-16 lg:mb-2" style={{}}>
+                    <div className="h-14 w-14 rounded-full overflow-hidden shadow-xl shadow-black/50 ring-2 ring-white/25 bg-white/10 mb-2 2xl:h-16 2xl:w-16 2xl:mb-3" style={{}}>
                         {profile?.photoUrl ? (
                             <img src={profile.photoUrl} alt={profile.fullName} className="h-full w-full object-cover" />
                         ) : (
@@ -85,7 +85,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                 </div>
 
                 {/* Nav Links */}
-                <nav className="p-4 space-y-2 lg:space-y-1 flex-1 overflow-y-auto min-h-0 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+                <nav className="p-4 space-y-2 lg:space-y-1 flex-1 overflow-y-auto min-h-0 text-[13px] 2xl:text-base [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded">
                     {navItems.map((item, idx) => {
                         const isActive = item.href === '/hradmin'
                             ? pathname === '/hradmin'
@@ -112,18 +112,18 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
 
                 {/* Mode Switcher (HR Admin only) */}
                 {role === 'hr_admin' && (
-                    <div className="shrink-0 w-full p-4 border-t border-white/10">
+                    <div className="shrink-0 w-full p-2 border-t border-white/10">
                         <Link
                             href={pathname?.startsWith('/hradmin') ? '/portal/dashboard' : '/hradmin/dashboard'}
                             className={cn(
-                                "flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-lg transition-all font-semibold shadow-lg",
+                                "flex items-center justify-center gap-2 w-full px-2 py-1.5 rounded-lg transition-all font-semibold shadow-lg",
                                 pathname?.startsWith('/hradmin')
                                     ? "bg-blue-500/90 hover:bg-blue-500 text-white shadow-blue-500/30 ring-1 ring-blue-400/50"
                                     : "bg-amber-500/90 hover:bg-amber-500 text-white shadow-amber-500/30 ring-1 ring-amber-400/50"
                             )}
                         >
-                            <RefreshCw size={16} />
-                            <span className="text-sm">
+                            <RefreshCw size={14} />
+                            <span className="text-[13px]">
                                 {pathname?.startsWith('/hradmin') ? 'ดูในฐานะพนักงาน' : 'กลับเป็น HR Admin'}
                             </span>
                         </Link>
@@ -131,19 +131,19 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                 )}
 
                 {/* Sign Out (Bottom) */}
-                <div className="shrink-0 w-full p-4">
+                <div className="shrink-0 w-full p-2">
                     <button
                         onClick={async () => {
                             await fetch('/api/auth/logout', { method: 'POST' })
                             window.location.href = '/login'
                         }}
                         className={cn(
-                            "flex items-center gap-3 w-full px-3 py-2.5 rounded-md transition-colors",
+                            "flex items-center gap-2 w-full px-2 py-1.5 rounded-md transition-colors",
                             "text-red-300 hover:bg-red-500/20 hover:text-red-200 font-semibold"
                         )}
                     >
-                        <LogOut size={20} />
-                        <span>{t('auth.signOut')}</span>
+                        <LogOut size={16} />
+                        <span className="text-[13px]">{t('auth.signOut')}</span>
                     </button>
                 </div>
             </aside>

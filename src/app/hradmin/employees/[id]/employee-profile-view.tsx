@@ -416,7 +416,7 @@ export function EmployeeProfileView({
                             <div className="h-11 w-11 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0">
                                 <Trash2 size={22} className="text-red-400" />
                             </div>
-                            <h2 className="text-[1.2rem] font-bold text-white">ยืนยันการลบพนักงาน</h2>
+                            <h2 className="text-base font-bold text-white">ยืนยันการลบพนักงาน</h2>
                         </div>
                         <p className="text-[1rem] text-white/92 leading-relaxed">
                             คุณต้องการลบ <span className="text-white font-bold">{displayName}</span> ออกจากระบบใช่หรือไม่?<br />
@@ -541,7 +541,7 @@ export function EmployeeProfileView({
                                     <h1 className="text-[1.8rem] font-black text-white leading-tight">
                                         {displayName}
                                         {employee.nickname && (
-                                            <span className="text-white/78 font-normal text-[1.2rem] ml-2">({employee.nickname})</span>
+                                            <span className="text-white/78 font-normal text-base ml-2">({employee.nickname})</span>
                                         )}
                                     </h1>
                                     <span className={cn("px-2.5 py-1 rounded-lg text-xs font-bold border", levelColor)}>

@@ -10,22 +10,22 @@ export function EmergencyBanner({ emergency }: { emergency: any }) {
 
     return (
         <>
-            <div className="bg-amber-500 text-black p-4 rounded-xl shadow-2xl border-2 border-amber-400 flex items-center justify-between animate-pulse-slow z-40 relative mb-8">
-                <div className="flex items-center gap-4">
+            <div className="bg-amber-500 text-black py-2 px-4 rounded-xl shadow-2xl border-2 border-amber-400 flex items-center justify-between animate-pulse-slow z-40 relative mb-4">
+                <div className="flex items-center gap-3">
                     <div className="h-10 w-10 bg-black/10 rounded-full flex items-center justify-center">
                         <AlertTriangle size={24} className="animate-bounce" />
                     </div>
                     <div>
-                        <p className="text-[10px] lg:text-xs font-black uppercase tracking-[0.2em] opacity-60">Critical Emergency Alert</p>
-                        <h2 className="text-lg lg:text-xl font-black uppercase leading-tight">{emergency.headline}</h2>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Critical Emergency Alert</p>
+                        <h2 className="text-base lg:text-lg font-black uppercase leading-tight">{emergency.headline}</h2>
                     </div>
                 </div>
-                <div className="hidden md:block max-w-md text-sm lg:text-base font-medium opacity-80 line-clamp-2">
+                <div className="hidden md:block max-w-md text-xs font-medium opacity-80 line-clamp-2">
                     {emergency.content}
                 </div>
                 <button
                     onClick={() => setIsOpen(true)}
-                    className="bg-black text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-black/80 transition-all"
+                    className="bg-black text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-black/80 transition-all"
                 >
                     View Details
                 </button>
