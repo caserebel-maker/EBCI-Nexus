@@ -101,16 +101,14 @@ function MetricCard({ title, value, sub, icon: Icon, accent, href }: {
     return (
         <div
             style={metricCardStyle}
-            className="p-3 lg:p-4 2xl:p-5 flex items-start gap-2 lg:gap-3 cursor-pointer transition-all duration-200 hover:brightness-125 hover:scale-[1.02] active:scale-[0.99]"
+            className="overflow-hidden cursor-pointer transition-all duration-200 hover:brightness-110 hover:scale-[1.02] active:scale-[0.99] flex"
             onClick={() => router.push(href)}
         >
-            <div className={cn('h-9 w-9 lg:h-10 lg:w-10 2xl:h-12 2xl:w-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg', accent)}>
-                <Icon size={22} className="text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-                <p className="text-xs lg:text-sm font-medium text-white/60 leading-snug line-clamp-2">{title}</p>
-                <p className="text-xl lg:text-2xl 2xl:text-3xl font-black text-white mt-1 leading-none">{value}</p>
-                {sub && <p className="text-xs lg:text-sm text-white/45 mt-1 leading-tight">{sub}</p>}
+            <div className={cn('w-1.5 shrink-0', accent)} />
+            <div className="flex-1 flex flex-col items-center justify-center px-3 py-4 text-center gap-1.5">
+                <p className="text-xs font-semibold text-white/70 leading-tight whitespace-nowrap">{title}</p>
+                <p className="text-3xl font-black text-white leading-none">{value}</p>
+                {sub && <p className="text-xs text-white/50 leading-tight whitespace-nowrap">{sub}</p>}
             </div>
         </div>
     )
