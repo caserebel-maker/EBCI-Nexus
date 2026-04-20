@@ -2,7 +2,6 @@
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
-import prisma from '@/lib/prisma'
 
 // ─── Attendance Report ───────────────────────────────────────────────────────
 
@@ -148,45 +147,63 @@ export async function getLeaveReport(year: number, department?: string): Promise
     const session = await getSession()
     if (!session || session.role !== 'hr_admin') return { error: 'ไม่มีสิทธิ์เข้าถึง' }
 
-    const start = new Date(Date.UTC(year, 0, 1))
-    const end = new Date(Date.UTC(year + 1, 0, 1))
+    const start = new Date(Date.UTC(year, 0, 1)).toISOString()
+    const end = new Date(Date.UTC(year + 1, 0, 1)).toISOString()
 
-    const approvedLeaves = await prisma.leaveRequest.findMany({
-        where: {
-            status: 'approved',
-            startDate: { gte: start, lt: end },
-            ...(department ? { employee: { department } } : {}),
-        },
-        include: {
-            employee: {
-                select: {
-                    id: true,
-                    employeeCode: true,
-                    firstNameTH: true,
-                    lastNameTH: true,
-                    department: true,
-                },
-            },
-        },
-    })
+    const { data: leaves, error } = await supabaseAdmin
+        .from('leave_requests')
+        .select(`
+            id,
+            employee_id,
+            leave_type,
+            total_days,
+            start_date,
+            employees!inner (
+                id,
+                employee_code,
+                first_name_th,
+                last_name_th,
+                department
+            )
+        `)
+        .eq('status', 'approved')
+        .gte('start_date', start)
+        .lt('start_date', end)
+    if (error) return { error: error.message }
+
+    type LeaveRow0 = {
+        employee_id: string
+        leave_type: string
+        total_days: number | null
+        employees: {
+            employee_code: string
+            first_name_th: string | null
+            last_name_th: string | null
+            department: string | null
+        }
+    }
+    const filtered = (leaves as unknown as LeaveRow0[] ?? []).filter(
+        l => !department || l.employees?.department === department
+    )
 
     const perEmp = new Map<string, LeaveRow>()
     const typeTotals: Record<string, number> = {}
 
-    for (const l of approvedLeaves) {
-        const days = l.totalDays || 0
-        typeTotals[l.leaveType] = (typeTotals[l.leaveType] ?? 0) + days
-        const existing = perEmp.get(l.employeeId) ?? {
-            employeeId: l.employeeId,
-            employeeCode: l.employee.employeeCode,
-            employeeName: `${l.employee.firstNameTH} ${l.employee.lastNameTH}`.trim(),
-            department: l.employee.department,
+    for (const l of filtered) {
+        const days = l.total_days ?? 0
+        typeTotals[l.leave_type] = (typeTotals[l.leave_type] ?? 0) + days
+        const emp = l.employees
+        const existing = perEmp.get(l.employee_id) ?? {
+            employeeId: l.employee_id,
+            employeeCode: emp?.employee_code ?? '',
+            employeeName: `${emp?.first_name_th ?? ''} ${emp?.last_name_th ?? ''}`.trim(),
+            department: emp?.department ?? null,
             byType: {},
             total: 0,
         }
-        existing.byType[l.leaveType] = (existing.byType[l.leaveType] ?? 0) + days
+        existing.byType[l.leave_type] = (existing.byType[l.leave_type] ?? 0) + days
         existing.total += days
-        perEmp.set(l.employeeId, existing)
+        perEmp.set(l.employee_id, existing)
     }
 
     const rows = Array.from(perEmp.values()).sort((a, b) => b.total - a.total)
