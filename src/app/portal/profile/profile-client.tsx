@@ -141,6 +141,7 @@ interface Props {
     avatarUrl: string | null
     position: string | null
     department: string | null
+    secondaryDepartment: string | null
     employeeCode: string | null
     employmentType: string | null
     tenure: string | null
@@ -158,7 +159,7 @@ function fmtDate(iso: string): string {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function ProfileClient({
-    displayName, initials, avatarUrl, position, department,
+    displayName, initials, avatarUrl, position, department, secondaryDepartment,
     employeeCode, employmentType, tenure, startDate, email, phone,
     managerName, leaveBalances, recentLeaves,
 }: Props) {
@@ -200,6 +201,11 @@ export function ProfileClient({
                                     <span style={{ color: 'rgba(255,255,255,0.25)', margin: '0 6px' }}>—</span>
                                 )}
                                 {department}
+                            </p>
+                        )}
+                        {secondaryDepartment && (
+                            <p style={{ fontSize: '15px', color: 'rgba(253,224,71,0.85)', marginTop: 4 }}>
+                                + {secondaryDepartment} <span style={{ color: 'rgba(253,224,71,0.55)', fontSize: '13px' }}>(รักษาการ)</span>
                             </p>
                         )}
                     </div>

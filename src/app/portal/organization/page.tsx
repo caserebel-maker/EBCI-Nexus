@@ -30,7 +30,7 @@ export default async function OrganizationPage() {
 
     const { data: rows, error } = await supabaseAdmin
         .from('employees')
-        .select('id, employee_code, first_name_th, last_name_th, nickname, position, department, photo_url, manager_id, approval_level, is_approver, approval_scopes, approval_limit_thb')
+        .select('id, employee_code, first_name_th, last_name_th, nickname, position, department, secondary_department, photo_url, manager_id, approval_level, is_approver, approval_scopes, approval_limit_thb')
         .eq('status', 'active')
         .order('approval_level', { ascending: false, nullsFirst: false })
         .order('department', { ascending: true })
@@ -49,6 +49,7 @@ export default async function OrganizationPage() {
         nickname: (e.nickname as string) ?? null,
         position: (e.position as string) ?? null,
         department: (e.department as string) ?? null,
+        secondaryDepartment: (e.secondary_department as string) ?? null,
         photoUrl: (e.photo_url as string) ?? null,
         managerId: (e.manager_id as string) ?? null,
         approvalLevel: (e.approval_level as number) ?? null,

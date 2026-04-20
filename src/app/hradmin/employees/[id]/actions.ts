@@ -10,6 +10,7 @@ export interface UpdateEmployeePayload {
     nickname?: string
     position: string
     department: string
+    secondary_department?: string | null
     phone: string
     email: string
     employment_type: string
@@ -40,6 +41,7 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
             nickname: employeeFields.nickname ?? null,
             position: employeeFields.position,
             department: employeeFields.department,
+            secondary_department: employeeFields.secondary_department ?? null,
             phone: employeeFields.phone,
             email: employeeFields.email,
             employment_type: employeeFields.employment_type,

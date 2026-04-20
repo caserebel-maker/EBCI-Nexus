@@ -101,7 +101,15 @@ function PersonCard({ person, ring, isMe }: { person: OrgEmployee; ring: string;
             {person.department && (
                 <p className="text-center text-[10px] text-white/40 leading-tight line-clamp-1">
                     {person.department}
+                    {person.secondaryDepartment && (
+                        <span className="text-purple-300"> + {person.secondaryDepartment}</span>
+                    )}
                 </p>
+            )}
+            {person.secondaryDepartment && (
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-100 border border-purple-400/40">
+                    🔗 ดูแล 2 แผนก
+                </span>
             )}
             {isMe && (
                 <span className="text-[9px] uppercase tracking-wider font-black px-1.5 py-0.5 rounded bg-amber-400 text-black">

@@ -100,6 +100,7 @@ interface FormState {
     nickname: string
     position: string
     department: string
+    secondary_department: string
     phone: string
     email: string
     employment_type: string
@@ -269,6 +270,7 @@ export function EmployeeProfileView({
         nickname: employee.nickname ?? '',
         position: employee.position ?? '',
         department: employee.department ?? '',
+        secondary_department: employee.secondary_department ?? '',
         phone: employee.phone ?? '',
         email: employee.email ?? '',
         employment_type: employee.employment_type ?? 'full-time',
@@ -328,6 +330,7 @@ export function EmployeeProfileView({
                 nickname: form.nickname,
                 position: form.position,
                 department: form.department,
+                secondary_department: form.secondary_department || null,
                 phone: form.phone,
                 email: form.email,
                 employment_type: form.employment_type,
@@ -668,6 +671,19 @@ export function EmployeeProfileView({
                         />
                         <InfoRow label="แผนก" icon={Building}
                             value={employee.department || '—'}
+                        />
+                        <InfoRow label="แผนกที่ 2 (รักษาการ)" icon={Building}
+                            value={employee.secondary_department || '—'}
+                            editing={isEditing && isHrAdmin}
+                            editNode={
+                                <input
+                                    type="text"
+                                    className={inp}
+                                    value={form.secondary_department}
+                                    onChange={set('secondary_department')}
+                                    placeholder="เว้นว่างถ้าไม่มี"
+                                />
+                            }
                         />
                         <InfoRow label="ตำแหน่ง" icon={Briefcase}
                             value={employee.position || '—'}

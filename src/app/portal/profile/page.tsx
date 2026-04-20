@@ -14,6 +14,7 @@ type EmpRow = {
     nickname: string | null
     position: string | null
     department: string | null
+    secondary_department: string | null
     start_date: string | null
     photo_url: string | null
     email: string | null
@@ -26,6 +27,7 @@ type EmpRow = {
 
 const EMP_SELECT = [
     'id', 'first_name_th', 'last_name_th', 'nickname', 'position', 'department',
+    'secondary_department',
     'start_date', 'photo_url', 'email', 'phone', 'applicant_id',
     'employee_code', 'employment_type', 'manager_id',
 ].join(', ')
@@ -166,6 +168,7 @@ export default async function ProfilePage() {
             avatarUrl={avatarUrl}
             position={emp?.position ?? null}
             department={emp?.department ?? null}
+            secondaryDepartment={emp?.secondary_department ?? null}
             employeeCode={emp?.employee_code ?? null}
             employmentType={emp?.employment_type ?? null}
             tenure={tenure}

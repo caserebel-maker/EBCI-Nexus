@@ -11,6 +11,7 @@ export interface OrgEmployee {
     nickname: string | null
     position: string | null
     department: string | null
+    secondaryDepartment: string | null
     photoUrl: string | null
     managerId: string | null
     approvalLevel: number | null
@@ -312,6 +313,16 @@ function Card({
             <p className="text-center text-[10px] text-white/65 leading-tight line-clamp-1" title={node.position ?? ''}>
                 {node.position ?? '—'}
             </p>
+
+            {/* Dual-department badge */}
+            {node.secondaryDepartment && (
+                <span
+                    className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-100 border border-purple-400/40"
+                    title={`${node.department ?? ''} + ${node.secondaryDepartment} (รักษาการ)`}
+                >
+                    🔗 ดูแล 2 แผนก
+                </span>
+            )}
 
             {/* Badges */}
             {(isMe || (isApprover && !isMe)) && (
