@@ -213,10 +213,10 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                 {/* Page Content */}
                 <div className="flex-1 overflow-auto p-4 lg:p-8">
                     {/* Emergency Banner — top priority, mobile only */}
-                    {emergencyBanner && <div className="lg:hidden mb-4">{emergencyBanner}</div>}
+                    {emergencyBanner && <div className="lg:hidden mb-4 pb-4 border-b border-white/10">{emergencyBanner}</div>}
 
                     {/* Mobile Identity Header — shown on every page */}
-                    <div className="lg:hidden mb-4">
+                    <div className="lg:hidden mb-4 pb-4 border-b border-white/10">
                         {/* Greeting — daily/payday/birthday */}
                         <p className="text-xs text-amber-300/90 font-semibold mb-3 pb-3 leading-snug text-center border-b border-white/10">
                             {getGreeting({ nickname: profile?.nickname, dateOfBirth: profile?.dateOfBirth })}
