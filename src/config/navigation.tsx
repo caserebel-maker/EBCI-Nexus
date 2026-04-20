@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, UserCircle, FileText, Settings, Megaphone, CalendarDays, ClipboardCheck, ShieldCheck, CalendarOff, MapPin } from 'lucide-react'
+import { LayoutDashboard, Users, UserCircle, FileText, Settings, Megaphone, CalendarDays, ClipboardCheck, ShieldCheck, CalendarOff, MapPin, Network } from 'lucide-react'
 import { ROLES, type UserRole } from './roles'
 
 export interface NavItem {
@@ -11,6 +11,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
     [ROLES.HR_ADMIN]: [
         { label: 'dashboard.title', href: '/hradmin/dashboard', icon: LayoutDashboard },
         { label: 'dashboard.employees', href: '/hradmin/employees', icon: Users },
+        { label: 'ผังองค์กร', href: '/portal/organization', icon: Network },
         { label: 'dashboard.recruitment', href: '/hradmin/recruitment', icon: UserCircle },
         { label: 'dashboard.announcements', href: '/hradmin/hr/announcements', icon: Megaphone },
         { label: 'การเข้างาน', href: '/hradmin/attendance', icon: MapPin },
@@ -24,6 +25,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         { label: 'เช็คอิน', href: '/portal/checkin', icon: MapPin },
         { label: 'leave.myLeave', href: '/portal/leave', icon: CalendarDays },
         { label: 'leave.approveLeave', href: '/portal/approve', icon: ClipboardCheck },
+        { label: 'ผังองค์กร', href: '/portal/organization', icon: Network },
         { label: 'dashboard.announcements', href: '/portal/announcements', icon: Megaphone },
     ],
     [ROLES.EMPLOYEE]: [
@@ -31,6 +33,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         { label: 'เช็คอิน', href: '/portal/checkin', icon: MapPin },
         { label: 'recruitment.personalInfo', href: '/portal/profile', icon: UserCircle },
         { label: 'leave.myLeave', href: '/portal/leave', icon: CalendarDays },
+        { label: 'ผังองค์กร', href: '/portal/organization', icon: Network },
         { label: 'dashboard.announcements', href: '/portal/announcements', icon: Megaphone },
         { label: 'common.view', href: '/portal/payslips', icon: FileText },
     ],

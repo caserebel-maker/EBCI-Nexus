@@ -65,12 +65,11 @@ function findApprovalChain(employees: OrgEmployee[], startId: string | null): Se
 
 function ringColorByLevel(level: number | null): string {
     switch (level) {
-        case 6: return 'ring-yellow-400'
-        case 5: return 'ring-red-400'
-        case 4: return 'ring-amber-400'
-        case 3: return 'ring-purple-400'
-        case 2: return 'ring-blue-400'
-        default: return 'ring-white/30'
+        case 5: return 'ring-yellow-400'   // ประธาน / เจ้าของ
+        case 4: return 'ring-red-400'      // MD
+        case 3: return 'ring-purple-400'   // หัวหน้าฝ่าย
+        case 2: return 'ring-blue-400'     // หัวหน้าแผนก
+        default: return 'ring-white/30'    // พนักงาน
     }
 }
 
@@ -126,9 +125,6 @@ export function OrganizationView({ employees, currentEmployeeId }: Props) {
                     </span>
                     <span className="flex items-center gap-1 text-white/75">
                         <span className="h-2.5 w-2.5 rounded-full ring-2 ring-red-400" /> MD
-                    </span>
-                    <span className="flex items-center gap-1 text-white/75">
-                        <span className="h-2.5 w-2.5 rounded-full ring-2 ring-amber-400" /> HR
                     </span>
                     <span className="flex items-center gap-1 text-white/75">
                         <span className="h-2.5 w-2.5 rounded-full ring-2 ring-purple-400" /> ฝ่าย

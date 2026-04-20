@@ -43,16 +43,37 @@ async function findFirstByLevel(level: number): Promise<EmployeeRow | null> {
     return data ?? null
 }
 
+// HR Admin is a system role, not a job level. Find the first active employee
+// whose linked user account has role='hr_admin'.
+async function findFirstHrAdmin(): Promise<EmployeeRow | null> {
+    const { data: hrUsers } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('role', 'hr_admin')
+    const userIds = (hrUsers ?? []).map(u => u.id as string)
+    if (!userIds.length) return null
+    const { data } = await supabaseAdmin
+        .from('employees')
+        .select('id, first_name_th, last_name_th, email, approval_level, manager_id, department')
+        .in('user_id', userIds)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle()
+    return data ?? null
+}
+
 // ─── Approval chain builder ───────────────────────────────────────────────────
 /**
  * Returns the ordered approval chain for an employee.
  * chain[0] = first approver (step 1), chain[1] = step 2, etc.
  *
- * Level 1 (พนักงาน):      supervisor → supervisor.supervisor → HR Admin
- * Level 2 (หัวหน้าแผนก):  supervisor → HR Admin
- * Level 3 (หัวหน้าฝ่าย):  MD → HR Admin
- * Level 4 (HR Admin):      MD
- * Level 5 (MD):            HR Admin
+ * Level 1 (พนักงาน):      supervisor → supervisor.supervisor → HR (by role)
+ * Level 2 (หัวหน้าแผนก):  supervisor → HR (by role)
+ * Level 3 (หัวหน้าฝ่าย):  MD (L4) → HR (by role)
+ * Level 4 (MD):            HR (by role)
+ * Level 5 (ประธาน):        HR (by role)
+ *
+ * HR is now found via users.role='hr_admin' (not approval_level).
  */
 async function buildApprovalChain(employee: EmployeeRow): Promise<ApprovalStep[]> {
     const chain: ApprovalStep[] = []
@@ -69,7 +90,7 @@ async function buildApprovalChain(employee: EmployeeRow): Promise<ApprovalStep[]
                 }
             }
         }
-        const hr = await findFirstByLevel(4)
+        const hr = await findFirstHrAdmin()
         if (hr) chain.push({ approver_id: hr.id, approver_role: 'hr' })
 
     } else if (level === 2) {
@@ -77,21 +98,17 @@ async function buildApprovalChain(employee: EmployeeRow): Promise<ApprovalStep[]
             const sup = await fetchEmployee(employee.manager_id)
             if (sup) chain.push({ approver_id: sup.id, approver_role: 'manager' })
         }
-        const hr = await findFirstByLevel(4)
+        const hr = await findFirstHrAdmin()
         if (hr) chain.push({ approver_id: hr.id, approver_role: 'hr' })
 
     } else if (level === 3) {
-        const md = await findFirstByLevel(5)
+        const md = await findFirstByLevel(4)
         if (md) chain.push({ approver_id: md.id, approver_role: 'md' })
-        const hr = await findFirstByLevel(4)
+        const hr = await findFirstHrAdmin()
         if (hr) chain.push({ approver_id: hr.id, approver_role: 'hr' })
 
-    } else if (level === 4) {
-        const md = await findFirstByLevel(5)
-        if (md) chain.push({ approver_id: md.id, approver_role: 'md' })
-
-    } else if (level === 5) {
-        const hr = await findFirstByLevel(4)
+    } else if (level === 4 || level === 5) {
+        const hr = await findFirstHrAdmin()
         if (hr) chain.push({ approver_id: hr.id, approver_role: 'hr' })
     }
 
