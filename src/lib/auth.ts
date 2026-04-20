@@ -1,11 +1,10 @@
-import { cookies } from 'next/headers'
+import 'server-only'
 
-export interface SessionUser {
-    id: string
-    role: 'hr_admin' | 'manager' | 'employee'
-    name: string
-    employeeId?: string // linked employee record id
-}
+import { cookies } from 'next/headers'
+import type { SessionUser } from './auth-types'
+
+// Re-export type so existing server-side imports keep working.
+export type { SessionUser } from './auth-types'
 
 export async function getSession(): Promise<SessionUser | null> {
     const cookieStore = await cookies()
@@ -15,7 +14,7 @@ export async function getSession(): Promise<SessionUser | null> {
 
     try {
         return JSON.parse(sessionCookie.value) as SessionUser
-    } catch (error) {
+    } catch {
         return null
     }
 }

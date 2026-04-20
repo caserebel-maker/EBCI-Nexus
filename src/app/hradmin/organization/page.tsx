@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { Network } from 'lucide-react'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
-import { getCurrentPermissions } from '@/lib/permissions'
+import { getCurrentPermissions } from '@/lib/permissions-server'
 import { type OrgEmployee } from '@/app/portal/organization/view-department'
 import { TabsShell } from '@/app/portal/organization/tabs-shell'
 
