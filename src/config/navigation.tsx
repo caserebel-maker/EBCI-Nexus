@@ -11,7 +11,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
     [ROLES.HR_ADMIN]: [
         { label: 'dashboard.title', href: '/hradmin/dashboard', icon: LayoutDashboard },
         { label: 'dashboard.employees', href: '/hradmin/employees', icon: Users },
-        { label: 'ผังองค์กร', href: '/portal/organization', icon: Network },
+        { label: 'ผังองค์กร', href: '/hradmin/organization', icon: Network },
         { label: 'dashboard.recruitment', href: '/hradmin/recruitment', icon: UserCircle },
         { label: 'dashboard.announcements', href: '/hradmin/hr/announcements', icon: Megaphone },
         { label: 'การเข้างาน', href: '/hradmin/attendance', icon: MapPin },

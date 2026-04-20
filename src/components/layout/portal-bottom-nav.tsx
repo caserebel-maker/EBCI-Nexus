@@ -70,8 +70,9 @@ const HR_ADMIN_PORTAL_MORE: MoreItem[] = [
 const MORE_CONFIG: Record<Role, MoreItem[]> = {
     hr_admin: [
         { label: 'อนุมัติการลา', desc: 'จัดการคำขอลาพนักงาน', href: '/hradmin/leave/admin', icon: ClipboardCheck },
-        { label: 'จัดการระบบ',   desc: 'ตั้งค่าและการจัดการ',  href: '/hradmin/settings',   icon: Settings },
-        { label: 'รายงาน',       desc: 'ดูรายงานต่าง ๆ',        href: '/hradmin/reports',    icon: FileText },
+        { label: 'ผังองค์กร',    desc: 'ดูโครงสร้างบริษัท',      href: '/hradmin/organization', icon: Network },
+        { label: 'จัดการระบบ',   desc: 'ตั้งค่าและการจัดการ',    href: '/hradmin/settings',   icon: Settings },
+        { label: 'รายงาน',       desc: 'ดูรายงานต่าง ๆ',          href: '/hradmin/reports',    icon: FileText },
         { label: 'ดูในฐานะพนักงาน', desc: 'สลับไปโหมดพนักงาน', href: '/portal/dashboard', icon: RefreshCw, accent: 'blue' },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
