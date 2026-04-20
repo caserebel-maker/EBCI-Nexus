@@ -158,7 +158,7 @@ export async function getLeaveReport(year: number, department?: string): Promise
             leave_type,
             total_days,
             start_date,
-            employees!inner (
+            employees!leave_requests_employee_id_fkey!inner (
                 id,
                 employee_code,
                 first_name_th,
