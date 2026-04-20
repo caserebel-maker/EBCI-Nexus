@@ -74,7 +74,8 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
             .eq('id', emp.applicant_id)
     }
 
-    revalidatePath(`/hradmin/employees/${employeeId}`)
+    // Revalidate by route pattern — URL can be either UUID or employee_code
+    revalidatePath('/hradmin/employees/[id]', 'page')
     revalidatePath('/hradmin/employees')
     revalidatePath('/hradmin/organization')
     revalidatePath('/portal/organization')

@@ -316,13 +316,13 @@ export function EmployeeProfileView({
             if (photoFile) {
                 const fd = new FormData()
                 fd.append('photo', photoFile)
-                const photoResult = await uploadEmployeePhoto(id, fd)
+                const photoResult = await uploadEmployeePhoto(employee.id, fd)
                 if (photoResult.error) {
                     showToast('error', `อัปโหลดรูปไม่สำเร็จ: ${photoResult.error}`)
                     return
                 }
             }
-            const result = await updateEmployee(id, {
+            const result = await updateEmployee(employee.id, {
                 first_name_th: form.first_name_th,
                 last_name_th: form.last_name_th,
                 nickname: form.nickname,
