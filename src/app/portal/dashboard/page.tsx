@@ -163,7 +163,11 @@ export default async function PortalDashboardPage() {
     // ── Announcements (up to 5 with image) ───────────────────────────────────
     try {
         const rows = await prisma.announcement.findMany({
-            where: { publishStatus: 'published', NOT: { imagePath: null } },
+            where: {
+                publishStatus: 'published',
+                NOT: { imagePath: null },
+                priority: { in: ['internal', 'promote'] },  // Exclude emergency/urgent (shown in top banner)
+            },
             orderBy: { publishDate: 'desc' },
             take: 5,
             select: { headline: true, content: true, imagePath: true },

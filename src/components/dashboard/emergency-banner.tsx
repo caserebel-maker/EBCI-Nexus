@@ -8,15 +8,24 @@ export function EmergencyBanner({ emergency }: { emergency: any }) {
 
     if (!emergency) return null
 
+    const isEmergency = emergency.priority === 'emergency'
+    const bannerBg = isEmergency
+        ? 'bg-gradient-to-r from-red-600 to-red-700 text-white border-red-400'
+        : 'bg-amber-500 text-black border-amber-400'
+    const labelText = isEmergency ? 'Critical Emergency Alert' : 'Urgent Announcement'
+    const buttonStyle = isEmergency
+        ? 'bg-white text-red-700 hover:bg-gray-100'
+        : 'bg-black text-white hover:bg-black/80'
+
     return (
         <>
-            <div className="bg-amber-500 text-black py-2 px-4 rounded-xl shadow-2xl border-2 border-amber-400 flex items-center justify-between animate-pulse-slow z-40 relative mb-4">
+            <div className={`${bannerBg} py-2 px-4 rounded-xl shadow-2xl border-2 flex items-center justify-between animate-pulse-slow z-40 relative mb-4`}>
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 bg-black/10 rounded-full flex items-center justify-center">
+                    <div className={`h-10 w-10 ${isEmergency ? 'bg-white/20' : 'bg-black/10'} rounded-full flex items-center justify-center`}>
                         <AlertTriangle size={24} className="animate-bounce" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Critical Emergency Alert</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-70">{labelText}</p>
                         <h2 className="text-base lg:text-lg font-black uppercase leading-tight">{emergency.headline}</h2>
                     </div>
                 </div>
@@ -25,7 +34,7 @@ export function EmergencyBanner({ emergency }: { emergency: any }) {
                 </div>
                 <button
                     onClick={() => setIsOpen(true)}
-                    className="bg-black text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-black/80 transition-all"
+                    className={`${buttonStyle} px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all`}
                 >
                     View Details
                 </button>

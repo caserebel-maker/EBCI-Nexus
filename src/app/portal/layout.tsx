@@ -16,20 +16,26 @@ export default async function EmployeeLayout({
         redirect('/login')
     }
 
-    let emergency = null
+    let emergencies: any[] = []
     try {
-        // Only show emergency banner if: priority=emergency + published + not expired
+        // Show emergency + urgent banners (max 2), published + not expired
+        // Priority order: emergency first, then urgent
         const nowIso = new Date().toISOString()
         const { data } = await supabaseAdmin
             .from('announcements')
             .select('*')
-            .eq('priority', 'emergency')
+            .in('priority', ['emergency', 'urgent'])
             .eq('publish_status', 'published')
             .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+            .order('priority', { ascending: true })  // emergency < urgent alphabetically? let's check
             .order('publish_date', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-        emergency = data
+            .limit(5)
+        // Sort: emergency first, then urgent; max 2
+        const sorted = (data ?? []).sort((a: any, b: any) => {
+            if (a.priority === b.priority) return 0
+            return a.priority === 'emergency' ? -1 : 1
+        })
+        emergencies = sorted.slice(0, 2)
     } catch {
         // non-critical
     }
@@ -47,7 +53,13 @@ export default async function EmployeeLayout({
             userName={session.name}
             profile={profile}
             showBottomNav
-            emergencyBanner={<EmergencyBanner emergency={emergency} />}
+            emergencyBanner={emergencies.length > 0 ? (
+                <div className="space-y-2">
+                    {emergencies.map((e: any) => (
+                        <EmergencyBanner key={e.id} emergency={e} />
+                    ))}
+                </div>
+            ) : null}
         >
             {children}
         </DashboardShell>

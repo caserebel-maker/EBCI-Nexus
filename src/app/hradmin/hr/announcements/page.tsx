@@ -34,7 +34,7 @@ export default function AnnouncementPage() {
     }
 
     return (
-        <div className="max-w-3xl mx-auto space-y-8">
+        <div className="max-w-3xl mx-auto space-y-6 lg:space-y-8">
             <div className="flex items-center gap-4 mb-8">
                 <div className="h-12 w-12 rounded-xl bg-white/10 flex items-center justify-center text-white border border-white/20 shadow-lg">
                     <Megaphone size={24} />
@@ -52,7 +52,7 @@ export default function AnnouncementPage() {
                 </div>
             )}
 
-            <form action={handleSubmit} className="bg-card border border-white/10 p-8 rounded-2xl shadow-xl space-y-6">
+            <form action={handleSubmit} className="bg-card border border-white/10 p-4 lg:p-8 rounded-2xl shadow-xl space-y-6">
 
                 {/* Priority Selection */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -173,7 +173,7 @@ export default function AnnouncementPage() {
                                 <Megaphone size={24} className="-rotate-12" />
                             </div>
                             <span className="text-gray-900 font-bold uppercase tracking-wider text-sm">Click to Upload Image</span>
-                            <span className="text-[10px] text-gray-600 mt-1">PNG, JPG up to 10MB</span>
+                            <span className="text-[10px] text-gray-600 mt-1">PNG, JPG up to 10MB · แนะนำ 16:9 (1920×1080)</span>
                         </div>
                         <div id="preview-container" className="hidden relative z-0 pointer-events-none w-full">
                             <img id="preview-image" src="" alt="Preview" className="max-h-40 rounded-lg mx-auto shadow-lg object-contain w-auto" />
@@ -182,7 +182,7 @@ export default function AnnouncementPage() {
                     </div>
                 </div>
 
-                <div className="pt-4 flex justify-end">
+                <div className="pt-4 flex justify-center">
                     <button
                         type="submit"
                         disabled={isPending}
