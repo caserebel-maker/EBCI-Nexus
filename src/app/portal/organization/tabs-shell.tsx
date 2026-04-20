@@ -80,8 +80,16 @@ export function TabsShell({ employees, currentEmployeeId, permissions }: Props) 
                     canSeeHeadcount={permissions.can_view_all_employees}
                 />
             )}
-            {view === 'authority' && <TabAuthority permissions={permissions} />}
-            {view === 'my-chain' && <TabMyChain permissions={permissions} />}
+            {view === 'authority' && (
+                <TabAuthority employees={employees} permissions={permissions} />
+            )}
+            {view === 'my-chain' && (
+                <TabMyChain
+                    employees={employees}
+                    currentEmployeeId={currentEmployeeId}
+                    permissions={permissions}
+                />
+            )}
         </div>
     )
 }

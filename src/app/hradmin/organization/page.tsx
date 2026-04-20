@@ -36,7 +36,7 @@ export default async function HrOrganizationPage() {
 
     const { data: rows, error } = await supabaseAdmin
         .from('employees')
-        .select('id, employee_code, first_name_th, last_name_th, nickname, position, department, photo_url, manager_id, approval_level')
+        .select('id, employee_code, first_name_th, last_name_th, nickname, position, department, photo_url, manager_id, approval_level, is_approver, approval_scopes, approval_limit_thb')
         .eq('status', 'active')
         .order('approval_level', { ascending: false, nullsFirst: false })
         .order('department', { ascending: true })
@@ -46,6 +46,7 @@ export default async function HrOrganizationPage() {
         console.error('Org chart fetch error:', error)
     }
 
+    const canSeeLimit = permissions.can_view_approval_limits
     const employees: OrgEmployee[] = (rows ?? []).map(e => ({
         id: e.id as string,
         employeeCode: e.employee_code as string,
@@ -57,6 +58,10 @@ export default async function HrOrganizationPage() {
         photoUrl: (e.photo_url as string) ?? null,
         managerId: (e.manager_id as string) ?? null,
         approvalLevel: (e.approval_level as number) ?? null,
+        isApprover: Boolean(e.is_approver),
+        approvalScopes: (e.approval_scopes as string[] | null) ?? [],
+        // Filter sensitive limit by permission (spec §8.2)
+        approvalLimitThb: canSeeLimit ? ((e.approval_limit_thb as number | null) ?? null) : null,
     }))
 
     return (

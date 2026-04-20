@@ -14,6 +14,9 @@ export interface OrgEmployee {
     photoUrl: string | null
     managerId: string | null
     approvalLevel: number | null
+    isApprover?: boolean
+    approvalScopes?: string[]
+    approvalLimitThb?: number | null
 }
 
 interface Props {
