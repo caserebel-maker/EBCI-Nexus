@@ -3,7 +3,9 @@ import { redirect } from 'next/navigation'
 import { Network } from 'lucide-react'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
-import { DepartmentView, type OrgEmployee } from './view-department'
+import { getCurrentPermissions } from '@/lib/permissions'
+import { type OrgEmployee } from './view-department'
+import { TabsShell } from './tabs-shell'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,6 +25,8 @@ export default async function OrganizationPage() {
             .maybeSingle()
         currentEmployeeId = data?.id ?? null
     }
+
+    const permissions = await getCurrentPermissions()
 
     const { data: rows, error } = await supabaseAdmin
         .from('employees')
@@ -57,10 +61,14 @@ export default async function OrganizationPage() {
                     ผังองค์กร
                 </h1>
                 <p className="text-white/80 text-sm">
-                    โครงสร้างการบังคับบัญชา — ดูลำดับขั้นการอนุมัติของคุณ
+                    โครงสร้าง · อำนาจอนุมัติ · สายอนุมัติของคุณ
                 </p>
             </div>
-            <DepartmentView employees={employees} currentEmployeeId={currentEmployeeId} />
+            <TabsShell
+                employees={employees}
+                currentEmployeeId={currentEmployeeId}
+                permissions={permissions}
+            />
         </div>
     )
 }
