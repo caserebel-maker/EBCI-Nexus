@@ -1,8 +1,9 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { Network } from 'lucide-react'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
-import { OrganizationView, type OrgEmployee } from './organization-view'
+import { DepartmentView, type OrgEmployee } from './view-department'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,7 +14,6 @@ export default async function OrganizationPage() {
 
     const session = await getSession()
 
-    // Resolve current user's employee id (for "me" highlight)
     let currentEmployeeId: string | null = session?.employeeId ?? null
     if (!currentEmployeeId && session?.name?.includes('@')) {
         const { data } = await supabaseAdmin
@@ -24,7 +24,6 @@ export default async function OrganizationPage() {
         currentEmployeeId = data?.id ?? null
     }
 
-    // Fetch all active employees
     const { data: rows, error } = await supabaseAdmin
         .from('employees')
         .select('id, employee_code, first_name_th, last_name_th, nickname, position, department, photo_url, manager_id, approval_level')
@@ -51,8 +50,17 @@ export default async function OrganizationPage() {
     }))
 
     return (
-        <div className="pb-24 lg:pb-6">
-            <OrganizationView employees={employees} currentEmployeeId={currentEmployeeId} />
+        <div className="pb-24 lg:pb-6 space-y-4 lg:space-y-6">
+            <div className="flex flex-col gap-1">
+                <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                    <Network className="h-6 w-6 text-white" />
+                    ผังองค์กร
+                </h1>
+                <p className="text-white/80 text-sm">
+                    โครงสร้างการบังคับบัญชา — ดูลำดับขั้นการอนุมัติของคุณ
+                </p>
+            </div>
+            <DepartmentView employees={employees} currentEmployeeId={currentEmployeeId} />
         </div>
     )
 }

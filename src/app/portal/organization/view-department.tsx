@@ -73,7 +73,7 @@ function ringColorByLevel(level: number | null): string {
     }
 }
 
-export function OrganizationView({ employees, currentEmployeeId }: Props) {
+export function DepartmentView({ employees, currentEmployeeId }: Props) {
     const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
     const tree = useMemo(() => buildTree(employees), [employees])
@@ -96,17 +96,6 @@ export function OrganizationView({ employees, currentEmployeeId }: Props) {
 
     return (
         <div className="space-y-4 lg:space-y-6">
-            {/* Header */}
-            <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                    <Network className="h-6 w-6 text-white" />
-                    ผังองค์กร
-                </h1>
-                <p className="text-white/80 text-sm">
-                    โครงสร้างการบังคับบัญชา — ดูลำดับขั้นการอนุมัติของคุณ
-                </p>
-            </div>
-
             {/* Legend */}
             <div className="p-3 space-y-2 text-xs"
                 style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12 }}>

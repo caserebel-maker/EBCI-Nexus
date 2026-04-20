@@ -1,8 +1,9 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { Network } from 'lucide-react'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
-import { OrganizationView, type OrgEmployee } from '@/app/portal/organization/organization-view'
+import { DepartmentView, type OrgEmployee } from '@/app/portal/organization/view-department'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,7 +57,16 @@ export default async function HrOrganizationPage() {
 
     return (
         <div className="space-y-6">
-            <OrganizationView employees={employees} currentEmployeeId={currentEmployeeId} />
+            <div className="flex flex-col gap-1">
+                <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                    <Network className="h-6 w-6 text-white" />
+                    ผังองค์กร
+                </h1>
+                <p className="text-white/80 text-sm">
+                    โครงสร้างการบังคับบัญชา — ดูลำดับขั้นการอนุมัติของคุณ
+                </p>
+            </div>
+            <DepartmentView employees={employees} currentEmployeeId={currentEmployeeId} />
         </div>
     )
 }
