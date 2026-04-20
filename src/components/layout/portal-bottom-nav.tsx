@@ -46,22 +46,22 @@ const NAV_CONFIG: Record<Role, NavItem[]> = {
 
     manager: [
         { label: 'หน้าแรก',  href: '/portal/dashboard',      icon: Home,       exact: true },
-        { label: 'โปรไฟล์',  href: '/portal/profile',         icon: UserRound },
-        { label: 'ยื่นใบลา', href: '/portal/leave',           icon: CalendarDays },
+        { label: 'เช็คอิน',  href: '/portal/checkin',         icon: Clock },
         { label: 'แจ้งเตือน', href: '/portal/notifications',  icon: Bell },
+        { label: 'โปรไฟล์',  href: '/portal/profile',         icon: UserRound },
     ],
     employee: [
         { label: 'หน้าแรก',  href: '/portal/dashboard',      icon: Home,       exact: true },
-        { label: 'โปรไฟล์',  href: '/portal/profile',         icon: UserRound },
-        { label: 'ยื่นใบลา', href: '/portal/leave',           icon: CalendarDays },
+        { label: 'เช็คอิน',  href: '/portal/checkin',         icon: Clock },
         { label: 'แจ้งเตือน', href: '/portal/notifications',  icon: Bell },
+        { label: 'โปรไฟล์',  href: '/portal/profile',         icon: UserRound },
     ],
 }
 
 // Variant of hr_admin More menu when viewing in /portal — offers switch back to admin
 const HR_ADMIN_PORTAL_MORE: MoreItem[] = [
-    { label: 'ปฏิทิน',       desc: 'ดูตารางงาน',           href: '/portal/calendar',       icon: CalendarDays },
-    { label: 'เช็คอิน',      desc: 'เช็คอิน/เช็คเอาท์',   href: '/portal/checkin',         icon: Clock },
+    { label: 'ยื่นใบลา',     desc: 'สร้างคำขอลาของตนเอง',   href: '/portal/leave',           icon: CalendarDays },
+    { label: 'ปฏิทิน',       desc: 'ดูตารางงาน',             href: '/portal/calendar',       icon: CalendarDays },
     { label: 'กลับเป็น HR Admin', desc: 'สลับกลับโหมดแอดมิน', href: '/hradmin/dashboard', icon: RefreshCw, accent: 'amber' },
     { label: 'ออกจากระบบ', icon: LogOut, danger: true },
 ]
@@ -76,14 +76,13 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
     ],
     manager: [
         { label: 'อนุมัติการลา', desc: 'พิจารณาคำขอลาลูกทีม', href: '/portal/approve',   icon: CheckSquare },
+        { label: 'ยื่นใบลา',     desc: 'สร้างคำขอลาของตนเอง', href: '/portal/leave',     icon: CalendarDays },
         { label: 'ปฏิทิน',       desc: 'ดูตารางงาน',           href: '/portal/calendar',  icon: CalendarDays },
-        { label: 'ลงเวลา',       desc: 'เช็คอิน/เช็คเอาท์',   href: '/portal/checkin',   icon: Clock },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     employee: [
+        { label: 'ยื่นใบลา',     desc: 'สร้างคำขอลาของตนเอง', href: '/portal/leave',           icon: CalendarDays },
         { label: 'ปฏิทิน',       desc: 'ดูตารางงาน',           href: '/portal/calendar',       icon: CalendarDays },
-        { label: 'เช็คอิน',      desc: 'เช็คอิน/เช็คเอาท์',   href: '/portal/checkin',         icon: Clock },
-        { label: 'การแจ้งเตือน', desc: 'ดูการแจ้งเตือนทั้งหมด', href: '/portal/notifications',  icon: Bell },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
 }
