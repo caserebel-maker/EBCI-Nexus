@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
 import { haversineDistance } from '@/lib/geo'
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 
 // Helper: resolve employee_id from session (with email fallback for legacy users)
 async function getEmployeeId(): Promise<string | null> {
@@ -35,6 +36,20 @@ export async function checkIn(payload: CheckInPayload) {
     const employeeId = await getEmployeeId()
     if (!employeeId) {
         return { error: 'ไม่พบข้อมูลพนักงาน — กรุณาติดต่อ HR' }
+    }
+
+    // ── Anti-Trick #1: Time restriction (7:00-9:30 only) ────────────────────
+    const now = new Date()
+    const minutesOfDay = now.getHours() * 60 + now.getMinutes()
+    const START_TIME = 7 * 60       // 7:00 = 420 minutes
+    const END_TIME = 9 * 60 + 30    // 9:30 = 570 minutes
+    if (minutesOfDay < START_TIME || minutesOfDay > END_TIME) {
+        return { error: 'เช็คอินได้เฉพาะเวลา 7:00-9:30 น. เท่านั้น' }
+    }
+
+    // ── Anti-Trick #2: GPS accuracy (reject if > 100m = likely spoofed) ─────
+    if (payload.accuracy > 100) {
+        return { error: `สัญญาณ GPS ไม่แม่นยำพอ (${Math.round(payload.accuracy)} ม.) กรุณาไปยังที่โล่งแจ้งและลองใหม่` }
     }
 
     // Guard: 1 check-in per day (Option 1 — strict)
@@ -82,6 +97,12 @@ export async function checkIn(payload: CheckInPayload) {
         actualType = 'wfh'
     }
 
+    // ── Anti-Trick #3: Get IP from server-side headers (safer than client-supplied) ──
+    const h = await headers()
+    const forwardedFor = h.get('x-forwarded-for')
+    const realIp = h.get('x-real-ip')
+    const ipAddress = forwardedFor?.split(',')[0].trim() || realIp || null
+
     const { data, error } = await supabaseAdmin
         .from('checkins')
         .insert({
@@ -92,6 +113,8 @@ export async function checkIn(payload: CheckInPayload) {
             accuracy_meters: payload.accuracy,
             distance_from_office: distance,
             notes: payload.notes ?? null,
+            ip_address: ipAddress,
+            source: 'web',
         })
         .select('id, checked_in_at, type')
         .single()
