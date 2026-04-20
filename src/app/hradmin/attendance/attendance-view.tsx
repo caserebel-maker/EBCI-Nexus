@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { MapPin, Users, Building, Home, HelpCircle, RefreshCw, Calendar, CheckCircle2, Clock, LogOut, MapPinOff } from 'lucide-react'
+import Link from 'next/link'
+import { MapPin, Users, Building, Home, HelpCircle, RefreshCw, Calendar, CheckCircle2, Clock, LogOut, MapPinOff, FileUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getAttendanceForDate, type AttendanceStats, type AttendanceRecord } from './actions'
 
@@ -111,6 +112,13 @@ export function AttendanceView({ initialDate, initialData }: Props) {
                             อัปเดต {timeAgo(data.fetchedAt)}
                         </span>
                     )}
+                    <Link
+                        href="/hradmin/attendance/import"
+                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-amber-300/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-200 transition-all"
+                    >
+                        <FileUp size={14} />
+                        <span className="hidden sm:inline">นำเข้า CSV</span>
+                    </Link>
                     <button
                         onClick={refresh}
                         disabled={isPending}
