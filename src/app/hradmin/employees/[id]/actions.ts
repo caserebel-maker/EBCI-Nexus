@@ -2,6 +2,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
+import { revalidatePath } from 'next/cache'
 
 export interface UpdateEmployeePayload {
     first_name_th: string
@@ -72,6 +73,11 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
             })
             .eq('id', emp.applicant_id)
     }
+
+    revalidatePath(`/hradmin/employees/${employeeId}`)
+    revalidatePath('/hradmin/employees')
+    revalidatePath('/hradmin/organization')
+    revalidatePath('/portal/organization')
 
     return { success: true }
 }
