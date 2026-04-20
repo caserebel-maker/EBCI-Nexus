@@ -106,9 +106,9 @@ function MetricCard({ title, value, sub, icon: Icon, accent, href }: {
         >
             <div className={cn('w-1.5 shrink-0', accent)} />
             <div className="flex-1 flex flex-col items-center justify-center px-3 py-4 text-center gap-1.5">
-                <p className="text-xs font-semibold text-white/70 leading-tight whitespace-nowrap">{title}</p>
+                <p className="text-xs font-semibold text-white/70 leading-tight text-center line-clamp-2">{title}</p>
                 <p className="text-3xl font-black text-white leading-none">{value}</p>
-                {sub && <p className="text-xs text-white/50 leading-tight whitespace-nowrap">{sub}</p>}
+                {sub && <p className="text-xs text-white/50 leading-tight text-center line-clamp-2">{sub}</p>}
             </div>
         </div>
     )
