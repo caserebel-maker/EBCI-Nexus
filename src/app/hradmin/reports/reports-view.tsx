@@ -23,6 +23,7 @@ const glassCard = {
 type Tab = 'attendance' | 'leave' | 'contracts'
 
 const MONTHS_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+const MONTHS_TH_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม']
 
 function downloadCsv(filename: string, rows: string[][]) {
     const csv = rows.map(r => r.map(c => `"${(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -203,13 +204,21 @@ function AttendanceTab({ data }: { data: AttendanceReport }) {
         downloadCsv(`attendance_${data.year}_${String(data.month).padStart(2, '0')}.csv`, rows)
     }
 
+    const daysInMonth = new Date(data.year, data.month, 0).getDate()
+
     return (
         <div className="space-y-4">
+            <RangeBanner
+                title={`สรุปเดือน ${MONTHS_TH_FULL[data.month - 1]} ${data.year + 543}`}
+                subtitle={`ช่วงข้อมูล: 1–${daysInMonth} ${MONTHS_TH[data.month - 1]} · วันทำงาน ${data.workdays} วัน`}
+                hint="ตัวเลข 'วัน-คน' = ผลรวมจำนวนวันของพนักงานทุกคน (เช่น 7 คน × 1 วัน = 7 วัน-คน)"
+            />
+
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatTile label="พนักงาน" value={data.rows.length} />
+                <StatTile label="พนักงาน" value={data.rows.length} suffix="คน" />
                 <StatTile label="วันทำงาน" value={data.workdays} suffix="วัน" />
-                <StatTile label="เข้าออฟฟิศ" value={data.typeBreakdown[0]?.count ?? 0} suffix="วัน" color="#60A5FA" />
-                <StatTile label="WFH" value={data.typeBreakdown[1]?.count ?? 0} suffix="วัน" color="#34D399" />
+                <StatTile label="เข้าออฟฟิศ" value={data.typeBreakdown[0]?.count ?? 0} suffix="วัน-คน" color="#60A5FA" />
+                <StatTile label="WFH" value={data.typeBreakdown[1]?.count ?? 0} suffix="วัน-คน" color="#34D399" />
             </div>
 
             {data.typeBreakdown.some(t => t.count > 0) && (
@@ -308,11 +317,17 @@ function LeaveTab({ data }: { data: LeaveReport }) {
 
     return (
         <div className="space-y-4">
+            <RangeBanner
+                title={`สรุปปี ${data.year + 543}`}
+                subtitle={`ช่วงข้อมูล: 1 ม.ค. – 31 ธ.ค. ${data.year + 543} · นับเฉพาะใบลาที่ได้รับอนุมัติแล้ว`}
+                hint="รวมวันลา = ผลรวมวันที่พนักงานทุกคนลา ไม่ใช่จำนวนวันในปฏิทิน"
+            />
+
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatTile label="ปี" value={data.year + 543} />
-                <StatTile label="พนักงานที่ลา" value={data.rows.length} />
+                <StatTile label="พนักงานที่ลา" value={data.rows.length} suffix="คน" />
                 <StatTile label="รวมวันลา" value={totalDays} suffix="วัน" color="#FBBF24" />
-                <StatTile label="ประเภทที่ใช้" value={data.typeBreakdown.length} />
+                <StatTile label="ประเภทที่ใช้" value={data.typeBreakdown.length} suffix="ประเภท" />
+                <StatTile label="เฉลี่ย/คน" value={data.rows.length ? Math.round(totalDays / data.rows.length * 10) / 10 : 0} suffix="วัน" />
             </div>
 
             {totalDays > 0 && (
@@ -434,11 +449,18 @@ function ContractsTab({ data }: { data: ContractReport }) {
         downloadCsv(`contracts.csv`, rows)
     }
 
+    const todayStr = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })
+
     return (
         <div className="space-y-4">
+            <RangeBanner
+                title="ภาพรวม ณ ปัจจุบัน"
+                subtitle={`ข้อมูล ณ วันที่ ${todayStr} · นับเฉพาะพนักงานที่ยัง active`}
+            />
+
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {data.byType.map(t => (
-                    <StatTile key={t.type} label={t.type} value={t.count} color={t.color} />
+                    <StatTile key={t.type} label={t.type} value={t.count} color={t.color} suffix="คน" />
                 ))}
             </div>
 
@@ -535,6 +557,26 @@ function EmpTypeBadge({ type }: { type: string }) {
         <span className={`text-xs px-2 py-0.5 rounded-full border ${info.cls}`}>
             {info.label}
         </span>
+    )
+}
+
+function RangeBanner({ title, subtitle, hint }: { title: string; subtitle: string; hint?: string }) {
+    return (
+        <div
+            className="p-4 lg:p-5 rounded-2xl border border-amber-300/30"
+            style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.15), rgba(245,158,11,0.08))' }}
+        >
+            <div className="flex items-start gap-3">
+                <Calendar size={20} className="text-amber-300 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                    <h2 className="text-white text-lg font-bold leading-tight">{title}</h2>
+                    <p className="text-white/75 text-sm mt-0.5">{subtitle}</p>
+                    {hint && (
+                        <p className="text-white/55 text-xs mt-2 italic">💡 {hint}</p>
+                    )}
+                </div>
+            </div>
+        </div>
     )
 }
 
