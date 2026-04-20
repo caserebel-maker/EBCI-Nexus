@@ -99,17 +99,34 @@ export function OrganizationView({ employees, currentEmployeeId }: Props) {
             </div>
 
             {/* Legend */}
-            <div className="p-3 flex flex-wrap gap-3 text-xs"
+            <div className="p-3 space-y-2 text-xs"
                 style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12 }}>
-                <span className="flex items-center gap-1.5 text-white/80">
-                    <span className="h-3 w-3 rounded-full bg-amber-400 ring-2 ring-amber-300" /> คุณ
-                </span>
-                <span className="flex items-center gap-1.5 text-white/80">
-                    <span className="h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-emerald-300" /> สายอนุมัติของคุณ
-                </span>
-                <span className="flex items-center gap-1.5 text-white/80">
-                    <span className="h-3 w-3 rounded-full bg-white/15 ring-1 ring-white/25" /> พนักงานอื่น
-                </span>
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                    <span className="flex items-center gap-1.5 text-white/80">
+                        <span className="h-3 w-3 rounded-full bg-amber-400 ring-2 ring-amber-300" /> คุณ
+                    </span>
+                    <span className="flex items-center gap-1.5 text-white/80">
+                        <span className="h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-emerald-300" /> สายอนุมัติของคุณ
+                    </span>
+                </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1.5 pt-1 border-t border-white/10">
+                    <span className="text-white/50 text-[10px] uppercase tracking-wider">ระดับ:</span>
+                    <span className="flex items-center gap-1 text-white/75">
+                        <span className="h-2.5 w-2.5 rounded-full ring-2 ring-red-400" /> MD
+                    </span>
+                    <span className="flex items-center gap-1 text-white/75">
+                        <span className="h-2.5 w-2.5 rounded-full ring-2 ring-amber-400" /> HR
+                    </span>
+                    <span className="flex items-center gap-1 text-white/75">
+                        <span className="h-2.5 w-2.5 rounded-full ring-2 ring-purple-400" /> ฝ่าย
+                    </span>
+                    <span className="flex items-center gap-1 text-white/75">
+                        <span className="h-2.5 w-2.5 rounded-full ring-2 ring-blue-400" /> แผนก
+                    </span>
+                    <span className="flex items-center gap-1 text-white/75">
+                        <span className="h-2.5 w-2.5 rounded-full ring-1 ring-white/30" /> พนักงาน
+                    </span>
+                </div>
             </div>
 
             {/* Empty / incomplete data banner */}
@@ -143,6 +160,7 @@ export function OrganizationView({ employees, currentEmployeeId }: Props) {
                         key={node.id}
                         node={node}
                         depth={0}
+                        isLastChild={false}
                         collapsed={collapsed}
                         toggle={toggle}
                         currentEmployeeId={currentEmployeeId}
@@ -157,11 +175,23 @@ export function OrganizationView({ employees, currentEmployeeId }: Props) {
     )
 }
 
+// Ring color by approval_level (higher = more prominent)
+function ringColorByLevel(level: number | null): string {
+    switch (level) {
+        case 5: return 'ring-red-400'          // MD
+        case 4: return 'ring-amber-400'        // HR Admin
+        case 3: return 'ring-purple-400'       // หัวหน้าฝ่าย
+        case 2: return 'ring-blue-400'         // หัวหน้าแผนก
+        default: return 'ring-white/30'        // พนักงาน
+    }
+}
+
 function OrgNode({
-    node, depth, collapsed, toggle, currentEmployeeId, approvalChain,
+    node, depth, isLastChild, collapsed, toggle, currentEmployeeId, approvalChain,
 }: {
     node: TreeNode
     depth: number
+    isLastChild: boolean
     collapsed: Set<string>
     toggle: (id: string) => void
     currentEmployeeId: string | null
@@ -172,9 +202,6 @@ function OrgNode({
     const isCollapsed = collapsed.has(node.id)
     const hasChildren = node.children.length > 0
 
-    const indent = Math.min(depth, 4) // cap indent on mobile
-    const marginLeft = `${indent * 16}px`
-
     const borderCls = isMe
         ? 'border-amber-400/60 ring-2 ring-amber-400/50'
         : isApprover
@@ -184,22 +211,51 @@ function OrgNode({
         ? 'bg-amber-500/15'
         : isApprover
             ? 'bg-emerald-500/10'
-            : 'bg-white/6'
+            : 'bg-white/[0.06]'
 
     const displayName = node.nickname
         ? `${node.firstName} (${node.nickname})`
         : `${node.firstName} ${node.lastName}`.trim()
 
+    const avatarRing = ringColorByLevel(node.approvalLevel)
+
+    // L-shape connector geometry (card is ~64px tall; connector meets at 32px)
+    const CONNECTOR_LEFT = 12  // px
+    const CARD_MIDPOINT = 32   // px — where horizontal line meets card
+
     return (
-        <div style={{ marginLeft }}>
+        <div className={depth > 0 ? 'relative pl-8' : ''}>
+            {/* L-shaped connector to parent */}
+            {depth > 0 && (
+                <>
+                    {/* Vertical line: from top of this subtree down to card midpoint (last child) or all the way (siblings continue below) */}
+                    <span
+                        aria-hidden
+                        className="absolute w-px bg-white/25"
+                        style={{
+                            left: `${CONNECTOR_LEFT}px`,
+                            top: 0,
+                            height: isLastChild ? `${CARD_MIDPOINT}px` : '100%',
+                        }}
+                    />
+                    {/* Horizontal line: from vertical line to card */}
+                    <span
+                        aria-hidden
+                        className="absolute h-px bg-white/25"
+                        style={{
+                            left: `${CONNECTOR_LEFT}px`,
+                            top: `${CARD_MIDPOINT}px`,
+                            width: `${32 - CONNECTOR_LEFT}px`,
+                        }}
+                    />
+                </>
+            )}
+
+            {/* Card */}
             <div
                 className={`relative flex items-center gap-3 p-3 rounded-xl border transition-all ${borderCls} ${bgCls}`}
                 style={{ backdropFilter: 'blur(8px)' }}
             >
-                {depth > 0 && (
-                    <span className="absolute -left-3 top-1/2 -translate-y-1/2 text-white/30 text-xs">└</span>
-                )}
-
                 {/* Expand/collapse */}
                 {hasChildren ? (
                     <button
@@ -213,15 +269,15 @@ function OrgNode({
                     <span className="flex-shrink-0 w-6 h-6" />
                 )}
 
-                {/* Avatar */}
+                {/* Avatar with colored ring */}
                 {node.photoUrl ? (
                     <img
                         src={node.photoUrl}
                         alt=""
-                        className="flex-shrink-0 w-10 h-10 rounded-full object-cover border border-white/20"
+                        className={`flex-shrink-0 w-10 h-10 rounded-full object-cover ring-2 ring-offset-2 ring-offset-[#3a1a1e] ${avatarRing}`}
                     />
                 ) : (
-                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white/15 border border-white/20 flex items-center justify-center">
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-full bg-white/15 ring-2 ring-offset-2 ring-offset-[#3a1a1e] ${avatarRing} flex items-center justify-center`}>
                         <User size={18} className="text-white/60" />
                     </div>
                 )}
@@ -264,11 +320,12 @@ function OrgNode({
             {/* Children */}
             {hasChildren && !isCollapsed && (
                 <div className="mt-2 space-y-2">
-                    {node.children.map(child => (
+                    {node.children.map((child, idx) => (
                         <OrgNode
                             key={child.id}
                             node={child}
                             depth={depth + 1}
+                            isLastChild={idx === node.children.length - 1}
                             collapsed={collapsed}
                             toggle={toggle}
                             currentEmployeeId={currentEmployeeId}
