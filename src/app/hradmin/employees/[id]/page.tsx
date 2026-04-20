@@ -81,12 +81,12 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
 
     // ── Supervisor name ────────────────────────────────────────────────────────
     let supervisorName = '—'
-    if (employee.supervisor_id) {
-        const sup = allEmployeesRaw?.find(e => e.id === employee.supervisor_id)
+    if (employee.manager_id) {
+        const sup = allEmployeesRaw?.find(e => e.id === employee.manager_id)
             ?? (await supabaseAdmin
                 .from('employees')
                 .select('first_name_th, last_name_th')
-                .eq('id', employee.supervisor_id)
+                .eq('id', employee.manager_id)
                 .single()
                 .then(r => r.data))
         if (sup) supervisorName = `${sup.first_name_th} ${sup.last_name_th}`

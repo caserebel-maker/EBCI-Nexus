@@ -18,7 +18,7 @@ interface EmployeeRow {
     last_name_th: string
     email: string | null
     approval_level: number | null
-    supervisor_id: string | null
+    manager_id: string | null
     department: string | null
 }
 
@@ -26,7 +26,7 @@ interface EmployeeRow {
 async function fetchEmployee(id: string): Promise<EmployeeRow | null> {
     const { data } = await supabaseAdmin
         .from('employees')
-        .select('id, first_name_th, last_name_th, email, approval_level, supervisor_id, department')
+        .select('id, first_name_th, last_name_th, email, approval_level, manager_id, department')
         .eq('id', id)
         .single()
     return data ?? null
@@ -35,7 +35,7 @@ async function fetchEmployee(id: string): Promise<EmployeeRow | null> {
 async function findFirstByLevel(level: number): Promise<EmployeeRow | null> {
     const { data } = await supabaseAdmin
         .from('employees')
-        .select('id, first_name_th, last_name_th, email, approval_level, supervisor_id, department')
+        .select('id, first_name_th, last_name_th, email, approval_level, manager_id, department')
         .eq('approval_level', level)
         .eq('status', 'active')
         .limit(1)
@@ -59,12 +59,12 @@ async function buildApprovalChain(employee: EmployeeRow): Promise<ApprovalStep[]
     const level = employee.approval_level ?? 1
 
     if (level === 1) {
-        if (employee.supervisor_id) {
-            const sup = await fetchEmployee(employee.supervisor_id)
+        if (employee.manager_id) {
+            const sup = await fetchEmployee(employee.manager_id)
             if (sup) {
                 chain.push({ approver_id: sup.id, approver_role: 'supervisor' })
-                if (sup.supervisor_id) {
-                    const sup2 = await fetchEmployee(sup.supervisor_id)
+                if (sup.manager_id) {
+                    const sup2 = await fetchEmployee(sup.manager_id)
                     if (sup2) chain.push({ approver_id: sup2.id, approver_role: 'manager' })
                 }
             }
@@ -73,8 +73,8 @@ async function buildApprovalChain(employee: EmployeeRow): Promise<ApprovalStep[]
         if (hr) chain.push({ approver_id: hr.id, approver_role: 'hr' })
 
     } else if (level === 2) {
-        if (employee.supervisor_id) {
-            const sup = await fetchEmployee(employee.supervisor_id)
+        if (employee.manager_id) {
+            const sup = await fetchEmployee(employee.manager_id)
             if (sup) chain.push({ approver_id: sup.id, approver_role: 'manager' })
         }
         const hr = await findFirstByLevel(4)
@@ -192,7 +192,7 @@ export async function approveLeave(
             .select(`
                 id, status, current_step, leave_type, start_date, end_date, total_days, reason,
                 employee_id,
-                employees!employee_id (id, first_name_th, last_name_th, email, approval_level, supervisor_id, department)
+                employees!employee_id (id, first_name_th, last_name_th, email, approval_level, manager_id, department)
             `)
             .eq('id', leaveRequestId)
             .single()

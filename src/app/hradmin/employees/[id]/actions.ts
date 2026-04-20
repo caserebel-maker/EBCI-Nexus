@@ -17,7 +17,7 @@ export interface UpdateEmployeePayload {
     quit_date?: string
     quit_reason?: string
     approval_level?: number
-    supervisor_id?: string | null
+    manager_id?: string | null
     // applicants table
     applicant_current_address: string
     applicant_phone: string  // emergency contact
@@ -47,7 +47,7 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
             quit_date: employeeFields.quit_date || null,
             quit_reason: employeeFields.quit_reason || null,
             ...(employeeFields.approval_level !== undefined && { approval_level: employeeFields.approval_level }),
-            supervisor_id: employeeFields.supervisor_id ?? null,
+            manager_id: employeeFields.manager_id ?? null,
         })
         .eq('id', employeeId)
 

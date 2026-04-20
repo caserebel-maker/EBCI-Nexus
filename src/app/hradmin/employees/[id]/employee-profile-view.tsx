@@ -110,7 +110,7 @@ interface FormState {
     address: string
     emergency_contact: string
     approval_level: number
-    supervisor_id: string
+    manager_id: string
 }
 
 // ─── Section header ───────────────────────────────────────────────────────────
@@ -279,7 +279,7 @@ export function EmployeeProfileView({
         address: employee.applicants?.current_address ?? '',
         emergency_contact: employee.applicants?.phone ?? '',
         approval_level: employee.approval_level ?? 1,
-        supervisor_id: employee.supervisor_id ?? '',
+        manager_id: employee.manager_id ?? '',
     })
 
     const [isEditing, setIsEditing] = useState(false)
@@ -338,7 +338,7 @@ export function EmployeeProfileView({
                 approval_level: form.approval_level,
                 applicant_current_address: form.address,
                 applicant_phone: form.emergency_contact,
-                supervisor_id: form.supervisor_id || null,
+                manager_id: form.manager_id || null,
             })
             if (result.error) {
                 showToast('error', `เกิดข้อผิดพลาด: ${result.error}`)
@@ -688,8 +688,8 @@ export function EmployeeProfileView({
                             value={supervisorName}
                             editing={isEditing}
                             editNode={
-                                <select className={sel} value={form.supervisor_id}
-                                    onChange={set('supervisor_id')}>
+                                <select className={sel} value={form.manager_id}
+                                    onChange={set('manager_id')}>
                                     <option value="">— ไม่ระบุ —</option>
                                     {allEmployees.map(e => (
                                         <option key={e.id} value={e.id}>

@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
     Home, Users, Bell, Megaphone, MoreHorizontal, Clock, CalendarDays,
     ClipboardCheck, CheckSquare, LogOut, FileText,
-    Settings, ChevronRight, X, UserRound, RefreshCw,
+    Settings, ChevronRight, X, UserRound, RefreshCw, Network,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRole, type Role } from '@/contexts/role-context'
@@ -61,6 +61,7 @@ const NAV_CONFIG: Record<Role, NavItem[]> = {
 // Variant of hr_admin More menu when viewing in /portal — offers switch back to admin
 const HR_ADMIN_PORTAL_MORE: MoreItem[] = [
     { label: 'ยื่นใบลา',     desc: 'สร้างคำขอลาของตนเอง',   href: '/portal/leave',           icon: CalendarDays },
+    { label: 'ผังองค์กร',    desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',   icon: Network },
     { label: 'ปฏิทิน',       desc: 'ดูตารางงาน',             href: '/portal/calendar',       icon: CalendarDays },
     { label: 'กลับเป็น HR Admin', desc: 'สลับกลับโหมดแอดมิน', href: '/hradmin/dashboard', icon: RefreshCw, accent: 'amber' },
     { label: 'ออกจากระบบ', icon: LogOut, danger: true },
@@ -77,11 +78,13 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
     manager: [
         { label: 'อนุมัติการลา', desc: 'พิจารณาคำขอลาลูกทีม', href: '/portal/approve',   icon: CheckSquare },
         { label: 'ยื่นใบลา',     desc: 'สร้างคำขอลาของตนเอง', href: '/portal/leave',     icon: CalendarDays },
+        { label: 'ผังองค์กร',    desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization', icon: Network },
         { label: 'ปฏิทิน',       desc: 'ดูตารางงาน',           href: '/portal/calendar',  icon: CalendarDays },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     employee: [
         { label: 'ยื่นใบลา',     desc: 'สร้างคำขอลาของตนเอง', href: '/portal/leave',           icon: CalendarDays },
+        { label: 'ผังองค์กร',    desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization', icon: Network },
         { label: 'ปฏิทิน',       desc: 'ดูตารางงาน',           href: '/portal/calendar',       icon: CalendarDays },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
