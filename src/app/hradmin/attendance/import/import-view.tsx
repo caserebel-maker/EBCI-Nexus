@@ -2,7 +2,8 @@
 
 import { useState, useTransition, useRef } from 'react'
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Info, X } from 'lucide-react'
-import { validateCardRows, importCheckins, type RawCardRow, type ValidatedRow } from './actions'
+import Link from 'next/link'
+import { validateCardRows, importCardScans, type RawCardRow, type ValidatedRow } from './actions'
 
 const glassCard = {
     background: 'rgba(255,255,255,0.06)',
@@ -67,7 +68,7 @@ type ParseState =
     | { kind: 'validating' }
     | { kind: 'validated'; fileName: string; rows: ValidatedRow[]; employeesFound: number; errorCount: number; duplicateCount: number }
     | { kind: 'importing' }
-    | { kind: 'done'; inserted: number; skipped: number }
+    | { kind: 'done'; inserted: number; skipped: number; reconciled: number; affectedDates: string[] }
     | { kind: 'error'; message: string }
 
 export function CardImportView() {
@@ -142,12 +143,18 @@ export function CardImportView() {
         const rows = state.rows
         setState({ kind: 'importing' })
         startTransition(async () => {
-            const result = await importCheckins(rows)
+            const result = await importCardScans(rows, state.fileName)
             if (result.error) {
                 setState({ kind: 'error', message: result.error })
                 return
             }
-            setState({ kind: 'done', inserted: result.inserted, skipped: result.skipped })
+            setState({
+                kind: 'done',
+                inserted: result.inserted,
+                skipped: result.skipped,
+                reconciled: result.reconciled ?? 0,
+                affectedDates: result.affectedDates ?? [],
+            })
         })
     }
 
@@ -301,15 +308,33 @@ export function CardImportView() {
                 <div className="p-6 lg:p-10 text-center" style={glassCard}>
                     <CheckCircle2 className="h-12 w-12 text-emerald-400 mx-auto mb-3" />
                     <h3 className="text-white text-xl font-bold mb-1">นำเข้าสำเร็จ!</h3>
-                    <p className="text-white/80 mb-4">
+                    <p className="text-white/80 mb-2">
                         เพิ่ม {state.inserted} รายการ · ข้าม {state.skipped} แถว
                     </p>
-                    <button
-                        onClick={reset}
-                        className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-black font-semibold rounded-lg transition-all"
-                    >
-                        นำเข้าไฟล์ใหม่
-                    </button>
+                    {state.reconciled > 0 && (
+                        <p className="text-white/70 text-sm mb-1">
+                            คำนวณเทียบกับมือถือแล้ว {state.reconciled} คน
+                        </p>
+                    )}
+                    {state.affectedDates.length > 0 && (
+                        <p className="text-white/60 text-xs mb-4">
+                            วันที่ที่อัปเดต: {state.affectedDates.sort().join(', ')}
+                        </p>
+                    )}
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
+                        <Link
+                            href="/hradmin/attendance/reconcile"
+                            className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg transition-all"
+                        >
+                            ดูผลการเทียบ
+                        </Link>
+                        <button
+                            onClick={reset}
+                            className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-black font-semibold rounded-lg transition-all"
+                        >
+                            นำเข้าไฟล์ใหม่
+                        </button>
+                    </div>
                 </div>
             )}
 
