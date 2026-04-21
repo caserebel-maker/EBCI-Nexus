@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Route, User, ChevronDown, Info, Crown, Compass } from 'lucide-react'
+import { Route, User, ChevronDown, Info, Crown, Compass, Sparkles } from 'lucide-react'
 import type { OrgEmployee } from './view-department'
 import type { UserPermissions } from '@/lib/permissions'
 
@@ -15,6 +15,7 @@ type ChainStep = {
     employee: OrgEmployee
     role: 'you' | 'approver' | 'final'
     roleLabel: string
+    isOverride: boolean
 }
 
 export function TabMyChain({ employees, currentEmployeeId, permissions: _permissions }: Props) {
@@ -55,6 +56,9 @@ export function TabMyChain({ employees, currentEmployeeId, permissions: _permiss
                 </div>
                 <p className="text-white/75 text-xs">
                     เมื่อคุณยื่นคำขอลา / OT / เบิกเงิน คำขอจะถูกส่งตามลำดับด้านล่าง
+                </p>
+                <p className="text-white/55 text-[11px] italic">
+                    💡 สายอนุมัติอาจต่างจากผู้บังคับบัญชาตรง สำหรับบางตำแหน่งพิเศษ (เช่น เลขาประธาน → ประธานโดยตรง)
                 </p>
             </div>
 
@@ -161,11 +165,15 @@ function ChainStepCard({ step }: { step: ChainStep }) {
             ? 'bg-rose-500/25 text-rose-200 border-rose-400/40'
             : 'bg-emerald-500/25 text-emerald-200 border-emerald-400/40'
 
+    const outerCls = step.isOverride
+        ? 'p-3 rounded-xl border-2 border-amber-400/50 ring-1 ring-amber-400/25 flex items-center gap-3'
+        : 'p-3 rounded-xl border border-white/15 flex items-center gap-3'
+    const outerBg = step.isOverride
+        ? 'linear-gradient(135deg, rgba(251,191,36,0.12), rgba(245,158,11,0.05))'
+        : 'rgba(255,255,255,0.06)'
+
     return (
-        <div
-            className="p-3 rounded-xl border border-white/15 flex items-center gap-3"
-            style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}
-        >
+        <div className={outerCls} style={{ background: outerBg, backdropFilter: 'blur(8px)' }}>
             {emp.photoUrl ? (
                 <img src={emp.photoUrl} alt="" className="w-11 h-11 rounded-full object-cover ring-2 ring-white/20 flex-shrink-0" />
             ) : (
@@ -178,6 +186,12 @@ function ChainStepCard({ step }: { step: ChainStep }) {
                     <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${roleBadge}`}>
                         {step.roleLabel}
                     </span>
+                    {step.isOverride && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-amber-400/20 text-amber-100 border-amber-300/50">
+                            <Sparkles size={10} />
+                            อนุมัติพิเศษ
+                        </span>
+                    )}
                     <p className="text-sm font-semibold text-white truncate">{displayName}</p>
                 </div>
                 <p className="text-xs text-white/65 truncate">{emp.position ?? '—'}</p>
@@ -187,6 +201,12 @@ function ChainStepCard({ step }: { step: ChainStep }) {
     )
 }
 
+// Walk up the approval chain. Rules (spec §"Tab 3" + business rules):
+//   1. Prefer leave_approver_id over manager_id (override for special cases
+//      like เลขาประธาน → ประธาน directly)
+//   2. Stop after pushing a node whose approval_level ≥ 4 (MD or ประธาน)
+//   3. Cycle guard via visited set
+// The override flag on each step lets the UI flag special routing.
 function computeChain(
     employees: OrgEmployee[],
     currentEmployeeId: string | null,
@@ -202,17 +222,29 @@ function computeChain(
     const visited = new Set<string>([me.id])
     let stepIdx = 1
 
-    while (cursor?.managerId) {
-        const next = byId.get(cursor.managerId)
+    while (cursor) {
+        const nextId = cursor.leaveApproverId ?? cursor.managerId
+        if (!nextId) break
+        const next = byId.get(nextId)
         if (!next || visited.has(next.id)) break
         visited.add(next.id)
+
+        const isOverride = Boolean(cursor.leaveApproverId)
         chain.push({
             employee: next,
             role: 'approver',
             roleLabel: `อนุมัติ ${stepIdx}`,
+            isOverride,
         })
-        cursor = next
         stepIdx += 1
+
+        // Stop rule: once we push MD (L4) or ประธาน (L5), the chain terminates.
+        // This prevents regular employees from reaching ดำ unless routed via
+        // the leave_approver_id override.
+        const nextLevel = next.approvalLevel ?? 0
+        if (nextLevel >= 4) break
+
+        cursor = next
     }
 
     // Mark last step as "final approver"

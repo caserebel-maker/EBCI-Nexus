@@ -19,7 +19,7 @@ export async function GET() {
     }
 
     const EMPLOYEE_SELECT =
-        'id, first_name_th, last_name_th, nickname, position, department, secondary_department, photo_url, approval_level, manager_id, is_approver'
+        'id, first_name_th, last_name_th, nickname, position, department, secondary_department, photo_url, approval_level, manager_id, leave_approver_id, is_approver'
 
     // ── Resolve the current user's employee record ─────────────────────────
     let me: Record<string, unknown> | null = null
@@ -56,26 +56,36 @@ export async function GET() {
     }
 
     // ── Walk up the chain ───────────────────────────────────────────────────
-    const chain: Record<string, unknown>[] = []
+    // Rules: prefer leave_approver_id over manager_id; stop after reaching
+    // approval_level ≥ 4 (MD or ประธาน). Mark steps that came via override.
+    const chain: Array<Record<string, unknown> & { is_override: boolean }> = []
     const visited = new Set<string>([me.id as string])
-    let cursorManagerId = me.manager_id as string | null
+    let cursor: Record<string, unknown> = me
+    let guard = 0 // defensive max-depth
 
-    while (cursorManagerId) {
-        if (visited.has(cursorManagerId)) break // cycle guard
-        visited.add(cursorManagerId)
+    while (guard < 20) {
+        guard += 1
+        const cursorOverride = (cursor.leave_approver_id as string | null) ?? null
+        const cursorManager = (cursor.manager_id as string | null) ?? null
+        const nextId = cursorOverride ?? cursorManager
+        if (!nextId) break
+        if (visited.has(nextId)) break
+        visited.add(nextId)
 
         const { data: next } = await supabaseAdmin
             .from('employees')
             .select(EMPLOYEE_SELECT)
-            .eq('id', cursorManagerId)
+            .eq('id', nextId)
             .maybeSingle()
 
         if (!next) break
-        chain.push(next as Record<string, unknown>)
 
-        // Stop at the chairman (Level 5) or when no manager above
-        if ((next.approval_level as number | null) === 5) break
-        cursorManagerId = (next.manager_id as string | null) ?? null
+        chain.push({ ...(next as Record<string, unknown>), is_override: Boolean(cursorOverride) })
+
+        const nextLevel = (next.approval_level as number | null) ?? 0
+        if (nextLevel >= 4) break // stop at MD or ประธาน
+
+        cursor = next as Record<string, unknown>
     }
 
     return NextResponse.json({ me, chain })

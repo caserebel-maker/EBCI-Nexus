@@ -14,6 +14,7 @@ export interface OrgEmployee {
     secondaryDepartment: string | null
     photoUrl: string | null
     managerId: string | null
+    leaveApproverId: string | null   // override for leave approval routing
     approvalLevel: number | null
     isApprover?: boolean
     approvalScopes?: string[]
