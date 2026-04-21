@@ -1,14 +1,17 @@
 'use client'
 
 import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import { publishAnnouncement } from "../actions"
-import { AlertTriangle, Send, Megaphone, Info, CheckCircle, Loader2 } from "lucide-react"
+import { AlertTriangle, Send, Megaphone, Info, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { SuccessPopup } from "@/components/success-popup"
 
 import { useTranslation } from "@/contexts/language-context"
 
 export default function AnnouncementPage() {
     const { t } = useTranslation()
+    const router = useRouter()
     const [isPending, startTransition] = useTransition()
     const [priority, setPriority] = useState("internal")
     const [success, setSuccess] = useState(false)
@@ -26,11 +29,15 @@ export default function AnnouncementPage() {
             const result = await publishAnnouncement(formData)
             if (result.success) {
                 setSuccess(true)
-                // Optional: Reset form
             } else {
                 alert(result.error)
             }
         })
+    }
+
+    const handleSuccessClose = () => {
+        setSuccess(false)
+        router.push('/hradmin/announcements')
     }
 
     return (
@@ -45,12 +52,13 @@ export default function AnnouncementPage() {
                 </div>
             </div>
 
-            {success && (
-                <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-                    <CheckCircle size={20} />
-                    <span className="font-bold">{t('common.success')}</span>
-                </div>
-            )}
+            <SuccessPopup
+                open={success}
+                title="สร้างประกาศสำเร็จ"
+                subtitle="ประกาศของคุณได้ถูกเผยแพร่เรียบร้อยแล้ว"
+                autoCloseMs={3000}
+                onClose={handleSuccessClose}
+            />
 
             <form action={handleSubmit} className="bg-card border border-white/10 p-4 lg:p-8 rounded-2xl shadow-xl space-y-6">
 
