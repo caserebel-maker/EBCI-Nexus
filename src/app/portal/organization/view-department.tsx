@@ -78,6 +78,11 @@ function ringColorByLevel(level: number | null): string {
     }
 }
 
+// Version marker — bumped each time the tree renderer changes. Surfaced via
+// a data-attribute and a console.log so we can tell if a user is on the
+// latest JS bundle vs a stale browser cache.
+const ORG_RENDER_VERSION = '2026-04-21-v3-flat-compact'
+
 export function DepartmentView({ employees, currentEmployeeId }: Props) {
     const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
@@ -97,6 +102,29 @@ export function DepartmentView({ employees, currentEmployeeId }: Props) {
     }, [employees])
 
     const tree = useMemo(() => buildTree(staff), [staff])
+
+    // Debug: show the tree shape in dev tools so we can verify the renderer
+    // is operating on siblings (flat children array) vs something nested.
+    useMemo(() => {
+        if (typeof window === 'undefined') return
+        // Find ตู่ as a quick canary for the chain bug the user saw.
+        const find = (nodes: TreeNode[], nickname: string): TreeNode | null => {
+            for (const n of nodes) {
+                if (n.nickname === nickname) return n
+                const hit = find(n.children, nickname)
+                if (hit) return hit
+            }
+            return null
+        }
+        const tu = find(tree, 'ตู่')
+        // eslint-disable-next-line no-console
+        console.info(`[OrgChart ${ORG_RENDER_VERSION}] tree roots:`, tree.map(r => r.nickname ?? r.firstName))
+        if (tu) {
+            // eslint-disable-next-line no-console
+            console.info(`[OrgChart] ตู่'s direct children (${tu.children.length}):`,
+                tu.children.map(c => c.nickname ?? c.firstName))
+        }
+    }, [tree])
     const approvalChain = useMemo(
         () => findApprovalChain(staff, currentEmployeeId),
         [staff, currentEmployeeId]
