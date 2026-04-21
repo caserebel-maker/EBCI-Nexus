@@ -1,9 +1,11 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Building2, ChevronDown, ChevronUp, Crown, User } from 'lucide-react'
-import type { OrgEmployee } from './view-department'
-import { buildTree, OrgNode } from './view-department'
+import {
+    Building2, ChevronDown, ChevronUp, ChevronRight, Crown, User,
+} from 'lucide-react'
+import type { OrgEmployee, TreeNode } from './view-department'
+import { buildTree } from './view-department'
 
 interface Props {
     employees: OrgEmployee[]
@@ -12,11 +14,10 @@ interface Props {
     viewerSecondaryDepartment: string | null
 }
 
-// Tab 1 — "มุมมองแผนก" view.
-// Scoped to the viewer's department(s) and rendered as a proper reports_to_id
-// hierarchy (root → children → grandchildren), not a flat grid.
-// Top executives live in a collapsible block below so people can expand when
-// they want to see the wider picture.
+// Tab 1 — "มุมมองแผนก"
+// Vertical-only reports_to_id tree. Each child indents with a dashed
+// left rail + a small horizontal tick meeting the card. Works the same
+// on mobile (no horizontal scroll, ever) and desktop.
 export function DepartmentOnlyView({
     employees,
     currentEmployeeId,
@@ -29,9 +30,6 @@ export function DepartmentOnlyView({
     const { deptPeers, deptTree, managerOutsideDept, topExecutives } = useMemo(() => {
         const me = employees.find(e => e.id === currentEmployeeId) ?? null
 
-        // Set of department names the viewer belongs to (primary + optional
-        // secondary). Guard against null equality matching null values on
-        // other employees.
         const myDepts = new Set<string>()
         if (viewerDepartment) myDepts.add(viewerDepartment)
         if (viewerSecondaryDepartment) myDepts.add(viewerSecondaryDepartment)
@@ -44,15 +42,8 @@ export function DepartmentOnlyView({
         }
 
         const peers = employees.filter(e => !e.isAdvisor && inMyDept(e))
-
-        // buildTree uses manager_id. For people whose manager is OUTSIDE the
-        // dept set, they surface as a root — which is exactly the "highest
-        // person in this dept" we want.
         const tree = buildTree(peers)
 
-        // If the viewer's own manager sits outside the dept, show that person
-        // as a separate hint card above the tree so the reporting line is
-        // still obvious (e.g., ตู่ reports to จิม outside the dept).
         let mgrOutside: OrgEmployee | null = null
         if (me?.managerId) {
             const mgr = employees.find(e => e.id === me.managerId)
@@ -71,25 +62,20 @@ export function DepartmentOnlyView({
         }
     }, [employees, currentEmployeeId, viewerDepartment, viewerSecondaryDepartment])
 
-    const toggle = (id: string) => {
+    const toggle = (id: string) =>
         setCollapsed(prev => {
             const next = new Set(prev)
             if (next.has(id)) next.delete(id)
             else next.add(id)
             return next
         })
-    }
 
     const deptLabel =
         [viewerDepartment, viewerSecondaryDepartment].filter(Boolean).join(' + ') ||
         'แผนกของคุณ'
 
-    // Approval chain is only meaningful on the full-company tree; within a
-    // single dept we don't need it. Pass an empty set so highlights stay off.
-    const emptyChain = useMemo(() => new Set<string>(), [])
-
     return (
-        <div className="space-y-4 lg:space-y-6">
+        <div className="w-full max-w-[720px] mx-auto space-y-4 lg:space-y-6 overflow-x-hidden">
             {/* Scope banner */}
             <div className="p-3 rounded-xl border border-white/12 bg-white/[0.04] text-xs text-white/70 flex items-start gap-2">
                 <Building2 size={14} className="mt-0.5 flex-shrink-0 text-white/50" />
@@ -99,15 +85,22 @@ export function DepartmentOnlyView({
                 </div>
             </div>
 
-            {/* Manager outside dept (if applicable) */}
+            {/* Manager outside dept */}
             {managerOutsideDept && (
                 <section>
                     <h3 className="text-xs text-white/60 uppercase tracking-wider mb-2">หัวหน้าของคุณ</h3>
-                    <OutsideManagerCard person={managerOutsideDept} />
+                    <RowCard
+                        node={managerOutsideDept}
+                        isMe={false}
+                        tone="rose"
+                        hasChildren={false}
+                        isCollapsed={false}
+                        onToggle={() => {}}
+                    />
                 </section>
             )}
 
-            {/* Dept tree */}
+            {/* Dept tree — vertical */}
             <section>
                 <h3 className="text-xs text-white/60 uppercase tracking-wider mb-2">
                     พนักงานในแผนก · {deptPeers.length} คน
@@ -117,30 +110,22 @@ export function DepartmentOnlyView({
                 ) : deptTree.length === 0 ? (
                     <p className="text-white/50 text-sm py-4">ไม่สามารถสร้างผังของแผนกได้</p>
                 ) : (
-                    <div className="overflow-x-auto pb-2 -mx-2 lg:mx-0">
-                        <div
-                            className="flex justify-center py-2 px-2"
-                            style={{ minWidth: 'max-content' }}
-                        >
-                            <div className="inline-flex gap-6 items-start">
-                                {deptTree.map(root => (
-                                    <OrgNode
-                                        key={root.id}
-                                        node={root}
-                                        depth={0}
-                                        collapsed={collapsed}
-                                        toggle={toggle}
-                                        currentEmployeeId={currentEmployeeId}
-                                        approvalChain={emptyChain}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                        <p className="text-white/40 text-[11px] text-center italic mt-2">
-                            💡 แตะปุ่ม ▲/▼ บนการ์ดเพื่อย่อ/ขยาย
-                        </p>
+                    <div className="flex flex-col gap-3">
+                        {deptTree.map(root => (
+                            <VerticalNode
+                                key={root.id}
+                                node={root}
+                                depth={0}
+                                collapsed={collapsed}
+                                toggle={toggle}
+                                currentEmployeeId={currentEmployeeId}
+                            />
+                        ))}
                     </div>
                 )}
+                <p className="text-white/40 text-[11px] italic mt-3">
+                    💡 แตะปุ่ม ▲/▼ บนการ์ดเพื่อย่อ/ขยาย
+                </p>
             </section>
 
             {/* Top executives — collapsible */}
@@ -165,13 +150,16 @@ export function DepartmentOnlyView({
                         )}
                     </button>
                     {execOpen && (
-                        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        <div className="mt-3 flex flex-col gap-2">
                             {topExecutives.map(e => (
-                                <PlainCard
+                                <RowCard
                                     key={e.id}
-                                    person={e}
+                                    node={e}
                                     isMe={e.id === currentEmployeeId}
-                                    accent="gold"
+                                    tone="gold"
+                                    hasChildren={false}
+                                    isCollapsed={false}
+                                    onToggle={() => {}}
                                 />
                             ))}
                         </div>
@@ -182,107 +170,161 @@ export function DepartmentOnlyView({
     )
 }
 
-// ─── Small helper cards ────────────────────────────────────────────────────
+// ─── Recursive vertical node ─────────────────────────────────────────────
 
-function OutsideManagerCard({ person }: { person: OrgEmployee }) {
-    const displayName = person.nickname
-        ? `${person.firstName} (${person.nickname})`
-        : person.firstName
+function VerticalNode({
+    node,
+    depth,
+    collapsed,
+    toggle,
+    currentEmployeeId,
+}: {
+    node: TreeNode
+    depth: number
+    collapsed: Set<string>
+    toggle: (id: string) => void
+    currentEmployeeId: string | null
+}) {
+    const isMe = node.id === currentEmployeeId
+    const isCollapsed = collapsed.has(node.id)
+    const hasChildren = node.children.length > 0
+
     return (
-        <div
-            className="p-3 rounded-xl border border-rose-400/25 flex items-center gap-3 max-w-[340px]"
-            style={{
-                background: 'linear-gradient(135deg, rgba(244,63,94,0.10), rgba(225,29,72,0.04))',
-                backdropFilter: 'blur(8px)',
-            }}
-        >
-            {person.photoUrl ? (
-                <img
-                    src={person.photoUrl}
-                    alt=""
-                    className="w-11 h-11 rounded-full object-cover ring-2 ring-offset-2 ring-offset-[#3a1a1e] ring-rose-400/60 flex-shrink-0"
-                />
-            ) : (
-                <div className="w-11 h-11 rounded-full bg-white/10 ring-2 ring-offset-2 ring-offset-[#3a1a1e] ring-rose-400/60 flex items-center justify-center flex-shrink-0">
-                    <User size={18} className="text-white/70" />
+        <div className="w-full">
+            <RowCard
+                node={node}
+                isMe={isMe}
+                tone={depth === 0 ? 'primary' : 'neutral'}
+                hasChildren={hasChildren}
+                isCollapsed={isCollapsed}
+                onToggle={() => toggle(node.id)}
+            />
+            {hasChildren && !isCollapsed && (
+                <div
+                    // Vertical rail: sits ~20px from the left edge so it lines
+                    // up with the card's avatar center. Horizontal ticks below
+                    // spring off this rail to each child row.
+                    className="mt-2 ml-5 sm:ml-6 pl-4 sm:pl-5 border-l-2 border-dashed border-white/20 flex flex-col gap-2"
+                >
+                    {node.children.map(child => (
+                        <div
+                            key={child.id}
+                            className="relative before:content-[''] before:absolute before:-left-4 sm:before:-left-5 before:top-6 before:h-px before:w-3 sm:before:w-4 before:bg-white/25"
+                        >
+                            <VerticalNode
+                                node={child}
+                                depth={depth + 1}
+                                collapsed={collapsed}
+                                toggle={toggle}
+                                currentEmployeeId={currentEmployeeId}
+                            />
+                        </div>
+                    ))}
                 </div>
             )}
-            <div className="flex-1 min-w-0">
-                <p className="text-white font-semibold text-sm truncate">{displayName}</p>
-                <p className="text-white/65 text-xs truncate">{person.position ?? '—'}</p>
-                <p className="text-white/45 text-[10px] truncate">{person.department ?? '—'}</p>
-            </div>
         </div>
     )
 }
 
-function PlainCard({
-    person,
+// ─── Row-style card (horizontal: avatar + text + toggle) ─────────────────
+
+type CardTone = 'primary' | 'neutral' | 'gold' | 'rose'
+
+function RowCard({
+    node,
     isMe,
-    accent,
+    tone,
+    hasChildren,
+    isCollapsed,
+    onToggle,
 }: {
-    person: OrgEmployee
+    node: OrgEmployee | TreeNode
     isMe: boolean
-    accent: 'white' | 'gold' | 'rose'
+    tone: CardTone
+    hasChildren: boolean
+    isCollapsed: boolean
+    onToggle: () => void
 }) {
-    const ringCls = isMe
+    const toneCls = isMe
+        ? 'border-amber-400/60 ring-2 ring-amber-400/40 bg-amber-500/12'
+        : tone === 'primary'
+            ? 'border-white/25 bg-white/[0.10]'
+            : tone === 'gold'
+                ? 'border-amber-400/25 bg-amber-500/5'
+                : tone === 'rose'
+                    ? 'border-rose-400/25 bg-rose-500/5'
+                    : 'border-white/15 bg-white/[0.06]'
+
+    const avatarRing = isMe
         ? 'ring-amber-300'
-        : accent === 'gold'
-            ? 'ring-yellow-400/70'
-            : accent === 'rose'
-                ? 'ring-rose-400/60'
-                : 'ring-white/25'
+        : tone === 'primary'
+            ? 'ring-amber-300/60'
+            : tone === 'gold'
+                ? 'ring-yellow-400/60'
+                : tone === 'rose'
+                    ? 'ring-rose-400/60'
+                    : 'ring-white/25'
 
-    const borderCls = isMe
-        ? 'border-amber-400/60 ring-2 ring-amber-400/50 bg-amber-500/15'
-        : accent === 'gold'
-            ? 'border-amber-400/25 bg-amber-500/5'
-            : accent === 'rose'
-                ? 'border-rose-400/25 bg-rose-500/5'
-                : 'border-white/15 bg-white/[0.06]'
+    const displayName = node.nickname
+        ? `${node.firstName} (${node.nickname})`
+        : node.firstName
 
-    const displayName = person.nickname
-        ? `${person.firstName} (${person.nickname})`
-        : person.firstName
+    const childCount = (node as TreeNode).children?.length ?? 0
 
     return (
         <div
-            className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${borderCls}`}
+            className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${toneCls}`}
             style={{ backdropFilter: 'blur(8px)' }}
         >
-            {person.photoUrl ? (
+            {/* Avatar */}
+            {node.photoUrl ? (
                 <img
-                    src={person.photoUrl}
+                    src={node.photoUrl}
                     alt=""
-                    className={`w-14 h-14 rounded-full object-cover ring-2 ring-offset-2 ring-offset-[#3a1a1e] ${ringCls}`}
+                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover ring-2 ring-offset-2 ring-offset-[#3a1a1e] flex-shrink-0 ${avatarRing}`}
                 />
             ) : (
                 <div
-                    className={`w-14 h-14 rounded-full bg-white/15 ring-2 ring-offset-2 ring-offset-[#3a1a1e] flex items-center justify-center ${ringCls}`}
+                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/15 ring-2 ring-offset-2 ring-offset-[#3a1a1e] flex items-center justify-center flex-shrink-0 ${avatarRing}`}
                 >
-                    <User size={22} className="text-white/60" />
+                    <User size={18} className="text-white/60" />
                 </div>
             )}
-            <p
-                className={`text-center text-sm font-semibold leading-tight line-clamp-2 ${
-                    isMe ? 'text-amber-200' : 'text-white'
-                }`}
-                title={`${person.firstName} ${person.lastName}`}
-            >
-                {displayName}
-            </p>
-            <p className="text-center text-[11px] text-white/65 leading-tight line-clamp-1" title={person.position ?? ''}>
-                {person.position ?? '—'}
-            </p>
-            {person.department && (
-                <p className="text-center text-[10px] text-white/40 leading-tight line-clamp-1">
-                    {person.department}
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className={`text-sm font-semibold truncate ${isMe ? 'text-amber-200' : 'text-white'}`}>
+                        {displayName}
+                    </p>
+                    {isMe && (
+                        <span className="text-[9px] uppercase tracking-wider font-black px-1.5 py-0.5 rounded bg-amber-400 text-black">
+                            คุณ
+                        </span>
+                    )}
+                </div>
+                <p className="text-xs text-white/65 truncate">{node.position ?? '—'}</p>
+                <p className="text-[10px] text-white/40 truncate">
+                    {node.department ?? '—'}
+                    {node.secondaryDepartment && (
+                        <span className="text-purple-300"> + {node.secondaryDepartment}</span>
+                    )}
                 </p>
-            )}
-            {isMe && (
-                <span className="text-[9px] uppercase tracking-wider font-black px-1.5 py-0.5 rounded bg-amber-400 text-black">
-                    คุณ
-                </span>
+            </div>
+
+            {/* Toggle / child count */}
+            {hasChildren && (
+                <button
+                    onClick={e => {
+                        e.stopPropagation()
+                        onToggle()
+                    }}
+                    aria-label={isCollapsed ? 'ขยาย' : 'ย่อ'}
+                    className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-white/70 text-xs transition-colors"
+                >
+                    <span className="font-mono">{childCount}</span>
+                    {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                </button>
             )}
         </div>
     )
