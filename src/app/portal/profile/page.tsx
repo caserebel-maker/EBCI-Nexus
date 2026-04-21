@@ -23,6 +23,9 @@ type EmpRow = {
     employee_code: string | null
     employment_type: string | null
     manager_id: string | null
+    emergency_contact_name: string | null
+    emergency_contact_phone: string | null
+    emergency_contact_relation: string | null
 }
 
 const EMP_SELECT = [
@@ -30,6 +33,7 @@ const EMP_SELECT = [
     'secondary_department',
     'start_date', 'photo_url', 'email', 'phone', 'applicant_id',
     'employee_code', 'employment_type', 'manager_id',
+    'emergency_contact_name', 'emergency_contact_phone', 'emergency_contact_relation',
 ].join(', ')
 
 // ─── Employee lookup with email fallback ──────────────────────────────────────
@@ -169,6 +173,9 @@ export default async function ProfilePage() {
             position={emp?.position ?? null}
             department={emp?.department ?? null}
             secondaryDepartment={emp?.secondary_department ?? null}
+            emergencyContactName={emp?.emergency_contact_name ?? null}
+            emergencyContactPhone={emp?.emergency_contact_phone ?? null}
+            emergencyContactRelation={emp?.emergency_contact_relation ?? null}
             employeeCode={emp?.employee_code ?? null}
             employmentType={emp?.employment_type ?? null}
             tenure={tenure}

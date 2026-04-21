@@ -110,6 +110,9 @@ interface FormState {
     quit_reason: string
     address: string
     emergency_contact: string
+    emergency_contact_name: string
+    emergency_contact_phone: string
+    emergency_contact_relation: string
     approval_level: number
     manager_id: string
 }
@@ -280,6 +283,9 @@ export function EmployeeProfileView({
         quit_reason: employee.quit_reason ?? '',
         address: employee.applicants?.current_address ?? '',
         emergency_contact: employee.applicants?.phone ?? '',
+        emergency_contact_name:     employee.emergency_contact_name     ?? '',
+        emergency_contact_phone:    employee.emergency_contact_phone    ?? '',
+        emergency_contact_relation: employee.emergency_contact_relation ?? '',
         approval_level: employee.approval_level ?? 1,
         manager_id: employee.manager_id ?? '',
     })
@@ -342,6 +348,9 @@ export function EmployeeProfileView({
                 applicant_current_address: form.address,
                 applicant_phone: form.emergency_contact,
                 manager_id: form.manager_id || null,
+                emergency_contact_name:     form.emergency_contact_name     || null,
+                emergency_contact_phone:    form.emergency_contact_phone    || null,
+                emergency_contact_relation: form.emergency_contact_relation || null,
             })
             if (result.error) {
                 showToast('error', `เกิดข้อผิดพลาด: ${result.error}`)
@@ -641,11 +650,47 @@ export function EmployeeProfileView({
                             editing={isEditing}
                             editNode={<input className={inp} value={form.phone} onChange={set('phone')} placeholder="เบอร์โทร" />}
                         />
-                        <InfoRow label="ผู้ติดต่อฉุกเฉิน" icon={AlertCircle}
-                            value={employee.applicants?.phone || '—'}
-                            editing={isEditing}
-                            editNode={<input className={inp} value={form.emergency_contact} onChange={set('emergency_contact')} placeholder="เบอร์ผู้ติดต่อฉุกเฉิน" />}
-                        />
+                        <div className="pt-3 mt-1 border-t border-white/8 px-3">
+                            <p className="text-[0.75rem] font-bold text-white/65 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                <AlertCircle size={13} className="text-rose-300" />
+                                ผู้ติดต่อฉุกเฉิน
+                            </p>
+                            <div className="space-y-1.5">
+                                <InfoRow label="ชื่อ-สกุล" icon={User}
+                                    value={employee.emergency_contact_name || '—'}
+                                    editing={isEditing}
+                                    editNode={<input className={inp} value={form.emergency_contact_name} onChange={set('emergency_contact_name')} placeholder="ชื่อ-นามสกุลผู้ติดต่อ" />}
+                                />
+                                <InfoRow label="เบอร์โทร" icon={Phone}
+                                    value={employee.emergency_contact_phone || '—'}
+                                    editing={isEditing}
+                                    editNode={<input type="tel" className={inp} value={form.emergency_contact_phone} onChange={set('emergency_contact_phone')} placeholder="0812345678" />}
+                                />
+                                <InfoRow label="ความสัมพันธ์" icon={User}
+                                    value={employee.emergency_contact_relation || '—'}
+                                    editing={isEditing}
+                                    editNode={
+                                        <select className={sel} value={form.emergency_contact_relation} onChange={set('emergency_contact_relation')}>
+                                            <option value="">— ไม่ระบุ —</option>
+                                            <option value="พ่อ">พ่อ</option>
+                                            <option value="แม่">แม่</option>
+                                            <option value="พี่ชาย">พี่ชาย</option>
+                                            <option value="พี่สาว">พี่สาว</option>
+                                            <option value="น้องชาย">น้องชาย</option>
+                                            <option value="น้องสาว">น้องสาว</option>
+                                            <option value="สามี">สามี</option>
+                                            <option value="ภรรยา">ภรรยา</option>
+                                            <option value="บุตรชาย">บุตรชาย</option>
+                                            <option value="บุตรสาว">บุตรสาว</option>
+                                            <option value="คู่สมรส">คู่สมรส</option>
+                                            <option value="ญาติ">ญาติ</option>
+                                            <option value="เพื่อน">เพื่อน</option>
+                                            <option value="อื่นๆ">อื่นๆ</option>
+                                        </select>
+                                    }
+                                />
+                            </div>
+                        </div>
                         <div className="pt-3 mt-1 border-t border-white/8 px-3">
                             <p className="text-[0.75rem] font-bold text-white/65 uppercase tracking-widest mb-2">ที่อยู่</p>
                             {isEditing ? (

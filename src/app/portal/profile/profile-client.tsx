@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Mail, Phone, User, Briefcase, Calendar, Award } from 'lucide-react'
+import { Mail, Phone, User, Briefcase, Calendar, Award, AlertCircle } from 'lucide-react'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LEAVE_META: Record<string, { label: string; color: string }> = {
@@ -142,6 +142,9 @@ interface Props {
     position: string | null
     department: string | null
     secondaryDepartment: string | null
+    emergencyContactName: string | null
+    emergencyContactPhone: string | null
+    emergencyContactRelation: string | null
     employeeCode: string | null
     employmentType: string | null
     tenure: string | null
@@ -160,6 +163,7 @@ function fmtDate(iso: string): string {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function ProfileClient({
     displayName, initials, avatarUrl, position, department, secondaryDepartment,
+    emergencyContactName, emergencyContactPhone, emergencyContactRelation,
     employeeCode, employmentType, tenure, startDate, email, phone,
     managerName, leaveBalances, recentLeaves,
 }: Props) {
@@ -229,6 +233,19 @@ export function ProfileClient({
                             ไม่มีข้อมูลติดต่อ
                         </p>
                     )}
+                </div>
+
+                {/* Emergency contact */}
+                <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.15)' }}>
+                    <div className="flex items-center gap-2 mb-2">
+                        <AlertCircle size={15} style={{ color: '#fda4af' }} />
+                        <p style={{ fontSize: '15px', fontWeight: 700, color: '#fecdd3', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            ผู้ติดต่อฉุกเฉิน
+                        </p>
+                    </div>
+                    <InfoRow icon={User}  label="ชื่อ-สกุล"     value={emergencyContactName || '—'} />
+                    <InfoRow icon={Phone} label="เบอร์โทร"      value={emergencyContactPhone || '—'} />
+                    <InfoRow icon={User}  label="ความสัมพันธ์" value={emergencyContactRelation || '—'} />
                 </div>
             </div>
 

@@ -20,9 +20,13 @@ export interface UpdateEmployeePayload {
     quit_reason?: string
     approval_level?: number
     manager_id?: string | null
+    // Emergency contact (stored directly on employees, not applicants)
+    emergency_contact_name?: string | null
+    emergency_contact_phone?: string | null
+    emergency_contact_relation?: string | null
     // applicants table
     applicant_current_address: string
-    applicant_phone: string  // emergency contact
+    applicant_phone: string  // legacy emergency contact (kept for backward compat)
 }
 
 export async function updateEmployee(employeeId: string, payload: UpdateEmployeePayload) {
@@ -51,6 +55,9 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
             quit_reason: employeeFields.quit_reason || null,
             ...(employeeFields.approval_level !== undefined && { approval_level: employeeFields.approval_level }),
             manager_id: employeeFields.manager_id ?? null,
+            emergency_contact_name:     employeeFields.emergency_contact_name     ?? null,
+            emergency_contact_phone:    employeeFields.emergency_contact_phone    ?? null,
+            emergency_contact_relation: employeeFields.emergency_contact_relation ?? null,
         })
         .eq('id', employeeId)
 
