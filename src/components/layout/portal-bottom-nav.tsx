@@ -7,6 +7,7 @@ import {
     Home, Users, Bell, Megaphone, MoreHorizontal, Clock, CalendarDays,
     ClipboardCheck, CheckSquare, LogOut, FileText,
     Settings, ChevronRight, X, UserRound, RefreshCw, Network,
+    UserPlus, Upload, Activity,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRole, type Role } from '@/contexts/role-context'
@@ -25,7 +26,19 @@ interface MoreItem {
     href?: string
     icon: React.ElementType
     danger?: boolean
+    groupLabel?: string // render a small section header above this item
 }
+
+// Shared quick-access to HR admin pages. Visible only to hr_admin, in both
+// /hradmin and /portal More menus so mobile admins can reach these screens
+// without first switching modes.
+const HR_ADMIN_QUICK_ACTIONS: MoreItem[] = [
+    { groupLabel: 'HR Admin', label: 'ประกาศข่าวสาร', href: '/hradmin/announcements',         icon: Megaphone },
+    {                          label: 'รับสมัครงาน',    href: '/hradmin/applicants',            icon: UserPlus },
+    {                          label: 'การเข้างาน',     href: '/hradmin/attendance/reconcile',  icon: Clock },
+    {                          label: 'นำเข้าข้อมูลบัตร', href: '/hradmin/attendance/import',    icon: Upload },
+    {                          label: 'ระบบและทรัพยากร', href: '/hradmin/settings/quota',       icon: Activity },
+]
 
 // hr_admin has two variants depending on whether they're in /hradmin or /portal
 const HR_ADMIN_NAV_HRADMIN: NavItem[] = [
@@ -63,6 +76,7 @@ const HR_ADMIN_PORTAL_MORE: MoreItem[] = [
     { label: 'ยื่นใบลา',     desc: 'สร้างคำขอลาของตนเอง',   href: '/portal/leave',           icon: CalendarDays },
     { label: 'ผังองค์กร',    desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',   icon: Network },
     { label: 'ปฏิทิน',       desc: 'ดูตารางงาน',             href: '/portal/calendar',       icon: CalendarDays },
+    ...HR_ADMIN_QUICK_ACTIONS,
     { label: 'กลับเป็น HR Admin', desc: 'สลับกลับโหมดแอดมิน', href: '/hradmin/dashboard', icon: RefreshCw, accent: 'amber' },
     { label: 'ออกจากระบบ', icon: LogOut, danger: true },
 ]
@@ -73,6 +87,7 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'ผังองค์กร',    desc: 'ดูโครงสร้างบริษัท',      href: '/hradmin/organization', icon: Network },
         { label: 'จัดการระบบ',   desc: 'ตั้งค่าและการจัดการ',    href: '/hradmin/settings',   icon: Settings },
         { label: 'รายงาน',       desc: 'ดูรายงานต่าง ๆ',          href: '/hradmin/reports',    icon: FileText },
+        ...HR_ADMIN_QUICK_ACTIONS,
         { label: 'ดูในฐานะพนักงาน', desc: 'สลับไปโหมดพนักงาน', href: '/portal/dashboard', icon: RefreshCw, accent: 'blue' },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
@@ -144,20 +159,35 @@ export function PortalBottomNav() {
                             <X size={18} />
                         </button>
                     </div>
-                    <div className="p-2 flex flex-col gap-1">
+                    <div className="p-2 flex flex-col gap-1 max-h-[70vh] overflow-y-auto">
                         {moreItems.map((item, idx) => {
+                            const header = item.groupLabel
+                                ? (
+                                    <div
+                                        key={`${idx}-header`}
+                                        className="px-3 pt-3 pb-1.5 mt-1 border-t border-white/10 first:border-t-0 first:mt-0 first:pt-1"
+                                    >
+                                        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/50">
+                                            {item.groupLabel}
+                                        </span>
+                                    </div>
+                                )
+                                : null
+
                             if (item.danger) {
                                 return (
-                                    <button
-                                        key={idx}
-                                        onClick={handleLogout}
-                                        className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-red-500/20 active:bg-red-500/30 transition-colors text-left"
-                                    >
-                                        <span className="flex items-center justify-center w-9 h-9 rounded-full bg-red-500/20">
-                                            <item.icon size={18} className="text-red-300" />
-                                        </span>
-                                        <span className="text-red-300 font-semibold text-sm flex-1">{item.label}</span>
-                                    </button>
+                                    <div key={idx}>
+                                        {header}
+                                        <button
+                                            onClick={handleLogout}
+                                            className="flex items-center gap-3 w-full px-3 py-3 min-h-[56px] rounded-xl hover:bg-red-500/20 active:bg-red-500/30 transition-colors text-left"
+                                        >
+                                            <span className="flex items-center justify-center w-9 h-9 rounded-full bg-red-500/20">
+                                                <item.icon size={18} className="text-red-300" />
+                                            </span>
+                                            <span className="text-red-300 font-semibold text-sm flex-1">{item.label}</span>
+                                        </button>
+                                    </div>
                                 )
                             }
                             const accentClass = item.accent === 'blue'
@@ -169,21 +199,23 @@ export function PortalBottomNav() {
                                 ? 'bg-white/20'
                                 : 'bg-white/10'
                             return (
-                                <Link
-                                    key={idx}
-                                    href={item.href!}
-                                    onClick={() => setMoreOpen(false)}
-                                    className={cn("flex items-center gap-3 px-3 py-3 rounded-xl transition-colors", accentClass)}
-                                >
-                                    <span className={cn("flex items-center justify-center w-9 h-9 rounded-full", iconBgClass)}>
-                                        <item.icon size={18} className="text-white" />
-                                    </span>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-white font-semibold text-sm">{item.label}</p>
-                                        {item.desc && <p className={cn("text-xs", item.accent ? "text-white/80" : "text-white/45")}>{item.desc}</p>}
-                                    </div>
-                                    <ChevronRight size={14} className={item.accent ? "text-white/70" : "text-white/30"} />
-                                </Link>
+                                <div key={idx}>
+                                    {header}
+                                    <Link
+                                        href={item.href!}
+                                        onClick={() => setMoreOpen(false)}
+                                        className={cn("flex items-center gap-3 px-3 py-3 min-h-[56px] rounded-xl transition-colors", accentClass)}
+                                    >
+                                        <span className={cn("flex items-center justify-center w-9 h-9 rounded-full", iconBgClass)}>
+                                            <item.icon size={18} className="text-white" />
+                                        </span>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-white font-semibold text-sm">{item.label}</p>
+                                            {item.desc && <p className={cn("text-xs", item.accent ? "text-white/80" : "text-white/45")}>{item.desc}</p>}
+                                        </div>
+                                        <ChevronRight size={14} className={item.accent ? "text-white/70" : "text-white/30"} />
+                                    </Link>
+                                </div>
                             )
                         })}
                     </div>
