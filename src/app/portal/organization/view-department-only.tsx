@@ -29,9 +29,7 @@ export function DepartmentOnlyView({
     const [execOpen, setExecOpen] = useState(false)
     const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
-    const { deptPeers, deptTree, managerOutsideDept, topExecutives } = useMemo(() => {
-        const me = employees.find(e => e.id === currentEmployeeId) ?? null
-
+    const { deptPeers, rootGroups, topExecutives } = useMemo(() => {
         const myDepts = new Set<string>()
         if (viewerDepartment) myDepts.add(viewerDepartment)
         if (viewerSecondaryDepartment) myDepts.add(viewerSecondaryDepartment)
@@ -44,13 +42,26 @@ export function DepartmentOnlyView({
         }
 
         const peers = employees.filter(e => !e.isAdvisor && inMyDept(e))
+        const peerIds = new Set(peers.map(p => p.id))
         const tree = buildTree(peers)
 
-        let mgrOutside: OrgEmployee | null = null
-        if (me?.managerId) {
-            const mgr = employees.find(e => e.id === me.managerId)
-            if (mgr && !inMyDept(mgr) && !mgr.isAdvisor) mgrOutside = mgr
+        // Group roots by their outside-department manager so we can show a
+        // single "manager → dept root(s)" connection even when the dept has
+        // multiple roots that share the same boss (e.g. ตู่ + โต้ย → จิม).
+        const groupsMap = new Map<
+            string | null,
+            { outsideManager: OrgEmployee | null; roots: typeof tree }
+        >()
+        for (const root of tree) {
+            const hasOutside = root.managerId && !peerIds.has(root.managerId)
+            const key = hasOutside ? (root.managerId as string) : null
+            const outsideManager =
+                hasOutside ? employees.find(e => e.id === root.managerId) ?? null : null
+            const existing = groupsMap.get(key)
+            if (existing) existing.roots.push(root)
+            else groupsMap.set(key, { outsideManager, roots: [root] })
         }
+        const rootGroups = Array.from(groupsMap.values())
 
         const execs = employees.filter(
             e => !e.isAdvisor && (e.approvalLevel ?? 0) >= 4,
@@ -58,11 +69,10 @@ export function DepartmentOnlyView({
 
         return {
             deptPeers: peers,
-            deptTree: tree,
-            managerOutsideDept: mgrOutside,
+            rootGroups,
             topExecutives: execs,
         }
-    }, [employees, currentEmployeeId, viewerDepartment, viewerSecondaryDepartment])
+    }, [employees, viewerDepartment, viewerSecondaryDepartment])
 
     const toggle = (id: string) =>
         setCollapsed(prev => {
@@ -87,38 +97,23 @@ export function DepartmentOnlyView({
                 </div>
             </div>
 
-            {/* Manager outside dept */}
-            {managerOutsideDept && (
-                <section>
-                    <h3 className="text-xs text-white/60 uppercase tracking-wider mb-2">หัวหน้าของคุณ</h3>
-                    <div className="flex justify-start">
-                        <PersonCard
-                            node={managerOutsideDept}
-                            isMe={false}
-                            tone="rose"
-                            hasChildren={false}
-                            isCollapsed={false}
-                            onToggle={() => {}}
-                        />
-                    </div>
-                </section>
-            )}
-
-            {/* Dept trees */}
+            {/* Dept trees — each root group optionally crowned by its outside
+                manager so the reporting line is visible even in tiny depts */}
             <section>
                 <h3 className="text-xs text-white/60 uppercase tracking-wider mb-3">
                     พนักงานในแผนก · {deptPeers.length} คน
                 </h3>
                 {deptPeers.length === 0 ? (
                     <p className="text-white/50 text-sm py-4">ยังไม่มีข้อมูลพนักงานในแผนกของคุณ</p>
-                ) : deptTree.length === 0 ? (
+                ) : rootGroups.length === 0 ? (
                     <p className="text-white/50 text-sm py-4">ไม่สามารถสร้างผังของแผนกได้</p>
                 ) : (
-                    <div className="flex flex-col gap-6">
-                        {deptTree.map(root => (
-                            <RootTree
-                                key={root.id}
-                                node={root}
+                    <div className="flex flex-col gap-8">
+                        {rootGroups.map((group, gi) => (
+                            <RootGroup
+                                key={group.outsideManager?.id ?? `ng-${gi}`}
+                                outsideManager={group.outsideManager}
+                                roots={group.roots}
                                 collapsed={collapsed}
                                 toggle={toggle}
                                 currentEmployeeId={currentEmployeeId}
@@ -169,6 +164,76 @@ export function DepartmentOnlyView({
                     )}
                 </section>
             )}
+        </div>
+    )
+}
+
+// ─── Root group: optional outside-manager crown + dept roots ─────────────
+// If the dept roots share a boss who sits OUTSIDE the dept (e.g. จิม above
+// ตู่ and โต้ย in ประสานงานเอกสาร), we render that boss on top, a vertical
+// line, a horizontal bracket, then the roots side by side. Single-root
+// depts still get the boss → root connector so 1-person depts don't look
+// like two floating cards.
+function RootGroup({
+    outsideManager,
+    roots,
+    collapsed,
+    toggle,
+    currentEmployeeId,
+}: {
+    outsideManager: OrgEmployee | null
+    roots: TreeNode[]
+    collapsed: Set<string>
+    toggle: (id: string) => void
+    currentEmployeeId: string | null
+}) {
+    const multiRoot = roots.length > 1
+    return (
+        <div className="flex flex-col items-center gap-0 w-full">
+            {outsideManager && (
+                <>
+                    <PersonCard
+                        node={outsideManager}
+                        isMe={false}
+                        tone="rose"
+                        hasChildren={false}
+                        isCollapsed={false}
+                        onToggle={() => {}}
+                    />
+                    <span className="mt-1 text-[10px] uppercase tracking-wider text-rose-200/80">
+                        หัวหน้านอกแผนก
+                    </span>
+                    {/* Vertical connector from outside manager to the dept row */}
+                    <div className="w-px h-6 bg-white/30" />
+                    {multiRoot && (
+                        /* Horizontal bracket when there are multiple roots */
+                        <div className="w-1/2 max-w-[280px] h-px bg-white/30" />
+                    )}
+                </>
+            )}
+            {/* Roots row — wrap if multiple */}
+            <div
+                className={`${
+                    multiRoot
+                        ? 'flex flex-wrap justify-center gap-6 w-full'
+                        : 'flex flex-col items-center'
+                }`}
+            >
+                {roots.map(root => (
+                    <div key={root.id} className="flex flex-col items-center">
+                        {outsideManager && multiRoot && (
+                            /* Small vertical stem from the bracket down to each root */
+                            <div className="w-px h-4 bg-white/30" />
+                        )}
+                        <RootTree
+                            node={root}
+                            collapsed={collapsed}
+                            toggle={toggle}
+                            currentEmployeeId={currentEmployeeId}
+                        />
+                    </div>
+                ))}
+            </div>
         </div>
     )
 }
