@@ -2,12 +2,13 @@
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useCallback } from 'react'
-import { Building2, Users } from 'lucide-react'
+import { Building2, Users, LayoutGrid } from 'lucide-react'
 import { DepartmentView, type OrgEmployee } from './view-department'
 import { DepartmentOnlyView } from './view-department-only'
 import { PeopleView } from './view-people'
+import { OverviewView } from './view-overview'
 
-type SubKey = 'department' | 'people'
+type SubKey = 'department' | 'people' | 'overview'
 
 interface Props {
     employees: OrgEmployee[]
@@ -28,18 +29,19 @@ export function TabStructure({
     viewerLevel: _viewerLevel,
     canSeeFullOrg,
 }: Props) {
-    // Suppress unused-var warning while keeping the prop available for
-    // future per-level behaviour in Phase B/C.
     void _viewerLevel
+
     const params = useSearchParams()
     const router = useRouter()
     const pathname = usePathname()
 
-    // L1/L2 only get the department view — People view (full list) is
-    // gated behind canSeeFullOrg per spec. Force 'department' for them
-    // regardless of any stale ?sub=people in the URL.
-    const requestedSub = params.get('sub') === 'people' ? 'people' : 'department'
-    const sub: SubKey = canSeeFullOrg ? requestedSub : 'department'
+    // "people" sub-view is L3+/admin only. L1/L2 can still use 'overview'.
+    const requestedSub =
+        params.get('sub') === 'people'   ? 'people'
+      : params.get('sub') === 'overview' ? 'overview'
+      :                                    'department'
+    const sub: SubKey =
+        requestedSub === 'people' && !canSeeFullOrg ? 'department' : requestedSub
 
     const switchSub = useCallback(
         (next: SubKey) => {
@@ -54,27 +56,33 @@ export function TabStructure({
 
     return (
         <div className="space-y-4 lg:space-y-6">
-            {canSeeFullOrg && (
-                <div
-                    role="tablist"
-                    aria-label="มุมมองย่อย"
-                    className="inline-flex gap-1 p-1 rounded-lg border border-white/15"
-                    style={{ background: 'rgba(255,255,255,0.04)' }}
-                >
-                    <SubButton
-                        active={sub === 'department'}
-                        onClick={() => switchSub('department')}
-                        icon={<Building2 size={14} />}
-                        label="มุมมองแผนก"
-                    />
+            <div
+                role="tablist"
+                aria-label="มุมมองย่อย"
+                className="inline-flex gap-1 p-1 rounded-lg border border-white/15"
+                style={{ background: 'rgba(255,255,255,0.04)' }}
+            >
+                <SubButton
+                    active={sub === 'department'}
+                    onClick={() => switchSub('department')}
+                    icon={<Building2 size={14} />}
+                    label="มุมมองแผนก"
+                />
+                <SubButton
+                    active={sub === 'overview'}
+                    onClick={() => switchSub('overview')}
+                    icon={<LayoutGrid size={14} />}
+                    label="ภาพรวมองค์กร"
+                />
+                {canSeeFullOrg && (
                     <SubButton
                         active={sub === 'people'}
                         onClick={() => switchSub('people')}
                         icon={<Users size={14} />}
                         label="มุมมองรายบุคคล"
                     />
-                </div>
-            )}
+                )}
+            </div>
 
             {sub === 'department' && (
                 canSeeFullOrg ? (
@@ -91,7 +99,8 @@ export function TabStructure({
                     />
                 )
             )}
-            {sub === 'people' && (
+            {sub === 'overview' && <OverviewView employees={employees} />}
+            {sub === 'people' && canSeeFullOrg && (
                 <PeopleView
                     employees={employees}
                     currentEmployeeId={currentEmployeeId}
