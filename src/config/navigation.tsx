@@ -13,6 +13,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         { label: 'dashboard.employees', href: '/hradmin/employees', icon: Users },
         { label: 'ผังองค์กร', href: '/hradmin/organization', icon: Network },
         { label: 'dashboard.recruitment', href: '/hradmin/recruitment', icon: UserCircle },
+        { label: 'ผู้สมัคร', href: '/hradmin/applicants', icon: Users },
         { label: 'ประกาศข่าวสาร', href: '/hradmin/announcements', icon: Megaphone },
         { label: 'การเข้างาน', href: '/hradmin/attendance', icon: MapPin },
         { label: 'dashboard.holidays', href: '/hradmin/holidays', icon: CalendarOff },
