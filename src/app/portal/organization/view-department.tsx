@@ -208,44 +208,67 @@ function OrgNode({
                 onToggle={() => toggle(node.id)}
             />
 
-            {/* Connector + children row */}
+            {/* Connector + children — horizontal bus for small branches, grid for big ones */}
             {hasChildren && !isCollapsed && (
                 <>
-                    {/* Vertical line: card → bus */}
+                    {/* Vertical line: card → bus/grid */}
                     <div className="w-px h-4 bg-white/25" />
 
-                    {/* Children row with bus */}
-                    <div className="flex items-start relative">
-                        {node.children.map((child, i) => {
-                            const isFirst = i === 0
-                            const isLast = i === childCount - 1
-                            const isOnly = childCount === 1
-                            return (
-                                <div key={child.id} className="relative flex flex-col items-center px-2">
-                                    {/* Horizontal bus line (top of child area) */}
-                                    {!isOnly && (
-                                        <div
-                                            className="absolute top-0 h-px bg-white/25"
-                                            style={{
-                                                left: isFirst ? '50%' : 0,
-                                                right: isLast ? '50%' : 0,
-                                            }}
-                                        />
-                                    )}
-                                    {/* Vertical line: bus → child card */}
-                                    <div className="w-px h-4 bg-white/25" />
-                                    {/* Recursive child */}
+                    {childCount >= 5 ? (
+                        /* GRID LAYOUT for wide branches (e.g. MD with 11 reports).
+                           Responsive: 1 col on narrow, 2 on tablet, 3 on desktop.
+                           Vertical scroll instead of horizontal. */
+                        <div className="w-full max-w-[1100px] pt-2 px-2 rounded-xl border border-white/8 bg-white/[0.03]">
+                            <p className="text-center text-[11px] text-white/50 py-2 mb-1 border-b border-white/8">
+                                ทีมของ {node.nickname ?? node.firstName} · {childCount} คน
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-5 pb-3 pt-2 justify-items-center">
+                                {node.children.map(child => (
                                     <OrgNode
+                                        key={child.id}
                                         node={child}
                                         collapsed={collapsed}
                                         toggle={toggle}
                                         currentEmployeeId={currentEmployeeId}
                                         approvalChain={approvalChain}
                                     />
-                                </div>
-                            )
-                        })}
-                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        /* HORIZONTAL BUS for small branches (< 5 children) — classic tree look */
+                        <div className="flex items-start relative">
+                            {node.children.map((child, i) => {
+                                const isFirst = i === 0
+                                const isLast = i === childCount - 1
+                                const isOnly = childCount === 1
+                                return (
+                                    <div key={child.id} className="relative flex flex-col items-center px-2">
+                                        {/* Horizontal bus line (top of child area) */}
+                                        {!isOnly && (
+                                            <div
+                                                className="absolute top-0 h-px bg-white/25"
+                                                style={{
+                                                    left: isFirst ? '50%' : 0,
+                                                    right: isLast ? '50%' : 0,
+                                                }}
+                                            />
+                                        )}
+                                        {/* Vertical line: bus → child card */}
+                                        <div className="w-px h-4 bg-white/25" />
+                                        {/* Recursive child */}
+                                        <OrgNode
+                                            node={child}
+                                            collapsed={collapsed}
+                                            toggle={toggle}
+                                            currentEmployeeId={currentEmployeeId}
+                                            approvalChain={approvalChain}
+                                        />
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
                 </>
             )}
         </div>
