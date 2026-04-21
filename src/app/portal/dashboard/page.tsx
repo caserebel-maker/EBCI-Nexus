@@ -18,9 +18,13 @@ const DEFAULT_ENTITLEMENTS: Record<string, number> = {
 const ALL_LEAVE_TYPES = ['annual', 'sick', 'personal', 'compensation', 'maternity', 'ordination']
 
 export interface AnnouncementItem {
+    id: string
     headline: string
     content: string
     imagePath: string | null
+    priority: string
+    publishDate: string
+    expiresAt: string | null
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -160,38 +164,45 @@ export default async function PortalDashboardPage() {
         console.error('[dashboard] employee/leave query failed:', e)
     }
 
-    // ── Announcements (up to 5 with image) ───────────────────────────────────
+    // ── Announcements (top 5 active, priority-weighted) ──────────────────────
     try {
-        const rows = await prisma.announcement.findMany({
-            where: {
-                publishStatus: 'published',
-                NOT: { imagePath: null },
-                priority: { in: ['internal', 'promote'] },  // Exclude emergency/urgent (shown in top banner)
-            },
-            orderBy: { publishDate: 'desc' },
-            take: 5,
-            select: { headline: true, content: true, imagePath: true },
-        })
+        const nowIso = new Date().toISOString()
+        const { data: rows } = await supabaseAdmin
+            .from('announcements')
+            .select('id, headline, content, image_path, priority, publish_date, expires_at')
+            .eq('publish_status', 'published')
+            .gt('expires_at', nowIso)
+            .order('publish_date', { ascending: false })
+            .limit(20)
+
+        const PRIORITY_WEIGHT: Record<string, number> = {
+            emergency: 0, urgent: 1, promote: 2, internal: 3,
+        }
+        const sorted = (rows ?? []).slice().sort((a, b) => {
+            const wa = PRIORITY_WEIGHT[a.priority as string] ?? 9
+            const wb = PRIORITY_WEIGHT[b.priority as string] ?? 9
+            if (wa !== wb) return wa - wb
+            return String(b.publish_date ?? '').localeCompare(String(a.publish_date ?? ''))
+        }).slice(0, 5)
 
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
-        announcements = rows.map(ann => {
-            let resolvedPath = ann.imagePath ?? null
+        announcements = sorted.map(ann => {
+            let resolvedPath = (ann.image_path as string | null) ?? null
             if (resolvedPath && !resolvedPath.startsWith('/') && !resolvedPath.startsWith('http')) {
                 resolvedPath = `${supabaseUrl}/storage/v1/object/public/announcement-images/${resolvedPath}`
             }
-            return { headline: ann.headline, content: ann.content, imagePath: resolvedPath }
+            return {
+                id: ann.id as string,
+                headline: ann.headline as string,
+                content: ann.content as string,
+                imagePath: resolvedPath,
+                priority: (ann.priority as string) ?? 'internal',
+                publishDate: ann.publish_date as string,
+                expiresAt: (ann.expires_at as string | null) ?? null,
+            }
         })
     } catch (e) {
         console.error('[dashboard] announcements query failed:', e)
-    }
-
-    // Fallback: static banner when no DB announcements
-    if (announcements.length === 0) {
-        announcements = [{
-            headline: 'วันหยุดราชการประจำปี 2026',
-            content: 'ประกาศวันหยุดราชการประจำปี 2026 สำหรับพนักงานทุกท่าน กรุณาวางแผนการลาพักร้อนล่วงหน้า',
-            imagePath: '/uploads/ebciho1.jpg',
-        }]
     }
 
     // ── Working days this year (Mon–Fri, Jan 1 → today) ──────────────────────

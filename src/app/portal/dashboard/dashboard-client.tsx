@@ -1,8 +1,13 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { FileText, Clock, Calendar, MapPin, User, Bell, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import useEmblaCarousel from 'embla-carousel-react'
+import Autoplay from 'embla-carousel-autoplay'
+import {
+    FileText, Clock, Calendar, MapPin, User, Bell, X, ChevronLeft, ChevronRight,
+    AlertTriangle, AlertCircle, Info, Megaphone,
+} from 'lucide-react'
 import type { AnnouncementItem } from './page'
 
 interface Employee {
@@ -151,138 +156,241 @@ function WelcomeSection({ employee, sessionName }: { employee: Employee | null; 
     )
 }
 
-// ─── Announcement Slideshow ───────────────────────────────────────────────────
-function AnnouncementSlideshow({ announcements }: { announcements: AnnouncementItem[] }) {
-    const [current, setCurrent] = useState(0)
-    const [modalAnn, setModalAnn] = useState<AnnouncementItem | null>(null)
-    const touchStartX = useRef<number | null>(null)
-    const total = announcements.length
+// ─── Announcement Carousel (Embla) ────────────────────────────────────────────
+const PRIORITY_META: Record<string, { label: string; icon: typeof AlertTriangle; chipBg: string; chipText: string }> = {
+    emergency: { label: 'ฉุกเฉิน', icon: AlertTriangle, chipBg: 'rgba(239,68,68,0.9)',  chipText: '#fff' },
+    urgent:    { label: 'ด่วน',    icon: AlertCircle,   chipBg: 'rgba(245,158,11,0.9)', chipText: '#1a0f00' },
+    promote:   { label: 'กิจกรรม', icon: Megaphone,     chipBg: 'rgba(168,85,247,0.9)', chipText: '#fff' },
+    internal:  { label: 'ทั่วไป',  icon: Info,          chipBg: 'rgba(59,130,246,0.9)', chipText: '#fff' },
+}
+
+function formatThaiDate(iso: string): string {
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return ''
+    const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`
+}
+
+function AnnouncementModal({ ann, onClose }: { ann: AnnouncementItem; onClose: () => void }) {
+    const meta = PRIORITY_META[ann.priority] ?? PRIORITY_META.internal
+    const Icon = meta.icon
 
     useEffect(() => {
-        if (total <= 1) return
-        const id = setInterval(() => {
-            setCurrent(c => (c + 1) % total)
-        }, 7000)
-        return () => clearInterval(id)
-    }, [current, total])
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [onClose])
 
-    function goTo(idx: number) {
-        setCurrent(((idx % total) + total) % total)
-    }
+    return (
+        <div
+            className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4"
+            style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+            onClick={onClose}
+        >
+            <div
+                className="w-full sm:max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-y-auto relative"
+                style={{
+                    ...glass,
+                    background: 'rgba(15,4,7,0.94)',
+                    borderRadius: '20px 20px 0 0',
+                }}
+                onClick={e => e.stopPropagation()}
+            >
+                <button
+                    onClick={onClose}
+                    className="absolute top-3 right-3 z-10 h-9 w-9 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-black/40 transition-all"
+                    style={{ background: 'rgba(0,0,0,0.35)' }}
+                    aria-label="ปิด"
+                >
+                    <X size={18} />
+                </button>
 
-    function handleTouchStart(e: React.TouchEvent) {
-        touchStartX.current = e.touches[0].clientX
-    }
-    function handleTouchEnd(e: React.TouchEvent) {
-        if (touchStartX.current === null) return
-        const dx = e.changedTouches[0].clientX - touchStartX.current
-        touchStartX.current = null
-        if (Math.abs(dx) < 40) return
-        goTo(dx < 0 ? current + 1 : current - 1)
-    }
+                {ann.imagePath && (
+                    <div className="w-full overflow-hidden bg-black/30" style={{ maxHeight: 400, borderRadius: '20px 20px 0 0' }}>
+                        <img src={ann.imagePath} alt={ann.headline} className="w-full h-auto object-cover" style={{ maxHeight: 400 }} />
+                    </div>
+                )}
 
-    const ann = announcements[current]
+                <div className="p-5 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span
+                            className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md"
+                            style={{ background: meta.chipBg, color: meta.chipText }}
+                        >
+                            <Icon size={12} />
+                            {meta.label}
+                        </span>
+                        <span className="text-[11px] text-white/50 inline-flex items-center gap-1">
+                            <Calendar size={11} />
+                            {formatThaiDate(ann.publishDate)}
+                        </span>
+                        {ann.expiresAt && (
+                            <span className="text-[11px] text-white/40">
+                                หมดอายุ {formatThaiDate(ann.expiresAt)}
+                            </span>
+                        )}
+                    </div>
+                    <h2 className="text-white font-bold leading-snug" style={{ fontSize: '18px' }}>
+                        {ann.headline}
+                    </h2>
+                    <p className="text-white/75 leading-relaxed whitespace-pre-wrap" style={{ fontSize: '14px' }}>
+                        {ann.content}
+                    </p>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function AnnouncementsCarousel({ announcements }: { announcements: AnnouncementItem[] }) {
+    const autoplay = useMemoAutoplay()
+    const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: 'start' }, [autoplay])
+    const [selected, setSelected] = useState(0)
+    const [modalAnn, setModalAnn] = useState<AnnouncementItem | null>(null)
+
+    const onSelect = useCallback(() => {
+        if (!emblaApi) return
+        setSelected(emblaApi.selectedScrollSnap())
+    }, [emblaApi])
+
+    useEffect(() => {
+        if (!emblaApi) return
+        onSelect()
+        emblaApi.on('select', onSelect)
+        emblaApi.on('reInit', onSelect)
+    }, [emblaApi, onSelect])
+
+    const scrollTo = useCallback((i: number) => emblaApi?.scrollTo(i), [emblaApi])
+    const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi])
+    const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi])
+
+    if (!announcements.length) return null
+    const total = announcements.length
 
     return (
         <>
-            <div style={{ ...glass, overflow: 'hidden', position: 'relative' }}>
-                <button
-                    className="w-full text-left focus:outline-none block"
-                    onClick={() => ann && setModalAnn(ann)}
-                    onTouchStart={handleTouchStart}
-                    onTouchEnd={handleTouchEnd}
-                >
-                    <div style={{ aspectRatio: '16/9', overflow: 'hidden', position: 'relative' }}>
-                        {ann?.imagePath ? (
-                            <img
-                                key={current}
-                                src={ann.imagePath}
-                                alt={ann.headline}
-                                className="w-full h-full object-cover"
-                                style={{ animation: 'fadeIn 0.4s ease' }}
-                            />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center"
-                                style={{ background: 'linear-gradient(135deg, #882136 0%, #561e23 100%)' }}>
-                                <span className="text-white/30 text-sm">ไม่มีข่าวสารในขณะนี้</span>
-                            </div>
-                        )}
+            <div
+                style={{ ...glass, overflow: 'hidden', position: 'relative' }}
+                onMouseEnter={() => autoplay.stop()}
+                onMouseLeave={() => autoplay.play()}
+            >
+                <div ref={emblaRef} className="overflow-hidden">
+                    <div className="flex">
+                        {announcements.map((ann) => {
+                            const meta = PRIORITY_META[ann.priority] ?? PRIORITY_META.internal
+                            const Icon = meta.icon
+                            return (
+                                <button
+                                    key={ann.id}
+                                    type="button"
+                                    onClick={() => setModalAnn(ann)}
+                                    className="relative flex-[0_0_100%] min-w-0 text-left focus:outline-none"
+                                >
+                                    <div className="carousel-slide w-full relative overflow-hidden bg-black/30">
+                                        {ann.imagePath ? (
+                                            <img
+                                                src={ann.imagePath}
+                                                alt={ann.headline}
+                                                className="absolute inset-0 w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <div
+                                                className="absolute inset-0 flex items-center justify-center"
+                                                style={{ background: 'linear-gradient(135deg, #882136 0%, #561e23 100%)' }}
+                                            >
+                                                <Megaphone size={48} className="text-white/25" />
+                                            </div>
+                                        )}
+                                        {/* Bottom gradient overlay for legibility */}
+                                        <div
+                                            className="absolute inset-x-0 bottom-0"
+                                            style={{
+                                                height: '55%',
+                                                background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 45%, transparent 100%)',
+                                            }}
+                                        />
+                                        {/* Priority badge — top left */}
+                                        <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                                            <span
+                                                className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md"
+                                                style={{ background: meta.chipBg, color: meta.chipText }}
+                                            >
+                                                <Icon size={11} />
+                                                {meta.label}
+                                            </span>
+                                        </div>
+                                        {/* Text overlay bottom */}
+                                        <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4 text-left">
+                                            <h3 className="text-white font-bold leading-tight mb-1 line-clamp-2" style={{ fontSize: '15px', lineHeight: 1.25 }}>
+                                                {ann.headline}
+                                            </h3>
+                                            <p className="text-white/70 text-[11px] inline-flex items-center gap-1">
+                                                <Calendar size={11} />
+                                                {formatThaiDate(ann.publishDate)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </button>
+                            )
+                        })}
                     </div>
-                </button>
+                </div>
 
                 {total > 1 && (
                     <>
                         <button
-                            onClick={() => goTo(current - 1)}
-                            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full flex items-center justify-center transition-all active:scale-90"
-                            style={{ width: 28, height: 28, background: 'rgba(0,0,0,0.35)', marginTop: -12 }}
+                            type="button"
+                            onClick={scrollPrev}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+                            style={{ width: 32, height: 32, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
+                            aria-label="Previous"
                         >
-                            <ChevronLeft size={16} className="text-white" />
+                            <ChevronLeft size={18} className="text-white" />
                         </button>
                         <button
-                            onClick={() => goTo(current + 1)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full flex items-center justify-center transition-all active:scale-90"
-                            style={{ width: 28, height: 28, background: 'rgba(0,0,0,0.35)', marginTop: -12 }}
+                            type="button"
+                            onClick={scrollNext}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+                            style={{ width: 32, height: 32, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
+                            aria-label="Next"
                         >
-                            <ChevronRight size={16} className="text-white" />
+                            <ChevronRight size={18} className="text-white" />
                         </button>
+                        <div
+                            className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5"
+                            style={{ bottom: 6 }}
+                        >
+                            {announcements.map((_, i) => (
+                                <button
+                                    key={i}
+                                    type="button"
+                                    onClick={() => scrollTo(i)}
+                                    className="rounded-full transition-all duration-300"
+                                    style={{
+                                        width: i === selected ? 18 : 6,
+                                        height: 6,
+                                        background: i === selected ? '#fff' : 'rgba(255,255,255,0.45)',
+                                    }}
+                                    aria-label={`Slide ${i + 1}`}
+                                />
+                            ))}
+                        </div>
                     </>
                 )}
-
-                {total > 1 && (
-                    <div className="flex justify-center items-center gap-1.5 py-2.5">
-                        {announcements.map((_, i) => (
-                            <button
-                                key={i}
-                                onClick={() => goTo(i)}
-                                className="rounded-full transition-all duration-300"
-                                style={{
-                                    width: i === current ? 18 : 6,
-                                    height: 6,
-                                    background: i === current ? '#fff' : 'rgba(255,255,255,0.3)',
-                                }}
-                            />
-                        ))}
-                    </div>
-                )}
             </div>
-
-            <style>{`@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }`}</style>
-
-            {modalAnn && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                    style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
-                    onClick={() => setModalAnn(null)}
-                >
-                    <div
-                        className="w-full max-w-lg max-h-[90vh] overflow-y-auto"
-                        style={{ ...glass, background: 'rgba(15,4,7,0.94)', borderRadius: '20px' }}
-                        onClick={e => e.stopPropagation()}
-                    >
-                        {modalAnn.imagePath && (
-                            <div className="w-full overflow-hidden" style={{ aspectRatio: '16/9', borderRadius: '20px 20px 0 0' }}>
-                                <img src={modalAnn.imagePath} alt={modalAnn.headline} className="w-full h-full object-cover" />
-                            </div>
-                        )}
-                        <div className="p-5">
-                            <div className="flex items-start justify-between gap-3 mb-3">
-                                <h2 className="text-white font-bold" style={{ fontSize: '18px', lineHeight: 1.3 }}>
-                                    {modalAnn.headline}
-                                </h2>
-                                <button onClick={() => setModalAnn(null)} className="text-white/50 hover:text-white transition-colors shrink-0 mt-0.5">
-                                    <X size={20} />
-                                </button>
-                            </div>
-                            <p className="text-white/70 leading-relaxed whitespace-pre-wrap" style={{ fontSize: '14px' }}>
-                                {modalAnn.content}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <style>{`
+                .carousel-slide { aspect-ratio: 4 / 3; }
+                @media (min-width: 640px) { .carousel-slide { aspect-ratio: 16 / 9; } }
+            `}</style>
+            {modalAnn && <AnnouncementModal ann={modalAnn} onClose={() => setModalAnn(null)} />}
         </>
     )
+}
+
+// Stable Autoplay plugin instance for the carousel
+function useMemoAutoplay() {
+    const [plugin] = useState(() => Autoplay({ delay: 5000, stopOnInteraction: false, stopOnMouseEnter: true }))
+    return plugin
 }
 
 // ─── SVG Donut + Popup Card ───────────────────────────────────────────────────
@@ -416,8 +524,10 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
     return (
         <div className="max-w-lg mx-auto space-y-4 pb-4">
 
-            {/* 2. Announcement Slideshow */}
-            <AnnouncementSlideshow announcements={announcements} />
+            {/* 2. Announcement Carousel (top 5 active, hides when empty) */}
+            {announcements.length > 0 && (
+                <AnnouncementsCarousel announcements={announcements} />
+            )}
 
             {/* 3. Donut Card — Late (left) | Leave remaining (right) */}
             <div style={glass} className="p-4 overflow-visible">
