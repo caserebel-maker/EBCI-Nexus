@@ -7,32 +7,67 @@ import { AnnouncementsView } from './announcements-view'
 
 export const dynamic = 'force-dynamic'
 
-export default async function AnnouncementsListPage() {
+const ARCHIVE_PAGE_SIZE = 10
+
+interface SearchParams {
+    tab?: string
+    page?: string
+}
+
+export default async function AnnouncementsListPage({
+    searchParams,
+}: {
+    searchParams: Promise<SearchParams>
+}) {
     const cookieStore = await cookies()
     const sessionCookie = cookieStore.get('nexus_session')
     if (!sessionCookie?.value) redirect('/login')
 
-    const { data: announcements } = await supabaseAdmin
+    const sp = await searchParams
+    const initialTab: 'active' | 'archive' = sp.tab === 'archive' ? 'archive' : 'active'
+    const requestedPage = Math.max(1, parseInt(sp.page ?? '1', 10) || 1)
+
+    const nowIso = new Date().toISOString()
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+
+    const resolveImage = (imagePath: string | null) => {
+        if (!imagePath) return null
+        return imagePath.startsWith('http')
+            ? imagePath
+            : `${supabaseUrl}/storage/v1/object/public/announcement-images/${imagePath}`
+    }
+
+    // Active = published + (no expiry OR expires in the future)
+    const { data: activeRows } = await supabaseAdmin
         .from('announcements')
-        .select('id, headline, content, priority, publish_date, expires_at, image_path')
+        .select('id, headline, content, priority, publish_date, expires_at, image_path, created_by')
         .eq('publish_status', 'published')
+        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
         .order('publish_date', { ascending: false })
         .limit(50)
 
-    // Resolve image URLs
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
-    const list = (announcements ?? []).map(a => {
-        let imageUrl: string | null = null
-        if (a.image_path) {
-            imageUrl = a.image_path.startsWith('http')
-                ? a.image_path
-                : `${supabaseUrl}/storage/v1/object/public/announcement-images/${a.image_path}`
-        }
-        return { ...a, imageUrl }
-    })
+    const active = (activeRows ?? []).map(a => ({ ...a, imageUrl: resolveImage(a.image_path as string | null) }))
+
+    // Archive = published + expired (expires_at <= NOW) — paginated
+    const from = (requestedPage - 1) * ARCHIVE_PAGE_SIZE
+    const to = from + ARCHIVE_PAGE_SIZE - 1
+    const { data: archiveRows, count: archiveCount } = await supabaseAdmin
+        .from('announcements')
+        .select('id, headline, content, priority, publish_date, expires_at, image_path, created_by', { count: 'exact' })
+        .eq('publish_status', 'published')
+        .not('expires_at', 'is', null)
+        .lte('expires_at', nowIso)
+        .order('publish_date', { ascending: false })
+        .range(from, to)
+
+    const archiveTotal = archiveCount ?? 0
+    const totalPages = Math.max(1, Math.ceil(archiveTotal / ARCHIVE_PAGE_SIZE))
+    // Clamp the requested page if it's out of range (e.g. old bookmark)
+    const initialPage = Math.min(requestedPage, totalPages)
+    const archiveInitial = (archiveRows ?? []).map(a => ({ ...a, imageUrl: resolveImage(a.image_path as string | null) }))
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-5xl mx-auto space-y-6">
             {/* Header */}
             <div className="flex items-center gap-3">
                 <Link
@@ -50,7 +85,17 @@ export default async function AnnouncementsListPage() {
                 </div>
             </div>
 
-            <AnnouncementsView announcements={list} />
+            <AnnouncementsView
+                activeItems={active}
+                initialArchive={{
+                    items: archiveInitial,
+                    total: archiveTotal,
+                    page: initialPage,
+                    pageSize: ARCHIVE_PAGE_SIZE,
+                    totalPages,
+                }}
+                initialTab={initialTab}
+            />
         </div>
     )
 }
