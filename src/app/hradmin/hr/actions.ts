@@ -3,9 +3,15 @@
 import crypto from "crypto"
 import { supabaseAdmin } from "@/lib/supabase-admin"
 import { sendEmail, buildAnnouncementEmail } from "@/lib/email"
+import { getSession } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 
 export async function publishAnnouncement(formData: FormData) {
+    const session = await getSession()
+    if (!session || session.role !== 'hr_admin') {
+        return { error: 'ไม่มีสิทธิ์เข้าถึง — เฉพาะ HR Admin เท่านั้น' }
+    }
+
     const headline = formData.get('headline') as string
     const content  = formData.get('content')  as string
     const priority = formData.get('priority') as string
@@ -15,6 +21,10 @@ export async function publishAnnouncement(formData: FormData) {
     if (!headline || !content || !priority) {
         return { error: 'Missing required fields' }
     }
+
+    // Prefer employee id (natural join with employees.id); fall back to
+    // auth user id. Legacy rows stored the literal "HR Admin" string.
+    const createdBy = session.employeeId ?? session.id
 
     // Default: emergency/urgent → 7 days, others → null (no auto-expire)
     let expiresAt: string | null = null
@@ -57,7 +67,7 @@ export async function publishAnnouncement(formData: FormData) {
                 publish_status: 'published',
                 publish_date: now,
                 expires_at: expiresAt,
-                created_by: 'HR Admin',
+                created_by: createdBy,
                 created_at: now,
                 updated_at: now,
             })

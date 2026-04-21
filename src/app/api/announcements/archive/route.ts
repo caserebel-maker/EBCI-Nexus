@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
+import { resolveCreators, displayCreator } from '@/lib/creators'
 
 /**
  * GET /api/announcements/archive?page=1&limit=10
@@ -37,6 +38,7 @@ export async function GET(req: NextRequest) {
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+    const creatorMap = await resolveCreators((data ?? []).map(a => a.created_by as string | null))
     const items = (data ?? []).map(a => {
         let imageUrl: string | null = null
         if (a.image_path) {
@@ -44,7 +46,11 @@ export async function GET(req: NextRequest) {
                 ? String(a.image_path)
                 : `${supabaseUrl}/storage/v1/object/public/announcement-images/${a.image_path}`
         }
-        return { ...a, imageUrl }
+        return {
+            ...a,
+            imageUrl,
+            creator_name: displayCreator(a.created_by as string | null, creatorMap),
+        }
     })
 
     const total = count ?? 0

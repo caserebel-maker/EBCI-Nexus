@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
     Megaphone, AlertTriangle, AlertCircle, Info, Calendar, Archive, Filter, X, Clock,
-    Eye, ChevronLeft, ChevronRight, Loader2,
+    Eye, ChevronLeft, ChevronRight, Loader2, UserCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -18,6 +18,7 @@ interface Announcement {
     image_path: string | null
     imageUrl: string | null
     created_by?: string | null
+    creator_name?: string | null
 }
 
 interface ArchivePayload {
@@ -211,6 +212,10 @@ function AnnouncementModal({ a, onClose }: { a: Announcement; onClose: () => voi
                     <h2 className="text-white font-bold leading-snug" style={{ fontSize: '20px' }}>
                         {a.headline}
                     </h2>
+                    <p className="text-[12px] text-white/55 inline-flex items-center gap-1.5">
+                        <UserCircle size={14} />
+                        โพสโดย: <span className="text-white/80 font-medium">{a.creator_name ?? 'ระบบ'}</span>
+                    </p>
                     <p className="text-white/80 leading-relaxed whitespace-pre-wrap" style={{ fontSize: '15px' }}>
                         {a.content}
                     </p>

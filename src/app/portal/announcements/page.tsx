@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Megaphone, ArrowLeft } from 'lucide-react'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { resolveCreators, displayCreator } from '@/lib/creators'
 import { AnnouncementsView } from './announcements-view'
 
 export const dynamic = 'force-dynamic'
@@ -46,7 +47,12 @@ export default async function AnnouncementsListPage({
         .order('publish_date', { ascending: false })
         .limit(50)
 
-    const active = (activeRows ?? []).map(a => ({ ...a, imageUrl: resolveImage(a.image_path as string | null) }))
+    const activeCreatorMap = await resolveCreators((activeRows ?? []).map(a => a.created_by as string | null))
+    const active = (activeRows ?? []).map(a => ({
+        ...a,
+        imageUrl: resolveImage(a.image_path as string | null),
+        creator_name: displayCreator(a.created_by as string | null, activeCreatorMap),
+    }))
 
     // Archive = published + expired (expires_at <= NOW) — paginated
     const from = (requestedPage - 1) * ARCHIVE_PAGE_SIZE
@@ -64,7 +70,12 @@ export default async function AnnouncementsListPage({
     const totalPages = Math.max(1, Math.ceil(archiveTotal / ARCHIVE_PAGE_SIZE))
     // Clamp the requested page if it's out of range (e.g. old bookmark)
     const initialPage = Math.min(requestedPage, totalPages)
-    const archiveInitial = (archiveRows ?? []).map(a => ({ ...a, imageUrl: resolveImage(a.image_path as string | null) }))
+    const archiveCreatorMap = await resolveCreators((archiveRows ?? []).map(a => a.created_by as string | null))
+    const archiveInitial = (archiveRows ?? []).map(a => ({
+        ...a,
+        imageUrl: resolveImage(a.image_path as string | null),
+        creator_name: displayCreator(a.created_by as string | null, archiveCreatorMap),
+    }))
 
     return (
         <div className="max-w-5xl mx-auto space-y-6">

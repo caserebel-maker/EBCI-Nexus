@@ -2,6 +2,7 @@ import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { resolveCreators, displayCreator } from '@/lib/creators'
 import { PortalDashboardClient } from './dashboard-client'
 
 export const dynamic = 'force-dynamic'
@@ -25,6 +26,7 @@ export interface AnnouncementItem {
     priority: string
     publishDate: string
     expiresAt: string | null
+    creatorName: string | null
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -173,7 +175,7 @@ export default async function PortalDashboardPage() {
         const nowIso = new Date().toISOString()
         const { data: rows } = await supabaseAdmin
             .from('announcements')
-            .select('id, headline, content, image_path, priority, publish_date, expires_at')
+            .select('id, headline, content, image_path, priority, publish_date, expires_at, created_by')
             .eq('publish_status', 'published')
             .in('priority', ['internal', 'promote'])
             .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
@@ -191,6 +193,7 @@ export default async function PortalDashboardPage() {
         }).slice(0, 5)
 
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+        const creatorMap = await resolveCreators(sorted.map(a => a.created_by as string | null))
         announcements = sorted.map(ann => {
             let resolvedPath = (ann.image_path as string | null) ?? null
             if (resolvedPath && !resolvedPath.startsWith('/') && !resolvedPath.startsWith('http')) {
@@ -204,6 +207,7 @@ export default async function PortalDashboardPage() {
                 priority: (ann.priority as string) ?? 'internal',
                 publishDate: ann.publish_date as string,
                 expiresAt: (ann.expires_at as string | null) ?? null,
+                creatorName: displayCreator(ann.created_by as string | null, creatorMap),
             }
         })
     } catch (e) {

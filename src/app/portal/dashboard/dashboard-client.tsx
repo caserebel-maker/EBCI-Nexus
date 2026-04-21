@@ -6,7 +6,7 @@ import useEmblaCarousel from 'embla-carousel-react'
 import Autoplay from 'embla-carousel-autoplay'
 import {
     FileText, Clock, Calendar, MapPin, User, Bell, X, ChevronLeft, ChevronRight,
-    AlertTriangle, AlertCircle, Info, Megaphone,
+    AlertTriangle, AlertCircle, Info, Megaphone, UserCircle,
 } from 'lucide-react'
 import { DailyGreeting } from '@/components/daily-greeting'
 import type { AnnouncementItem } from './page'
@@ -235,6 +235,10 @@ function AnnouncementModal({ ann, onClose }: { ann: AnnouncementItem; onClose: (
                     <h2 className="text-white font-bold leading-snug" style={{ fontSize: '18px' }}>
                         {ann.headline}
                     </h2>
+                    <p className="text-[11px] text-white/55 inline-flex items-center gap-1.5">
+                        <UserCircle size={13} />
+                        โพสโดย: <span className="text-white/75 font-medium">{ann.creatorName ?? 'ระบบ'}</span>
+                    </p>
                     <p className="text-white/75 leading-relaxed whitespace-pre-wrap" style={{ fontSize: '14px' }}>
                         {ann.content}
                     </p>
