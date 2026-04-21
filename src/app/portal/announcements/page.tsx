@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Megaphone, AlertTriangle, AlertCircle, Info, Calendar, ArrowLeft, Archive } from 'lucide-react'
+import { Megaphone, ArrowLeft } from 'lucide-react'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { AnnouncementsView } from './announcements-view'
 
