@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Network, ChevronDown, ChevronUp, User, Info, Route } from 'lucide-react'
+import { Network, ChevronDown, ChevronUp, User, Info, Route, Link2 } from 'lucide-react'
 
 export interface OrgEmployee {
     id: string
@@ -467,10 +467,11 @@ function Card({
             {/* Dual-department badge */}
             {node.secondaryDepartment && (
                 <span
-                    className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-100 border border-purple-400/40"
+                    className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-100 border border-purple-400/40"
                     title={`${node.department ?? ''} + ${node.secondaryDepartment} (รักษาการ)`}
                 >
-                    🔗 ดูแล 2 แผนก
+                    <Link2 size={9} />
+                    ดูแล 2 แผนก
                 </span>
             )}
 

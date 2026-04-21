@@ -72,11 +72,13 @@ export function TabsShell({
                             role="tab"
                             aria-selected={active}
                             onClick={() => switchTab(key)}
-                            className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
-                                active
-                                    ? 'bg-amber-400 text-[#561e23] shadow-md'
-                                    : 'text-white/80 hover:bg-white/10'
-                            }`}
+                            className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap
+                                focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#3a1a1e]
+                                ${
+                                    active
+                                        ? 'bg-amber-400 text-[#561e23] shadow-md'
+                                        : 'bg-white/[0.03] border border-white/10 text-white/80 hover:bg-white/10 hover:border-white/20'
+                                }`}
                         >
                             <Icon size={16} className="flex-shrink-0" />
                             <span>{label}</span>
@@ -94,6 +96,7 @@ export function TabsShell({
                     viewerSecondaryDepartment={viewerSecondaryDepartment}
                     viewerLevel={viewerLevel}
                     canSeeFullOrg={canSeeFullOrg}
+                    showLevelNumber={permissions.can_manage_system}
                 />
             )}
             {view === 'authority' && (

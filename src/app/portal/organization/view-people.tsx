@@ -1,24 +1,25 @@
 'use client'
 
 import { useMemo } from 'react'
-import { User } from 'lucide-react'
+import { User, Link2 } from 'lucide-react'
 import type { OrgEmployee } from './view-department'
 
 interface Props {
     employees: OrgEmployee[]
     currentEmployeeId: string | null
     canSeeHeadcount: boolean
+    showLevelNumber?: boolean  // true for hr_admin/super-admin debugging
 }
 
 const LEVEL_META: Record<number, { label: string; ring: string; badgeBg: string; badgeText: string }> = {
     5: { label: 'ประธาน / เจ้าของ',       ring: 'ring-yellow-400', badgeBg: 'bg-yellow-500/20', badgeText: 'text-yellow-200' },
-    4: { label: 'MD (กรรมการผู้จัดการ)',  ring: 'ring-red-400',    badgeBg: 'bg-red-500/20',    badgeText: 'text-red-200' },
+    4: { label: 'กรรมการผู้จัดการ (MD)',   ring: 'ring-red-400',    badgeBg: 'bg-red-500/20',    badgeText: 'text-red-200' },
     3: { label: 'หัวหน้าฝ่าย / ผู้จัดการ', ring: 'ring-purple-400', badgeBg: 'bg-purple-500/20', badgeText: 'text-purple-200' },
-    2: { label: 'หัวหน้าแผนก',             ring: 'ring-blue-400',   badgeBg: 'bg-blue-500/20',   badgeText: 'text-blue-200' },
+    2: { label: 'หัวหน้าแผนก / หน่วย',      ring: 'ring-blue-400',   badgeBg: 'bg-blue-500/20',   badgeText: 'text-blue-200' },
     1: { label: 'พนักงานทั่วไป',           ring: 'ring-white/30',   badgeBg: 'bg-white/10',      badgeText: 'text-white/70' },
 }
 
-export function PeopleView({ employees, currentEmployeeId, canSeeHeadcount }: Props) {
+export function PeopleView({ employees, currentEmployeeId, canSeeHeadcount, showLevelNumber = false }: Props) {
     const byLevel = useMemo(() => {
         const groups = new Map<number, OrgEmployee[]>()
         for (const e of employees) {
@@ -44,7 +45,7 @@ export function PeopleView({ employees, currentEmployeeId, canSeeHeadcount }: Pr
                     <section key={lvl}>
                         <div className="flex items-center gap-3 mb-3">
                             <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${meta.badgeBg} ${meta.badgeText} border border-white/10`}>
-                                Level {lvl} · {meta.label}
+                                {showLevelNumber ? `Level ${lvl} · ${meta.label}` : meta.label}
                             </span>
                             {canSeeHeadcount && (
                                 <span className="text-white/40 text-xs">{people.length} คน</span>
@@ -107,8 +108,9 @@ function PersonCard({ person, ring, isMe }: { person: OrgEmployee; ring: string;
                 </p>
             )}
             {person.secondaryDepartment && (
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-100 border border-purple-400/40">
-                    🔗 ดูแล 2 แผนก
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-100 border border-purple-400/40">
+                    <Link2 size={9} />
+                    ดูแล 2 แผนก
                 </span>
             )}
             {isMe && (

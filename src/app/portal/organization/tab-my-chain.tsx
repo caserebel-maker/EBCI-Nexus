@@ -102,7 +102,7 @@ export function TabMyChain({ employees, currentEmployeeId, permissions: _permiss
                         </div>
                         <p className="text-sm font-semibold text-yellow-100">คุณคือผู้บริหารระดับสูงสุด</p>
                         <p className="text-xs text-white/70 max-w-md mx-auto">
-                            ไม่มีผู้อนุมัติเหนือขึ้นไป คำขอของคุณเป็นการตัดสินใจสุดท้ายในระดับบริษัท
+                            ไม่มีสายอนุมัติเหนือกว่า — คุณคือคนตัดสินใจสูงสุด
                         </p>
                     </div>
                 ) : (
@@ -113,10 +113,9 @@ export function TabMyChain({ employees, currentEmployeeId, permissions: _permiss
                         <div className="inline-flex w-12 h-12 items-center justify-center rounded-full bg-white/10 ring-2 ring-white/20">
                             <Info className="text-white/70" size={22} />
                         </div>
-                        <p className="text-sm font-semibold text-white">ยังไม่ได้กำหนดผู้บังคับบัญชา</p>
+                        <p className="text-sm font-semibold text-white">ยังไม่มีข้อมูลสายอนุมัติ</p>
                         <p className="text-xs text-white/65 max-w-md mx-auto">
-                            ขอให้ HR กำหนด <code className="bg-black/20 px-1.5 rounded">ผู้บังคับบัญชา</code> ของคุณในหน้าจัดการพนักงาน —
-                            เมื่อกำหนดแล้ว คำขอลาจะถูกส่งตามลำดับอัตโนมัติ
+                            กรุณาติดต่อ HR เพื่อกำหนดผู้บังคับบัญชา — เมื่อกำหนดแล้ว คำขอลาจะถูกส่งตามลำดับอัตโนมัติ
                         </p>
                     </div>
                 )

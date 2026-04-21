@@ -5,6 +5,7 @@ import {
     ShieldCheck, User, Scale, ChevronDown, ChevronUp, Star,
     CalendarDays, Wallet, Users, Calendar, Clock, DollarSign, UserCog,
     Droplet, Gem, Flame, Infinity as InfinityIcon,
+    Crown, AlertTriangle,
     type LucideIcon,
 } from 'lucide-react'
 import type { OrgEmployee } from './view-department'
@@ -93,9 +94,44 @@ export function TabAuthority({
                     className="p-4 rounded-xl border border-amber-400/30 text-xs text-amber-100"
                     style={{ background: 'rgba(251,191,36,0.08)' }}
                 >
-                    ไม่พบข้อมูลพนักงานของคุณ — หัวข้อ "ของฉัน" จะไม่แสดง ติดต่อ HR เพื่อเชื่อม account
+                    ไม่พบข้อมูลพนักงานของคุณ — หัวข้อ &quot;ของฉัน&quot; จะไม่แสดง ติดต่อ HR เพื่อเชื่อม account
                 </div>
             )}
+
+            {/* President (L5) — no approvers above, message once, then skip sections */}
+            {me && (me.approvalLevel ?? 0) >= 5 && (
+                <div
+                    className="p-6 rounded-xl border border-yellow-400/30 text-center space-y-2"
+                    style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.12), rgba(217,119,6,0.05))' }}
+                >
+                    <div className="inline-flex w-12 h-12 items-center justify-center rounded-full bg-yellow-400/20 ring-2 ring-yellow-400/50">
+                        <Crown className="text-yellow-200" size={22} />
+                    </div>
+                    <p className="text-sm font-semibold text-yellow-100">คุณมีอำนาจอนุมัติสูงสุด</p>
+                    <p className="text-xs text-white/70 max-w-md mx-auto">
+                        ไม่ต้องขออนุมัติจากใคร — คำขอของคุณมีผลทันที
+                    </p>
+                </div>
+            )}
+
+            {/* Warning: non-president with an empty chain */}
+            {me && (me.approvalLevel ?? 0) < 5 && leaveOt.length === 0 && budget.length === 0 && (
+                <div
+                    className="p-4 rounded-xl border border-amber-400/40 flex items-start gap-3"
+                    style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.14), rgba(245,158,11,0.04))' }}
+                >
+                    <AlertTriangle size={18} className="text-amber-300 flex-shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-sm font-semibold text-amber-100">ไม่พบผู้อนุมัติในสายของคุณ</p>
+                        <p className="text-xs text-white/75 mt-0.5">
+                            กรุณาติดต่อ HR เพื่อกำหนดผู้บังคับบัญชาและสิทธิ์การอนุมัติ
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* L5 skips the personal chain sections — they don't need approval */}
+            {me && (me.approvalLevel ?? 0) >= 5 ? null : <>
 
             {/* Section 1: การลา / OT */}
             <AuthoritySection
@@ -180,6 +216,8 @@ export function TabAuthority({
                     )}
                 </AuthoritySection>
             )}
+
+            </>}{/* end L5-skip fragment */}
 
             {/* Collapsible: all approvers — L3+/admin only (L1/L2 don't need
                  an org-wide approver list; their personal chain sections
