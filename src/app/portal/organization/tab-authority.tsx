@@ -1,19 +1,40 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ShieldCheck, User, Scale, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
+import {
+    ShieldCheck, User, Scale, ChevronDown, ChevronUp, Star,
+    CalendarDays, Wallet, Users, Calendar, Clock, DollarSign, UserCog,
+    Droplet, Gem, Flame, Infinity as InfinityIcon,
+    type LucideIcon,
+} from 'lucide-react'
 import type { OrgEmployee } from './view-department'
 import type { UserPermissions } from '@/lib/permissions'
-import { limitToTier, TIER_LABELS } from '@/lib/permissions'
+import { limitToTier, TIER_LABELS, type ApprovalTier } from '@/lib/permissions'
+
+// Tier → Lucide icon + Tailwind text color
+const TIER_VISUAL: Record<ApprovalTier, { Icon: LucideIcon; color: string }> = {
+    small:     { Icon: Droplet,      color: 'text-sky-300' },
+    medium:    { Icon: Gem,          color: 'text-emerald-300' },
+    large:     { Icon: Flame,        color: 'text-orange-300' },
+    unlimited: { Icon: InfinityIcon, color: 'text-amber-300' },
+}
+
+// Scope → Lucide icon
+const SCOPE_ICON: Record<string, LucideIcon> = {
+    leave:  Calendar,
+    ot:     Clock,
+    budget: DollarSign,
+    hr:     UserCog,
+}
 
 type ScopeFilter = 'all' | 'leave' | 'ot' | 'budget' | 'hr'
 
-const FILTERS: Array<{ key: ScopeFilter; label: string; icon: string }> = [
-    { key: 'all',    label: 'ทั้งหมด',  icon: '🌟' },
-    { key: 'leave',  label: 'การลา',    icon: '🟢' },
-    { key: 'ot',     label: 'OT',       icon: '🟡' },
-    { key: 'budget', label: 'เบิกเงิน',  icon: '🔵' },
-    { key: 'hr',     label: 'HR',       icon: '🌹' },
+const FILTERS: Array<{ key: ScopeFilter; label: string; Icon: LucideIcon }> = [
+    { key: 'all',    label: 'ทั้งหมด',  Icon: ShieldCheck },
+    { key: 'leave',  label: 'การลา',    Icon: Calendar },
+    { key: 'ot',     label: 'OT',       Icon: Clock },
+    { key: 'budget', label: 'เบิกเงิน',  Icon: DollarSign },
+    { key: 'hr',     label: 'HR',       Icon: UserCog },
 ]
 
 const SCOPE_META: Record<string, { label: string; bg: string; text: string; border: string }> = {
@@ -78,7 +99,8 @@ export function TabAuthority({
 
             {/* Section 1: การลา / OT */}
             <AuthoritySection
-                icon="📅"
+                Icon={CalendarDays}
+                iconColor="text-emerald-300"
                 title="การลา / OT"
                 subtitle={
                     me
@@ -105,7 +127,8 @@ export function TabAuthority({
 
             {/* Section 2: เบิกเงิน */}
             <AuthoritySection
-                icon="💰"
+                Icon={Wallet}
+                iconColor="text-sky-300"
                 title="เบิกเงิน"
                 subtitle={
                     me
@@ -135,7 +158,8 @@ export function TabAuthority({
             {/* Section 3: HR — hidden for L1/L2 (sensitive HR workflows) */}
             {canSeeFullOrg && (
                 <AuthoritySection
-                    icon="👥"
+                    Icon={Users}
+                    iconColor="text-rose-300"
                     title="HR (สมัครงาน, ปรับตำแหน่ง)"
                     subtitle="ผู้อนุมัติเรื่อง HR ของทั้งบริษัท"
                 >
@@ -157,75 +181,79 @@ export function TabAuthority({
                 </AuthoritySection>
             )}
 
-            {/* Collapsible: all approvers */}
-            <section className="rounded-xl border border-white/10 overflow-hidden">
-                <button
-                    onClick={() => setAllOpen(o => !o)}
-                    aria-expanded={allOpen}
-                    className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors"
-                    style={{ background: 'rgba(255,255,255,0.04)' }}
-                >
-                    <span className="flex items-center gap-2 text-white text-sm font-semibold">
-                        <ShieldCheck size={16} className="text-white/70" />
-                        ดูผู้อนุมัติทั้งหมดในบริษัท
-                        <span className="text-white/55 text-xs font-normal">· {all.length} คน</span>
-                    </span>
-                    {allOpen ? (
-                        <ChevronUp size={16} className="text-white/70" />
-                    ) : (
-                        <ChevronDown size={16} className="text-white/70" />
-                    )}
-                </button>
-                {allOpen && (
-                    <div className="p-3 space-y-3" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                        {/* Filter chips */}
-                        <div
-                            role="tablist"
-                            aria-label="กรองตามประเภทการอนุมัติ"
-                            className="flex flex-wrap gap-1.5 p-1.5 rounded-lg border border-white/10"
-                            style={{ background: 'rgba(255,255,255,0.04)' }}
-                        >
-                            {FILTERS.map(({ key, label, icon }) => {
-                                const active = filter === key
-                                return (
-                                    <button
-                                        key={key}
-                                        onClick={() => setFilter(key)}
-                                        aria-selected={active}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                                            active
-                                                ? 'bg-amber-400 text-[#561e23] shadow-md'
-                                                : 'text-white/75 hover:bg-white/10'
-                                        }`}
-                                    >
-                                        <span>{icon}</span>
-                                        <span>{label}</span>
-                                    </button>
-                                )
-                            })}
-                        </div>
-
-                        {filteredAll.length === 0 ? (
-                            <EmptyBox>
-                                ไม่พบผู้อนุมัติในหมวด{' '}
-                                <span className="font-bold">{FILTERS.find(f => f.key === filter)?.label}</span>
-                            </EmptyBox>
+            {/* Collapsible: all approvers — L3+/admin only (L1/L2 don't need
+                 an org-wide approver list; their personal chain sections
+                 above are the authoritative view) */}
+            {canSeeFullOrg && (
+                <section className="rounded-xl border border-white/10 overflow-hidden">
+                    <button
+                        onClick={() => setAllOpen(o => !o)}
+                        aria-expanded={allOpen}
+                        className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors"
+                        style={{ background: 'rgba(255,255,255,0.04)' }}
+                    >
+                        <span className="flex items-center gap-2 text-white text-sm font-semibold">
+                            <Scale size={16} className="text-amber-300" />
+                            ดูผู้อนุมัติทั้งหมดในบริษัท
+                            <span className="text-white/55 text-xs font-normal">· {all.length} คน</span>
+                        </span>
+                        {allOpen ? (
+                            <ChevronUp size={16} className="text-white/70" />
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                                {filteredAll.map(a => (
-                                    <ApproverCard
-                                        key={`all-${a.id}`}
-                                        approver={a}
-                                        canSeeExact={canSeeExact}
-                                        showAmount={true}
-                                        showLevel={canSeeExact}
-                                    />
-                                ))}
-                            </div>
+                            <ChevronDown size={16} className="text-white/70" />
                         )}
-                    </div>
-                )}
-            </section>
+                    </button>
+                    {allOpen && (
+                        <div className="p-3 space-y-3" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                            {/* Filter chips */}
+                            <div
+                                role="tablist"
+                                aria-label="กรองตามประเภทการอนุมัติ"
+                                className="flex flex-wrap gap-1.5 p-1.5 rounded-lg border border-white/10"
+                                style={{ background: 'rgba(255,255,255,0.04)' }}
+                            >
+                                {FILTERS.map(({ key, label, Icon }) => {
+                                    const active = filter === key
+                                    return (
+                                        <button
+                                            key={key}
+                                            onClick={() => setFilter(key)}
+                                            aria-selected={active}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                                                active
+                                                    ? 'bg-amber-400 text-[#561e23] shadow-md'
+                                                    : 'text-white/75 hover:bg-white/10'
+                                            }`}
+                                        >
+                                            <Icon size={14} />
+                                            <span>{label}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+
+                            {filteredAll.length === 0 ? (
+                                <EmptyBox>
+                                    ไม่พบผู้อนุมัติในหมวด{' '}
+                                    <span className="font-bold">{FILTERS.find(f => f.key === filter)?.label}</span>
+                                </EmptyBox>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                    {filteredAll.map(a => (
+                                        <ApproverCard
+                                            key={`all-${a.id}`}
+                                            approver={a}
+                                            canSeeExact={canSeeExact}
+                                            showAmount={true}
+                                            showLevel={canSeeExact}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </section>
+            )}
         </div>
     )
 }
@@ -233,12 +261,14 @@ export function TabAuthority({
 // ─── Subcomponents ─────────────────────────────────────────────────────────
 
 function AuthoritySection({
-    icon,
+    Icon,
+    iconColor,
     title,
     subtitle,
     children,
 }: {
-    icon: string
+    Icon: LucideIcon
+    iconColor?: string
     title: string
     subtitle?: string
     children: React.ReactNode
@@ -246,11 +276,11 @@ function AuthoritySection({
     return (
         <section>
             <div className="mb-2">
-                <h3 className="text-white font-bold text-sm flex items-center gap-1.5">
-                    <span>{icon}</span>
+                <h3 className="text-white font-bold text-sm flex items-center gap-2">
+                    <Icon size={18} className={iconColor ?? 'text-white/70'} />
                     {title}
                 </h3>
-                {subtitle && <p className="text-white/55 text-[11px] mt-0.5">{subtitle}</p>}
+                {subtitle && <p className="text-white/55 text-[11px] mt-0.5 pl-6">{subtitle}</p>}
             </div>
             {children}
         </section>
@@ -286,12 +316,11 @@ function ApproverCard({
 
     const hasBudget = scopes.includes('budget')
     const tier = showAmount && hasBudget ? limitToTier(approver.approvalLimitThb ?? undefined) : null
-    const amountText =
-        showAmount && canSeeExact && approver.approvalLimitThb
-            ? `≤ ${approver.approvalLimitThb.toLocaleString('th-TH')} บาท`
-            : tier
-                ? `${TIER_LABELS[tier].icon} ${TIER_LABELS[tier].th}`
-                : null
+    const tierVisual = tier ? TIER_VISUAL[tier] : null
+    const tierLabel = tier ? TIER_LABELS[tier].th : null
+    const exactText = showAmount && canSeeExact && approver.approvalLimitThb
+        ? `≤ ${approver.approvalLimitThb.toLocaleString('th-TH')} บาท`
+        : null
 
     const isOverride = Boolean(approver.isOverride)
 
@@ -323,8 +352,8 @@ function ApproverCard({
                     <div className="flex items-center gap-1.5 flex-wrap">
                         <p className="text-sm font-bold text-white truncate">{displayName}</p>
                         {isOverride && (
-                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-amber-400/20 text-amber-100 border-amber-300/50">
-                                <Sparkles size={9} />
+                            <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-amber-400/20 text-amber-100 border-amber-300/50">
+                                <Star size={10} className="fill-amber-200 text-amber-200" />
                                 อนุมัติพิเศษ
                             </span>
                         )}
@@ -343,12 +372,14 @@ function ApproverCard({
                 <div className="flex flex-wrap gap-1">
                     {scopes.map(s => {
                         const meta = SCOPE_META[s]
+                        const ScopeIconComp = SCOPE_ICON[s]
                         if (!meta) return null
                         return (
                             <span
                                 key={s}
-                                className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${meta.bg} ${meta.text} ${meta.border}`}
+                                className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-semibold ${meta.bg} ${meta.text} ${meta.border}`}
                             >
+                                {ScopeIconComp && <ScopeIconComp size={10} />}
                                 {meta.label}
                             </span>
                         )
@@ -356,10 +387,16 @@ function ApproverCard({
                 </div>
             )}
 
-            {amountText && (
+            {(exactText || tierVisual) && (
                 <div className="flex items-center gap-1.5 pt-2 border-t border-white/10">
-                    <ShieldCheck size={12} className="text-amber-300 flex-shrink-0" />
-                    <span className="text-xs text-white/85 font-semibold">{amountText}</span>
+                    {tierVisual ? (
+                        <tierVisual.Icon size={14} className={`flex-shrink-0 ${tierVisual.color}`} />
+                    ) : (
+                        <ShieldCheck size={12} className="text-amber-300 flex-shrink-0" />
+                    )}
+                    <span className="text-xs text-white/85 font-semibold">
+                        {exactText ?? tierLabel}
+                    </span>
                 </div>
             )}
         </div>
