@@ -76,12 +76,14 @@ const NAV_CONFIG: Record<Role, NavItem[]> = {
     ],
 }
 
-// Variant of hr_admin More menu when viewing in /portal — offers switch back to admin
+// Variant of hr_admin More menu when viewing in /portal — mirrors the
+// employee experience (personal actions only). HR admin pages are kept
+// off this variant on purpose: portal mode is meant to feel like an
+// employee's view. The "กลับเป็น HR Admin" switch is how they jump back.
 const HR_ADMIN_PORTAL_MORE: MoreItem[] = [
     { label: 'ยื่นใบลา',     desc: 'สร้างคำขอลาของตนเอง',   href: '/portal/leave',           icon: CalendarDays },
     { label: 'ผังองค์กร',    desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',   icon: Network },
     { label: 'ปฏิทิน',       desc: 'ดูตารางงาน',             href: '/portal/calendar',       icon: CalendarDays },
-    ...HR_ADMIN_QUICK_ACTIONS,
     { label: 'กลับเป็น HR Admin', desc: 'สลับกลับโหมดแอดมิน', href: '/hradmin/dashboard', icon: RefreshCw, accent: 'amber' },
     { label: 'ออกจากระบบ', icon: LogOut, danger: true },
 ]
