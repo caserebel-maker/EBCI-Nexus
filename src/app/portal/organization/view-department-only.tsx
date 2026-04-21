@@ -28,14 +28,17 @@ export function DepartmentOnlyView({
     // 3. Top executives (L4+) — collapsible, excludes advisors
     const { deptPeers, managerOutsideDept, topExecutives } = useMemo(() => {
         const me = employees.find(e => e.id === currentEmployeeId) ?? null
+        // Build a set of the viewer's non-null departments so the match
+        // can't bottom out as null === null (which matched every employee
+        // with no secondary_department — the source of the "47 คน" bug).
+        const myDepts = new Set<string>()
+        if (viewerDepartment) myDepts.add(viewerDepartment)
+        if (viewerSecondaryDepartment) myDepts.add(viewerSecondaryDepartment)
         const inMyDept = (e: OrgEmployee) => {
-            if (!viewerDepartment && !viewerSecondaryDepartment) return false
-            return (
-                e.department === viewerDepartment ||
-                e.department === viewerSecondaryDepartment ||
-                e.secondaryDepartment === viewerDepartment ||
-                e.secondaryDepartment === viewerSecondaryDepartment
-            )
+            if (myDepts.size === 0) return false
+            if (e.department && myDepts.has(e.department)) return true
+            if (e.secondaryDepartment && myDepts.has(e.secondaryDepartment)) return true
+            return false
         }
         const deptPeers = employees.filter(e => !e.isAdvisor && inMyDept(e))
 

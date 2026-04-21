@@ -35,7 +35,11 @@ export function TabStructure({
     const router = useRouter()
     const pathname = usePathname()
 
-    const sub: SubKey = params.get('sub') === 'people' ? 'people' : 'department'
+    // L1/L2 only get the department view — People view (full list) is
+    // gated behind canSeeFullOrg per spec. Force 'department' for them
+    // regardless of any stale ?sub=people in the URL.
+    const requestedSub = params.get('sub') === 'people' ? 'people' : 'department'
+    const sub: SubKey = canSeeFullOrg ? requestedSub : 'department'
 
     const switchSub = useCallback(
         (next: SubKey) => {
@@ -50,25 +54,27 @@ export function TabStructure({
 
     return (
         <div className="space-y-4 lg:space-y-6">
-            <div
-                role="tablist"
-                aria-label="มุมมองย่อย"
-                className="inline-flex gap-1 p-1 rounded-lg border border-white/15"
-                style={{ background: 'rgba(255,255,255,0.04)' }}
-            >
-                <SubButton
-                    active={sub === 'department'}
-                    onClick={() => switchSub('department')}
-                    icon={<Building2 size={14} />}
-                    label="มุมมองแผนก"
-                />
-                <SubButton
-                    active={sub === 'people'}
-                    onClick={() => switchSub('people')}
-                    icon={<Users size={14} />}
-                    label="มุมมองรายบุคคล"
-                />
-            </div>
+            {canSeeFullOrg && (
+                <div
+                    role="tablist"
+                    aria-label="มุมมองย่อย"
+                    className="inline-flex gap-1 p-1 rounded-lg border border-white/15"
+                    style={{ background: 'rgba(255,255,255,0.04)' }}
+                >
+                    <SubButton
+                        active={sub === 'department'}
+                        onClick={() => switchSub('department')}
+                        icon={<Building2 size={14} />}
+                        label="มุมมองแผนก"
+                    />
+                    <SubButton
+                        active={sub === 'people'}
+                        onClick={() => switchSub('people')}
+                        icon={<Users size={14} />}
+                        label="มุมมองรายบุคคล"
+                    />
+                </div>
+            )}
 
             {sub === 'department' && (
                 canSeeFullOrg ? (
