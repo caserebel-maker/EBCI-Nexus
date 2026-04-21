@@ -37,7 +37,12 @@ const HR_ADMIN_QUICK_ACTIONS: MoreItem[] = [
     {                          label: 'รับสมัครงาน',    href: '/hradmin/applicants',            icon: UserPlus },
     {                          label: 'การเข้างาน',     href: '/hradmin/attendance/reconcile',  icon: Clock },
     {                          label: 'นำเข้าข้อมูลบัตร', href: '/hradmin/attendance/import',    icon: Upload },
-    {                          label: 'ระบบและทรัพยากร', href: '/hradmin/settings/quota',       icon: Activity },
+]
+
+// Admin-only (kept out of /portal variant to avoid surfacing system/quota
+// data in the employee-facing experience).
+const HR_ADMIN_SYSTEM_ACTIONS: MoreItem[] = [
+    { label: 'ระบบและทรัพยากร', href: '/hradmin/settings/quota', icon: Activity },
 ]
 
 // hr_admin has two variants depending on whether they're in /hradmin or /portal
@@ -88,6 +93,7 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'จัดการระบบ',   desc: 'ตั้งค่าและการจัดการ',    href: '/hradmin/settings',   icon: Settings },
         { label: 'รายงาน',       desc: 'ดูรายงานต่าง ๆ',          href: '/hradmin/reports',    icon: FileText },
         ...HR_ADMIN_QUICK_ACTIONS,
+        ...HR_ADMIN_SYSTEM_ACTIONS,
         { label: 'ดูในฐานะพนักงาน', desc: 'สลับไปโหมดพนักงาน', href: '/portal/dashboard', icon: RefreshCw, accent: 'blue' },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
