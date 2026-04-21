@@ -292,12 +292,15 @@ function AnnouncementsCarousel({ announcements }: { announcements: AnnouncementI
                                     onClick={() => setModalAnn(ann)}
                                     className="relative flex-[0_0_100%] min-w-0 text-left focus:outline-none"
                                 >
-                                    <div className="carousel-slide w-full relative overflow-hidden bg-black/30">
+                                    <div
+                                        className="carousel-slide w-full relative overflow-hidden"
+                                        style={{ background: 'linear-gradient(135deg, #561e23 0%, #882136 100%)' }}
+                                    >
                                         {ann.imagePath ? (
                                             <img
                                                 src={ann.imagePath}
                                                 alt={ann.headline}
-                                                className="absolute inset-0 w-full h-full object-cover"
+                                                className="absolute inset-0 w-full h-full object-contain"
                                             />
                                         ) : (
                                             <div
@@ -385,8 +388,7 @@ function AnnouncementsCarousel({ announcements }: { announcements: AnnouncementI
                 )}
             </div>
             <style>{`
-                .carousel-slide { aspect-ratio: 4 / 3; }
-                @media (min-width: 640px) { .carousel-slide { aspect-ratio: 16 / 9; } }
+                .carousel-slide { aspect-ratio: 16 / 9; }
             `}</style>
             {modalAnn && <AnnouncementModal ann={modalAnn} onClose={() => setModalAnn(null)} />}
         </>
