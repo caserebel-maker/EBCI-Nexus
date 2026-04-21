@@ -38,9 +38,11 @@ export async function checkIn(payload: CheckInPayload) {
         return { error: 'ไม่พบข้อมูลพนักงาน — กรุณาติดต่อ HR' }
     }
 
-    // ── Anti-Trick #1: Time restriction (7:00-9:30 only) ────────────────────
-    const now = new Date()
-    const minutesOfDay = now.getHours() * 60 + now.getMinutes()
+    // ── Anti-Trick #1: Time restriction (7:00-9:30 Bangkok time) ───────────
+    // Vercel serverless runs in UTC — shift +7h then read as UTC to get
+    // the Bangkok wall clock without depending on the process timezone.
+    const nowBkk = new Date(Date.now() + 7 * 60 * 60 * 1000)
+    const minutesOfDay = nowBkk.getUTCHours() * 60 + nowBkk.getUTCMinutes()
     const START_TIME = 7 * 60       // 7:00 = 420 minutes
     const END_TIME = 9 * 60 + 30    // 9:30 = 570 minutes
     if (minutesOfDay < START_TIME || minutesOfDay > END_TIME) {
