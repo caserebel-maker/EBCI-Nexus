@@ -244,37 +244,46 @@ function OrgNode({
     const hasChildren = node.children.length > 0
     const childCount = node.children.length
 
-    // COMPACT MODE — used inside narrow grid cells. Card stays visible but
-    // children render as a vertical indented list (no horizontal bus/grid)
-    // so a deep subtree can't blow past its column width.
+    // COMPACT MODE — used inside narrow grid cells.
+    // Renders the node's card and its direct reports as a flat wrap-flex
+    // row of cards (siblings side by side, wrap to the next line when the
+    // row runs out of width). Does NOT recurse into grandchildren — those
+    // are hinted via the "+N" badge on each child card. Keeps the visual
+    // inside a single grid cell and eliminates any chance of nested
+    // indentation reading as a chain.
     if (compact) {
         return (
-            <div className="w-full min-w-0">
-                <div className="flex justify-center">
-                    <Card
-                        node={node}
-                        isMe={isMe}
-                        isApprover={isApprover}
-                        isCollapsed={isCollapsed}
-                        hasChildren={hasChildren}
-                        onToggle={() => toggle(node.id)}
-                    />
-                </div>
+            <div className="w-full flex flex-col items-center">
+                <Card
+                    node={node}
+                    isMe={isMe}
+                    isApprover={isApprover}
+                    isCollapsed={isCollapsed}
+                    hasChildren={hasChildren}
+                    onToggle={() => toggle(node.id)}
+                />
                 {hasChildren && !isCollapsed && (
-                    <div className="mt-2 ml-6 pl-3 border-l-2 border-white/15 space-y-2">
-                        {node.children.map(child => (
-                            <OrgNode
-                                key={child.id}
-                                node={child}
-                                depth={depth + 1}
-                                compact
-                                collapsed={collapsed}
-                                toggle={toggle}
-                                currentEmployeeId={currentEmployeeId}
-                                approvalChain={approvalChain}
-                            />
-                        ))}
-                    </div>
+                    <>
+                        <div className="w-px h-3 bg-white/25 mt-1" />
+                        <div className="w-full mt-1 p-2 rounded-lg bg-white/[0.04] border border-white/10">
+                            <p className="text-[10px] text-white/55 text-center mb-2">
+                                ลูกน้อง {childCount} คน
+                            </p>
+                            <div className="flex flex-wrap justify-center gap-2">
+                                {node.children.map(child => (
+                                    <Card
+                                        key={child.id}
+                                        node={child}
+                                        isMe={child.id === currentEmployeeId}
+                                        isApprover={approvalChain.has(child.id)}
+                                        isCollapsed={true /* leaf-render in compact */}
+                                        hasChildren={child.children.length > 0}
+                                        onToggle={() => {}}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    </>
                 )}
             </div>
         )
