@@ -8,6 +8,7 @@ import {
     FileText, Clock, Calendar, MapPin, User, Bell, X, ChevronLeft, ChevronRight,
     AlertTriangle, AlertCircle, Info, Megaphone,
 } from 'lucide-react'
+import { DailyGreeting } from '@/components/daily-greeting'
 import type { AnnouncementItem } from './page'
 
 interface Employee {
@@ -18,6 +19,7 @@ interface Employee {
     startDate: string
     gender: string | null
     nickname: string | null
+    dateOfBirth: string | null
     avatarUrl: string | null
 }
 
@@ -523,6 +525,15 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
 
     return (
         <div className="max-w-lg mx-auto space-y-4 pb-4">
+
+            {/* 1. Daily greeting — desktop only (mobile shell header already shows it) */}
+            <div className="hidden lg:block">
+                <DailyGreeting
+                    variant="desktop"
+                    nickname={employee?.nickname}
+                    dateOfBirth={employee?.dateOfBirth}
+                />
+            </div>
 
             {/* 2. Announcement Carousel (top 5 active, hides when empty) */}
             {announcements.length > 0 && (

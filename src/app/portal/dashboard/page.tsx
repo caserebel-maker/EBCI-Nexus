@@ -37,12 +37,13 @@ type EmpRow = {
     position: string | null
     department: string | null
     start_date: string | null
+    date_of_birth: string | null
     photo_url: string | null
     email: string | null
     applicant_id: string | null
 }
 
-const EMP_SELECT = 'id, first_name_th, last_name_th, nickname, position, department, start_date, photo_url, email, applicant_id'
+const EMP_SELECT = 'id, first_name_th, last_name_th, nickname, position, department, start_date, date_of_birth, photo_url, email, applicant_id'
 
 async function findEmployee(userId: string): Promise<EmpRow | null> {
     // 1. Try user_id (fastest path once linked)
@@ -90,6 +91,7 @@ export default async function PortalDashboardPage() {
         startDate: string
         gender: string | null
         nickname: string | null
+        dateOfBirth: string | null
         avatarUrl: string | null
     } | null = null
 
@@ -144,6 +146,7 @@ export default async function PortalDashboardPage() {
                 startDate: emp.start_date ?? new Date().toISOString(),
                 gender,
                 nickname: emp.nickname ?? null,
+                dateOfBirth: emp.date_of_birth ?? null,
                 avatarUrl,
             }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { getGreeting } from '@/lib/greeting'
+import { DailyGreeting } from '@/components/daily-greeting'
 
 // Calculate tenure in Thai (e.g. "10 ปี 2 เดือน")
 function calcTenure(startDate: string): string {
@@ -218,9 +218,12 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                     {/* Mobile Identity Header — shown on every page */}
                     <div className="lg:hidden mb-4 pb-4 border-b border-white/10">
                         {/* Greeting — daily/payday/birthday */}
-                        <p className="text-xs text-amber-300/90 font-semibold mb-3 pb-3 leading-snug text-center border-b border-white/10">
-                            {getGreeting({ nickname: profile?.nickname, dateOfBirth: profile?.dateOfBirth })}
-                        </p>
+                        <DailyGreeting
+                            variant="mobile"
+                            nickname={profile?.nickname}
+                            dateOfBirth={profile?.dateOfBirth}
+                            className="mb-3 pb-3 border-b border-white/10"
+                        />
                         <div className="flex items-center gap-3">
                             <div className="h-14 w-14 rounded-full overflow-hidden shadow-md shadow-black/30 ring-2 ring-white/20 bg-white/10 shrink-0">
                                 {profile?.photoUrl ? (
