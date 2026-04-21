@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ShieldCheck, User, Info } from 'lucide-react'
+import { ShieldCheck, User, Scale, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
 import type { OrgEmployee } from './view-department'
 import type { UserPermissions } from '@/lib/permissions'
 import { limitToTier, TIER_LABELS } from '@/lib/permissions'
@@ -26,126 +26,311 @@ const SCOPE_META: Record<string, { label: string; bg: string; text: string; bord
 interface Props {
     employees: OrgEmployee[]
     permissions: UserPermissions
+    currentEmployeeId?: string | null
+    canSeeFullOrg?: boolean
 }
 
-export function TabAuthority({ employees, permissions }: Props) {
-    const [filter, setFilter] = useState<ScopeFilter>('all')
+type WalkedApprover = OrgEmployee & { isOverride?: boolean }
 
-    const { approvers, nonApprovers } = useMemo(() => {
-        const a: OrgEmployee[] = []
-        const n: OrgEmployee[] = []
-        for (const e of employees) {
-            if (e.isApprover) a.push(e)
-            else n.push(e)
-        }
-        // Sort approvers: level desc, then department, then code
-        a.sort((x, y) => {
-            const lx = x.approvalLevel ?? 0
-            const ly = y.approvalLevel ?? 0
-            if (lx !== ly) return ly - lx
-            return (x.department ?? '').localeCompare(y.department ?? '') || x.employeeCode.localeCompare(y.employeeCode)
-        })
-        return { approvers: a, nonApprovers: n }
-    }, [employees])
-
-    const filtered = useMemo(() => {
-        if (filter === 'all') return approvers
-        return approvers.filter(a => (a.approvalScopes ?? []).includes(filter))
-    }, [approvers, filter])
-
+export function TabAuthority({
+    employees,
+    permissions,
+    currentEmployeeId = null,
+    canSeeFullOrg = false,
+}: Props) {
     const canSeeExact = permissions.can_view_approval_limits
 
+    // Derive personal chains + org-wide lists from the employee snapshot.
+    const { me, leaveOt, budget, hr, all } = useMemo(
+        () => deriveApprovers(employees, currentEmployeeId),
+        [employees, currentEmployeeId],
+    )
+
+    const [allOpen, setAllOpen] = useState(canSeeFullOrg)
+    const [filter, setFilter] = useState<ScopeFilter>('all')
+    const filteredAll = useMemo(() => {
+        if (filter === 'all') return all
+        return all.filter(a => (a.approvalScopes ?? []).includes(filter))
+    }, [all, filter])
+
     return (
-        <div className="space-y-4">
-            {/* Filter chips */}
+        <div className="space-y-5">
+            {/* Header banner */}
             <div
-                role="tablist"
-                aria-label="กรองตามประเภทการอนุมัติ"
-                className="flex flex-wrap gap-1.5 p-1.5 rounded-xl border border-white/15"
-                style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(12px)' }}
+                className="p-4 rounded-xl border border-sky-400/30 space-y-1"
+                style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.12), rgba(56,189,248,0.05))' }}
             >
-                {FILTERS.map(({ key, label, icon }) => {
-                    const active = filter === key
-                    return (
-                        <button
-                            key={key}
-                            onClick={() => setFilter(key)}
-                            aria-selected={active}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                                active
-                                    ? 'bg-amber-400 text-[#561e23] shadow-md'
-                                    : 'text-white/75 hover:bg-white/10'
-                            }`}
-                        >
-                            <span>{icon}</span>
-                            <span>{label}</span>
-                        </button>
-                    )
-                })}
+                <div className="flex items-center gap-2 text-white font-bold text-base">
+                    <Scale size={18} className="text-sky-300" />
+                    อำนาจอนุมัติ
+                </div>
+                <p className="text-white/75 text-xs">รายชื่อผู้อนุมัติเรื่องต่างๆ ของคุณ</p>
             </div>
 
-            {/* Permission hint */}
-            <div className="flex items-start gap-2 text-[11px] text-white/55 italic px-1">
-                <Info size={12} className="flex-shrink-0 mt-0.5" />
-                <span>
-                    {canSeeExact
-                        ? 'คุณเห็นวงเงินอนุมัติเป๊ะ (สิทธิ์ can_view_approval_limits)'
-                        : 'วงเงินแสดงเป็นช่วง (💧 / 💎 / 🔥 / ♾️) — สิทธิ์ดูตัวเลขเป๊ะสงวนให้ผู้บริหาร/HR'}
-                </span>
-            </div>
-
-            {/* Approvers grid */}
-            {filtered.length === 0 ? (
-                <EmptyApproversState filter={filter} totalApprovers={approvers.length} />
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {filtered.map(a => (
-                        <ApproverCard key={a.id} approver={a} canSeeExact={canSeeExact} />
-                    ))}
+            {!me && (
+                <div
+                    className="p-4 rounded-xl border border-amber-400/30 text-xs text-amber-100"
+                    style={{ background: 'rgba(251,191,36,0.08)' }}
+                >
+                    ไม่พบข้อมูลพนักงานของคุณ — หัวข้อ "ของฉัน" จะไม่แสดง ติดต่อ HR เพื่อเชื่อม account
                 </div>
             )}
 
-            {/* Non-approvers section */}
-            {nonApprovers.length > 0 && (
-                <NonApproverSection people={nonApprovers} />
-            )}
+            {/* Section 1: การลา / OT */}
+            <AuthoritySection
+                icon="📅"
+                title="การลา / OT"
+                subtitle={
+                    me
+                        ? 'ผู้อนุมัติคำขอลา / OT ของคุณ (เรียงตามลำดับการอนุมัติ)'
+                        : undefined
+                }
+            >
+                {leaveOt.length === 0 ? (
+                    <EmptyBox>{me ? 'ยังไม่มีผู้อนุมัติในสายงานของคุณ' : 'โปรดเข้าสู่ระบบเพื่อดูสายอนุมัติ'}</EmptyBox>
+                ) : (
+                    <div className="space-y-2">
+                        {leaveOt.map(a => (
+                            <ApproverCard
+                                key={`leave-${a.id}`}
+                                approver={a}
+                                canSeeExact={canSeeExact}
+                                showAmount={false}
+                                showLevel={canSeeExact}
+                            />
+                        ))}
+                    </div>
+                )}
+            </AuthoritySection>
+
+            {/* Section 2: เบิกเงิน */}
+            <AuthoritySection
+                icon="💰"
+                title="เบิกเงิน"
+                subtitle={
+                    me
+                        ? canSeeExact
+                            ? 'สายอนุมัติเบิกเงิน แสดงวงเงินเต็มของแต่ละคน'
+                            : 'สายอนุมัติเบิกเงิน วงเงินแสดงเป็นระดับ (💧/💎/🔥/♾️)'
+                        : undefined
+                }
+            >
+                {budget.length === 0 ? (
+                    <EmptyBox>{me ? 'ยังไม่มีผู้อนุมัติเบิกเงินในสายของคุณ' : 'โปรดเข้าสู่ระบบเพื่อดู'}</EmptyBox>
+                ) : (
+                    <div className="space-y-2">
+                        {budget.map(a => (
+                            <ApproverCard
+                                key={`budget-${a.id}`}
+                                approver={a}
+                                canSeeExact={canSeeExact}
+                                showAmount={true}
+                                showLevel={canSeeExact}
+                            />
+                        ))}
+                    </div>
+                )}
+            </AuthoritySection>
+
+            {/* Section 3: HR */}
+            <AuthoritySection
+                icon="👥"
+                title="HR (สมัครงาน, ปรับตำแหน่ง)"
+                subtitle="ผู้อนุมัติเรื่อง HR ของทั้งบริษัท"
+            >
+                {hr.length === 0 ? (
+                    <EmptyBox>ยังไม่มี HR approver</EmptyBox>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {hr.map(a => (
+                            <ApproverCard
+                                key={`hr-${a.id}`}
+                                approver={a}
+                                canSeeExact={canSeeExact}
+                                showAmount={false}
+                                showLevel={canSeeExact}
+                            />
+                        ))}
+                    </div>
+                )}
+            </AuthoritySection>
+
+            {/* Collapsible: all approvers */}
+            <section className="rounded-xl border border-white/10 overflow-hidden">
+                <button
+                    onClick={() => setAllOpen(o => !o)}
+                    aria-expanded={allOpen}
+                    className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors"
+                    style={{ background: 'rgba(255,255,255,0.04)' }}
+                >
+                    <span className="flex items-center gap-2 text-white text-sm font-semibold">
+                        <ShieldCheck size={16} className="text-white/70" />
+                        ดูผู้อนุมัติทั้งหมดในบริษัท
+                        <span className="text-white/55 text-xs font-normal">· {all.length} คน</span>
+                    </span>
+                    {allOpen ? (
+                        <ChevronUp size={16} className="text-white/70" />
+                    ) : (
+                        <ChevronDown size={16} className="text-white/70" />
+                    )}
+                </button>
+                {allOpen && (
+                    <div className="p-3 space-y-3" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                        {/* Filter chips */}
+                        <div
+                            role="tablist"
+                            aria-label="กรองตามประเภทการอนุมัติ"
+                            className="flex flex-wrap gap-1.5 p-1.5 rounded-lg border border-white/10"
+                            style={{ background: 'rgba(255,255,255,0.04)' }}
+                        >
+                            {FILTERS.map(({ key, label, icon }) => {
+                                const active = filter === key
+                                return (
+                                    <button
+                                        key={key}
+                                        onClick={() => setFilter(key)}
+                                        aria-selected={active}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                                            active
+                                                ? 'bg-amber-400 text-[#561e23] shadow-md'
+                                                : 'text-white/75 hover:bg-white/10'
+                                        }`}
+                                    >
+                                        <span>{icon}</span>
+                                        <span>{label}</span>
+                                    </button>
+                                )
+                            })}
+                        </div>
+
+                        {filteredAll.length === 0 ? (
+                            <EmptyBox>
+                                ไม่พบผู้อนุมัติในหมวด{' '}
+                                <span className="font-bold">{FILTERS.find(f => f.key === filter)?.label}</span>
+                            </EmptyBox>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                {filteredAll.map(a => (
+                                    <ApproverCard
+                                        key={`all-${a.id}`}
+                                        approver={a}
+                                        canSeeExact={canSeeExact}
+                                        showAmount={true}
+                                        showLevel={canSeeExact}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </section>
         </div>
     )
 }
 
-function ApproverCard({ approver, canSeeExact }: { approver: OrgEmployee; canSeeExact: boolean }) {
+// ─── Subcomponents ─────────────────────────────────────────────────────────
+
+function AuthoritySection({
+    icon,
+    title,
+    subtitle,
+    children,
+}: {
+    icon: string
+    title: string
+    subtitle?: string
+    children: React.ReactNode
+}) {
+    return (
+        <section>
+            <div className="mb-2">
+                <h3 className="text-white font-bold text-sm flex items-center gap-1.5">
+                    <span>{icon}</span>
+                    {title}
+                </h3>
+                {subtitle && <p className="text-white/55 text-[11px] mt-0.5">{subtitle}</p>}
+            </div>
+            {children}
+        </section>
+    )
+}
+
+function EmptyBox({ children }: { children: React.ReactNode }) {
+    return (
+        <div
+            className="p-4 rounded-lg border border-white/10 text-center text-xs text-white/60"
+            style={{ background: 'rgba(255,255,255,0.03)' }}
+        >
+            {children}
+        </div>
+    )
+}
+
+function ApproverCard({
+    approver,
+    canSeeExact,
+    showAmount,
+    showLevel,
+}: {
+    approver: WalkedApprover
+    canSeeExact: boolean
+    showAmount: boolean
+    showLevel: boolean
+}) {
     const scopes = approver.approvalScopes ?? []
     const displayName = approver.nickname
         ? `${approver.firstName} (${approver.nickname})`
         : approver.firstName
 
     const hasBudget = scopes.includes('budget')
-    const tier = hasBudget ? limitToTier(approver.approvalLimitThb ?? undefined) : null
-    const amountText = canSeeExact && approver.approvalLimitThb
-        ? `≤ ${approver.approvalLimitThb.toLocaleString('th-TH')} บาท`
-        : tier
-            ? `${TIER_LABELS[tier].icon} ${TIER_LABELS[tier].th}`
-            : null
+    const tier = showAmount && hasBudget ? limitToTier(approver.approvalLimitThb ?? undefined) : null
+    const amountText =
+        showAmount && canSeeExact && approver.approvalLimitThb
+            ? `≤ ${approver.approvalLimitThb.toLocaleString('th-TH')} บาท`
+            : tier
+                ? `${TIER_LABELS[tier].icon} ${TIER_LABELS[tier].th}`
+                : null
+
+    const isOverride = Boolean(approver.isOverride)
+
+    const outerBorder = isOverride
+        ? 'border-2 border-amber-400/50 ring-1 ring-amber-400/25'
+        : 'border border-white/15'
+    const outerBg = isOverride
+        ? 'linear-gradient(135deg, rgba(251,191,36,0.12), rgba(245,158,11,0.05))'
+        : 'rgba(255,255,255,0.07)'
 
     return (
         <div
-            className="p-4 rounded-xl border border-white/15 space-y-3"
-            style={{ background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(8px)' }}
+            className={`p-3 rounded-xl space-y-2 ${outerBorder}`}
+            style={{ background: outerBg, backdropFilter: 'blur(8px)' }}
         >
             <div className="flex items-start gap-3">
                 {approver.photoUrl ? (
-                    <img src={approver.photoUrl} alt="" className="w-12 h-12 rounded-full object-cover ring-2 ring-white/20 flex-shrink-0" />
+                    <img
+                        src={approver.photoUrl}
+                        alt=""
+                        className="w-11 h-11 rounded-full object-cover ring-2 ring-white/20 flex-shrink-0"
+                    />
                 ) : (
-                    <div className="w-12 h-12 rounded-full bg-white/10 ring-2 ring-white/20 flex items-center justify-center flex-shrink-0">
-                        <User size={22} className="text-white/60" />
+                    <div className="w-11 h-11 rounded-full bg-white/10 ring-2 ring-white/20 flex items-center justify-center flex-shrink-0">
+                        <User size={20} className="text-white/60" />
                     </div>
                 )}
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white truncate">{displayName}</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-sm font-bold text-white truncate">{displayName}</p>
+                        {isOverride && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-amber-400/20 text-amber-100 border-amber-300/50">
+                                <Sparkles size={9} />
+                                อนุมัติพิเศษ
+                            </span>
+                        )}
+                    </div>
                     <p className="text-xs text-white/65 truncate">{approver.position ?? '—'}</p>
                     <p className="text-[10px] text-white/45 truncate">{approver.department ?? '—'}</p>
                 </div>
-                {canSeeExact && approver.approvalLevel && (
+                {showLevel && approver.approvalLevel && (
                     <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-white/10 border border-white/20 text-white/70 flex-shrink-0">
                         L{approver.approvalLevel}
                     </span>
@@ -172,57 +357,89 @@ function ApproverCard({ approver, canSeeExact }: { approver: OrgEmployee; canSee
             {amountText && (
                 <div className="flex items-center gap-1.5 pt-2 border-t border-white/10">
                     <ShieldCheck size={12} className="text-amber-300 flex-shrink-0" />
-                    <span className="text-xs text-white/80 font-semibold">{amountText}</span>
+                    <span className="text-xs text-white/85 font-semibold">{amountText}</span>
                 </div>
             )}
         </div>
     )
 }
 
-function EmptyApproversState({ filter, totalApprovers }: { filter: ScopeFilter; totalApprovers: number }) {
-    if (totalApprovers === 0) {
-        return (
-            <div
-                className="p-6 rounded-xl border border-amber-400/30 text-center space-y-2"
-                style={{ background: 'rgba(251,191,36,0.08)', backdropFilter: 'blur(8px)' }}
-            >
-                <p className="text-sm font-semibold text-amber-200">ยังไม่มีผู้มีอำนาจอนุมัติในระบบ</p>
-                <p className="text-xs text-white/65">
-                    HR ต้องกำหนดผู้อนุมัติของแต่ละแผนก โดยเข้าไปแก้ข้อมูลพนักงาน ตั้ง <code className="bg-black/20 px-1.5 rounded">is_approver = true</code>, <code className="bg-black/20 px-1.5 rounded">approval_scopes</code>, และ <code className="bg-black/20 px-1.5 rounded">approval_limit_thb</code>
-                </p>
-            </div>
-        )
+// ─── Chain walkers ─────────────────────────────────────────────────────────
+
+function deriveApprovers(employees: OrgEmployee[], currentEmployeeId: string | null) {
+    const byId = new Map(employees.map(e => [e.id, e]))
+    const me = currentEmployeeId ? byId.get(currentEmployeeId) ?? null : null
+
+    // Leave/OT: prefer leave_approver_id, stop after L≥4
+    const leaveOt: WalkedApprover[] = []
+    if (me) {
+        const visited = new Set<string>([me.id])
+        let cursor: OrgEmployee | undefined = me
+        let guard = 0
+        while (cursor && guard < 20) {
+            guard++
+            const override = cursor.leaveApproverId ?? null
+            const nextId = override ?? cursor.managerId
+            if (!nextId || visited.has(nextId)) break
+            visited.add(nextId)
+            const next = byId.get(nextId)
+            if (!next) break
+            if (next.isApprover && (next.approvalScopes ?? []).includes('leave')) {
+                leaveOt.push({ ...next, isOverride: Boolean(override) })
+            }
+            if ((next.approvalLevel ?? 0) >= 4) break
+            cursor = next
+        }
     }
-    return (
-        <div className="p-6 rounded-xl border border-white/15 text-center">
-            <p className="text-sm text-white/70">
-                ไม่พบผู้อนุมัติในหมวด <span className="font-bold text-white">{FILTERS.find(f => f.key === filter)?.label}</span>
-            </p>
-        </div>
-    )
-}
 
-function NonApproverSection({ people }: { people: OrgEmployee[] }) {
-    const shown = people.slice(0, 5)
-    const remaining = people.length - shown.length
+    // Budget: walk manager_id, collect every budget approver, include self,
+    // and ensure ประธาน is always the tail (safety net).
+    const budget: WalkedApprover[] = []
+    if (me) {
+        if (me.isApprover && (me.approvalScopes ?? []).includes('budget')) {
+            budget.push({ ...me })
+        }
+        const visited = new Set<string>([me.id])
+        let cursor: OrgEmployee | undefined = me
+        let guard = 0
+        while (cursor && guard < 20) {
+            guard++
+            const nextId = cursor.managerId
+            if (!nextId || visited.has(nextId)) break
+            visited.add(nextId)
+            const next = byId.get(nextId)
+            if (!next) break
+            if (next.isApprover && (next.approvalScopes ?? []).includes('budget')) {
+                budget.push({ ...next })
+            }
+            cursor = next
+        }
+        const president = employees.find(
+            e =>
+                (e.approvalLevel ?? 0) === 5 &&
+                e.isApprover &&
+                (e.approvalScopes ?? []).includes('budget'),
+        )
+        if (president && !budget.some(b => b.id === president.id)) {
+            budget.push({ ...president })
+        }
+    }
 
-    return (
-        <details
-            className="rounded-xl border border-white/10 p-3"
-            style={{ background: 'rgba(255,255,255,0.03)' }}
-        >
-            <summary className="cursor-pointer text-xs font-semibold text-white/70 hover:text-white/90 select-none">
-                พนักงานที่ไม่ได้เป็นผู้อนุมัติ ({people.length} คน)
-            </summary>
-            <div className="mt-2 pt-2 border-t border-white/10 space-y-1">
-                <p className="text-[11px] text-white/55">
-                    {shown.map(p => p.nickname || p.firstName).join(' · ')}
-                    {remaining > 0 && ` · และอีก ${remaining} คน`}
-                </p>
-                <p className="text-[10px] text-white/40 italic">
-                    * หากต้องการเปลี่ยนสถานะ ติดต่อ HR เพื่อแก้ไขข้อมูลพนักงาน
-                </p>
-            </div>
-        </details>
+    // HR: fixed list (anyone with hr scope)
+    const hr = employees.filter(
+        e => e.isApprover && (e.approvalScopes ?? []).includes('hr'),
     )
+
+    // All approvers — sorted by level desc
+    const all = employees
+        .filter(e => e.isApprover)
+        .sort((a, b) => {
+            const la = a.approvalLevel ?? 0
+            const lb = b.approvalLevel ?? 0
+            if (la !== lb) return lb - la
+            return (a.department ?? '').localeCompare(b.department ?? '') ||
+                a.employeeCode.localeCompare(b.employeeCode)
+        })
+
+    return { me, leaveOt, budget, hr, all }
 }

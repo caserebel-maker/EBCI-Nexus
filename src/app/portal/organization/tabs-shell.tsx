@@ -97,7 +97,12 @@ export function TabsShell({
                 />
             )}
             {view === 'authority' && (
-                <TabAuthority employees={employees} permissions={permissions} />
+                <TabAuthority
+                    employees={employees}
+                    permissions={permissions}
+                    currentEmployeeId={currentEmployeeId}
+                    canSeeFullOrg={canSeeFullOrg}
+                />
             )}
             {view === 'my-chain' && (
                 <TabMyChain
