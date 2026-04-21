@@ -301,12 +301,12 @@ function AnnouncementsCarousel({ announcements }: { announcements: AnnouncementI
                                                 <Megaphone size={48} className="text-white/25" />
                                             </div>
                                         )}
-                                        {/* Bottom gradient overlay for legibility */}
+                                        {/* Bottom gradient overlay — EBCI maroon, shorter + softer */}
                                         <div
-                                            className="absolute inset-x-0 bottom-0"
+                                            className="absolute inset-x-0 bottom-0 pointer-events-none"
                                             style={{
-                                                height: '55%',
-                                                background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 45%, transparent 100%)',
+                                                height: '30%',
+                                                background: 'linear-gradient(to top, rgba(86,30,35,0.75) 0%, rgba(86,30,35,0) 80%)',
                                             }}
                                         />
                                         {/* Priority badge — top left */}
@@ -319,12 +319,12 @@ function AnnouncementsCarousel({ announcements }: { announcements: AnnouncementI
                                                 {meta.label}
                                             </span>
                                         </div>
-                                        {/* Text overlay bottom */}
-                                        <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4 text-left">
-                                            <h3 className="text-white font-bold leading-tight mb-1 line-clamp-2" style={{ fontSize: '15px', lineHeight: 1.25 }}>
+                                        {/* Text overlay bottom — compact */}
+                                        <div className="absolute inset-x-0 bottom-0 px-3 py-2 sm:px-4 sm:py-2.5 text-left">
+                                            <h3 className="text-white font-bold leading-tight line-clamp-2" style={{ fontSize: '15px', lineHeight: 1.2, textShadow: '0 1px 3px rgba(0,0,0,0.45)' }}>
                                                 {ann.headline}
                                             </h3>
-                                            <p className="text-white/70 text-[11px] inline-flex items-center gap-1">
+                                            <p className="text-white/80 text-[11px] inline-flex items-center gap-1 mt-0.5" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>
                                                 <Calendar size={11} />
                                                 {formatThaiDate(ann.publishDate)}
                                             </p>
