@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Building2, ChevronDown, ChevronUp, Crown, User } from 'lucide-react'
 import type { OrgEmployee } from './view-department'
+import { buildTree, OrgNode } from './view-department'
 
 interface Props {
     employees: OrgEmployee[]
@@ -11,9 +12,11 @@ interface Props {
     viewerSecondaryDepartment: string | null
 }
 
-// Phase A — L1/L2 view: only shows the user's own department peers + their
-// direct manager, plus a collapsible block for top executives (L4+).
-// Spec: docs/ebci-permission-model-spec.md §"Tab 1 — โครงสร้าง"
+// Tab 1 — "มุมมองแผนก" view.
+// Scoped to the viewer's department(s) and rendered as a proper reports_to_id
+// hierarchy (root → children → grandchildren), not a flat grid.
+// Top executives live in a collapsible block below so people can expand when
+// they want to see the wider picture.
 export function DepartmentOnlyView({
     employees,
     currentEmployeeId,
@@ -21,50 +24,73 @@ export function DepartmentOnlyView({
     viewerSecondaryDepartment,
 }: Props) {
     const [execOpen, setExecOpen] = useState(false)
+    const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
-    // Build views:
-    // 1. People in my department (primary OR secondary match)
-    // 2. My direct manager (even if from another dept — so user knows who to report to)
-    // 3. Top executives (L4+) — collapsible, excludes advisors
-    const { deptPeers, managerOutsideDept, topExecutives } = useMemo(() => {
+    const { deptPeers, deptTree, managerOutsideDept, topExecutives } = useMemo(() => {
         const me = employees.find(e => e.id === currentEmployeeId) ?? null
-        // Build a set of the viewer's non-null departments so the match
-        // can't bottom out as null === null (which matched every employee
-        // with no secondary_department — the source of the "47 คน" bug).
+
+        // Set of department names the viewer belongs to (primary + optional
+        // secondary). Guard against null equality matching null values on
+        // other employees.
         const myDepts = new Set<string>()
         if (viewerDepartment) myDepts.add(viewerDepartment)
         if (viewerSecondaryDepartment) myDepts.add(viewerSecondaryDepartment)
+
         const inMyDept = (e: OrgEmployee) => {
             if (myDepts.size === 0) return false
             if (e.department && myDepts.has(e.department)) return true
             if (e.secondaryDepartment && myDepts.has(e.secondaryDepartment)) return true
             return false
         }
-        const deptPeers = employees.filter(e => !e.isAdvisor && inMyDept(e))
 
-        // If my manager isn't in my department (e.g. manager is L3 of another fn),
-        // still show them in a separate "หัวหน้าของฉัน" slot so the user sees who
-        // they report to.
-        let managerOutsideDept: OrgEmployee | null = null
+        const peers = employees.filter(e => !e.isAdvisor && inMyDept(e))
+
+        // buildTree uses manager_id. For people whose manager is OUTSIDE the
+        // dept set, they surface as a root — which is exactly the "highest
+        // person in this dept" we want.
+        const tree = buildTree(peers)
+
+        // If the viewer's own manager sits outside the dept, show that person
+        // as a separate hint card above the tree so the reporting line is
+        // still obvious (e.g., ตู่ reports to จิม outside the dept).
+        let mgrOutside: OrgEmployee | null = null
         if (me?.managerId) {
             const mgr = employees.find(e => e.id === me.managerId)
-            if (mgr && !inMyDept(mgr) && !mgr.isAdvisor) {
-                managerOutsideDept = mgr
-            }
+            if (mgr && !inMyDept(mgr) && !mgr.isAdvisor) mgrOutside = mgr
         }
 
-        const topExecutives = employees.filter(
+        const execs = employees.filter(
             e => !e.isAdvisor && (e.approvalLevel ?? 0) >= 4,
         )
 
-        return { deptPeers, managerOutsideDept, topExecutives }
+        return {
+            deptPeers: peers,
+            deptTree: tree,
+            managerOutsideDept: mgrOutside,
+            topExecutives: execs,
+        }
     }, [employees, currentEmployeeId, viewerDepartment, viewerSecondaryDepartment])
 
-    const deptLabel = [viewerDepartment, viewerSecondaryDepartment].filter(Boolean).join(' + ') || 'แผนกของคุณ'
+    const toggle = (id: string) => {
+        setCollapsed(prev => {
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            return next
+        })
+    }
+
+    const deptLabel =
+        [viewerDepartment, viewerSecondaryDepartment].filter(Boolean).join(' + ') ||
+        'แผนกของคุณ'
+
+    // Approval chain is only meaningful on the full-company tree; within a
+    // single dept we don't need it. Pass an empty set so highlights stay off.
+    const emptyChain = useMemo(() => new Set<string>(), [])
 
     return (
         <div className="space-y-4 lg:space-y-6">
-            {/* Scope notice */}
+            {/* Scope banner */}
             <div className="p-3 rounded-xl border border-white/12 bg-white/[0.04] text-xs text-white/70 flex items-start gap-2">
                 <Building2 size={14} className="mt-0.5 flex-shrink-0 text-white/50" />
                 <div>
@@ -73,79 +99,123 @@ export function DepartmentOnlyView({
                 </div>
             </div>
 
-            {/* Manager (if outside department) */}
+            {/* Manager outside dept (if applicable) */}
             {managerOutsideDept && (
                 <section>
                     <h3 className="text-xs text-white/60 uppercase tracking-wider mb-2">หัวหน้าของคุณ</h3>
-                    <div className="flex justify-start">
-                        <PlainCard
-                            person={managerOutsideDept}
-                            isMe={false}
-                            accent="rose"
-                        />
-                    </div>
+                    <OutsideManagerCard person={managerOutsideDept} />
                 </section>
             )}
 
-            {/* Department peers */}
+            {/* Dept tree */}
             <section>
                 <h3 className="text-xs text-white/60 uppercase tracking-wider mb-2">
                     พนักงานในแผนก · {deptPeers.length} คน
                 </h3>
                 {deptPeers.length === 0 ? (
                     <p className="text-white/50 text-sm py-4">ยังไม่มีข้อมูลพนักงานในแผนกของคุณ</p>
+                ) : deptTree.length === 0 ? (
+                    <p className="text-white/50 text-sm py-4">ไม่สามารถสร้างผังของแผนกได้</p>
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {deptPeers.map(p => (
-                            <PlainCard
-                                key={p.id}
-                                person={p}
-                                isMe={p.id === currentEmployeeId}
-                                accent="white"
-                            />
-                        ))}
+                    <div className="overflow-x-auto pb-2 -mx-2 lg:mx-0">
+                        <div
+                            className="flex justify-center py-2 px-2"
+                            style={{ minWidth: 'max-content' }}
+                        >
+                            <div className="inline-flex gap-6 items-start">
+                                {deptTree.map(root => (
+                                    <OrgNode
+                                        key={root.id}
+                                        node={root}
+                                        depth={0}
+                                        collapsed={collapsed}
+                                        toggle={toggle}
+                                        currentEmployeeId={currentEmployeeId}
+                                        approvalChain={emptyChain}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        <p className="text-white/40 text-[11px] text-center italic mt-2">
+                            💡 แตะปุ่ม ▲/▼ บนการ์ดเพื่อย่อ/ขยาย
+                        </p>
                     </div>
                 )}
             </section>
 
             {/* Top executives — collapsible */}
-            <section>
-                <button
-                    onClick={() => setExecOpen(o => !o)}
-                    aria-expanded={execOpen}
-                    className="w-full flex items-center justify-between p-3 rounded-xl border border-amber-400/25 bg-amber-500/10 hover:bg-amber-500/15 transition-colors"
-                >
-                    <span className="flex items-center gap-2 text-white text-sm font-semibold">
-                        <Crown size={16} className="text-amber-300" />
-                        ผู้บริหารระดับสูง
-                        <span className="text-white/60 text-xs font-normal">
-                            · {topExecutives.length} คน
+            {topExecutives.length > 0 && (
+                <section>
+                    <button
+                        onClick={() => setExecOpen(o => !o)}
+                        aria-expanded={execOpen}
+                        className="w-full flex items-center justify-between p-3 rounded-xl border border-amber-400/25 bg-amber-500/10 hover:bg-amber-500/15 transition-colors"
+                    >
+                        <span className="flex items-center gap-2 text-white text-sm font-semibold">
+                            <Crown size={16} className="text-amber-300" />
+                            ผู้บริหารระดับสูง
+                            <span className="text-white/60 text-xs font-normal">
+                                · {topExecutives.length} คน
+                            </span>
                         </span>
-                    </span>
-                    {execOpen ? (
-                        <ChevronUp size={16} className="text-white/70" />
-                    ) : (
-                        <ChevronDown size={16} className="text-white/70" />
+                        {execOpen ? (
+                            <ChevronUp size={16} className="text-white/70" />
+                        ) : (
+                            <ChevronDown size={16} className="text-white/70" />
+                        )}
+                    </button>
+                    {execOpen && (
+                        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                            {topExecutives.map(e => (
+                                <PlainCard
+                                    key={e.id}
+                                    person={e}
+                                    isMe={e.id === currentEmployeeId}
+                                    accent="gold"
+                                />
+                            ))}
+                        </div>
                     )}
-                </button>
-                {execOpen && (
-                    <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {topExecutives.map(e => (
-                            <PlainCard
-                                key={e.id}
-                                person={e}
-                                isMe={e.id === currentEmployeeId}
-                                accent="gold"
-                            />
-                        ))}
-                    </div>
-                )}
-            </section>
+                </section>
+            )}
         </div>
     )
 }
 
-// Minimal card — no level badge (spec: L1/L2 must NOT see Level number).
+// ─── Small helper cards ────────────────────────────────────────────────────
+
+function OutsideManagerCard({ person }: { person: OrgEmployee }) {
+    const displayName = person.nickname
+        ? `${person.firstName} (${person.nickname})`
+        : person.firstName
+    return (
+        <div
+            className="p-3 rounded-xl border border-rose-400/25 flex items-center gap-3 max-w-[340px]"
+            style={{
+                background: 'linear-gradient(135deg, rgba(244,63,94,0.10), rgba(225,29,72,0.04))',
+                backdropFilter: 'blur(8px)',
+            }}
+        >
+            {person.photoUrl ? (
+                <img
+                    src={person.photoUrl}
+                    alt=""
+                    className="w-11 h-11 rounded-full object-cover ring-2 ring-offset-2 ring-offset-[#3a1a1e] ring-rose-400/60 flex-shrink-0"
+                />
+            ) : (
+                <div className="w-11 h-11 rounded-full bg-white/10 ring-2 ring-offset-2 ring-offset-[#3a1a1e] ring-rose-400/60 flex items-center justify-center flex-shrink-0">
+                    <User size={18} className="text-white/70" />
+                </div>
+            )}
+            <div className="flex-1 min-w-0">
+                <p className="text-white font-semibold text-sm truncate">{displayName}</p>
+                <p className="text-white/65 text-xs truncate">{person.position ?? '—'}</p>
+                <p className="text-white/45 text-[10px] truncate">{person.department ?? '—'}</p>
+            </div>
+        </div>
+    )
+}
+
 function PlainCard({
     person,
     isMe,
@@ -207,9 +277,6 @@ function PlainCard({
             {person.department && (
                 <p className="text-center text-[10px] text-white/40 leading-tight line-clamp-1">
                     {person.department}
-                    {person.secondaryDepartment && (
-                        <span className="text-purple-300"> + {person.secondaryDepartment}</span>
-                    )}
                 </p>
             )}
             {isMe && (

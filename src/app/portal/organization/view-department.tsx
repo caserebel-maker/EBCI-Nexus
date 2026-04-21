@@ -27,7 +27,7 @@ interface Props {
     currentEmployeeId: string | null
 }
 
-type TreeNode = OrgEmployee & { children: TreeNode[] }
+export type TreeNode = OrgEmployee & { children: TreeNode[] }
 
 // Priority within the same approval_level.
 // Lower number = shown first. Keeps directors/department heads above
@@ -51,7 +51,7 @@ function positionRank(position: string | null): number {
     return 50
 }
 
-function buildTree(employees: OrgEmployee[]): TreeNode[] {
+export function buildTree(employees: OrgEmployee[]): TreeNode[] {
     const byId = new Map<string, TreeNode>()
     for (const e of employees) byId.set(e.id, { ...e, children: [] })
 
@@ -282,7 +282,7 @@ export function DepartmentView({ employees, currentEmployeeId }: Props) {
     )
 }
 
-function OrgNode({
+export function OrgNode({
     node, depth, compact, collapsed, toggle, currentEmployeeId, approvalChain,
 }: {
     node: TreeNode

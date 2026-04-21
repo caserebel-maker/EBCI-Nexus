@@ -3,7 +3,7 @@
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useCallback } from 'react'
 import { Building2, Users, LayoutGrid } from 'lucide-react'
-import { DepartmentView, type OrgEmployee } from './view-department'
+import { type OrgEmployee } from './view-department'
 import { DepartmentOnlyView } from './view-department-only'
 import { PeopleView } from './view-people'
 import { OverviewView } from './view-overview'
@@ -85,19 +85,12 @@ export function TabStructure({
             </div>
 
             {sub === 'department' && (
-                canSeeFullOrg ? (
-                    <DepartmentView
-                        employees={employees}
-                        currentEmployeeId={currentEmployeeId}
-                    />
-                ) : (
-                    <DepartmentOnlyView
-                        employees={employees}
-                        currentEmployeeId={currentEmployeeId}
-                        viewerDepartment={viewerDepartment}
-                        viewerSecondaryDepartment={viewerSecondaryDepartment}
-                    />
-                )
+                <DepartmentOnlyView
+                    employees={employees}
+                    currentEmployeeId={currentEmployeeId}
+                    viewerDepartment={viewerDepartment}
+                    viewerSecondaryDepartment={viewerSecondaryDepartment}
+                />
             )}
             {sub === 'overview' && <OverviewView employees={employees} />}
             {sub === 'people' && canSeeFullOrg && (
