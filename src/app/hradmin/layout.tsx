@@ -23,6 +23,7 @@ export default async function AdminLayout({
             session.name,
             session.name,
             session.role,
+            session.id,
         ),
     ])
 

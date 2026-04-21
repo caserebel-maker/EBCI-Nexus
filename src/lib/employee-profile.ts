@@ -23,20 +23,59 @@ export async function getEmployeeProfile(
     employeeId: string | undefined,
     fallbackName: string,
     fallbackEmail: string,
-    role: string
+    role: string,
+    authUserId?: string,
 ): Promise<EmployeeProfile> {
     const roleLabel = ROLE_LABELS[role] ?? 'User'
 
     try {
-        // Try by employeeId first; fallback to email lookup for legacy users
-        // whose auth.user_metadata doesn't contain employeeId
-        const query = supabaseAdmin
-            .from('employees')
-            .select('id, first_name_th, last_name_th, nickname, email, photo_url, position, department, start_date, date_of_birth')
+        // Lookup order:
+        //   1. employees.id = session.employeeId (set on newer users)
+        //   2. employees.user_id = session.id (auth user id) — covers legacy
+        //      users whose user_metadata never got employeeId seeded
+        //   3. employees.email = fallbackEmail (final safety net)
+        const cols = 'id, first_name_th, last_name_th, nickname, email, photo_url, position, department, start_date, date_of_birth'
 
-        const { data } = employeeId
-            ? await query.eq('id', employeeId).maybeSingle()
-            : await query.eq('email', fallbackEmail).maybeSingle()
+        type EmployeeRow = {
+            id: string
+            first_name_th: string | null
+            last_name_th: string | null
+            nickname: string | null
+            email: string | null
+            photo_url: string | null
+            position: string | null
+            department: string | null
+            start_date: string | null
+            date_of_birth: string | null
+        }
+        let data: EmployeeRow | null = null
+
+        if (employeeId) {
+            const { data: byId } = await supabaseAdmin
+                .from('employees')
+                .select(cols)
+                .eq('id', employeeId)
+                .maybeSingle()
+            data = byId as EmployeeRow | null
+        }
+
+        if (!data && authUserId) {
+            const { data: byUserId } = await supabaseAdmin
+                .from('employees')
+                .select(cols)
+                .eq('user_id', authUserId)
+                .maybeSingle()
+            data = byUserId as EmployeeRow | null
+        }
+
+        if (!data && fallbackEmail) {
+            const { data: byEmail } = await supabaseAdmin
+                .from('employees')
+                .select(cols)
+                .eq('email', fallbackEmail)
+                .maybeSingle()
+            data = byEmail as EmployeeRow | null
+        }
 
         if (!data) {
             return {
