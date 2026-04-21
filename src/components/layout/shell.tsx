@@ -212,8 +212,8 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
 
                 {/* Page Content */}
                 <div className="flex-1 overflow-auto p-4 lg:p-8">
-                    {/* Emergency Banner — top priority, mobile only */}
-                    {emergencyBanner && <div className="lg:hidden mb-4 pb-4 border-b border-white/10">{emergencyBanner}</div>}
+                    {/* Priority alerts — top of content on every viewport */}
+                    {emergencyBanner && <div className="mb-4">{emergencyBanner}</div>}
 
                     {/* Mobile Identity Header — shown on every page */}
                     <div className="lg:hidden mb-4 pb-4 border-b border-white/10">
