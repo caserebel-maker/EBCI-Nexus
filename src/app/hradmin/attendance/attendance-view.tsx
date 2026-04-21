@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { MapPin, Users, Building, Home, HelpCircle, RefreshCw, Calendar, CheckCircle2, Clock, LogOut, MapPinOff, FileUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatBangkokTime } from '@/lib/datetime'
 import { getAttendanceForDate, type AttendanceStats, type AttendanceRecord } from './actions'
 
 type FilterTab = 'all' | 'office' | 'wfh' | 'not-checked-in'
@@ -26,9 +27,10 @@ function formatThaiDate(iso: string) {
     return `${d.getDate()} ${MONTHS_TH[d.getMonth()]} ${d.getFullYear() + 543}`
 }
 
+// Mobile check-ins are stored as UTC wall-clock (from new Date().toISOString()),
+// so hand the raw value through the Bangkok-aware formatter.
 function formatTime(iso: string) {
-    const d = new Date(iso)
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    return formatBangkokTime(iso)
 }
 
 function timeAgo(iso: string): string {

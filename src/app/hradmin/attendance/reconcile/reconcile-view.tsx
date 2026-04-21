@@ -6,6 +6,7 @@ import {
     Calendar, RefreshCw, FileDown, Search, Loader2, Users,
 } from 'lucide-react'
 import { reconcileDate, type ReconSummary, type ReconStatus } from './actions'
+import { formatBangkokTime } from '@/lib/datetime'
 
 const glass = {
     background: 'rgba(255,255,255,0.06)',
@@ -29,16 +30,14 @@ const FILTERS: Array<{
     { key: 'absent',      label: 'ขาด',       color: 'text-white/50' },
 ]
 
-function formatTime(ts: string | null): string {
-    if (!ts) return '—'
-    const s = ts.includes('T') ? ts : ts.replace(' ', 'T')
-    const d = new Date(s)
-    if (isNaN(d.getTime())) return '—'
-    // Treat stored timestamp as Bangkok local (no TZ conversion)
-    const hh = String(d.getUTCHours()).padStart(2, '0')
-    const mm = String(d.getUTCMinutes()).padStart(2, '0')
-    const ss = String(d.getUTCSeconds()).padStart(2, '0')
-    return `${hh}:${mm}:${ss}`
+/**
+ * card_scans store Bangkok wall-clock (CSV from reader), while
+ * mobile checkins + the derived attendance_logs.official_clock_in
+ * store UTC wall-clock (new Date().toISOString() backend). Callers
+ * pass the correct `source` so the Bangkok-shown time is the real one.
+ */
+function formatTime(ts: string | null, source: 'utc' | 'bangkok' = 'utc'): string {
+    return formatBangkokTime(ts, source)
 }
 
 function formatVariance(v: number | null): string {
@@ -119,11 +118,12 @@ export function ReconcileView({ initialDate, initialData }: Props) {
                 `${r.firstNameTh}${r.nickname ? ` (${r.nickname})` : ''}`,
                 r.department ?? '',
                 r.position ?? '',
-                formatTime(r.cardTime),
-                formatTime(r.mobileTime),
+                formatTime(r.cardTime, 'bangkok'),
+                formatTime(r.mobileTime, 'utc'),
                 r.varianceMinutes !== null ? String(r.varianceMinutes) : '',
                 statusLabel[r.status],
-                formatTime(r.officialClockIn),
+                // official_clock_in mirrors card when present, mobile otherwise
+                formatTime(r.officialClockIn, r.cardTime ? 'bangkok' : 'utc'),
             ]),
         ]
         downloadCsv(`reconcile_${data.date}.csv`, rows)
@@ -235,8 +235,8 @@ export function ReconcileView({ initialDate, initialData }: Props) {
                                                 {r.nickname && <span className="text-white/55"> ({r.nickname})</span>}
                                                 <div className="text-[10px] text-white/40">{r.department ?? '—'}</div>
                                             </td>
-                                            <td className="py-2 px-3 text-right font-mono text-xs text-sky-200">{formatTime(r.cardTime)}</td>
-                                            <td className="py-2 px-3 text-right font-mono text-xs text-amber-200">{formatTime(r.mobileTime)}</td>
+                                            <td className="py-2 px-3 text-right font-mono text-xs text-sky-200">{formatTime(r.cardTime, 'bangkok')}</td>
+                                            <td className="py-2 px-3 text-right font-mono text-xs text-amber-200">{formatTime(r.mobileTime, 'utc')}</td>
                                             <td className={`py-2 px-3 text-right font-mono text-xs font-semibold ${
                                                 r.status === 'discrepancy' ? 'text-rose-300' :
                                                 r.status === 'matched' ? 'text-emerald-300' : 'text-white/40'

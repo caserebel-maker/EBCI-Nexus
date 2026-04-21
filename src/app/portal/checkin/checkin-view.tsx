@@ -9,6 +9,7 @@ import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut } fr
 import { cn } from '@/lib/utils'
 import { checkIn, checkOut } from './actions'
 import { haversineDistance } from '@/lib/geo'
+import { formatBangkokTime, formatBangkokDateTime } from '@/lib/datetime'
 
 interface Office {
     name: string
@@ -164,10 +165,7 @@ export function CheckinView({ office, todayCheckin }: Props) {
                                 {todayCheckin!.type === 'office' ? '🏢 ออฟฟิศ' : '🏠 WFH'}
                             </p>
                             <p className="text-xs text-white/50 mt-0.5">
-                                {new Date(todayCheckin!.checked_in_at).toLocaleString('th-TH', {
-                                    dateStyle: 'medium',
-                                    timeStyle: 'short',
-                                })}
+                                {formatBangkokDateTime(todayCheckin!.checked_in_at)}
                             </p>
                         </div>
                     </div>
@@ -200,13 +198,13 @@ export function CheckinView({ office, todayCheckin }: Props) {
                         <div className="flex justify-between text-white/70">
                             <span>เช็คอิน</span>
                             <span className="font-mono">
-                                {new Date(todayCheckin!.checked_in_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                                {formatBangkokTime(todayCheckin!.checked_in_at)}
                             </span>
                         </div>
                         <div className="flex justify-between text-white/70">
                             <span>เช็คเอาท์</span>
                             <span className="font-mono">
-                                {new Date(todayCheckin!.checked_out_at!).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                                {formatBangkokTime(todayCheckin!.checked_out_at)}
                             </span>
                         </div>
                     </div>

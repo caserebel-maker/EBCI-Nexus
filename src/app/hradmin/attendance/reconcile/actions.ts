@@ -39,11 +39,24 @@ export interface ReconSummary {
     reconciledAt: string
 }
 
-function toMs(ts: string | null): number | null {
+/**
+ * Our two sides store naive timestamps under different conventions:
+ *   - card_scans.scan_time  = Bangkok wall-clock (UTC+7)
+ *   - checkins.checked_in_at = UTC wall-clock (Node's toISOString)
+ *
+ * Giving each side the right explicit offset is what makes the
+ * cross-source variance meaningful. Without this, two times that look
+ * "07:35" (card) and "01:03" (mobile) read as ~6.5 hours apart even
+ * though they're actually 28 minutes apart in real time.
+ */
+function toMs(ts: string | null, source: 'utc' | 'bangkok'): number | null {
     if (!ts) return null
-    // "YYYY-MM-DD HH:MM:SS" or ISO — parse both
-    const normalized = ts.includes('T') ? ts : ts.replace(' ', 'T')
-    const d = new Date(normalized)
+    let s = ts.trim()
+    if (!s.includes('T')) s = s.replace(' ', 'T')
+    if (!/[zZ]$|[+-]\d{2}:?\d{2}$/.test(s)) {
+        s = source === 'utc' ? `${s}Z` : `${s}+07:00`
+    }
+    const d = new Date(s)
     return isNaN(d.getTime()) ? null : d.getTime()
 }
 
@@ -136,7 +149,10 @@ export async function reconcileDate(
     for (const e of staff) {
         const cardTime = cardByEmp.get(e.id) ?? null
         const mobileTime = mobileByEmp.get(e.id) ?? null
-        const { status, variance } = classify(toMs(cardTime), toMs(mobileTime))
+        const { status, variance } = classify(
+            toMs(cardTime, 'bangkok'),
+            toMs(mobileTime, 'utc'),
+        )
         const official =
             cardTime // card is the source of truth when present
                 ? cardTime
