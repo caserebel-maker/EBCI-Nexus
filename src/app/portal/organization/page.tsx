@@ -25,6 +25,15 @@ export default async function OrganizationPage() {
             .maybeSingle()
         currentEmployeeId = data?.id ?? null
     }
+    // Fallback: resolve by user_id (covers mock/username-based logins).
+    if (!currentEmployeeId && session?.id) {
+        const { data } = await supabaseAdmin
+            .from('employees')
+            .select('id')
+            .eq('user_id', session.id)
+            .maybeSingle()
+        currentEmployeeId = data?.id ?? null
+    }
 
     const permissions = await getCurrentPermissions()
 
@@ -65,6 +74,14 @@ export default async function OrganizationPage() {
         }
     })
 
+    // ── Viewer-scope metadata for Phase A permission filtering ─────────────
+    // Spec: L1/L2 see only their own department + secondary_department;
+    // L3+ or an admin with can_view_all_employees sees the full org.
+    const me = employees.find(e => e.id === currentEmployeeId) ?? null
+    const viewerLevel = me?.approvalLevel ?? 1
+    const canSeeFullOrg =
+        viewerLevel >= 3 || permissions.can_view_all_employees === true
+
     return (
         <div className="pb-24 lg:pb-6 space-y-4 lg:space-y-6">
             <div className="flex flex-col gap-1">
@@ -80,6 +97,10 @@ export default async function OrganizationPage() {
                 employees={employees}
                 currentEmployeeId={currentEmployeeId}
                 permissions={permissions}
+                viewerDepartment={me?.department ?? null}
+                viewerSecondaryDepartment={me?.secondaryDepartment ?? null}
+                viewerLevel={viewerLevel}
+                canSeeFullOrg={canSeeFullOrg}
             />
         </div>
     )

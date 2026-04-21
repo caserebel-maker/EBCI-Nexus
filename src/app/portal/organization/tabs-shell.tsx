@@ -21,9 +21,21 @@ interface Props {
     employees: OrgEmployee[]
     currentEmployeeId: string | null
     permissions: UserPermissions
+    viewerDepartment: string | null
+    viewerSecondaryDepartment: string | null
+    viewerLevel: number
+    canSeeFullOrg: boolean
 }
 
-export function TabsShell({ employees, currentEmployeeId, permissions }: Props) {
+export function TabsShell({
+    employees,
+    currentEmployeeId,
+    permissions,
+    viewerDepartment,
+    viewerSecondaryDepartment,
+    viewerLevel,
+    canSeeFullOrg,
+}: Props) {
     const params = useSearchParams()
     const router = useRouter()
     const pathname = usePathname()
@@ -78,6 +90,10 @@ export function TabsShell({ employees, currentEmployeeId, permissions }: Props) 
                     employees={employees}
                     currentEmployeeId={currentEmployeeId}
                     canSeeHeadcount={permissions.can_view_all_employees}
+                    viewerDepartment={viewerDepartment}
+                    viewerSecondaryDepartment={viewerSecondaryDepartment}
+                    viewerLevel={viewerLevel}
+                    canSeeFullOrg={canSeeFullOrg}
                 />
             )}
             {view === 'authority' && (

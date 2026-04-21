@@ -4,6 +4,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useCallback } from 'react'
 import { Building2, Users } from 'lucide-react'
 import { DepartmentView, type OrgEmployee } from './view-department'
+import { DepartmentOnlyView } from './view-department-only'
 import { PeopleView } from './view-people'
 
 type SubKey = 'department' | 'people'
@@ -12,9 +13,24 @@ interface Props {
     employees: OrgEmployee[]
     currentEmployeeId: string | null
     canSeeHeadcount: boolean
+    viewerDepartment: string | null
+    viewerSecondaryDepartment: string | null
+    viewerLevel: number
+    canSeeFullOrg: boolean
 }
 
-export function TabStructure({ employees, currentEmployeeId, canSeeHeadcount }: Props) {
+export function TabStructure({
+    employees,
+    currentEmployeeId,
+    canSeeHeadcount,
+    viewerDepartment,
+    viewerSecondaryDepartment,
+    viewerLevel: _viewerLevel,
+    canSeeFullOrg,
+}: Props) {
+    // Suppress unused-var warning while keeping the prop available for
+    // future per-level behaviour in Phase B/C.
+    void _viewerLevel
     const params = useSearchParams()
     const router = useRouter()
     const pathname = usePathname()
@@ -55,7 +71,19 @@ export function TabStructure({ employees, currentEmployeeId, canSeeHeadcount }: 
             </div>
 
             {sub === 'department' && (
-                <DepartmentView employees={employees} currentEmployeeId={currentEmployeeId} />
+                canSeeFullOrg ? (
+                    <DepartmentView
+                        employees={employees}
+                        currentEmployeeId={currentEmployeeId}
+                    />
+                ) : (
+                    <DepartmentOnlyView
+                        employees={employees}
+                        currentEmployeeId={currentEmployeeId}
+                        viewerDepartment={viewerDepartment}
+                        viewerSecondaryDepartment={viewerSecondaryDepartment}
+                    />
+                )
             )}
             {sub === 'people' && (
                 <PeopleView
