@@ -132,28 +132,30 @@ export function TabAuthority({
                 )}
             </AuthoritySection>
 
-            {/* Section 3: HR */}
-            <AuthoritySection
-                icon="👥"
-                title="HR (สมัครงาน, ปรับตำแหน่ง)"
-                subtitle="ผู้อนุมัติเรื่อง HR ของทั้งบริษัท"
-            >
-                {hr.length === 0 ? (
-                    <EmptyBox>ยังไม่มี HR approver</EmptyBox>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {hr.map(a => (
-                            <ApproverCard
-                                key={`hr-${a.id}`}
-                                approver={a}
-                                canSeeExact={canSeeExact}
-                                showAmount={false}
-                                showLevel={canSeeExact}
-                            />
-                        ))}
-                    </div>
-                )}
-            </AuthoritySection>
+            {/* Section 3: HR — hidden for L1/L2 (sensitive HR workflows) */}
+            {canSeeFullOrg && (
+                <AuthoritySection
+                    icon="👥"
+                    title="HR (สมัครงาน, ปรับตำแหน่ง)"
+                    subtitle="ผู้อนุมัติเรื่อง HR ของทั้งบริษัท"
+                >
+                    {hr.length === 0 ? (
+                        <EmptyBox>ยังไม่มี HR approver</EmptyBox>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {hr.map(a => (
+                                <ApproverCard
+                                    key={`hr-${a.id}`}
+                                    approver={a}
+                                    canSeeExact={canSeeExact}
+                                    showAmount={false}
+                                    showLevel={canSeeExact}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </AuthoritySection>
+            )}
 
             {/* Collapsible: all approvers */}
             <section className="rounded-xl border border-white/10 overflow-hidden">
@@ -370,7 +372,9 @@ function deriveApprovers(employees: OrgEmployee[], currentEmployeeId: string | n
     const byId = new Map(employees.map(e => [e.id, e]))
     const me = currentEmployeeId ? byId.get(currentEmployeeId) ?? null : null
 
-    // Leave/OT: prefer leave_approver_id, stop after L≥4
+    // Leave/OT: prefer leave_approver_id, stop after L≥4.
+    // Hard rule: the president (L5) never enters this chain unless the
+    // employee was explicitly routed there via leave_approver_id.
     const leaveOt: WalkedApprover[] = []
     if (me) {
         const visited = new Set<string>([me.id])
@@ -384,10 +388,19 @@ function deriveApprovers(employees: OrgEmployee[], currentEmployeeId: string | n
             visited.add(nextId)
             const next = byId.get(nextId)
             if (!next) break
-            if (next.isApprover && (next.approvalScopes ?? []).includes('leave')) {
-                leaveOt.push({ ...next, isOverride: Boolean(override) })
+
+            const nextLevel = next.approvalLevel ?? 0
+            const arrivedViaOverride = Boolean(override)
+            const isPresident = nextLevel >= 5
+            const shouldPush =
+                next.isApprover &&
+                (next.approvalScopes ?? []).includes('leave') &&
+                (!isPresident || arrivedViaOverride)
+
+            if (shouldPush) {
+                leaveOt.push({ ...next, isOverride: arrivedViaOverride })
             }
-            if ((next.approvalLevel ?? 0) >= 4) break
+            if (nextLevel >= 4) break
             cursor = next
         }
     }

@@ -59,7 +59,9 @@ export async function GET() {
         return NextResponse.json({ error: 'Employee record not linked' }, { status: 404 })
     }
 
-    // ── Leave/OT chain: leave_approver_id override wins, stop after L≥4 ───
+    // ── Leave/OT chain: leave_approver_id override wins, stop after L≥4.
+    //     President (L5) never shows up here unless the user was explicitly
+    //     routed to them via leave_approver_id.
     const leaveOt: ApproverOut[] = []
     {
         const visited = new Set<string>([me.id])
@@ -73,11 +75,17 @@ export async function GET() {
             visited.add(nextId)
             const next = byId.get(nextId)
             if (!next) break
-            const isOverride = Boolean(override)
-            if (next.is_approver && (next.approval_scopes ?? []).includes('leave')) {
-                leaveOt.push({ ...next, is_override: isOverride })
+            const nextLevel = next.approval_level ?? 0
+            const arrivedViaOverride = Boolean(override)
+            const isPresident = nextLevel >= 5
+            const shouldPush =
+                next.is_approver &&
+                (next.approval_scopes ?? []).includes('leave') &&
+                (!isPresident || arrivedViaOverride)
+            if (shouldPush) {
+                leaveOt.push({ ...next, is_override: arrivedViaOverride })
             }
-            if ((next.approval_level ?? 0) >= 4) break
+            if (nextLevel >= 4) break
             cursor = next
         }
     }
