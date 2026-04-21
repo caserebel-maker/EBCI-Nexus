@@ -1,13 +1,16 @@
 'use client'
 
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { publishAnnouncement } from "../actions"
-import { AlertTriangle, Send, Megaphone, Info, Loader2 } from "lucide-react"
+import { AlertTriangle, Send, Megaphone, Info, Loader2, ArrowLeft, X, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SuccessPopup } from "@/components/success-popup"
 
 import { useTranslation } from "@/contexts/language-context"
+
+const LIST_PATH = '/hradmin/announcements'
 
 export default function AnnouncementPage() {
     const { t } = useTranslation()
@@ -15,6 +18,32 @@ export default function AnnouncementPage() {
     const [isPending, startTransition] = useTransition()
     const [priority, setPriority] = useState("internal")
     const [success, setSuccess] = useState(false)
+    const [isDirty, setIsDirty] = useState(false)
+
+    // Changing priority away from the default counts as a modification too
+    const handlePriorityChange = (id: string) => {
+        setPriority(id)
+        if (id !== 'internal') setIsDirty(true)
+    }
+
+    // Warn on hard-refresh / tab-close if the form has unsaved input
+    useEffect(() => {
+        if (!isDirty) return
+        const handler = (e: BeforeUnloadEvent) => {
+            e.preventDefault()
+            e.returnValue = ''
+        }
+        window.addEventListener('beforeunload', handler)
+        return () => window.removeEventListener('beforeunload', handler)
+    }, [isDirty])
+
+    const handleBack = () => {
+        if (isDirty) {
+            const go = confirm('คุณมีข้อมูลที่ยังไม่ได้บันทึก ต้องการออกจริงหรือไม่?')
+            if (!go) return
+        }
+        router.push(LIST_PATH)
+    }
 
     const handleSubmit = (formData: FormData) => {
         setSuccess(false)
@@ -28,6 +57,9 @@ export default function AnnouncementPage() {
         startTransition(async () => {
             const result = await publishAnnouncement(formData)
             if (result.success) {
+                // Form is persisted — clear dirty flag so success autoclose
+                // doesn't prompt the unsaved-changes dialog
+                setIsDirty(false)
                 setSuccess(true)
             } else {
                 alert(result.error)
@@ -37,19 +69,58 @@ export default function AnnouncementPage() {
 
     const handleSuccessClose = () => {
         setSuccess(false)
-        router.push('/hradmin/announcements')
+        router.push(LIST_PATH)
     }
 
     return (
         <div className="max-w-3xl mx-auto space-y-6 lg:space-y-8">
-            <div className="flex items-center gap-4 mb-8">
-                <div className="h-12 w-12 rounded-xl bg-white/10 flex items-center justify-center text-white border border-white/20 shadow-lg">
-                    <Megaphone size={24} />
+            {/* Breadcrumb */}
+            <nav aria-label="breadcrumb" className="flex items-center gap-1.5 text-sm text-white/50">
+                <Link
+                    href={LIST_PATH}
+                    onClick={(e) => {
+                        if (isDirty && !confirm('คุณมีข้อมูลที่ยังไม่ได้บันทึก ต้องการออกจริงหรือไม่?')) {
+                            e.preventDefault()
+                        }
+                    }}
+                    className="hover:text-white transition-colors font-medium"
+                >
+                    ประกาศข่าวสาร
+                </Link>
+                <ChevronRight size={14} className="text-white/30" />
+                <span className="text-white/80 font-semibold">สร้างใหม่</span>
+            </nav>
+
+            {/* Header: back · title · close */}
+            <div className="flex items-center gap-3 sm:gap-4 mb-8">
+                <button
+                    type="button"
+                    onClick={handleBack}
+                    className="h-11 w-11 shrink-0 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white flex items-center justify-center transition-all active:scale-95"
+                    aria-label="กลับไปหน้าประกาศ"
+                >
+                    <ArrowLeft size={18} />
+                </button>
+                <div className="h-11 w-11 shrink-0 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-white shadow-lg">
+                    <Megaphone size={20} />
                 </div>
-                <div>
-                    <h1 className="text-2xl font-bold text-white tracking-tight">{t('announcements.create')}</h1>
-                    <p className="text-white/80 font-medium text-sm mt-0.5">Broadcast news, updates, or emergency alerts to the organization.</p>
+                <div className="flex-1 min-w-0">
+                    <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">
+                        {t('announcements.create')}
+                    </h1>
+                    <p className="hidden sm:block text-white/70 text-sm mt-0.5">
+                        Broadcast news, updates, or emergency alerts to the organization.
+                    </p>
                 </div>
+                <button
+                    type="button"
+                    onClick={handleBack}
+                    className="h-11 w-11 shrink-0 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 text-white/80 hover:text-white flex items-center justify-center transition-all active:scale-95"
+                    aria-label="ปิด"
+                    title="ปิดและกลับไปหน้าประกาศ"
+                >
+                    <X size={18} />
+                </button>
             </div>
 
             <SuccessPopup
@@ -60,7 +131,12 @@ export default function AnnouncementPage() {
                 onClose={handleSuccessClose}
             />
 
-            <form action={handleSubmit} className="bg-card border border-white/10 p-4 lg:p-8 rounded-2xl shadow-xl space-y-6">
+            <form
+                action={handleSubmit}
+                onInput={() => setIsDirty(true)}
+                onChange={() => setIsDirty(true)}
+                className="bg-card border border-white/10 p-4 lg:p-8 rounded-2xl shadow-xl space-y-6"
+            >
 
                 {/* Priority Selection */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -70,7 +146,7 @@ export default function AnnouncementPage() {
                         icon={Info}
                         color="bg-blue-500"
                         current={priority}
-                        onClick={setPriority}
+                        onClick={handlePriorityChange}
                     />
                     <PriorityOption
                         id="promote"
@@ -78,7 +154,7 @@ export default function AnnouncementPage() {
                         icon={Megaphone}
                         color="bg-purple-500"
                         current={priority}
-                        onClick={setPriority}
+                        onClick={handlePriorityChange}
                     />
                     <PriorityOption
                         id="urgent"
@@ -86,7 +162,7 @@ export default function AnnouncementPage() {
                         icon={AlertTriangle}
                         color="bg-amber-400"
                         current={priority}
-                        onClick={setPriority}
+                        onClick={handlePriorityChange}
                     />
                     <PriorityOption
                         id="emergency"
@@ -94,7 +170,7 @@ export default function AnnouncementPage() {
                         icon={AlertTriangle}
                         color="bg-red-600"
                         current={priority}
-                        onClick={setPriority}
+                        onClick={handlePriorityChange}
                     />
                 </div>
                 <input type="hidden" name="priority" value={priority} />
