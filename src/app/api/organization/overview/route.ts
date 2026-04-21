@@ -3,15 +3,16 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
 
 // GET /api/organization/overview
-// Aggregated headcount by department — intentionally does not expose any
-// individual employee. Visible to every role (L1–L5).
+// Aggregated headcount for Tab 1 "ภาพรวมองค์กร" — deliberately does not
+// expose any individual name or photo. Visible to every role (L1–L5).
 //
 // Response:
 //   {
-//     executives: [{ id, nickname, first_name_th, position, level }],
-//     departments: [{ name, count, top_level }],
-//     advisors: { count: number, label: 'ที่ปรึกษา' },
-//     total_employees: number
+//     president: { count: number },
+//     md:        { count: number },
+//     departments: [{ name, count }],   // sorted by count desc
+//     advisors:  { count: number },
+//     total:     number                 // total active staff (excl. advisors)
 //   }
 export async function GET() {
     const session = await getSession()
@@ -19,15 +20,13 @@ export async function GET() {
 
     const { data: rows, error } = await supabaseAdmin
         .from('employees')
-        .select('id, first_name_th, nickname, position, department, approval_level')
+        .select('id, position, department, approval_level')
         .eq('status', 'active')
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     type Row = {
         id: string
-        first_name_th: string | null
-        nickname: string | null
         position: string | null
         department: string | null
         approval_level: number | null
@@ -40,42 +39,28 @@ export async function GET() {
     const advisors = data.filter(isAdvisor)
     const staff = data.filter(r => !isAdvisor(r))
 
-    // Executives (L4+) are highlighted individually at the top of the chart
-    const executives = staff
-        .filter(r => (r.approval_level ?? 0) >= 4)
-        .sort((a, b) => (b.approval_level ?? 0) - (a.approval_level ?? 0))
-        .map(r => ({
-            id: r.id,
-            first_name_th: r.first_name_th,
-            nickname: r.nickname,
-            position: r.position,
-            level: r.approval_level,
-        }))
+    const presidentCount = staff.filter(r => (r.approval_level ?? 0) === 5).length
+    const mdCount = staff.filter(r => (r.approval_level ?? 0) === 4).length
 
-    // Department rollups: count + highest level present in that department
-    const byDept = new Map<string, { count: number; top_level: number }>()
+    // Departments rollup (excluding president/MD rows — they're shown at the top)
+    const byDept = new Map<string, number>()
     for (const r of staff) {
-        // Skip executives here so department rollups read as "ฝ่าย/แผนกย่อย"
         if ((r.approval_level ?? 0) >= 4) continue
         const key = r.department ?? 'ไม่ระบุแผนก'
-        const prev = byDept.get(key) ?? { count: 0, top_level: 0 }
-        prev.count += 1
-        prev.top_level = Math.max(prev.top_level, r.approval_level ?? 0)
-        byDept.set(key, prev)
+        byDept.set(key, (byDept.get(key) ?? 0) + 1)
     }
     const departments = Array.from(byDept.entries())
-        .map(([name, v]) => ({ name, count: v.count, top_level: v.top_level }))
+        .map(([name, count]) => ({ name, count }))
         .sort((a, b) => {
-            // higher top_level first, then by headcount, then by name
-            if (a.top_level !== b.top_level) return b.top_level - a.top_level
             if (a.count !== b.count) return b.count - a.count
             return a.name.localeCompare(b.name, 'th')
         })
 
     return NextResponse.json({
-        executives,
+        president: { count: presidentCount },
+        md: { count: mdCount },
         departments,
-        advisors: { count: advisors.length, label: 'ที่ปรึกษา' },
-        total_employees: staff.length,
+        advisors: { count: advisors.length },
+        total: staff.length,
     })
 }
