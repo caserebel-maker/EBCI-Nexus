@@ -15,9 +15,11 @@ interface Props {
 }
 
 // Tab 1 — "มุมมองแผนก"
-// Vertical-only reports_to_id tree. Each child indents with a dashed
-// left rail + a small horizontal tick meeting the card. Works the same
-// on mobile (no horizontal scroll, ever) and desktop.
+// Visual tree with connector lines (root at top, children below) but siblings
+// use flex-wrap so they flow to a new line when the viewport is narrow.
+// That eliminates horizontal scroll while keeping the tree silhouette.
+// Subtrees of L2 nodes (e.g. ฝน's 5 kids) render in their own group box
+// below the L2 wrap row — never intermixed with siblings.
 export function DepartmentOnlyView({
     employees,
     currentEmployeeId,
@@ -75,7 +77,7 @@ export function DepartmentOnlyView({
         'แผนกของคุณ'
 
     return (
-        <div className="w-full max-w-[720px] mx-auto space-y-4 lg:space-y-6 overflow-x-hidden">
+        <div className="w-full max-w-full mx-auto space-y-4 lg:space-y-6 overflow-x-hidden">
             {/* Scope banner */}
             <div className="p-3 rounded-xl border border-white/12 bg-white/[0.04] text-xs text-white/70 flex items-start gap-2">
                 <Building2 size={14} className="mt-0.5 flex-shrink-0 text-white/50" />
@@ -89,20 +91,22 @@ export function DepartmentOnlyView({
             {managerOutsideDept && (
                 <section>
                     <h3 className="text-xs text-white/60 uppercase tracking-wider mb-2">หัวหน้าของคุณ</h3>
-                    <RowCard
-                        node={managerOutsideDept}
-                        isMe={false}
-                        tone="rose"
-                        hasChildren={false}
-                        isCollapsed={false}
-                        onToggle={() => {}}
-                    />
+                    <div className="flex justify-start">
+                        <PersonCard
+                            node={managerOutsideDept}
+                            isMe={false}
+                            tone="rose"
+                            hasChildren={false}
+                            isCollapsed={false}
+                            onToggle={() => {}}
+                        />
+                    </div>
                 </section>
             )}
 
-            {/* Dept tree — vertical */}
+            {/* Dept trees */}
             <section>
-                <h3 className="text-xs text-white/60 uppercase tracking-wider mb-2">
+                <h3 className="text-xs text-white/60 uppercase tracking-wider mb-3">
                     พนักงานในแผนก · {deptPeers.length} คน
                 </h3>
                 {deptPeers.length === 0 ? (
@@ -110,12 +114,11 @@ export function DepartmentOnlyView({
                 ) : deptTree.length === 0 ? (
                     <p className="text-white/50 text-sm py-4">ไม่สามารถสร้างผังของแผนกได้</p>
                 ) : (
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-6">
                         {deptTree.map(root => (
-                            <VerticalNode
+                            <RootTree
                                 key={root.id}
                                 node={root}
-                                depth={0}
                                 collapsed={collapsed}
                                 toggle={toggle}
                                 currentEmployeeId={currentEmployeeId}
@@ -123,8 +126,8 @@ export function DepartmentOnlyView({
                         ))}
                     </div>
                 )}
-                <p className="text-white/40 text-[11px] italic mt-3">
-                    💡 แตะปุ่ม ▲/▼ บนการ์ดเพื่อย่อ/ขยาย
+                <p className="text-white/40 text-[11px] italic mt-4 text-center">
+                    💡 แตะปุ่ม ▼ บนการ์ดเพื่อย่อ/ขยายกลุ่ม
                 </p>
             </section>
 
@@ -150,9 +153,9 @@ export function DepartmentOnlyView({
                         )}
                     </button>
                     {execOpen && (
-                        <div className="mt-3 flex flex-col gap-2">
+                        <div className="mt-3 flex flex-wrap justify-center gap-3">
                             {topExecutives.map(e => (
-                                <RowCard
+                                <PersonCard
                                     key={e.id}
                                     node={e}
                                     isMe={e.id === currentEmployeeId}
@@ -170,17 +173,15 @@ export function DepartmentOnlyView({
     )
 }
 
-// ─── Recursive vertical node ─────────────────────────────────────────────
+// ─── Root tree: parent card → vertical connector → subtree group ─────────
 
-function VerticalNode({
+function RootTree({
     node,
-    depth,
     collapsed,
     toggle,
     currentEmployeeId,
 }: {
     node: TreeNode
-    depth: number
     collapsed: Set<string>
     toggle: (id: string) => void
     currentEmployeeId: string | null
@@ -190,47 +191,98 @@ function VerticalNode({
     const hasChildren = node.children.length > 0
 
     return (
-        <div className="w-full">
-            <RowCard
+        <div className="w-full flex flex-col items-center gap-3">
+            <PersonCard
                 node={node}
                 isMe={isMe}
-                tone={depth === 0 ? 'primary' : 'neutral'}
+                tone="primary"
                 hasChildren={hasChildren}
                 isCollapsed={isCollapsed}
                 onToggle={() => toggle(node.id)}
             />
             {hasChildren && !isCollapsed && (
-                <div
-                    // Vertical rail: sits ~20px from the left edge so it lines
-                    // up with the card's avatar center. Horizontal ticks below
-                    // spring off this rail to each child row.
-                    className="mt-2 ml-5 sm:ml-6 pl-4 sm:pl-5 border-l-2 border-dashed border-white/20 flex flex-col gap-2"
-                >
-                    {node.children.map(child => (
-                        <div
-                            key={child.id}
-                            className="relative before:content-[''] before:absolute before:-left-4 sm:before:-left-5 before:top-6 before:h-px before:w-3 sm:before:w-4 before:bg-white/25"
-                        >
-                            <VerticalNode
-                                node={child}
-                                depth={depth + 1}
-                                collapsed={collapsed}
-                                toggle={toggle}
-                                currentEmployeeId={currentEmployeeId}
-                            />
-                        </div>
-                    ))}
-                </div>
+                <>
+                    {/* Parent → children connector */}
+                    <div className="w-px h-4 bg-white/25" />
+                    <SubtreeGroup
+                        parent={node}
+                        collapsed={collapsed}
+                        toggle={toggle}
+                        currentEmployeeId={currentEmployeeId}
+                    />
+                </>
             )}
         </div>
     )
 }
 
-// ─── Row-style card (horizontal: avatar + text + toggle) ─────────────────
+// Renders a parent's direct children as a wrap row, then — for each child
+// that itself has children — renders that child's subtree in a nested group
+// box below the wrap row. Recursive.
+function SubtreeGroup({
+    parent,
+    collapsed,
+    toggle,
+    currentEmployeeId,
+}: {
+    parent: TreeNode
+    collapsed: Set<string>
+    toggle: (id: string) => void
+    currentEmployeeId: string | null
+}) {
+    const directChildren = parent.children
+    const childrenWithKids = directChildren.filter(
+        c => c.children.length > 0 && !collapsed.has(c.id),
+    )
+
+    return (
+        <div className="w-full flex flex-col gap-4">
+            {/* Siblings wrap row — bracket-style border-top suggests they
+                 share the same parent above. */}
+            <div className="w-full rounded-xl border-t-2 border-white/20 pt-3">
+                <div className="flex flex-wrap justify-center gap-3 w-full">
+                    {directChildren.map(c => (
+                        <PersonCard
+                            key={c.id}
+                            node={c}
+                            isMe={c.id === currentEmployeeId}
+                            tone="neutral"
+                            hasChildren={c.children.length > 0}
+                            isCollapsed={collapsed.has(c.id)}
+                            onToggle={() => toggle(c.id)}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            {/* Nested subtree groups for each child that has its own kids */}
+            {childrenWithKids.map(c => (
+                <div
+                    key={c.id}
+                    className="w-full p-3 rounded-xl border border-white/10"
+                    style={{ background: 'rgba(255,255,255,0.03)' }}
+                >
+                    <p className="text-center text-xs text-white/60 mb-3">
+                        ลูกน้องของ <span className="text-white font-semibold">{c.nickname ?? c.firstName}</span>
+                        <span className="text-white/40"> · {c.children.length} คน</span>
+                    </p>
+                    <SubtreeGroup
+                        parent={c}
+                        collapsed={collapsed}
+                        toggle={toggle}
+                        currentEmployeeId={currentEmployeeId}
+                    />
+                </div>
+            ))}
+        </div>
+    )
+}
+
+// ─── Compact person card — fixed width, responsive ───────────────────────
 
 type CardTone = 'primary' | 'neutral' | 'gold' | 'rose'
 
-function RowCard({
+function PersonCard({
     node,
     isMe,
     tone,
@@ -246,9 +298,9 @@ function RowCard({
     onToggle: () => void
 }) {
     const toneCls = isMe
-        ? 'border-amber-400/60 ring-2 ring-amber-400/40 bg-amber-500/12'
+        ? 'border-amber-400/60 ring-2 ring-amber-400/40 bg-amber-500/15'
         : tone === 'primary'
-            ? 'border-white/25 bg-white/[0.10]'
+            ? 'border-amber-300/30 bg-amber-500/5'
             : tone === 'gold'
                 ? 'border-amber-400/25 bg-amber-500/5'
                 : tone === 'rose'
@@ -273,46 +325,49 @@ function RowCard({
 
     return (
         <div
-            className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${toneCls}`}
-            style={{ backdropFilter: 'blur(8px)' }}
+            className={`
+                relative flex flex-col items-center gap-1.5 p-2.5
+                rounded-xl border transition-all
+                w-[140px] sm:w-[170px] lg:w-[190px]
+                ${toneCls}
+            `}
+            style={{ flex: '0 0 auto', backdropFilter: 'blur(8px)' }}
         >
             {/* Avatar */}
             {node.photoUrl ? (
                 <img
                     src={node.photoUrl}
                     alt=""
-                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover ring-2 ring-offset-2 ring-offset-[#3a1a1e] flex-shrink-0 ${avatarRing}`}
+                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover ring-2 ring-offset-2 ring-offset-[#3a1a1e] ${avatarRing}`}
                 />
             ) : (
                 <div
-                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/15 ring-2 ring-offset-2 ring-offset-[#3a1a1e] flex items-center justify-center flex-shrink-0 ${avatarRing}`}
+                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/15 ring-2 ring-offset-2 ring-offset-[#3a1a1e] flex items-center justify-center ${avatarRing}`}
                 >
-                    <User size={18} className="text-white/60" />
+                    <User size={22} className="text-white/60" />
                 </div>
             )}
 
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                    <p className={`text-sm font-semibold truncate ${isMe ? 'text-amber-200' : 'text-white'}`}>
-                        {displayName}
-                    </p>
-                    {isMe && (
-                        <span className="text-[9px] uppercase tracking-wider font-black px-1.5 py-0.5 rounded bg-amber-400 text-black">
-                            คุณ
-                        </span>
-                    )}
-                </div>
-                <p className="text-xs text-white/65 truncate">{node.position ?? '—'}</p>
-                <p className="text-[10px] text-white/40 truncate">
-                    {node.department ?? '—'}
-                    {node.secondaryDepartment && (
-                        <span className="text-purple-300"> + {node.secondaryDepartment}</span>
-                    )}
-                </p>
-            </div>
+            {/* Name + position */}
+            <p
+                className={`text-center text-xs sm:text-sm font-semibold leading-tight line-clamp-2 ${
+                    isMe ? 'text-amber-200' : 'text-white'
+                }`}
+                title={`${node.firstName} ${node.lastName}`}
+            >
+                {displayName}
+            </p>
+            <p className="text-center text-[10px] sm:text-[11px] text-white/60 leading-tight line-clamp-1" title={node.position ?? ''}>
+                {node.position ?? '—'}
+            </p>
 
-            {/* Toggle / child count */}
+            {isMe && (
+                <span className="text-[9px] uppercase tracking-wider font-black px-1.5 py-0.5 rounded bg-amber-400 text-black">
+                    คุณ
+                </span>
+            )}
+
+            {/* Toggle */}
             {hasChildren && (
                 <button
                     onClick={e => {
@@ -320,10 +375,10 @@ function RowCard({
                         onToggle()
                     }}
                     aria-label={isCollapsed ? 'ขยาย' : 'ย่อ'}
-                    className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-white/70 text-xs transition-colors"
+                    className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/15 hover:bg-white/25 text-white/80 text-[10px] border border-white/20 shadow-md transition-colors"
                 >
                     <span className="font-mono">{childCount}</span>
-                    {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                    {isCollapsed ? <ChevronRight size={10} /> : <ChevronDown size={10} />}
                 </button>
             )}
         </div>
