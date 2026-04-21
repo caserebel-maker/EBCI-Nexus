@@ -41,23 +41,29 @@ export default async function OrganizationPage() {
     }
 
     const canSeeLimit = permissions.can_view_approval_limits
-    const employees: OrgEmployee[] = (rows ?? []).map(e => ({
-        id: e.id as string,
-        employeeCode: e.employee_code as string,
-        firstName: (e.first_name_th as string) ?? '',
-        lastName: (e.last_name_th as string) ?? '',
-        nickname: (e.nickname as string) ?? null,
-        position: (e.position as string) ?? null,
-        department: (e.department as string) ?? null,
-        secondaryDepartment: (e.secondary_department as string) ?? null,
-        photoUrl: (e.photo_url as string) ?? null,
-        managerId: (e.manager_id as string) ?? null,
-        approvalLevel: (e.approval_level as number) ?? null,
-        isApprover: Boolean(e.is_approver),
-        approvalScopes: (e.approval_scopes as string[] | null) ?? [],
-        // Filter sensitive limit by permission (spec §8.2)
-        approvalLimitThb: canSeeLimit ? ((e.approval_limit_thb as number | null) ?? null) : null,
-    }))
+    const employees: OrgEmployee[] = (rows ?? []).map(e => {
+        const position = (e.position as string) ?? null
+        const department = (e.department as string) ?? null
+        return {
+            id: e.id as string,
+            employeeCode: e.employee_code as string,
+            firstName: (e.first_name_th as string) ?? '',
+            lastName: (e.last_name_th as string) ?? '',
+            nickname: (e.nickname as string) ?? null,
+            position,
+            department,
+            secondaryDepartment: (e.secondary_department as string) ?? null,
+            photoUrl: (e.photo_url as string) ?? null,
+            managerId: (e.manager_id as string) ?? null,
+            approvalLevel: (e.approval_level as number) ?? null,
+            isApprover: Boolean(e.is_approver),
+            approvalScopes: (e.approval_scopes as string[] | null) ?? [],
+            // Filter sensitive limit by permission (spec §8.2)
+            approvalLimitThb: canSeeLimit ? ((e.approval_limit_thb as number | null) ?? null) : null,
+            // Advisors = parallel group; detect by position/department text.
+            isAdvisor: position === 'ที่ปรึกษา' || department === 'ที่ปรึกษา',
+        }
+    })
 
     return (
         <div className="pb-24 lg:pb-6 space-y-4 lg:space-y-6">

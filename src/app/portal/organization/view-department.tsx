@@ -18,6 +18,7 @@ export interface OrgEmployee {
     isApprover?: boolean
     approvalScopes?: string[]
     approvalLimitThb?: number | null
+    isAdvisor?: boolean  // separate section, not in tree hierarchy
 }
 
 interface Props {
@@ -80,13 +81,28 @@ function ringColorByLevel(level: number | null): string {
 export function DepartmentView({ employees, currentEmployeeId }: Props) {
     const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
-    const tree = useMemo(() => buildTree(employees), [employees])
+    // Advisors are a parallel group, not part of the reporting hierarchy.
+    // Identified by isAdvisor flag OR position/department = "ที่ปรึกษา".
+    const { advisors, staff } = useMemo(() => {
+        const advisors: OrgEmployee[] = []
+        const staff: OrgEmployee[] = []
+        for (const e of employees) {
+            const isAdv = e.isAdvisor
+                || e.position === 'ที่ปรึกษา'
+                || e.department === 'ที่ปรึกษา'
+            if (isAdv) advisors.push(e)
+            else staff.push(e)
+        }
+        return { advisors, staff }
+    }, [employees])
+
+    const tree = useMemo(() => buildTree(staff), [staff])
     const approvalChain = useMemo(
-        () => findApprovalChain(employees, currentEmployeeId),
-        [employees, currentEmployeeId]
+        () => findApprovalChain(staff, currentEmployeeId),
+        [staff, currentEmployeeId]
     )
 
-    const withManagerCount = employees.filter(e => e.managerId).length
+    const withManagerCount = staff.filter(e => e.managerId).length
     const rootCount = tree.length
 
     const toggle = (id: string) => {
@@ -155,19 +171,49 @@ export function DepartmentView({ employees, currentEmployeeId }: Props) {
                 </div>
             )}
 
-            {/* Tree — horizontal scroll for wide structures */}
-            <div className="overflow-x-auto -mx-4 lg:mx-0 px-4 pb-4">
-                <div className="inline-flex gap-6 min-w-full justify-center py-2">
-                    {tree.map(node => (
-                        <OrgNode
-                            key={node.id}
-                            node={node}
-                            collapsed={collapsed}
-                            toggle={toggle}
-                            currentEmployeeId={currentEmployeeId}
-                            approvalChain={approvalChain}
-                        />
-                    ))}
+            {/* Advisors section — parallel to the reporting hierarchy */}
+            {advisors.length > 0 && (
+                <div className="p-3 lg:p-4 rounded-xl border border-purple-400/25"
+                    style={{ background: 'linear-gradient(135deg, rgba(168,85,247,0.12), rgba(139,92,246,0.05))' }}>
+                    <p className="text-white/80 text-xs font-semibold mb-3 flex items-center gap-2">
+                        🎓 คณะที่ปรึกษาบริษัท
+                        <span className="text-white/40 font-normal">· {advisors.length} คน</span>
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 justify-items-center">
+                        {advisors.map(a => (
+                            <Card
+                                key={a.id}
+                                node={{ ...a, children: [] }}
+                                isMe={a.id === currentEmployeeId}
+                                isApprover={false}
+                                isCollapsed={false}
+                                hasChildren={false}
+                                onToggle={() => {}}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Tree — center the whole thing, allow horizontal scroll only when content really exceeds viewport */}
+            <div className="w-full overflow-x-auto pb-4">
+                <div
+                    className="flex justify-center py-2 px-2 mx-auto"
+                    style={{ minWidth: 'max-content' }}
+                >
+                    <div className="inline-flex gap-6 items-start">
+                        {tree.map(node => (
+                            <OrgNode
+                                key={node.id}
+                                node={node}
+                                depth={0}
+                                collapsed={collapsed}
+                                toggle={toggle}
+                                currentEmployeeId={currentEmployeeId}
+                                approvalChain={approvalChain}
+                            />
+                        ))}
+                    </div>
                 </div>
                 {rootCount === 0 && (
                     <p className="text-white/60 text-center py-8">ไม่มีข้อมูลพนักงาน</p>
@@ -175,16 +221,18 @@ export function DepartmentView({ employees, currentEmployeeId }: Props) {
             </div>
 
             <p className="text-white/40 text-xs text-center italic">
-                💡 เลื่อนซ้าย-ขวาเพื่อดูทั้งผัง · แตะปุ่ม ▲/▼ บนการ์ดเพื่อย่อ/ขยาย
+                💡 แตะปุ่ม ▲/▼ บนการ์ดเพื่อย่อ/ขยาย · ถ้าผังยาวเกินจอให้เลื่อนซ้าย-ขวา
             </p>
         </div>
     )
 }
 
 function OrgNode({
-    node, collapsed, toggle, currentEmployeeId, approvalChain,
+    node, depth, compact, collapsed, toggle, currentEmployeeId, approvalChain,
 }: {
     node: TreeNode
+    depth: number
+    compact?: boolean
     collapsed: Set<string>
     toggle: (id: string) => void
     currentEmployeeId: string | null
@@ -195,6 +243,42 @@ function OrgNode({
     const isCollapsed = collapsed.has(node.id)
     const hasChildren = node.children.length > 0
     const childCount = node.children.length
+
+    // COMPACT MODE — used inside narrow grid cells. Card stays visible but
+    // children render as a vertical indented list (no horizontal bus/grid)
+    // so a deep subtree can't blow past its column width.
+    if (compact) {
+        return (
+            <div className="w-full min-w-0">
+                <div className="flex justify-center">
+                    <Card
+                        node={node}
+                        isMe={isMe}
+                        isApprover={isApprover}
+                        isCollapsed={isCollapsed}
+                        hasChildren={hasChildren}
+                        onToggle={() => toggle(node.id)}
+                    />
+                </div>
+                {hasChildren && !isCollapsed && (
+                    <div className="mt-2 ml-6 pl-3 border-l-2 border-white/15 space-y-2">
+                        {node.children.map(child => (
+                            <OrgNode
+                                key={child.id}
+                                node={child}
+                                depth={depth + 1}
+                                compact
+                                collapsed={collapsed}
+                                toggle={toggle}
+                                currentEmployeeId={currentEmployeeId}
+                                approvalChain={approvalChain}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+        )
+    }
 
     return (
         <div className="flex flex-col items-center flex-shrink-0">
@@ -216,17 +300,18 @@ function OrgNode({
 
                     {childCount >= 5 ? (
                         /* GRID LAYOUT for wide branches (e.g. MD with 11 reports).
-                           Responsive: 1 col on narrow, 2 on tablet, 3 on desktop.
-                           Vertical scroll instead of horizontal. */
-                        <div className="w-full max-w-[1100px] pt-2 px-2 rounded-xl border border-white/8 bg-white/[0.03]">
-                            <p className="text-center text-[11px] text-white/50 py-2 mb-1 border-b border-white/8">
+                           Descendants render in compact mode to stay within grid cells. */
+                        <div className="w-full max-w-[1100px] pt-2 px-2 rounded-xl border border-white/10 bg-white/[0.03]">
+                            <p className="text-center text-[11px] text-white/50 py-2 mb-1 border-b border-white/10">
                                 ทีมของ {node.nickname ?? node.firstName} · {childCount} คน
                             </p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-5 pb-3 pt-2 justify-items-center">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-5 pb-3 pt-2">
                                 {node.children.map(child => (
                                     <OrgNode
                                         key={child.id}
                                         node={child}
+                                        depth={depth + 1}
+                                        compact
                                         collapsed={collapsed}
                                         toggle={toggle}
                                         currentEmployeeId={currentEmployeeId}
@@ -259,6 +344,7 @@ function OrgNode({
                                         {/* Recursive child */}
                                         <OrgNode
                                             node={child}
+                                            depth={depth + 1}
                                             collapsed={collapsed}
                                             toggle={toggle}
                                             currentEmployeeId={currentEmployeeId}
