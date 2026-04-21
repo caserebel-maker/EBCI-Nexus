@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Route, User, ChevronDown, Info } from 'lucide-react'
+import { Route, User, ChevronDown, Info, Crown, Compass } from 'lucide-react'
 import type { OrgEmployee } from './view-department'
 import type { UserPermissions } from '@/lib/permissions'
 
@@ -37,8 +37,27 @@ export function TabMyChain({ employees, currentEmployeeId, permissions: _permiss
         )
     }
 
+    // Distinguish "top executive at the top of the org" from "manager not yet
+    // assigned" so the empty state reads correctly for ประธาน vs a missing
+    // manager_id (per spec §"Tab 3" empty state).
+    const isTopExecutive = chain.length === 0 && (me.approvalLevel ?? 0) >= 4
+
     return (
         <div className="space-y-4">
+            {/* Banner */}
+            <div
+                className="p-4 rounded-xl border border-amber-400/30 space-y-1"
+                style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.12), rgba(245,158,11,0.05))' }}
+            >
+                <div className="flex items-center gap-2 text-white font-bold text-base">
+                    <Compass size={18} className="text-amber-300" />
+                    สายอนุมัติของคุณ
+                </div>
+                <p className="text-white/75 text-xs">
+                    เมื่อคุณยื่นคำขอลา / OT / เบิกเงิน คำขอจะถูกส่งตามลำดับด้านล่าง
+                </p>
+            </div>
+
             {/* Profile card (you) */}
             <div
                 className="p-4 rounded-xl border-2 border-amber-400/60 ring-2 ring-amber-400/20 space-y-2"
@@ -69,19 +88,34 @@ export function TabMyChain({ employees, currentEmployeeId, permissions: _permiss
 
             {/* Chain */}
             {chain.length === 0 ? (
-                <div
-                    className="p-6 rounded-xl border border-white/15 text-center space-y-2"
-                    style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}
-                >
-                    <div className="inline-flex w-12 h-12 items-center justify-center rounded-full bg-white/10 ring-2 ring-white/20">
-                        <Info className="text-white/70" size={22} />
+                isTopExecutive ? (
+                    <div
+                        className="p-6 rounded-xl border border-yellow-400/30 text-center space-y-2"
+                        style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.12), rgba(217,119,6,0.05))' }}
+                    >
+                        <div className="inline-flex w-12 h-12 items-center justify-center rounded-full bg-yellow-400/20 ring-2 ring-yellow-400/50">
+                            <Crown className="text-yellow-200" size={22} />
+                        </div>
+                        <p className="text-sm font-semibold text-yellow-100">คุณคือผู้บริหารระดับสูงสุด</p>
+                        <p className="text-xs text-white/70 max-w-md mx-auto">
+                            ไม่มีผู้อนุมัติเหนือขึ้นไป คำขอของคุณเป็นการตัดสินใจสุดท้ายในระดับบริษัท
+                        </p>
                     </div>
-                    <p className="text-sm font-semibold text-white">ยังไม่ได้กำหนดผู้บังคับบัญชา</p>
-                    <p className="text-xs text-white/65 max-w-md mx-auto">
-                        ขอให้ HR กำหนด <code className="bg-black/20 px-1.5 rounded">ผู้บังคับบัญชา</code> ของคุณในหน้าจัดการพนักงาน —
-                        เมื่อกำหนดแล้ว คำขอลาจะถูกส่งตามลำดับอัตโนมัติ
-                    </p>
-                </div>
+                ) : (
+                    <div
+                        className="p-6 rounded-xl border border-white/15 text-center space-y-2"
+                        style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}
+                    >
+                        <div className="inline-flex w-12 h-12 items-center justify-center rounded-full bg-white/10 ring-2 ring-white/20">
+                            <Info className="text-white/70" size={22} />
+                        </div>
+                        <p className="text-sm font-semibold text-white">ยังไม่ได้กำหนดผู้บังคับบัญชา</p>
+                        <p className="text-xs text-white/65 max-w-md mx-auto">
+                            ขอให้ HR กำหนด <code className="bg-black/20 px-1.5 rounded">ผู้บังคับบัญชา</code> ของคุณในหน้าจัดการพนักงาน —
+                            เมื่อกำหนดแล้ว คำขอลาจะถูกส่งตามลำดับอัตโนมัติ
+                        </p>
+                    </div>
+                )
             ) : (
                 <div className="space-y-0">
                     <div className="flex justify-center py-2">
