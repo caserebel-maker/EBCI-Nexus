@@ -28,6 +28,28 @@ interface Props {
 
 type TreeNode = OrgEmployee & { children: TreeNode[] }
 
+// Priority within the same approval_level.
+// Lower number = shown first. Keeps directors/department heads above
+// assistants even when they have larger/newer employee_codes.
+function positionRank(position: string | null): number {
+    if (!position) return 99
+    if (position.includes('ประธาน')) return 1
+    if (position.includes('กรรมการผู้จัดการ')) return 2
+    if (position.includes('ผู้อำนวยการ')) return 3
+    if (position.includes('หัวหน้าฝ่าย')) return 4
+    if (position.includes('ผู้จัดการฝ่าย')) return 5
+    if (position.includes('ผู้จัดการ')) return 6
+    if (position.includes('รองผู้จัดการ')) return 6
+    if (position.includes('หัวหน้าแผนก')) return 7
+    if (position.includes('หัวหน้าหน่วย')) return 8
+    if (position.includes('ผู้ช่วยผู้จัดการ')) return 9
+    if (position.includes('ผู้ช่วยหัวหน้าแผนก')) return 10
+    if (position.includes('ผู้ช่วย')) return 11
+    if (position.includes('เลขา')) return 12
+    if (position.includes('เจ้าหน้าที่')) return 13
+    return 50
+}
+
 function buildTree(employees: OrgEmployee[]): TreeNode[] {
     const byId = new Map<string, TreeNode>()
     for (const e of employees) byId.set(e.id, { ...e, children: [] })
@@ -41,10 +63,14 @@ function buildTree(employees: OrgEmployee[]): TreeNode[] {
         }
     }
 
+    // Sort siblings: approval_level DESC → position seniority → employee_code
     const sortFn = (a: TreeNode, b: TreeNode) => {
         const la = a.approvalLevel ?? 0
         const lb = b.approvalLevel ?? 0
         if (la !== lb) return lb - la
+        const pa = positionRank(a.position)
+        const pb = positionRank(b.position)
+        if (pa !== pb) return pa - pb
         return a.employeeCode.localeCompare(b.employeeCode)
     }
     const sortRec = (nodes: TreeNode[]) => {
