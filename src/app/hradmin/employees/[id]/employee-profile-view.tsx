@@ -10,6 +10,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { updateEmployee, uploadEmployeePhoto, deleteEmployee } from "./actions"
+import { ImageCropModal } from "@/components/ImageCropModal"
 import { EMPLOYEE_LEVELS, LEVEL_BADGE_COLORS } from "@/config/employee-levels"
 import { DEPARTMENTS } from "@/config/departments"
 import {
@@ -296,6 +297,7 @@ export function EmployeeProfileView({
     const [isPending, startTransition] = useTransition()
     const [photoPreview, setPhotoPreview] = useState<string | null>(null)
     const [photoFile, setPhotoFile] = useState<File | null>(null)
+    const [cropSrc, setCropSrc] = useState<string | null>(null) // raw file → crop modal
     const photoInputRef = useRef<HTMLInputElement>(null)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
@@ -304,11 +306,39 @@ export function EmployeeProfileView({
         (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
             setForm(prev => ({ ...prev, [field]: e.target.value }))
 
+    // File picker → validate → open crop modal.
+    // Actual photoFile is set by handleCropped once the user confirms the crop.
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
+
+        const allowed = ['image/jpeg', 'image/png', 'image/webp']
+        if (!allowed.includes(file.type)) {
+            showToast('error', 'ไฟล์ต้องเป็น JPG, PNG หรือ WebP')
+            if (photoInputRef.current) photoInputRef.current.value = ''
+            return
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('error', 'ขนาดไฟล์ต้องไม่เกิน 5 MB')
+            if (photoInputRef.current) photoInputRef.current.value = ''
+            return
+        }
+
+        const reader = new FileReader()
+        reader.onload = () => {
+            if (typeof reader.result === 'string') setCropSrc(reader.result)
+        }
+        reader.readAsDataURL(file)
+    }
+
+    // Crop modal committed — convert the cropped blob into a File + preview
+    // so the existing Save flow picks it up.
+    const handleCropped = (blob: Blob) => {
+        const file = new File([blob], 'profile.jpg', { type: 'image/jpeg' })
         setPhotoFile(file)
         setPhotoPreview(URL.createObjectURL(file))
+        setCropSrc(null)
+        if (photoInputRef.current) photoInputRef.current.value = ''
     }
 
     const handleEdit = () => { setForm(initForm()); setPhotoPreview(null); setPhotoFile(null); setIsEditing(true) }
@@ -874,6 +904,17 @@ export function EmployeeProfileView({
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Profile photo crop modal (mounted at root so it overlays) */}
+            {cropSrc && (
+                <ImageCropModal
+                    imageSrc={cropSrc}
+                    open={true}
+                    onClose={() => setCropSrc(null)}
+                    onCropComplete={handleCropped}
+                    aspectRatio={1}
+                />
             )}
         </div>
     )
