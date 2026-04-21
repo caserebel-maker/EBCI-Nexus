@@ -356,69 +356,46 @@ export function OrgNode({
                 onToggle={() => toggle(node.id)}
             />
 
-            {/* Connector + children — horizontal bus for small branches, grid for big ones */}
+            {/* Classic horizontal bus — always. Each child sits in its own
+                 flex-column slot so its own subtree hangs directly below it,
+                 never intermixed with sibling columns. Wide branches (e.g. 9
+                 siblings) overflow the viewport and rely on the outer
+                 overflow-x-auto for scrolling. */}
             {hasChildren && !isCollapsed && (
                 <>
-                    {/* Vertical line: card → bus/grid */}
                     <div className="w-px h-4 bg-white/25" />
-
-                    {childCount >= 5 ? (
-                        /* GRID LAYOUT for wide branches (e.g. MD with 11 reports).
-                           Descendants render in compact mode to stay within grid cells. */
-                        <div className="w-full max-w-[1100px] pt-2 px-2 rounded-xl border border-white/10 bg-white/[0.03]">
-                            <p className="text-center text-[11px] text-white/50 py-2 mb-1 border-b border-white/10">
-                                ทีมของ {node.nickname ?? node.firstName} · {childCount} คน
-                            </p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-5 pb-3 pt-2">
-                                {node.children.map(child => (
+                    <div className="flex items-start relative">
+                        {node.children.map((child, i) => {
+                            const isFirst = i === 0
+                            const isLast = i === childCount - 1
+                            const isOnly = childCount === 1
+                            return (
+                                <div key={child.id} className="relative flex flex-col items-center px-3 lg:px-4">
+                                    {/* Horizontal bus line (top of child area) */}
+                                    {!isOnly && (
+                                        <div
+                                            className="absolute top-0 h-px bg-white/25"
+                                            style={{
+                                                left: isFirst ? '50%' : 0,
+                                                right: isLast ? '50%' : 0,
+                                            }}
+                                        />
+                                    )}
+                                    {/* Vertical line: bus → child card */}
+                                    <div className="w-px h-4 bg-white/25" />
+                                    {/* Recursive child (carries its own subtree directly below) */}
                                     <OrgNode
-                                        key={child.id}
                                         node={child}
                                         depth={depth + 1}
-                                        compact
                                         collapsed={collapsed}
                                         toggle={toggle}
                                         currentEmployeeId={currentEmployeeId}
                                         approvalChain={approvalChain}
                                     />
-                                ))}
-                            </div>
-                        </div>
-                    ) : (
-                        /* HORIZONTAL BUS for small branches (< 5 children) — classic tree look */
-                        <div className="flex items-start relative">
-                            {node.children.map((child, i) => {
-                                const isFirst = i === 0
-                                const isLast = i === childCount - 1
-                                const isOnly = childCount === 1
-                                return (
-                                    <div key={child.id} className="relative flex flex-col items-center px-2">
-                                        {/* Horizontal bus line (top of child area) */}
-                                        {!isOnly && (
-                                            <div
-                                                className="absolute top-0 h-px bg-white/25"
-                                                style={{
-                                                    left: isFirst ? '50%' : 0,
-                                                    right: isLast ? '50%' : 0,
-                                                }}
-                                            />
-                                        )}
-                                        {/* Vertical line: bus → child card */}
-                                        <div className="w-px h-4 bg-white/25" />
-                                        {/* Recursive child */}
-                                        <OrgNode
-                                            node={child}
-                                            depth={depth + 1}
-                                            collapsed={collapsed}
-                                            toggle={toggle}
-                                            currentEmployeeId={currentEmployeeId}
-                                            approvalChain={approvalChain}
-                                        />
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    )}
+                                </div>
+                            )
+                        })}
+                    </div>
                 </>
             )}
         </div>
