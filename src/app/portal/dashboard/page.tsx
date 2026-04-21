@@ -167,19 +167,21 @@ export default async function PortalDashboardPage() {
         console.error('[dashboard] employee/leave query failed:', e)
     }
 
-    // ── Announcements (top 5 active, priority-weighted) ──────────────────────
+    // ── Carousel announcements: internal/promote only, top 5 active ──────────
+    // Emergency + urgent live in the priority alert bar above the page, not here.
     try {
         const nowIso = new Date().toISOString()
         const { data: rows } = await supabaseAdmin
             .from('announcements')
             .select('id, headline, content, image_path, priority, publish_date, expires_at')
             .eq('publish_status', 'published')
+            .in('priority', ['internal', 'promote'])
             .gt('expires_at', nowIso)
             .order('publish_date', { ascending: false })
             .limit(20)
 
         const PRIORITY_WEIGHT: Record<string, number> = {
-            emergency: 0, urgent: 1, promote: 2, internal: 3,
+            promote: 0, internal: 1,
         }
         const sorted = (rows ?? []).slice().sort((a, b) => {
             const wa = PRIORITY_WEIGHT[a.priority as string] ?? 9
