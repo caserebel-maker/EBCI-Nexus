@@ -176,7 +176,7 @@ export default async function PortalDashboardPage() {
             .select('id, headline, content, image_path, priority, publish_date, expires_at')
             .eq('publish_status', 'published')
             .in('priority', ['internal', 'promote'])
-            .gt('expires_at', nowIso)
+            .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
             .order('publish_date', { ascending: false })
             .limit(20)
 
