@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, UserCircle, FileText, Settings, Megaphone, CalendarDays, ClipboardCheck, ShieldCheck, CalendarOff, MapPin, Network } from 'lucide-react'
+import { LayoutDashboard, Users, UserCircle, FileText, Settings, Megaphone, CalendarDays, ClipboardCheck, ShieldCheck, CalendarOff, MapPin, Network, Activity } from 'lucide-react'
 import { ROLES, type UserRole } from './roles'
 
 export interface NavItem {
@@ -20,6 +20,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         { label: 'leave.title', href: '/hradmin/leave/admin', icon: CalendarDays },
         { label: 'common.view', href: '/hradmin/reports', icon: FileText },
         { label: 'common.actions', href: '/hradmin/settings', icon: Settings },
+        { label: 'ระบบและทรัพยากร', href: '/hradmin/settings/quota', icon: Activity },
     ],
     [ROLES.MANAGER]: [
         { label: 'dashboard.title', href: '/hradmin/dashboard', icon: LayoutDashboard },
