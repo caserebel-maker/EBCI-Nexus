@@ -1,6 +1,20 @@
 import { Resend } from 'resend'
 
-const FROM = 'onboarding@resend.dev'
+/**
+ * From address used on every outgoing transactional email.
+ *
+ * - Set EMAIL_FROM in Vercel env to something like
+ *   "EBCI Careers <careers@ebcinext.com>" once the domain is verified
+ *   in the Resend dashboard. Until then the default
+ *   `onboarding@resend.dev` works ONLY for the email address that owns
+ *   the Resend account — any other recipient will silently be dropped
+ *   (this is a Resend restriction, not something the code can work
+ *   around).
+ * - EMAIL_REPLY_TO is optional; set it to e.g. "hr@ebcitrade.com" so
+ *   replies go to a monitored inbox.
+ */
+const FROM = process.env.EMAIL_FROM ?? 'EBCI NEXUS HR <onboarding@resend.dev>'
+const REPLY_TO = process.env.EMAIL_REPLY_TO ?? undefined
 
 interface SendEmailParams {
     to: string | string[]
@@ -10,47 +24,50 @@ interface SendEmailParams {
 
 export async function sendEmail({ to, subject, html }: SendEmailParams) {
     const apiKey = process.env.RESEND_API_KEY
+    const recipients = Array.isArray(to) ? to : [to]
 
     if (!apiKey) {
-        // Dev/dry-run mode
-        const recipients = Array.isArray(to) ? to : [to]
+        // Dev/dry-run mode — do not pretend success in logs; the caller
+        // receives `mock: true` so it can surface the state clearly.
         console.log('==========================================')
         console.log('📧 [MOCK EMAIL] — RESEND_API_KEY not set')
+        console.log(`From: ${FROM}`)
         console.log(`To: ${recipients.join(', ')}`)
         console.log(`Subject: ${subject}`)
         console.log('==========================================')
-        return { success: true, mock: true }
+        return { success: true, mock: true as const, recipients }
     }
 
     const resend = new Resend(apiKey)
-    const recipients = Array.isArray(to) ? to : [to]
 
     try {
-        // Resend free plan: send individually in batches to avoid 50-recipient limit
-        // For broadcasts, use BCC-equivalent: send once with all in bcc isn't supported by Resend.
-        // Instead, send in chunks of 50.
+        // Chunk to stay under Resend's 50-recipient per-call limit.
         const chunkSize = 50
-        const results = []
+        const results: Array<{ success: boolean; id?: string; error?: unknown }> = []
         for (let i = 0; i < recipients.length; i += chunkSize) {
             const chunk = recipients.slice(i, i + chunkSize)
             const { data, error } = await resend.emails.send({
-                from: `EBCI NEXUS HR <${FROM}>`,
+                from: FROM,
                 to: chunk,
                 subject,
                 html,
+                ...(REPLY_TO ? { replyTo: REPLY_TO } : {}),
             })
             if (error) {
-                console.error('Resend error (chunk):', error)
+                console.error('[email] Resend chunk error:', {
+                    to: chunk, subject, from: FROM, error,
+                })
                 results.push({ success: false, error })
             } else {
+                console.log(`[email] sent → ${chunk.join(', ')} — id=${data?.id}`)
                 results.push({ success: true, id: data?.id })
             }
         }
         const allOk = results.every(r => r.success)
-        return { success: allOk, results }
+        return { success: allOk, results, recipients }
     } catch (err) {
-        console.error('sendEmail exception:', err)
-        return { success: false, error: err }
+        console.error('[email] sendEmail exception:', err)
+        return { success: false, error: err, recipients }
     }
 }
 

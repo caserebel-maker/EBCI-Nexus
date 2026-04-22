@@ -94,32 +94,53 @@ export async function POST(
         return NextResponse.json({ error: subErr.message }, { status: 500 })
     }
 
-    // Emails (fire-and-forget — don't block the response)
+    // Emails — awaited so Vercel's Lambda doesn't kill the request in
+    // flight. Each template returns { success: boolean } so we can tell
+    // the client which half actually made it out. An email failure must
+    // never fail the submit (the row is already flipped to `submitted`).
     const applicantName = [row.first_name_th, row.last_name_th].filter(Boolean).join(' ')
         + (row.nickname ? ` (${row.nickname})` : '')
     const applicantEmail = String(row.email)
 
-    Promise.allSettled([
-        sendApplicationSubmittedEmail({
-            to: applicantEmail,
-            referenceCode: String(row.reference_code),
-            applicantName: applicantName || null,
-            position: row.position_applied as string | null,
-        }),
-        sendHrNotificationEmail({
-            applicationId: String(row.id),
-            referenceCode: String(row.reference_code),
-            applicantName: applicantName || null,
-            email: applicantEmail,
-            position: row.position_applied as string | null,
-        }),
-    ]).then(results => {
-        for (const r of results) if (r.status === 'rejected') console.error('[careers/submit] email:', r.reason)
-    })
+    const emailSent = { applicant: false, hr: false }
+    try {
+        const [applicantResult, hrResult] = await Promise.allSettled([
+            sendApplicationSubmittedEmail({
+                to: applicantEmail,
+                referenceCode: String(row.reference_code),
+                applicantName: applicantName || null,
+                position: row.position_applied as string | null,
+            }),
+            sendHrNotificationEmail({
+                applicationId: String(row.id),
+                referenceCode: String(row.reference_code),
+                applicantName: applicantName || null,
+                email: applicantEmail,
+                position: row.position_applied as string | null,
+            }),
+        ])
+        if (applicantResult.status === 'fulfilled' && applicantResult.value?.success) {
+            emailSent.applicant = true
+        } else if (applicantResult.status === 'rejected') {
+            console.error('[careers/submit] applicant email threw:', applicantResult.reason)
+        } else if (applicantResult.status === 'fulfilled') {
+            console.error('[careers/submit] applicant email failed:', applicantResult.value)
+        }
+        if (hrResult.status === 'fulfilled' && hrResult.value?.success) {
+            emailSent.hr = true
+        } else if (hrResult.status === 'rejected') {
+            console.error('[careers/submit] hr email threw:', hrResult.reason)
+        } else if (hrResult.status === 'fulfilled') {
+            console.error('[careers/submit] hr email failed:', hrResult.value)
+        }
+    } catch (err) {
+        console.error('[careers/submit] unexpected email error:', err)
+    }
 
     return NextResponse.json({
         success: true,
         reference_code: row.reference_code,
         submitted_at: nowIso,
+        email_sent: emailSent,
     })
 }
