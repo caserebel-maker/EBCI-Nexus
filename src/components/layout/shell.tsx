@@ -28,6 +28,7 @@ import { ModeToggle } from '@/components/mode-toggle'
 import { LanguageToggle } from '@/components/ui/language-toggle'
 import { useTranslation } from '@/contexts/language-context'
 import { PortalBottomNav } from '@/components/layout/portal-bottom-nav'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 interface DashboardShellProps {
     children: React.ReactNode
@@ -205,6 +206,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                                 <path d="M3 3v5h5" />
                             </svg>
                         </button>
+                        <NotificationBell />
                         <LanguageToggle />
                         <ModeToggle />
                     </div>

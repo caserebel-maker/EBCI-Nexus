@@ -1,0 +1,159 @@
+'use client'
+
+import { useEffect } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { CheckCheck, Loader2, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import {
+    useNotifications,
+    type NotificationRow,
+} from '@/hooks/useNotifications'
+import { NotificationItem } from './NotificationItem'
+import { EmptyState } from './EmptyState'
+
+interface Props {
+    open: boolean
+    onClose: () => void
+    // Hook is owned by the parent (bell) so it can read `count` for the
+    // badge; the dropdown just consumes the state.
+    state: ReturnType<typeof useNotifications>
+}
+
+/**
+ * Dropdown panel — responsive:
+ *   - Desktop (sm+): absolute-anchored under the bell, 380 px wide.
+ *   - Mobile: bottom sheet spanning the width, up to 75 vh.
+ *
+ * The parent Bell component is `relative` so `sm:absolute` docks here.
+ */
+export function NotificationDropdown({ open, onClose, state }: Props) {
+    const router = useRouter()
+    const {
+        items, isLoading, hasLoaded, refetch,
+        markRead, markAllRead, remove,
+    } = state
+
+    // First open → fetch. Reopens re-use the cached list (stale data is
+    // fine for ~30 s because the badge will re-fetch on poll).
+    useEffect(() => {
+        if (open && !hasLoaded) void refetch()
+    }, [open, hasLoaded, refetch])
+
+    // Close on ESC
+    useEffect(() => {
+        if (!open) return
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose()
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [open, onClose])
+
+    const handleItemClick = (n: NotificationRow) => {
+        if (!n.is_read) void markRead(n.id)
+        onClose()
+        if (n.action_url) router.push(n.action_url)
+    }
+
+    if (!open) return null
+
+    const hasAny = items.length > 0
+    const hasUnread = items.some(n => !n.is_read)
+
+    return (
+        <>
+            {/* Mobile backdrop — desktop uses outside-click handler on the bell */}
+            <div
+                className="fixed inset-0 z-[60] bg-black/50 sm:hidden"
+                onClick={onClose}
+                aria-hidden="true"
+            />
+
+            <div
+                role="dialog"
+                aria-label="การแจ้งเตือน"
+                className={cn(
+                    'z-[70] overflow-hidden border border-white/10 shadow-2xl shadow-black/50',
+                    // Mobile: bottom sheet
+                    'fixed inset-x-3 bottom-3 rounded-2xl',
+                    // Desktop: anchored dropdown under the bell
+                    'sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:bottom-auto',
+                    'sm:w-[380px] sm:rounded-xl',
+                )}
+                style={{
+                    background: 'linear-gradient(160deg, rgba(60,15,20,0.97) 0%, rgba(86,30,35,0.97) 55%, rgba(120,45,53,0.95) 100%)',
+                    backdropFilter: 'blur(14px)',
+                    WebkitBackdropFilter: 'blur(14px)',
+                }}
+                // Stop propagation so clicks inside don't bubble to the
+                // outside-click handler that closes the panel.
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header */}
+                <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-white font-bold text-sm">การแจ้งเตือน</span>
+                        {state.count > 0 && (
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-200/90 bg-amber-300/10 border border-amber-300/25 rounded-full px-2 py-0.5">
+                                {state.count} ใหม่
+                            </span>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                        {hasUnread && (
+                            <button
+                                onClick={() => void markAllRead()}
+                                className="inline-flex items-center gap-1 text-[11px] text-white/70 hover:text-white px-2 py-1 rounded-md hover:bg-white/10 transition-colors font-semibold"
+                                aria-label="อ่านทั้งหมด"
+                            >
+                                <CheckCheck size={12} />
+                                อ่านทั้งหมด
+                            </button>
+                        )}
+                        <button
+                            onClick={onClose}
+                            className="sm:hidden w-8 h-8 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                            aria-label="ปิด"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                </header>
+
+                {/* Body */}
+                <div className="overflow-y-auto max-h-[60vh] sm:max-h-[440px] divide-y divide-white/5">
+                    {isLoading && !hasAny && (
+                        <div className="py-14 flex items-center justify-center text-white/50">
+                            <Loader2 size={22} className="animate-spin" />
+                        </div>
+                    )}
+                    {!isLoading && !hasAny && <EmptyState />}
+                    {hasAny && items.map(n => (
+                        <div key={n.id} className="relative group">
+                            <NotificationItem n={n} onClick={handleItemClick} />
+                            <button
+                                onClick={() => void remove(n.id)}
+                                className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center text-white/30 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-200 transition-all"
+                                aria-label="ลบการแจ้งเตือน"
+                            >
+                                <X size={13} />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Footer — link to full history page */}
+                <footer className="border-t border-white/10 px-4 py-3 text-center">
+                    <Link
+                        href="/portal/notifications"
+                        onClick={onClose}
+                        className="text-xs text-white/70 hover:text-white font-semibold inline-flex items-center gap-1"
+                    >
+                        ดูทั้งหมด →
+                    </Link>
+                </footer>
+            </div>
+        </>
+    )
+}
