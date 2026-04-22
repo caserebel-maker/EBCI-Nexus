@@ -3,6 +3,50 @@ import { cookies } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { ROLE_CONFIG, type UserRole } from '@/config/roles'
 
+/**
+ * Resolve role from the public."User" table when auth metadata is
+ * missing it. Tries two link patterns, in order of reliability:
+ *   1. Direct id match — public."User".id == auth.users.id
+ *   2. Via employees.email — employees.email == auth.users.email
+ *      → employees.user_id → public."User".id
+ *
+ * Legacy accounts split across these patterns because public."User"
+ * still holds CUID ids from the Prisma era alongside newer UUID rows
+ * that do match auth.users.id.
+ */
+async function lookupRoleFromUserTable(
+    authUserId: string,
+    email: string | null | undefined,
+): Promise<UserRole | undefined> {
+    try {
+        const { data: byId } = await supabaseAdmin
+            .from('User')
+            .select('role')
+            .eq('id', authUserId)
+            .maybeSingle()
+        if (byId?.role) return byId.role as UserRole
+
+        if (!email) return undefined
+
+        const { data: emp } = await supabaseAdmin
+            .from('employees')
+            .select('user_id')
+            .eq('email', email)
+            .maybeSingle()
+        if (emp?.user_id) {
+            const { data: byUserId } = await supabaseAdmin
+                .from('User')
+                .select('role')
+                .eq('id', emp.user_id)
+                .maybeSingle()
+            if (byUserId?.role) return byUserId.role as UserRole
+        }
+    } catch (err) {
+        console.error('[Auth] role lookup fallback failed:', err)
+    }
+    return undefined
+}
+
 export async function POST(request: Request) {
     try {
         const body = await request.json()
@@ -31,10 +75,34 @@ export async function POST(request: Request) {
 
         const meta = data.user.user_metadata ?? {}
         const appMeta = data.user.app_metadata ?? {}
-        // Check user_metadata first, fallback to app_metadata (Supabase stores admin roles there)
-        const rawRole = meta.role ?? appMeta.role ?? (appMeta.claims_admin ? 'hr_admin' : undefined)
+        // Role resolution order:
+        //   1. user_metadata.role  (source of truth for most accounts)
+        //   2. app_metadata.role   (some Supabase-managed admins live here)
+        //   3. app_metadata.claims_admin boolean → hr_admin
+        //   4. Fallback: look up public."User".role so historical accounts
+        //      whose auth metadata never got the role field still resolve
+        //      correctly instead of silently defaulting to "employee".
+        let rawRole: string | undefined =
+            meta.role ?? appMeta.role ?? (appMeta.claims_admin ? 'hr_admin' : undefined)
+        let roleSource: 'metadata' | 'user-table' | 'default' = rawRole ? 'metadata' : 'default'
+        if (!rawRole) {
+            const fallback = await lookupRoleFromUserTable(data.user.id, data.user.email)
+            if (fallback) {
+                rawRole = fallback
+                roleSource = 'user-table'
+            }
+        }
         const role: UserRole = (rawRole as UserRole) ?? 'employee'
-        console.log(`[Auth] user_metadata.role=${meta.role} app_metadata.role=${appMeta.role} → resolved=${role}`)
+        console.log(`[Auth] user_metadata.role=${meta.role} app_metadata.role=${appMeta.role} → resolved=${role} (source=${roleSource})`)
+
+        // Self-heal: when the role came from the User-table fallback, copy
+        // it into auth metadata so the next login skips the extra queries
+        // and future sessions elsewhere in the app see a consistent shape.
+        if (roleSource === 'user-table') {
+            supabaseAdmin.auth.admin
+                .updateUserById(data.user.id, { user_metadata: { ...meta, role } })
+                .catch(err => console.warn('[Auth] failed to persist resolved role to metadata:', err))
+        }
         const name: string = meta.name ?? meta.full_name ?? data.user.email ?? 'User'
         const employeeId: string | undefined = meta.employeeId ?? undefined
 
