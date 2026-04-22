@@ -1,11 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
     ArrowLeft, ArrowRight, CheckCircle2, Loader2, Save, Hash, Mail, X,
     AlertCircle, ImageIcon, UploadCloud, Sparkles, RefreshCw, Briefcase,
-    Construction,
+    Send,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ImageCropModal } from '@/components/ImageCropModal'
@@ -17,6 +17,10 @@ import {
     TOTAL_STEPS,
 } from './form-types'
 import { useAutosave, type SaveState } from './use-autosave'
+import { Step2Address } from './steps/step2-address'
+import { Step3Education } from './steps/step3-education'
+import { Step4Skills } from './steps/step4-skills'
+import { Step5References } from './steps/step5-references'
 
 interface Props {
     initialRef: string | null
@@ -64,6 +68,8 @@ export function ApplyForm({ initialRef, initialStep }: Props) {
     const [resumingPending, setResumingPending] = useState(false)
 
     const [advancing, setAdvancing] = useState(false)
+    const [submitting, startSubmitTransition] = useTransition()
+    const [submitError, setSubmitError] = useState<{ message: string; missing?: string[] } | null>(null)
 
     // Dirty tracking: we only call /start once the user has actually typed
     // something. Before then there's nothing worth persisting.
@@ -218,6 +224,54 @@ export function ApplyForm({ initialRef, initialStep }: Props) {
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }, [step, referenceCode, router])
 
+    // ── Final submit (Step 5) ────────────────────────────────────────────────
+    const handleSubmit = useCallback(() => {
+        if (!applicationId || !referenceCode) return
+        if (!values.pdpa_consented) {
+            setSubmitError({ message: 'กรุณายอมรับข้อตกลง PDPA ก่อนส่งใบสมัคร' })
+            return
+        }
+        if (!values.signature_data) {
+            setSubmitError({ message: 'กรุณาเซ็นลายเซ็นก่อนส่งใบสมัคร' })
+            return
+        }
+        const confirmed = window.confirm(
+            'ยืนยันการส่งใบสมัคร?\n\nหลังจากส่งแล้วคุณจะไม่สามารถแก้ไขได้\n' +
+            'ทีม HR จะได้รับใบสมัครและติดต่อกลับภายใน 7 วันทำการ',
+        )
+        if (!confirmed) return
+
+        setSubmitError(null)
+        startSubmitTransition(async () => {
+            try {
+                // Flush pending autosave so the server has the freshest text
+                await flush()
+                const res = await fetch(`/api/careers/apply/${applicationId}/submit`, {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({
+                        reference_code: referenceCode,
+                        fields: buildFieldsPayload(values),
+                    }),
+                })
+                const json = await res.json()
+                if (!res.ok) {
+                    setSubmitError({
+                        message: json?.error ?? 'ส่งใบสมัครไม่สำเร็จ',
+                        missing: Array.isArray(json?.missing) ? json.missing : undefined,
+                    })
+                    return
+                }
+                // Success — navigate to confirmation page
+                router.push(`/careers/apply/success?ref=${encodeURIComponent(referenceCode)}`)
+            } catch (err) {
+                setSubmitError({
+                    message: err instanceof Error ? err.message : 'ส่งใบสมัครไม่สำเร็จ',
+                })
+            }
+        })
+    }, [applicationId, referenceCode, values, flush, router])
+
     // ── Render ──────────────────────────────────────────────────────────────
     // If we came in with ?ref= but haven't hydrated yet, show the resume modal
     if (initialRef && bootstrapping && !applicationId) {
@@ -282,26 +336,68 @@ export function ApplyForm({ initialRef, initialStep }: Props) {
                         referenceCode={referenceCode}
                     />
                 )}
-                {step > 1 && <StepPlaceholder step={step} />}
+                {step === 2 && (
+                    <Step2Address values={values} onChange={setValues} />
+                )}
+                {step === 3 && (
+                    <Step3Education
+                        values={values}
+                        onChange={setValues}
+                        applicationId={applicationId}
+                        referenceCode={referenceCode}
+                    />
+                )}
+                {step === 4 && (
+                    <Step4Skills values={values} onChange={setValues} />
+                )}
+                {step === 5 && (
+                    <Step5References values={values} onChange={setValues} />
+                )}
             </section>
+
+            {/* Submit error (Step 5) */}
+            {submitError && step === TOTAL_STEPS && (
+                <div className="p-4 rounded-xl border border-red-500/40 bg-red-500/10 text-red-100 text-sm">
+                    <p className="inline-flex items-center gap-1.5 font-semibold">
+                        <AlertCircle size={14} /> {submitError.message}
+                    </p>
+                    {submitError.missing && submitError.missing.length > 0 && (
+                        <p className="mt-1.5 text-red-100/85 text-xs">
+                            ข้อมูลที่ต้องเติม: {submitError.missing.join(' · ')}
+                        </p>
+                    )}
+                </div>
+            )}
 
             {/* Navigation buttons */}
             <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 justify-between">
                 <button
                     type="button"
                     onClick={goBack}
-                    disabled={step <= 1 || advancing}
+                    disabled={step <= 1 || advancing || submitting}
                     className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm font-semibold border border-white/15 transition-all disabled:opacity-40"
                 >
                     <ArrowLeft size={15} />
                     ย้อนกลับ
                 </button>
-                <NextButton
-                    disabled={!canGoNext || advancing || !applicationId}
-                    loading={advancing}
-                    onClick={goNext}
-                    step={step}
-                />
+                {step < TOTAL_STEPS ? (
+                    <NextButton
+                        disabled={!canGoNext || advancing || !applicationId}
+                        loading={advancing}
+                        onClick={goNext}
+                        step={step}
+                    />
+                ) : (
+                    <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={submitting || !applicationId}
+                        className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 disabled:opacity-50 disabled:cursor-not-allowed text-black text-base font-bold transition-all active:scale-95 shadow-lg shadow-amber-400/25"
+                    >
+                        {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                        ส่งใบสมัคร
+                    </button>
+                )}
             </div>
 
             <p className="text-[11px] text-white/40 text-center px-4">
@@ -715,24 +811,6 @@ function PhotoUploader({
     )
 }
 
-// ─── Step 2–5 placeholders ──────────────────────────────────────────────────
-function StepPlaceholder({ step }: { step: number }) {
-    return (
-        <div className="text-center py-10 text-white/70">
-            <div className="h-14 w-14 mx-auto rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center mb-4">
-                <Construction size={22} />
-            </div>
-            <p className="font-semibold text-white mb-1">
-                Step {step}: {STEP_TITLES[step - 1]}
-            </p>
-            <p className="text-sm text-white/55 max-w-sm mx-auto leading-relaxed">
-                ขั้นตอนนี้กำลังพัฒนา ระบบบันทึกข้อมูล Step 1 ของคุณไว้แล้ว
-                ใช้รหัสใบสมัครกลับมากรอกต่อได้เมื่อเปิดให้บริการ
-            </p>
-        </div>
-    )
-}
-
 // ─── Tiny controlled input helpers ──────────────────────────────────────────
 function TextField({
     label, value, onChange, required, placeholder, type = 'text', help,
@@ -838,15 +916,33 @@ function RadioGroup({
 }
 
 // ─── Hydrate /resume row → form values ──────────────────────────────────────
+/**
+ * Merges a `/resume`-fetched DB row onto the default form values.
+ * Columns that are null in the DB fall through to the defaults, so a
+ * resumed draft that never got past Step 1 still has sensible
+ * pre-filled values (e.g. default language rows) for later steps.
+ */
 function hydrateValuesFromRow(row: Record<string, unknown>): ApplyFormValues {
-    const str = (k: string) => (row[k] == null ? '' : String(row[k]))
+    const defaults = defaultApplyFormValues()
+    const str = (k: string, fb = '') => (row[k] == null ? fb : String(row[k]))
     const num = (k: string) => {
         const v = row[k]
         if (v === null || v === undefined || v === '') return null
         const n = Number(v)
         return isNaN(n) ? null : n
     }
+    const bool = (k: string, fb: boolean | null = null) => {
+        const v = row[k]
+        if (v === null || v === undefined) return fb
+        return Boolean(v)
+    }
+    const arr = <T,>(k: string, fallback: T[]): T[] => {
+        const v = row[k]
+        return Array.isArray(v) ? (v as T[]) : fallback
+    }
+
     return {
+        // Step 1
         position_applied: str('position_applied'),
         expected_salary: num('expected_salary'),
         title_th: str('title_th') || 'นาย',
@@ -859,5 +955,98 @@ function hydrateValuesFromRow(row: Record<string, unknown>): ApplyFormValues {
         phone_mobile: str('phone_mobile'),
         phone_home: str('phone_home'),
         photo_url: row.photo_url ? String(row.photo_url) : null,
+
+        // Step 2
+        id_card_address_no: str('id_card_address_no'),
+        id_card_address_moo: str('id_card_address_moo'),
+        id_card_address_subdistrict: str('id_card_address_subdistrict'),
+        id_card_address_district: str('id_card_address_district'),
+        id_card_address_province: str('id_card_address_province'),
+        id_card_address_postal: str('id_card_address_postal'),
+        same_as_id_address: bool('same_as_id_address', true) ?? true,
+        current_address_no: str('current_address_no'),
+        current_address_moo: str('current_address_moo'),
+        current_address_road: str('current_address_road'),
+        current_address_subdistrict: str('current_address_subdistrict'),
+        current_address_district: str('current_address_district'),
+        current_address_province: str('current_address_province'),
+        current_address_postal: str('current_address_postal'),
+        living_with: str('living_with', defaults.living_with),
+        date_of_birth: str('date_of_birth'),
+        nationality: str('nationality', defaults.nationality),
+        ethnicity: str('ethnicity', defaults.ethnicity),
+        religion: str('religion', defaults.religion),
+        height_cm: num('height_cm'),
+        weight_kg: num('weight_kg'),
+        blood_type: str('blood_type'),
+        id_card_number: str('id_card_number'),
+        id_card_issued_date: str('id_card_issued_date'),
+        id_card_expiry_date: str('id_card_expiry_date'),
+        marital_status: str('marital_status', defaults.marital_status),
+        military_status: str('military_status', defaults.military_status),
+        father_name: str('father_name'), father_age: num('father_age'), father_status: str('father_status', 'alive'),
+        mother_name: str('mother_name'), mother_age: num('mother_age'), mother_status: str('mother_status', 'alive'),
+        spouse_name: str('spouse_name'), spouse_occupation: str('spouse_occupation'),
+        spouse_workplace: str('spouse_workplace'), spouse_position: str('spouse_position'),
+        spouse_phone: str('spouse_phone'),
+        children_count: num('children_count'), children_male: num('children_male'),
+        children_female: num('children_female'),
+        children_not_in_school: num('children_not_in_school'),
+        children_studying: num('children_studying'),
+        children_school_level: str('children_school_level'),
+        siblings_total: num('siblings_total'), siblings_male: num('siblings_male'),
+        siblings_female: num('siblings_female'), applicant_birth_order: num('applicant_birth_order'),
+        siblings_details: arr('siblings_details', defaults.siblings_details),
+
+        // Step 3
+        education: arr('education', defaults.education),
+        work_experience: arr('work_experience', defaults.work_experience),
+        cv_url: row.cv_url ? String(row.cv_url) : null,
+        transcript_url: row.transcript_url ? String(row.transcript_url) : null,
+        id_card_copy_url: row.id_card_copy_url ? String(row.id_card_copy_url) : null,
+        house_registration_url: row.house_registration_url ? String(row.house_registration_url) : null,
+        other_documents: arr('other_documents', defaults.other_documents),
+
+        // Step 4
+        languages: arr('languages', defaults.languages),
+        typing_thai_wpm: num('typing_thai_wpm'),
+        typing_english_wpm: num('typing_english_wpm'),
+        computer_skills: str('computer_skills'),
+        driving_license_car: str('driving_license_car'),
+        driving_license_car_type: str('driving_license_car_type'),
+        driving_license_motorcycle: str('driving_license_motorcycle'),
+        driving_license_motorcycle_type: str('driving_license_motorcycle_type'),
+        office_equipment_skills: str('office_equipment_skills'),
+        hobbies: str('hobbies'), sports: str('sports'),
+        special_knowledge: str('special_knowledge'), other_skills: str('other_skills'),
+        can_work_upcountry: bool('can_work_upcountry'),
+        can_work_upcountry_note: str('can_work_upcountry_note'),
+        has_vehicle: bool('has_vehicle'),
+        vehicles: arr('vehicles', defaults.vehicles),
+        has_chronic_disease: bool('has_chronic_disease'),
+        chronic_disease_details: str('chronic_disease_details'),
+        had_surgery: bool('had_surgery'),
+        surgery_details: str('surgery_details'),
+        has_criminal_record: bool('has_criminal_record'),
+        criminal_record_details: str('criminal_record_details'),
+
+        // Step 5
+        emergency_contact_name: str('emergency_contact_name'),
+        emergency_contact_relation: str('emergency_contact_relation'),
+        emergency_contact_address: str('emergency_contact_address'),
+        emergency_contact_phone: str('emergency_contact_phone'),
+        reference_persons: arr('reference_persons', defaults.reference_persons),
+        allow_background_check: bool('allow_background_check'),
+        background_check_reason: str('background_check_reason'),
+        applied_before: bool('applied_before'),
+        applied_before_date: str('applied_before_date'),
+        knows_ebci_employees: str('knows_ebci_employees'),
+        heard_from: str('heard_from'), heard_from_other: str('heard_from_other'),
+        can_start_date: str('can_start_date'),
+        consider_other_positions: bool('consider_other_positions'),
+        pdpa_consented: bool('pdpa_consented', false) ?? false,
+        signature_data: row.signature_data ? String(row.signature_data) : null,
+        signed_date: str('signed_date'),
+        signed_location: str('signed_location', defaults.signed_location),
     }
 }
