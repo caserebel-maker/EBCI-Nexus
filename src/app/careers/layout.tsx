@@ -19,13 +19,24 @@ export default async function CareersLayout({
         <div className={`min-h-screen bg-brand-gradient dark:bg-background text-foreground flex flex-col font-sans ${kanit.variable} transition-colors duration-300`}>
             {/* Public Header */}
             <header className="bg-white/5 dark:bg-card/80 backdrop-blur-md border-b border-white/10 dark:border-border sticky top-0 z-50 transition-colors">
-                <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 bg-white/20 dark:bg-primary rounded flex items-center justify-center font-bold text-white dark:text-primary-foreground shadow-sm">N</div>
-                        <span className="text-lg font-bold tracking-wide text-white dark:text-foreground">
-                            EBCI NEXUS <span className="text-white/80 dark:text-primary">CAREERS</span>
+                <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
+                    <Link href="/careers" className="inline-flex items-center gap-3 shrink-0" aria-label="EBCI Careers">
+                        {/* Silver variant for the maroon header; w-auto preserves the ~3.4:1 wordmark ratio */}
+                        <img
+                            src="/brand/ebci-logo-silver.png"
+                            alt="EBCI"
+                            className="h-9 md:h-11 w-auto dark:hidden"
+                        />
+                        {/* Dark-mode fallback uses the maroon variant on the neutral card bg */}
+                        <img
+                            src="/brand/ebci-logo-maroon.png"
+                            alt="EBCI"
+                            className="hidden dark:block h-9 md:h-11 w-auto"
+                        />
+                        <span className="hidden sm:inline text-[11px] font-bold uppercase tracking-[0.28em] text-white/55 dark:text-primary border-l border-white/20 dark:border-border pl-3">
+                            Careers
                         </span>
-                    </div>
+                    </Link>
                     <div className="flex items-center gap-4">
                         <ModeToggle className="text-white dark:text-foreground hover:bg-white/10 dark:hover:bg-accent" />
                         <Link href="/login" className="text-sm text-white/80 hover:text-white dark:text-muted-foreground dark:hover:text-foreground transition-colors">
