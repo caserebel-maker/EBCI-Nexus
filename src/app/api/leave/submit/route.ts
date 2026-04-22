@@ -14,7 +14,7 @@ import {
     type LeaveType,
 } from '@/lib/leave-balance'
 import { resolveLeaveApprover, displayApproverName } from '@/lib/leave-approval'
-import { sendLeaveSubmittedToEmployee } from '@/lib/email-leave'
+import { sendLeaveSubmittedToEmployee, sendLeaveSubmittedToApprover } from '@/lib/email-leave'
 
 export const dynamic = 'force-dynamic'
 
@@ -192,7 +192,10 @@ export async function POST(req: NextRequest) {
         // job can re-sum pending_days from leave_requests.
     }
 
-    // Fire-and-forget email
+    // Emails — awaited so Vercel's Lambda doesn't tear the function
+    // down mid-send. Both failures are non-fatal: the DB row is the
+    // authoritative record, delivery status is logged + returned as
+    // flags for the client to surface if it wants to.
     const employeeRow = await supabaseAdmin
         .from('employees')
         .select('first_name_th, last_name_th, nickname, email')
@@ -203,19 +206,42 @@ export async function POST(req: NextRequest) {
           + (employeeRow.data.nickname ? ` (${employeeRow.data.nickname})` : '')
         : session.name
     const employeeEmail = (employeeRow.data?.email as string | null) ?? session.name
-    if (employeeEmail && employeeEmail.includes('@')) {
-        sendLeaveSubmittedToEmployee({
-            referenceCode,
-            employeeName,
-            employeeEmail,
-            approverName: displayApproverName(approver),
-            approverEmail: approver.email,
-            leaveTypeTh: leaveType.name_th,
-            startDate,
-            endDate,
-            totalDays,
-            reason,
-        }).catch(err => console.error('[leave/submit] email error:', err))
+    const approverName = displayApproverName(approver)
+    const approverEmail = approver.email
+
+    const emailSent = { employee: false, approver: false }
+
+    const emailCtx = {
+        referenceCode,
+        employeeName,
+        employeeEmail,
+        approverName,
+        approverEmail,
+        leaveTypeTh: leaveType.name_th,
+        startDate,
+        endDate,
+        totalDays,
+        reason,
+    }
+    try {
+        const jobs: Array<Promise<unknown>> = []
+        if (employeeEmail && employeeEmail.includes('@')) {
+            jobs.push(
+                sendLeaveSubmittedToEmployee(emailCtx)
+                    .then(r => { emailSent.employee = Boolean(r && 'success' in r && r.success) })
+                    .catch(err => console.error('[leave/submit] employee email threw:', err)),
+            )
+        }
+        if (approverEmail && approverEmail.includes('@')) {
+            jobs.push(
+                sendLeaveSubmittedToApprover(emailCtx)
+                    .then(r => { emailSent.approver = Boolean(r && 'success' in r && r.success) })
+                    .catch(err => console.error('[leave/submit] approver email threw:', err)),
+            )
+        }
+        await Promise.allSettled(jobs)
+    } catch (err) {
+        console.error('[leave/submit] unexpected email error:', err)
     }
 
     return NextResponse.json({
@@ -224,8 +250,9 @@ export async function POST(req: NextRequest) {
         reference_code: referenceCode,
         approver: {
             id: approver.id,
-            name: displayApproverName(approver),
+            name: approverName,
         },
         total_days: totalDays,
+        email_sent: emailSent,
     })
 }
