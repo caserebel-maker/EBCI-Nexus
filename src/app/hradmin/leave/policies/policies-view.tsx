@@ -5,7 +5,8 @@ import {
     ScrollText, Plus, Loader2, Edit3, Trash2, Power, PowerOff, Info,
     CheckCircle2, AlertCircle, X, Calculator, UserCircle, Briefcase,
     Calendar as CalendarIcon, Sparkles, Users as UsersIcon,
-    ChevronDown, ChevronUp, Target, Play, History,
+    ChevronDown, ChevronUp, Target, Play,
+    Rocket, ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -282,6 +283,12 @@ export function PoliciesView() {
             {/* Test calculate tool */}
             <CalculateCard leaveTypes={leaveTypes} employees={employees} />
 
+            {/* Bulk apply */}
+            <ApplyCard
+                disabled={policies.filter(p => p.is_active !== false).length === 0}
+                onApplied={() => showToast('Apply policies เรียบร้อย')}
+            />
+
             {(editing || creating) && (
                 <PolicyFormModal
                     initial={editing}
@@ -378,6 +385,239 @@ function Badge({
             {icon}
             {label}
         </span>
+    )
+}
+
+// ── Bulk apply card ───────────────────────────────────────────────────────
+interface ApplyResult {
+    updated_count: number
+    created_count: number
+    skipped_count: number
+    no_policy_count: number
+    applied_sample: Array<{
+        employee_code: string; employee_name: string; leave_type_id: string;
+        old_total: number; new_total: number; source: string;
+    }>
+    skipped_sample: Array<{
+        employee_code: string; employee_name: string; leave_type_id: string;
+        old_total: number; new_total: number;
+    }>
+    dry_run: boolean
+    year: number
+}
+
+function ApplyCard({
+    disabled, onApplied,
+}: {
+    disabled: boolean
+    onApplied: () => void
+}) {
+    const currentYear = new Date().getFullYear()
+    const [year, setYear] = useState(currentYear)
+    const [skipAdjusted, setSkipAdjusted] = useState(true)
+    const [result, setResult] = useState<ApplyResult | null>(null)
+    const [err, setErr] = useState<string | null>(null)
+    const [pending, startTransition] = useTransition()
+    const [mode, setMode] = useState<'idle' | 'dry' | 'applied'>('idle')
+
+    const run = (dryRun: boolean) => {
+        if (!dryRun && !confirm(
+            `ยืนยัน Apply นโยบายให้พนักงานทุกคนสำหรับปี ${year}?\n\n` +
+            `${skipAdjusted ? '• ข้ามคนที่ HR ปรับ manual ไว้แล้ว' : '• เขียนทับทุกรายการ (รวมคนที่ปรับ manual)'}\n` +
+            `\nการกระทำนี้อัปเดต leave_balances.total_days ของทุกคน`,
+        )) return
+
+        setErr(null); setResult(null)
+        startTransition(async () => {
+            try {
+                const res = await fetch('/api/hradmin/leave/policies/apply', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({
+                        year,
+                        skip_manually_adjusted: skipAdjusted,
+                        dry_run: dryRun,
+                    }),
+                })
+                const json = await res.json()
+                if (!res.ok) throw new Error(json?.error ?? 'Apply ล้มเหลว')
+                setResult(json as ApplyResult)
+                setMode(dryRun ? 'dry' : 'applied')
+                if (!dryRun) onApplied()
+            } catch (e) {
+                setErr(e instanceof Error ? e.message : 'Apply ล้มเหลว')
+            }
+        })
+    }
+
+    return (
+        <section className="p-5 sm:p-6" style={glass}>
+            <div className="flex items-start gap-2 mb-4">
+                <Rocket size={16} className="mt-0.5 text-amber-200 shrink-0" />
+                <div>
+                    <h2 className="text-white font-bold">Apply Policies ให้พนักงานทุกคน</h2>
+                    <p className="text-xs text-white/55 mt-0.5">
+                        คำนวณสิทธิ์จาก policies ที่เปิด active และอัปเดต <code className="text-amber-200">leave_balances.total_days</code>
+                        (used_days / pending_days ไม่ถูกแตะ)
+                    </p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                <div>
+                    <label className="block text-[11px] uppercase tracking-wider text-white/55 font-bold mb-1.5">ปี</label>
+                    <input
+                        type="number" min={2024} max={2035}
+                        value={year}
+                        onChange={e => setYear(Number(e.target.value))}
+                        className="w-full h-11 px-3 rounded-lg bg-black/25 border border-white/15 text-white text-sm tabular-nums focus:outline-none focus:border-amber-300/50"
+                    />
+                </div>
+                <div className="sm:col-span-3">
+                    <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            checked={skipAdjusted}
+                            onChange={e => setSkipAdjusted(e.target.checked)}
+                            className="h-4 w-4 accent-amber-400"
+                        />
+                        <span className="text-sm text-white inline-flex items-center gap-1.5">
+                            <ShieldCheck size={13} className={skipAdjusted ? 'text-emerald-300' : 'text-white/40'} />
+                            ข้ามคนที่ HR ปรับ balance ด้วยมือไว้แล้ว
+                        </span>
+                    </label>
+                    <p className="text-[11px] text-white/45 mt-1 pl-6">
+                        {skipAdjusted
+                            ? 'ปลอดภัย — ถ้ามีการปรับ manual ระบบจะเว้นคนเหล่านั้น'
+                            : 'จะเขียนทับทุกรายการรวมถึงที่ HR ปรับไว้ด้วยมือ'}
+                    </p>
+                </div>
+            </div>
+
+            <div className="mt-4 flex items-center gap-2 flex-wrap">
+                <button
+                    type="button"
+                    onClick={() => run(true)}
+                    disabled={pending || disabled}
+                    className="inline-flex items-center gap-2 px-4 h-11 rounded-lg bg-white/10 hover:bg-white/15 disabled:opacity-60 text-white text-sm font-semibold"
+                >
+                    {pending && mode !== 'applied' ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+                    ทดลอง (Dry run)
+                </button>
+                <button
+                    type="button"
+                    onClick={() => run(false)}
+                    disabled={pending || disabled}
+                    className="inline-flex items-center gap-2 px-5 h-11 rounded-lg bg-amber-400 hover:bg-amber-300 disabled:opacity-60 text-black font-bold"
+                >
+                    {pending && mode !== 'dry' ? <Loader2 size={14} className="animate-spin" /> : <Rocket size={14} />}
+                    Apply Now
+                </button>
+                {disabled && (
+                    <p className="text-xs text-amber-200 inline-flex items-center gap-1.5">
+                        <Info size={12} /> ไม่มี active policy ให้ apply
+                    </p>
+                )}
+            </div>
+
+            {err && (
+                <div className="mt-3 p-3 rounded-lg border border-red-500/40 bg-red-500/10 text-red-200 text-sm inline-flex items-start gap-2">
+                    <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                    {err}
+                </div>
+            )}
+
+            {result && <ApplyResultCard result={result} />}
+        </section>
+    )
+}
+
+function ApplyResultCard({ result }: { result: ApplyResult }) {
+    const stats: Array<{ label: string; value: number; tone: 'ok' | 'muted' | 'warn' | 'info' }> = [
+        { label: 'อัปเดต', value: result.updated_count, tone: 'ok' },
+        { label: 'สร้างใหม่', value: result.created_count, tone: 'info' },
+        { label: 'ข้าม (manual)', value: result.skipped_count, tone: 'warn' },
+        { label: 'ใช้ default', value: result.no_policy_count, tone: 'muted' },
+    ]
+    return (
+        <div className={cn(
+            'mt-4 p-4 rounded-xl border',
+            result.dry_run ? 'border-sky-400/30 bg-sky-500/10' : 'border-emerald-400/30 bg-emerald-500/10',
+        )}>
+            <div className="flex items-center justify-between mb-3">
+                <p className="text-white font-bold text-sm inline-flex items-center gap-1.5">
+                    <CheckCircle2 size={14} className={result.dry_run ? 'text-sky-200' : 'text-emerald-200'} />
+                    {result.dry_run ? `ทดลองเสร็จ — ปี ${result.year}` : `Apply เรียบร้อย — ปี ${result.year}`}
+                </p>
+                {result.dry_run && (
+                    <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md bg-sky-500/30 text-sky-100">
+                        DRY RUN
+                    </span>
+                )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                {stats.map(s => (
+                    <div key={s.label} className="p-3 rounded-lg bg-black/25 border border-white/10">
+                        <p className="text-[10px] uppercase tracking-wider text-white/45 font-bold">{s.label}</p>
+                        <p className={cn('text-xl font-bold tabular-nums mt-0.5',
+                            s.tone === 'ok' ? 'text-emerald-200'
+                            : s.tone === 'info' ? 'text-sky-200'
+                            : s.tone === 'warn' ? 'text-amber-200'
+                            : 'text-white/70',
+                        )}>
+                            {s.value}
+                        </p>
+                    </div>
+                ))}
+            </div>
+
+            {result.applied_sample.length > 0 && (
+                <details className="mb-2">
+                    <summary className="cursor-pointer text-xs text-white/70 font-semibold inline-flex items-center gap-1.5">
+                        <ChevronDown size={12} />
+                        ตัวอย่างรายการที่เปลี่ยน ({result.applied_sample.length}{result.updated_count + result.created_count > result.applied_sample.length ? ' จาก ' + (result.updated_count + result.created_count) : ''})
+                    </summary>
+                    <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">
+                        {result.applied_sample.map((r, i) => (
+                            <div key={i} className="text-xs text-white/75 flex items-center gap-2">
+                                <span className="inline-block w-14 text-amber-200 font-mono tabular-nums">{r.employee_code}</span>
+                                <span className="text-white/85 truncate min-w-[100px]">{r.employee_name}</span>
+                                <span className="text-white/40">·</span>
+                                <span className="text-white/55">{r.leave_type_id}</span>
+                                <span className="text-white/40">·</span>
+                                <span className="tabular-nums text-white/55">{r.old_total}</span>
+                                <span className="text-white/40">→</span>
+                                <span className="tabular-nums font-bold text-white">{r.new_total}</span>
+                                {r.source === 'default' && (
+                                    <span className="text-[10px] text-amber-300 ml-1">(default)</span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </details>
+            )}
+            {result.skipped_sample.length > 0 && (
+                <details>
+                    <summary className="cursor-pointer text-xs text-white/70 font-semibold inline-flex items-center gap-1.5">
+                        <ChevronDown size={12} />
+                        ตัวอย่างคนที่ข้าม (manually adjusted) ({result.skipped_sample.length})
+                    </summary>
+                    <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">
+                        {result.skipped_sample.map((r, i) => (
+                            <div key={i} className="text-xs text-white/60 flex items-center gap-2">
+                                <span className="inline-block w-14 text-amber-200 font-mono tabular-nums">{r.employee_code}</span>
+                                <span className="truncate min-w-[100px]">{r.employee_name}</span>
+                                <span className="text-white/30">·</span>
+                                <span>{r.leave_type_id}</span>
+                                <span className="text-white/30">·</span>
+                                <span className="tabular-nums">คงไว้ที่ {r.old_total}</span>
+                                <span className="text-white/30">(policy จะให้ {r.new_total})</span>
+                            </div>
+                        ))}
+                    </div>
+                </details>
+            )}
+        </div>
     )
 }
 
