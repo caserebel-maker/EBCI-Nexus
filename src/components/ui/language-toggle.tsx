@@ -15,12 +15,12 @@ export function LanguageToggle() {
                 console.log("Toggling language from:", language)
                 toggleLanguage()
             }}
-            className="flex items-center gap-1.5 font-black cursor-pointer active:scale-95 text-white dark:text-foreground hover:bg-white/10 dark:hover:bg-accent h-11 px-3 rounded-lg"
+            className="flex items-center gap-1 font-black cursor-pointer active:scale-95 text-white dark:text-foreground bg-white/10 hover:bg-white/20 dark:hover:bg-accent h-10 px-3 rounded-full"
             style={{ pointerEvents: 'auto', zIndex: 9999 }}
             title="Switch Language"
         >
-            <Globe className="h-[26px] w-[26px] text-white dark:text-foreground" strokeWidth={2.2} />
-            <span className="uppercase tracking-widest text-[15px]">{language}</span>
+            <Globe className="h-5 w-5 text-white dark:text-foreground" strokeWidth={2.2} />
+            <span className="uppercase tracking-widest text-[13px]">{language}</span>
         </Button>
     )
 }

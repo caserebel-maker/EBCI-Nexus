@@ -42,15 +42,16 @@ export function NotificationBell() {
                 onClick={() => setOpen(v => !v)}
                 aria-label={badge ? `การแจ้งเตือน ${badge} รายการใหม่` : 'การแจ้งเตือน'}
                 className={cn(
-                    'relative h-11 w-11 rounded-lg flex items-center justify-center transition-all',
-                    'text-white/80 hover:text-white hover:bg-white/10 active:scale-95',
-                    open && 'bg-white/10 text-white',
+                    'relative h-10 w-10 rounded-full flex items-center justify-center transition-all',
+                    'bg-white/10 hover:bg-white/20 active:scale-95',
+                    'text-white',
+                    open && 'bg-white/25',
                 )}
             >
-                <Bell size={26} strokeWidth={open ? 2.5 : 2.2} />
+                <Bell size={20} strokeWidth={open ? 2.5 : 2.2} />
                 {badge && (
                     <span
-                        className="absolute -top-0.5 -right-0.5 min-w-[20px] h-[20px] rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center px-1 ring-2 ring-[rgb(60,15,20)] shadow-lg shadow-red-500/40"
+                        className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1 ring-2 ring-[rgb(60,15,20)] shadow-lg shadow-red-500/40"
                         aria-hidden="true"
                     >
                         {badge}

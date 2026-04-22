@@ -194,15 +194,17 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                     </Link>
 
                     {/* Right: refresh (mobile only) + toggles.
-                        gap-0 with rounded-lg tiles reads as a unified
-                        action strip, not three floating orbs. */}
-                    <div className="flex items-center gap-0 relative z-[100] ml-auto">
+                        Each control wears a persistent bg-white/10 chip
+                        so the cluster reads as a grouped action bar
+                        (Facebook/Messenger pattern) even with a small
+                        gap between circles. */}
+                    <div className="flex items-center gap-1.5 relative z-[100] ml-auto">
                         <button
                             onClick={() => window.location.reload()}
-                            className="lg:hidden h-11 w-11 rounded-lg flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 active:scale-90 transition-all"
+                            className="lg:hidden h-10 w-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white active:scale-95 transition-all"
                             aria-label="Refresh"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                                 <path d="M3 3v5h5" />
                             </svg>
