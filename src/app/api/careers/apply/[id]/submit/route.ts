@@ -5,6 +5,7 @@ import {
     sendApplicationSubmittedEmail,
     sendHrNotificationEmail,
 } from '@/lib/careers-emails'
+import { sanitizeApplyFields } from '@/lib/careers-sanitize'
 
 /**
  * POST /api/careers/apply/[id]/submit
@@ -32,12 +33,9 @@ export async function POST(
         return NextResponse.json({ error: 'ใบสมัครนี้ถูกส่งไปแล้ว' }, { status: 409 })
     }
 
-    // Apply any last-moment changes
-    const update: Record<string, unknown> = { ...extraFields }
-    for (const forbidden of [
-        'id', 'reference_code', 'application_status', 'created_at', 'updated_at',
-        'submitted_at', 'reviewed_by', 'reviewed_at', 'review_notes', 'interview_evaluation',
-    ]) delete update[forbidden]
+    // Apply any last-moment changes (forbidden columns stripped + date/numeric
+    // empty strings → null, same treatment as /start and /autosave)
+    const update: Record<string, unknown> = sanitizeApplyFields(extraFields)
 
     if (Object.keys(update).length) {
         const { error: upErr } = await supabaseAdmin

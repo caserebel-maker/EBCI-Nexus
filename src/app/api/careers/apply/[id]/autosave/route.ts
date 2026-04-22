@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { verifyOwnership } from '@/lib/careers-ownership'
-
-const FORBIDDEN_FIELDS = new Set([
-    'id', 'reference_code', 'application_status', 'created_at', 'updated_at',
-    'submitted_at', 'reviewed_by', 'reviewed_at', 'review_notes',
-    'interview_evaluation', 'pdpa_consented_at',
-])
+import { sanitizeApplyFields } from '@/lib/careers-sanitize'
 
 /**
  * PATCH /api/careers/apply/[id]/autosave
@@ -32,11 +27,7 @@ export async function PATCH(
         return NextResponse.json({ error: 'ใบสมัครถูกส่งแล้ว ไม่สามารถแก้ไขได้' }, { status: 409 })
     }
 
-    const cleanUpdate: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(fields)) {
-        if (FORBIDDEN_FIELDS.has(k)) continue
-        cleanUpdate[k] = v
-    }
+    const cleanUpdate: Record<string, unknown> = sanitizeApplyFields(fields)
     cleanUpdate.last_saved_at = new Date().toISOString()
 
     if (Object.keys(cleanUpdate).length === 1) {
