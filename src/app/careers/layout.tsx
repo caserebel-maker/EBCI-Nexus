@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { Kanit } from 'next/font/google'
 import { getDictionary } from '@/config/i18n'
-import { ModeToggle } from '@/components/mode-toggle'
 
 const kanit = Kanit({
     subsets: ['thai', 'latin'],
@@ -38,7 +37,6 @@ export default async function CareersLayout({
                         </span>
                     </Link>
                     <div className="flex items-center gap-4">
-                        <ModeToggle className="text-white dark:text-foreground hover:bg-white/10 dark:hover:bg-accent" />
                         <Link href="/login" className="text-sm text-white/80 hover:text-white dark:text-muted-foreground dark:hover:text-foreground transition-colors">
                             Staff Login
                         </Link>

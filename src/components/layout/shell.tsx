@@ -24,7 +24,6 @@ import { usePathname } from 'next/navigation'
 import { LogOut, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAVIGATION_CONFIG } from '@/config/navigation'
-import { ModeToggle } from '@/components/mode-toggle'
 import { LanguageToggle } from '@/components/ui/language-toggle'
 import { useTranslation } from '@/contexts/language-context'
 import { PortalBottomNav } from '@/components/layout/portal-bottom-nav'
@@ -208,7 +207,6 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                         </button>
                         <NotificationBell />
                         <LanguageToggle />
-                        <ModeToggle />
                     </div>
                 </header>
 

@@ -1,6 +1,5 @@
 import 'server-only'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { resolveSessionEmployeeId } from '@/lib/session-employee'
 import type { SessionUser } from '@/lib/auth-types'
 
 export type NotificationColor =
@@ -90,33 +89,24 @@ export async function getEmployeeUserId(
 }
 
 /**
- * Resolve the public.User.id for the signed-in session.
+ * Resolve the recipient_user_id for the signed-in session.
  *
- * Fast path: session.id matches public."User".id directly (newer
- * accounts created after the UUID migration).
- * Slow path: look up via employees.user_id (legacy accounts whose
- * User row still holds a Prisma CUID like `cm6ml...`).
+ * Simple semantic: `notifications.recipient_user_id` now holds the
+ * Supabase `auth.users.id` (= `employees.user_id` for linked rows).
+ *
+ * The original column was declared with an FK to the legacy Prisma
+ * `public."User"` table whose ids are CUIDs that don't match auth
+ * UUIDs and aren't reachable from the session. That FK was dropped;
+ * this resolver just returns `session.id`, falling back to
+ * `employees.user_id` for the rare case where session.id and the
+ * linked employees.user_id disagree (shouldn't happen post-migration
+ * but kept as a safety net).
  */
 export async function resolveSessionUserId(
     session: SessionUser,
 ): Promise<string | null> {
     if (!session?.id) return null
-
-    try {
-        const { data: direct } = await supabaseAdmin
-            .from('User')
-            .select('id')
-            .eq('id', session.id)
-            .maybeSingle()
-        if (direct?.id) return String(direct.id)
-    } catch (err) {
-        // table or column may be absent in edge environments — fall through
-        console.warn('[notifications] User direct lookup skipped:', err)
-    }
-
-    const employeeId = await resolveSessionEmployeeId(session)
-    if (!employeeId) return null
-    return await getEmployeeUserId(employeeId)
+    return session.id
 }
 
 // ── Lucide icon + color defaults by type ─────────────────────────────
