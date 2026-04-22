@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
     Users, Search, Filter, ChevronLeft, ChevronRight, X, Calendar,
-    Clock, CheckCircle2, Hourglass, Eye, Loader2, FileText,
+    CheckCircle2, Hourglass, Loader2, FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -46,14 +46,18 @@ interface Props {
 }
 
 const STATUS_META: Record<string, { label: string; chip: string; icon: typeof Hourglass }> = {
-    draft:        { label: 'ร่าง',             chip: 'bg-white/10 text-white/70',         icon: Hourglass },
-    submitted:    { label: 'ส่งแล้ว',           chip: 'bg-blue-500/25 text-blue-200',       icon: CheckCircle2 },
-    reviewing:    { label: 'กำลังพิจารณา',     chip: 'bg-amber-500/25 text-amber-200',     icon: Clock },
-    shortlisted:  { label: 'เข้ารอบ',          chip: 'bg-emerald-500/25 text-emerald-200', icon: CheckCircle2 },
-    interviewed:  { label: 'สัมภาษณ์แล้ว',     chip: 'bg-purple-500/25 text-purple-200',   icon: CheckCircle2 },
-    offered:      { label: 'เสนองาน',          chip: 'bg-emerald-500/25 text-emerald-200', icon: CheckCircle2 },
-    rejected:     { label: 'ไม่ผ่าน',          chip: 'bg-red-500/25 text-red-200',         icon: X },
-    withdrawn:    { label: 'ถอนใบสมัคร',       chip: 'bg-white/10 text-white/50',          icon: X },
+    draft:        { label: 'ร่าง',         chip: 'bg-white/20 text-white/85',          icon: Hourglass },
+    submitted:    { label: 'ส่งแล้ว',       chip: 'bg-blue-500/80 text-white',           icon: CheckCircle2 },
+    reviewing:    { label: 'กำลังพิจารณา', chip: 'bg-amber-500/85 text-black',          icon: Clock },
+    shortlisted:  { label: 'เข้ารอบ',      chip: 'bg-purple-500/85 text-white',         icon: CheckCircle2 },
+    interview:    { label: 'สัมภาษณ์',     chip: 'bg-indigo-500/85 text-white',         icon: CheckCircle2 },
+    hired:        { label: 'เสนองาน',      chip: 'bg-emerald-500/90 text-white',        icon: CheckCircle2 },
+    rejected:     { label: 'ไม่ผ่าน',      chip: 'bg-red-500/85 text-white',            icon: X },
+    // Legacy values still in the DB (pre-Iteration-2 rename). Shown
+    // with reasonable colors so existing rows don't look broken.
+    interviewed:  { label: 'สัมภาษณ์แล้ว', chip: 'bg-indigo-500/85 text-white',         icon: CheckCircle2 },
+    offered:      { label: 'เสนองาน',      chip: 'bg-emerald-500/90 text-white',        icon: CheckCircle2 },
+    withdrawn:    { label: 'ถอนใบสมัคร',   chip: 'bg-white/10 text-white/50',           icon: X },
 }
 
 const STATUS_TABS: Array<{ key: string; label: string }> = [
@@ -61,8 +65,8 @@ const STATUS_TABS: Array<{ key: string; label: string }> = [
     { key: 'submitted',   label: 'ส่งแล้ว' },
     { key: 'reviewing',   label: 'กำลังพิจารณา' },
     { key: 'shortlisted', label: 'เข้ารอบ' },
-    { key: 'interviewed', label: 'สัมภาษณ์' },
-    { key: 'offered',     label: 'เสนองาน' },
+    { key: 'interview',   label: 'สัมภาษณ์' },
+    { key: 'hired',       label: 'เสนองาน' },
     { key: 'draft',       label: 'ร่าง' },
     { key: 'rejected',    label: 'ไม่ผ่าน' },
 ]
@@ -260,130 +264,19 @@ export function ApplicantsListView({
                 </div>
             </form>
 
-            {/* Table */}
-            <div className={cn('rounded-xl border border-white/10 overflow-hidden bg-white/[0.03]', isPending && 'opacity-60')}>
+            {/* Card grid */}
+            <div className={cn('transition-opacity', isPending && 'opacity-60')}>
                 {items.length === 0 ? (
-                    <div className="py-16 text-center text-white/40">
+                    <div className="py-16 text-center text-white/40 rounded-xl border border-white/10 bg-white/[0.03]">
                         <Users size={42} className="mx-auto mb-3 opacity-30" />
                         <p className="text-sm">ยังไม่มีใบสมัครที่ตรงกับตัวกรอง</p>
                     </div>
                 ) : (
-                    <>
-                        {/* Desktop table */}
-                        <div className="hidden md:block overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-white/[0.04] text-white/55">
-                                    <tr className="text-left">
-                                        <th className="py-3 px-3 w-12 text-center">#</th>
-                                        <th className="py-3 px-3 w-40 whitespace-nowrap">รหัส</th>
-                                        <th className="py-3 px-3">ผู้สมัคร</th>
-                                        <th className="py-3 px-3 w-48">ตำแหน่ง</th>
-                                        <th className="py-3 px-3 w-32">สถานะ</th>
-                                        <th className="py-3 px-3 w-44 whitespace-nowrap">ส่งเมื่อ</th>
-                                        <th className="py-3 px-3 w-20 text-right">ดู</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {items.map((a, i) => {
-                                        const meta = STATUS_META[a.application_status] ?? STATUS_META.draft
-                                        const StatusIcon = meta.icon
-                                        return (
-                                            <tr
-                                                key={a.id}
-                                                onClick={() => router.push(`/hradmin/applicants/${a.id}`)}
-                                                className="border-t border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
-                                            >
-                                                <td className="py-3 px-3 text-white/40 text-center tabular-nums">{from + i}</td>
-                                                <td className="py-3 px-3 text-amber-200 font-mono text-[13px] whitespace-nowrap">{a.reference_code}</td>
-                                                <td className="py-3 px-3">
-                                                    <div className="flex items-center gap-3 min-w-0">
-                                                        <div className="h-9 w-9 rounded-full overflow-hidden bg-white/10 border border-white/15 shrink-0">
-                                                            {a.photo_url ? (
-                                                                <img src={a.photo_url} alt="" className="h-full w-full object-cover" />
-                                                            ) : (
-                                                                <div className="h-full w-full flex items-center justify-center text-white/70 font-bold text-sm">
-                                                                    {initials(a)}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <p className="text-white font-semibold truncate">{fullName(a)}</p>
-                                                            <p className="text-white/45 text-[12px] truncate">{a.email ?? '—'}</p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="py-3 px-3 text-white/75 truncate max-w-[200px]">{a.position_applied ?? '—'}</td>
-                                                <td className="py-3 px-3">
-                                                    <span className={cn('inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md', meta.chip)}>
-                                                        <StatusIcon size={11} />
-                                                        {meta.label}
-                                                    </span>
-                                                </td>
-                                                <td className="py-3 px-3 text-white/65 whitespace-nowrap tabular-nums">
-                                                    {a.submitted_at ? formatDateTime(a.submitted_at) : (
-                                                        <span className="text-white/30 italic">— ยังไม่ส่ง</span>
-                                                    )}
-                                                </td>
-                                                <td className="py-3 px-3 text-right">
-                                                    <Link
-                                                        href={`/hradmin/applicants/${a.id}`}
-                                                        onClick={e => e.stopPropagation()}
-                                                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-white/5 hover:bg-white/15 text-white/75 hover:text-white text-xs font-semibold transition-all"
-                                                    >
-                                                        <Eye size={13} />
-                                                        ดู
-                                                    </Link>
-                                                </td>
-                                            </tr>
-                                        )
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Mobile cards */}
-                        <div className="md:hidden divide-y divide-white/5">
-                            {items.map((a, i) => {
-                                const meta = STATUS_META[a.application_status] ?? STATUS_META.draft
-                                const StatusIcon = meta.icon
-                                return (
-                                    <Link
-                                        key={a.id}
-                                        href={`/hradmin/applicants/${a.id}`}
-                                        className="block p-3 hover:bg-white/5 transition-colors"
-                                    >
-                                        <div className="flex items-center justify-between gap-2 mb-1">
-                                            <span className="text-[11px] text-white/35 tabular-nums">#{from + i}</span>
-                                            <span className={cn('inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md', meta.chip)}>
-                                                <StatusIcon size={10} />
-                                                {meta.label}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-full overflow-hidden bg-white/10 border border-white/15 shrink-0">
-                                                {a.photo_url ? (
-                                                    <img src={a.photo_url} alt="" className="h-full w-full object-cover" />
-                                                ) : (
-                                                    <div className="h-full w-full flex items-center justify-center text-white/70 font-bold text-sm">
-                                                        {initials(a)}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <p className="text-white font-semibold truncate">{fullName(a)}</p>
-                                                <p className="text-white/55 text-xs truncate">{a.position_applied ?? '—'}</p>
-                                                <p className="text-amber-200 text-[11px] font-mono mt-0.5">{a.reference_code}</p>
-                                            </div>
-                                        </div>
-                                        <p className="mt-2 text-[11px] text-white/45 inline-flex items-center gap-1">
-                                            <Clock size={10} />
-                                            {a.submitted_at ? `ส่งเมื่อ ${formatDateTime(a.submitted_at)}` : `บันทึกร่าง ${formatDateTime(a.last_saved_at ?? a.created_at)}`}
-                                        </p>
-                                    </Link>
-                                )
-                            })}
-                        </div>
-                    </>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        {items.map(a => (
+                            <ApplicantCard key={a.id} a={a} />
+                        ))}
+                    </div>
                 )}
             </div>
 
@@ -434,5 +327,78 @@ export function ApplicantsListView({
                 </div>
             )}
         </div>
+    )
+}
+
+// ── Applicant card ─────────────────────────────────────────────────────────
+/**
+ * Vertical 3:4 card used in the grid. Photo fills the frame with a
+ * maroon gradient fallback + large initial when there's no photo_url.
+ * Status pill top-right, 4-line overlay bottom (name / position /
+ * reference code / submitted-at). Whole card links to the detail page.
+ */
+function ApplicantCard({ a }: { a: Applicant }) {
+    const meta = STATUS_META[a.application_status] ?? STATUS_META.draft
+    const StatusIcon = meta.icon
+    const name = fullName(a)
+    const submittedLine = a.submitted_at
+        ? `ส่งเมื่อ ${formatDateTime(a.submitted_at)}`
+        : `บันทึกร่าง ${formatDateTime(a.last_saved_at ?? a.created_at)}`
+    return (
+        <Link
+            href={`/hradmin/applicants/${a.id}`}
+            className="relative aspect-[3/4] rounded-2xl overflow-hidden cursor-pointer group shadow-lg hover:shadow-2xl transition-all"
+            aria-label={`ดูใบสมัครของ ${name}`}
+        >
+            {/* Photo / fallback */}
+            {a.photo_url ? (
+                <img
+                    src={a.photo_url}
+                    alt={name}
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                />
+            ) : (
+                <div
+                    className="absolute inset-0 flex items-center justify-center text-white/30 text-6xl font-bold"
+                    style={{ background: 'linear-gradient(135deg,#561e23 0%,#882136 100%)' }}
+                >
+                    {initials(a)}
+                </div>
+            )}
+
+            {/* Status badge — top right */}
+            <span
+                className={cn(
+                    'absolute top-3 right-3 z-10 inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-md',
+                    meta.chip,
+                )}
+            >
+                <StatusIcon size={11} />
+                {meta.label}
+            </span>
+
+            {/* Bottom gradient overlay (fills lower half for readability) */}
+            <div
+                className="absolute inset-x-0 bottom-0 h-1/2 pointer-events-none"
+                style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 100%)' }}
+            />
+
+            {/* Text content — 4 lines */}
+            <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4 text-white">
+                <p className="font-bold text-[15px] sm:text-base leading-tight mb-0.5 line-clamp-1 drop-shadow">
+                    {name}
+                </p>
+                <p className="text-[12px] sm:text-sm text-white/90 line-clamp-1 drop-shadow">
+                    {a.position_applied ?? '—'}
+                </p>
+                <p className="text-[11px] font-mono text-amber-200 tracking-wider mt-0.5 drop-shadow">
+                    {a.reference_code}
+                </p>
+                <p className="text-[10px] text-white/75 mt-0.5 line-clamp-1">
+                    {submittedLine}
+                </p>
+            </div>
+        </Link>
     )
 }
