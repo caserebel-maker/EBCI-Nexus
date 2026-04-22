@@ -15,6 +15,7 @@ import {
 } from '@/lib/leave-balance'
 import { resolveLeaveApprover, displayApproverName } from '@/lib/leave-approval'
 import { sendLeaveSubmittedToEmployee, sendLeaveSubmittedToApprover } from '@/lib/email-leave'
+import { createNotification, getEmployeeUserId } from '@/lib/notifications'
 
 export const dynamic = 'force-dynamic'
 
@@ -242,6 +243,34 @@ export async function POST(req: NextRequest) {
         await Promise.allSettled(jobs)
     } catch (err) {
         console.error('[leave/submit] unexpected email error:', err)
+    }
+
+    // In-app notification for the approver. Best-effort: failure here
+    // never interrupts the response — the DB row + email are the
+    // authoritative signals.
+    try {
+        const approverUserId = await getEmployeeUserId(approver.id)
+        if (approverUserId) {
+            const applicantNick = (employeeRow.data?.nickname as string | null) ?? employeeName
+            const leaveTypeTh = leaveType.name_th ?? 'ลา'
+            const dateLabel = startDate === endDate ? startDate : `${startDate} → ${endDate}`
+            await createNotification({
+                recipient_user_id: approverUserId,
+                type: 'leave_request_pending',
+                title: `${applicantNick} ขอ${leaveTypeTh}`,
+                body: `${dateLabel} (${totalDays} วัน) — ${reason || 'ไม่ระบุเหตุผล'}`,
+                action_url: '/portal/leave/inbox',
+                action_label: 'ดูรายละเอียด',
+                entity_type: 'leave_request',
+                entity_id: leaveRequestId,
+                reference_code: referenceCode,
+                icon: 'Calendar',
+                color: 'amber',
+                sender_name: applicantNick,
+            })
+        }
+    } catch (err) {
+        console.error('[leave/submit] notification error:', err)
     }
 
     return NextResponse.json({

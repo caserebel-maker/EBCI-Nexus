@@ -4,6 +4,7 @@ import { getSession } from '@/lib/auth'
 import { resolveSessionEmployeeId } from '@/lib/session-employee'
 import { adjustPendingDays } from '@/lib/leave-balance'
 import { sendLeaveRejected } from '@/lib/email-leave'
+import { createNotification, getEmployeeUserId } from '@/lib/notifications'
 
 export const dynamic = 'force-dynamic'
 
@@ -137,6 +138,33 @@ export async function POST(
         } catch (err) {
             console.error('[leave/reject] email threw:', err)
         }
+    }
+
+    // In-app notification for the applicant (best-effort)
+    try {
+        const employeeUserId = await getEmployeeUserId(row.employee_id as string)
+        if (employeeUserId) {
+            const approverNick = (approver?.nickname as string | null)
+                ?? `${approver?.first_name_th ?? ''} ${approver?.last_name_th ?? ''}`.trim()
+                ?? null
+            const leaveTypeTh = (typeResult.data?.name_th as string | undefined) ?? (row.leave_type_id as string)
+            await createNotification({
+                recipient_user_id: employeeUserId,
+                type: 'leave_rejected',
+                title: 'ใบลาของคุณถูกปฏิเสธ',
+                body: `${leaveTypeTh} ${row.start_date} → ${row.end_date} — เหตุผล: ${rejectionReason}`,
+                action_url: '/portal/leave',
+                action_label: 'ดูใบลา',
+                entity_type: 'leave_request',
+                entity_id: id,
+                reference_code: String(row.reference_code),
+                icon: 'XCircle',
+                color: 'red',
+                sender_name: approverNick || null,
+            })
+        }
+    } catch (err) {
+        console.error('[leave/reject] notification error:', err)
     }
 
     return NextResponse.json({
