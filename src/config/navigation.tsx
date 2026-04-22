@@ -12,8 +12,11 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         { label: 'dashboard.title', href: '/hradmin/dashboard', icon: LayoutDashboard },
         { label: 'dashboard.employees', href: '/hradmin/employees', icon: Users },
         { label: 'ผังองค์กร', href: '/hradmin/organization', icon: Network },
-        { label: 'dashboard.recruitment', href: '/hradmin/recruitment', icon: UserCircle },
-        { label: 'ผู้สมัคร', href: '/hradmin/applicants', icon: Users },
+        // The legacy /hradmin/recruitment page still exists but reads the
+        // old applicants / applicant_educations tables. The modern view
+        // against job_applications lives at /hradmin/applicants and is
+        // the only entry point from the sidebar now.
+        { label: 'รับสมัครงาน', href: '/hradmin/applicants', icon: UserCircle },
         { label: 'ประกาศข่าวสาร', href: '/hradmin/announcements', icon: Megaphone },
         { label: 'การเข้างาน', href: '/hradmin/attendance', icon: MapPin },
         { label: 'dashboard.holidays', href: '/hradmin/holidays', icon: CalendarOff },
