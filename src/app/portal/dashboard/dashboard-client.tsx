@@ -185,16 +185,16 @@ function AnnouncementModal({ ann, onClose }: { ann: AnnouncementItem; onClose: (
 
     return (
         <div
-            className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4"
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200"
             style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
             onClick={onClose}
         >
             <div
-                className="w-full sm:max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-y-auto relative"
+                className="w-full max-w-lg max-h-[85vh] overflow-y-auto relative shadow-2xl animate-in fade-in zoom-in-95 duration-200"
                 style={{
                     ...glass,
                     background: 'rgba(15,4,7,0.94)',
-                    borderRadius: '20px 20px 0 0',
+                    borderRadius: '20px',
                 }}
                 onClick={e => e.stopPropagation()}
             >

@@ -37,20 +37,20 @@ function AlertModal({ alert, onClose }: { alert: PriorityAlert; onClose: () => v
 
     return (
         <div
-            className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4"
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200"
             style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
             onClick={onClose}
         >
             <div
                 className={cn(
-                    'w-full sm:max-w-xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto relative border-2',
+                    'w-full max-w-xl max-h-[85vh] overflow-y-auto relative border-2 shadow-2xl animate-in fade-in zoom-in-95 duration-200',
                     isEmergency ? 'border-red-500/70' : 'border-amber-400/70',
                 )}
                 style={{
                     background: 'rgba(15,4,7,0.96)',
                     backdropFilter: 'blur(16px)',
                     WebkitBackdropFilter: 'blur(16px)',
-                    borderRadius: '20px 20px 0 0',
+                    borderRadius: '20px',
                 }}
                 onClick={e => e.stopPropagation()}
             >

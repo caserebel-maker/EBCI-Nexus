@@ -108,13 +108,13 @@ function AnnouncementModal({ a, onClose }: { a: Announcement; onClose: () => voi
     }, [onClose])
     return (
         <div
-            className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4"
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200"
             style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
             onClick={onClose}
         >
             <div
-                className="w-full sm:max-w-xl h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto relative border border-white/10"
-                style={{ background: 'rgba(15,4,7,0.96)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderRadius: '20px 20px 0 0' }}
+                className="w-full max-w-xl max-h-[85vh] overflow-y-auto relative border border-white/10 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+                style={{ background: 'rgba(15,4,7,0.96)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderRadius: '20px' }}
                 onClick={e => e.stopPropagation()}
             >
                 <button
