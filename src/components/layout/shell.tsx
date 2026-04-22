@@ -211,18 +211,18 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                 </header>
 
                 {/* Page Content */}
-                <div className="flex-1 overflow-auto p-4 lg:p-8">
+                <div className="flex-1 overflow-auto pt-3 px-4 pb-4 lg:p-8">
                     {/* Priority alerts — top of content on every viewport */}
                     {emergencyBanner && <div className="mb-4">{emergencyBanner}</div>}
 
                     {/* Mobile Identity Header — shown on every page */}
-                    <div className="lg:hidden mb-4 pb-4 border-b border-white/10">
+                    <div className="lg:hidden mb-3 pb-3 border-b border-white/10">
                         {/* Greeting — daily/payday/birthday */}
                         <DailyGreeting
                             variant="mobile"
                             nickname={profile?.nickname}
                             dateOfBirth={profile?.dateOfBirth}
-                            className="mb-3 pb-3 border-b border-white/10"
+                            className="mb-2 pb-2 border-b border-white/10"
                         />
                         <div className="flex items-center gap-3">
                             <div className="h-14 w-14 rounded-full overflow-hidden shadow-md shadow-black/30 ring-2 ring-white/20 bg-white/10 shrink-0">
@@ -238,13 +238,35 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                                 <p className="text-sm font-bold text-white truncate leading-tight">
                                     {profile?.fullName ?? userName ?? 'User'}
                                 </p>
-                                {(profile?.position || profile?.department) && (
-                                    <p className="text-xs text-white/70 truncate mt-1">
-                                        {profile?.position}
-                                        {profile?.position && profile?.department && <span className="text-white/30 mx-1.5">·</span>}
-                                        {profile?.department}
-                                    </p>
-                                )}
+                                {(profile?.position || profile?.department) && (() => {
+                                    // Department often repeats inside the position string
+                                    // ("หัวหน้าฝ่าย<dept> · ฝ่าย<dept>"). Strip the
+                                    // prefix + trim, then hide the second line when
+                                    // the position already carries the same name.
+                                    const position = profile?.position ?? ''
+                                    const department = profile?.department ?? ''
+                                    const normalizedDept = department.replace(/^ฝ่าย|^แผนก/, '').trim()
+                                    const isDeptInPosition =
+                                        !!normalizedDept && position.includes(normalizedDept)
+                                    const showDepartment = !!department && !isDeptInPosition
+                                    return (
+                                        <div className="mt-1 text-xs text-white/70 leading-tight">
+                                            {position && (
+                                                <span className="block sm:inline break-words">
+                                                    {position}
+                                                </span>
+                                            )}
+                                            {showDepartment && (
+                                                <>
+                                                    <span className="hidden sm:inline text-white/30 mx-1.5">·</span>
+                                                    <span className="block sm:inline text-white/60 break-words">
+                                                        {department}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    )
+                                })()}
                                 {profile?.startDate && (
                                     <p className="text-xs text-white/55 truncate mt-0.5">
                                         อายุงาน {calcTenure(profile.startDate)}
