@@ -193,14 +193,16 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                         />
                     </Link>
 
-                    {/* Right: refresh (mobile only) + toggles */}
-                    <div className="flex items-center gap-3 relative z-[100] ml-auto">
+                    {/* Right: refresh (mobile only) + toggles.
+                        gap-1 keeps the cluster visually tight; each control
+                        is h-14 so they line up on a single baseline. */}
+                    <div className="flex items-center gap-1 relative z-[100] ml-auto">
                         <button
                             onClick={() => window.location.reload()}
-                            className="lg:hidden p-1.5 rounded-md text-white/80 hover:text-white hover:bg-white/10 active:scale-90 transition-all"
+                            className="lg:hidden h-14 w-14 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 active:scale-90 transition-all"
                             aria-label="Refresh"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                                 <path d="M3 3v5h5" />
                             </svg>
