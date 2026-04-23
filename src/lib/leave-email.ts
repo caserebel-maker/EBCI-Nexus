@@ -1,5 +1,13 @@
 import { sendEmail } from './email'
 
+/**
+ * Thin wrapper — legacy leave templates all route through the same
+ * 'hr' sender identity as the newer email-leave.ts module.
+ */
+function sendLeaveEmail(args: { to: string | string[]; subject: string; html: string }) {
+    return sendLeaveEmail({ ...args, sender: 'hr' })
+}
+
 const LEAVE_TYPE_LABELS: Record<string, string> = {
     sick: 'ลาป่วย',
     personal: 'ลากิจ',
@@ -46,7 +54,7 @@ export async function sendLeaveRequestNotification({
 }) {
     const leaveLabel = LEAVE_TYPE_LABELS[leaveType] || leaveType
 
-    return sendEmail({
+    return sendLeaveEmail({
         to: managerEmail,
         subject: `[EBCI Nexus] ใบลาใหม่ — ${employeeName} ขอ${leaveLabel}`,
         html: `
@@ -125,7 +133,7 @@ export async function sendLeaveDecisionNotification({
     const badgeColor = isApproved ? '#16a34a' : '#dc2626'
     const badgeBg = isApproved ? '#dcfce7' : '#fee2e2'
 
-    return sendEmail({
+    return sendLeaveEmail({
         to: employeeEmail,
         subject: `[EBCI Nexus] ใบลาของคุณ${isApproved ? 'ได้รับการอนุมัติ' : 'ถูกปฏิเสธ'} — ${leaveLabel}`,
         html: `
@@ -203,7 +211,7 @@ export async function sendEscalationNotification({
 }) {
     const leaveLabel = LEAVE_TYPE_LABELS[leaveType] || leaveType
 
-    return sendEmail({
+    return sendLeaveEmail({
         to: hrEmail,
         subject: `[EBCI Nexus] ⚠️ Escalation — ใบลาของ ${employeeName} ยังไม่ได้รับการพิจารณา`,
         html: `

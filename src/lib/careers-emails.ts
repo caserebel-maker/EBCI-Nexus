@@ -1,6 +1,15 @@
 import 'server-only'
 import { sendEmail } from '@/lib/email'
 
+/**
+ * Thin wrapper that pins every careers email to the 'careers' sender
+ * identity — applicant-facing mail should come from
+ * careers@ebcinext.com, not the generic HR address.
+ */
+function sendCareersEmail(args: { to: string | string[]; subject: string; html: string }) {
+    return sendCareersEmail({ ...args, sender: 'careers' })
+}
+
 const BASE_URL =
     process.env.NEXT_PUBLIC_APP_URL ??
     process.env.NEXT_PUBLIC_SITE_URL ??
@@ -205,7 +214,7 @@ export async function sendDraftSavedEmail(args: {
             ${button(resumeUrl, 'กรอกใบสมัครต่อ')}
         `,
     })
-    return sendEmail({ to: args.to, subject: 'ใบสมัครงาน EBCI บันทึกเรียบร้อย', html })
+    return sendCareersEmail({ to: args.to, subject: 'ใบสมัครงาน EBCI บันทึกเรียบร้อย', html })
 }
 
 // ── 2. Application submitted — sent to applicant ────────────────────────────
@@ -225,7 +234,7 @@ export async function sendApplicationSubmittedEmail(args: {
             ${paragraph('ทีม HR จะพิจารณาใบสมัครและ<strong>ติดต่อกลับภายใน 7 วันทำการ</strong> โปรดเก็บรหัสใบสมัครไว้เพื่อใช้อ้างอิง', { muted: true })}
         `,
     })
-    return sendEmail({
+    return sendCareersEmail({
         to: args.to,
         subject: `ขอบคุณสำหรับการสมัครงาน EBCI [${args.referenceCode}]`,
         html,
@@ -255,7 +264,7 @@ export async function sendHrNotificationEmail(args: {
             ${button(adminUrl, 'เปิดใบสมัคร')}
         `,
     })
-    return sendEmail({
+    return sendCareersEmail({
         to: HR_NOTIFY_EMAIL,
         subject: `ใบสมัครใหม่: ${args.position ?? 'ไม่ระบุตำแหน่ง'} — ${args.applicantName ?? args.email}`,
         html,
@@ -297,7 +306,7 @@ export async function sendStatusReviewingEmail(ctx: StatusEmailContext) {
             ${optionalHrNotes(ctx.notes)}
         `,
     })
-    return sendEmail({
+    return sendCareersEmail({
         to: ctx.to,
         subject: `ใบสมัครของคุณกำลังถูกพิจารณา [${ctx.referenceCode}]`,
         html,
@@ -319,7 +328,7 @@ export async function sendStatusShortlistedEmail(ctx: StatusEmailContext) {
             ${optionalHrNotes(ctx.notes)}
         `,
     })
-    return sendEmail({
+    return sendCareersEmail({
         to: ctx.to,
         subject: `ใบสมัครของคุณผ่านรอบแรก [${ctx.referenceCode}]`,
         html,
@@ -340,7 +349,7 @@ export async function sendStatusInterviewEmail(ctx: StatusEmailContext) {
             ${optionalHrNotes(ctx.notes)}
         `,
     })
-    return sendEmail({
+    return sendCareersEmail({
         to: ctx.to,
         subject: `นัดสัมภาษณ์ [${ctx.referenceCode}]`,
         html,
@@ -363,7 +372,7 @@ export async function sendStatusHiredEmail(ctx: StatusEmailContext) {
             ${optionalHrNotes(ctx.notes)}
         `,
     })
-    return sendEmail({
+    return sendCareersEmail({
         to: ctx.to,
         subject: `ยินดีต้อนรับสู่ EBCI! [${ctx.referenceCode}]`,
         html,
@@ -386,7 +395,7 @@ export async function sendStatusRejectedEmail(ctx: StatusEmailContext) {
             ${optionalHrNotes(ctx.notes)}
         `,
     })
-    return sendEmail({
+    return sendCareersEmail({
         to: ctx.to,
         subject: `ผลการพิจารณาใบสมัคร [${ctx.referenceCode}]`,
         html,

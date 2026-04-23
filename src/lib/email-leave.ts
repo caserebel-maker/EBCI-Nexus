@@ -2,6 +2,15 @@ import 'server-only'
 import { sendEmail } from '@/lib/email'
 
 /**
+ * Thin wrapper that pins every leave email to the 'hr' sender
+ * identity — employee-facing mail about leave should come from
+ * hr@ebcinext.com, not the careers address.
+ */
+function sendLeaveEmail(args: { to: string | string[]; subject: string; html: string }) {
+    return sendLeaveEmail({ ...args, sender: 'hr' })
+}
+
+/**
  * Leave-system email templates.
  * Light-canvas layout mirroring careers-emails.ts so every
  * transactional mail in the app shares one brand voice.
@@ -216,7 +225,7 @@ export async function sendLeaveSubmittedToEmployee(c: LeaveEmailContext) {
             ${button(portalUrl, 'ดูใบลาของฉัน')}
         `,
     })
-    return sendEmail({
+    return sendLeaveEmail({
         to: c.employeeEmail,
         subject: `ใบลาของคุณถูกบันทึกแล้ว [${c.referenceCode}]`,
         html,
@@ -245,7 +254,7 @@ export async function sendLeaveSubmittedToApprover(c: LeaveEmailContext) {
             ${paragraph('กดปุ่มเพื่อเปิดรายละเอียดและอนุมัติ / ปฏิเสธได้ทันที', { small: true, muted: true })}
         `,
     })
-    return sendEmail({
+    return sendLeaveEmail({
         to: c.approverEmail,
         subject: `มีใบลารออนุมัติ: ${c.employeeName} — ${c.leaveTypeTh}`,
         html,
@@ -272,7 +281,7 @@ export async function sendLeaveApproved(c: LeaveEmailContext & { approvalNotes?:
             ${button(portalUrl, 'ดูใบลาของฉัน', 'green')}
         `,
     })
-    return sendEmail({
+    return sendLeaveEmail({
         to: c.employeeEmail,
         subject: `ใบลา [${c.referenceCode}] ได้รับการอนุมัติแล้ว`,
         html,
@@ -300,7 +309,7 @@ export async function sendLeaveRejected(c: LeaveEmailContext & { rejectionReason
             ${button(portalUrl, 'ยื่นใบลาใหม่')}
         `,
     })
-    return sendEmail({
+    return sendLeaveEmail({
         to: c.employeeEmail,
         subject: `ใบลา [${c.referenceCode}] ถูกปฏิเสธ`,
         html,
@@ -328,7 +337,7 @@ export async function sendLeaveCancelled(
     })
     const recipients = [c.employeeEmail, c.approverEmail].filter(Boolean) as string[]
     if (!recipients.length) return { success: false }
-    return sendEmail({
+    return sendLeaveEmail({
         to: recipients,
         subject: `ใบลา [${c.referenceCode}] ถูกยกเลิก`,
         html,

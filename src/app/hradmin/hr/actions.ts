@@ -189,7 +189,7 @@ export async function publishAnnouncement(formData: FormData) {
                     })
 
                     console.log(`Sending to ${emails.length} employees...`)
-                    const result = await sendEmail({ to: emails, subject, html })
+                    const result = await sendEmail({ to: emails, subject, html, sender: 'hr' })
                     console.log('Broadcast result:', result.success)
 
                     if (result.success) {

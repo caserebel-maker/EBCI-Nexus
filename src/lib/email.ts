@@ -1,28 +1,55 @@
 import { Resend } from 'resend'
 
 /**
- * From address used on every outgoing transactional email.
+ * Identity the email is sent *as*. Each key maps to an env var + a
+ * sensible default so we don't have to ship every address in code:
  *
- * - Set EMAIL_FROM in Vercel env to something like
- *   "EBCI Careers <careers@ebcinext.com>" once the domain is verified
- *   in the Resend dashboard. Until then the default
- *   `onboarding@resend.dev` works ONLY for the email address that owns
- *   the Resend account — any other recipient will silently be dropped
- *   (this is a Resend restriction, not something the code can work
- *   around).
- * - EMAIL_REPLY_TO is optional; set it to e.g. "hr@ebcitrade.com" so
- *   replies go to a monitored inbox.
+ *   careers → EMAIL_FROM_CAREERS  (applicant-facing: careers@…)
+ *   hr      → EMAIL_FROM_HR       (employee-facing: leave, announcements)
+ *   system  → EMAIL_FROM_SYSTEM   (automated: password reset, alerts)
+ *
+ * If a domain-specific env var is missing we fall through to the legacy
+ * `EMAIL_FROM` so partially-configured environments don't break, and
+ * finally to a hardcoded default so dev/mock mode still has a reasonable
+ * `From:` line in logs.
  */
-const FROM = process.env.EMAIL_FROM ?? 'EBCI NEXUS HR <onboarding@resend.dev>'
+export type EmailSenderKey = 'careers' | 'hr' | 'system'
+
+export const EMAIL_SENDERS: Record<EmailSenderKey, string> = {
+    careers:
+        process.env.EMAIL_FROM_CAREERS
+        ?? process.env.EMAIL_FROM
+        ?? 'EBCI Careers <careers@ebcinext.com>',
+    hr:
+        process.env.EMAIL_FROM_HR
+        ?? process.env.EMAIL_FROM
+        ?? 'EBCI HR <hr@ebcinext.com>',
+    system:
+        process.env.EMAIL_FROM_SYSTEM
+        ?? process.env.EMAIL_FROM
+        ?? 'EBCI System <no-reply@ebcinext.com>',
+}
+
+/**
+ * Reply-To — optional; when set, replies go to a monitored inbox
+ * (e.g. "hr@ebcitrade.com") instead of the From address, which keeps
+ * the conversation on the business domain even when we send from the
+ * Resend-verified nexus domain.
+ */
 const REPLY_TO = process.env.EMAIL_REPLY_TO ?? undefined
 
 interface SendEmailParams {
     to: string | string[]
     subject: string
     html: string
+    /** Identity to send as. Defaults to 'system' for safety. */
+    sender?: EmailSenderKey
+    /** Explicit override — takes precedence over `sender`. Rare. */
+    from?: string
 }
 
-export async function sendEmail({ to, subject, html }: SendEmailParams) {
+export async function sendEmail({ to, subject, html, sender = 'system', from }: SendEmailParams) {
+    const FROM = from ?? EMAIL_SENDERS[sender]
     const apiKey = process.env.RESEND_API_KEY
     const recipients = Array.isArray(to) ? to : [to]
 
@@ -31,7 +58,7 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
         // receives `mock: true` so it can surface the state clearly.
         console.log('==========================================')
         console.log('📧 [MOCK EMAIL] — RESEND_API_KEY not set')
-        console.log(`From: ${FROM}`)
+        console.log(`From: ${FROM}  (sender=${sender})`)
         console.log(`To: ${recipients.join(', ')}`)
         console.log(`Subject: ${subject}`)
         console.log('==========================================')
@@ -59,7 +86,7 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
                 })
                 results.push({ success: false, error })
             } else {
-                console.log(`[email] sent → ${chunk.join(', ')} — id=${data?.id}`)
+                console.log(`[email] sent (sender=${sender}) → ${chunk.join(', ')} — id=${data?.id}`)
                 results.push({ success: true, id: data?.id })
             }
         }
