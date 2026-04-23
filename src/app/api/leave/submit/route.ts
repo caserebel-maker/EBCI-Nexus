@@ -16,6 +16,7 @@ import {
 import { resolveLeaveApprover, displayApproverName } from '@/lib/leave-approval'
 import { sendLeaveSubmittedToEmployee, sendLeaveSubmittedToApprover } from '@/lib/email-leave'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
+import { resolveApproverInboxUrl } from '@/lib/leave-inbox-url'
 
 export const dynamic = 'force-dynamic'
 
@@ -254,12 +255,16 @@ export async function POST(req: NextRequest) {
             const applicantNick = (employeeRow.data?.nickname as string | null) ?? employeeName
             const leaveTypeTh = leaveType.name_th ?? 'ลา'
             const dateLabel = startDate === endDate ? startDate : `${startDate} → ${endDate}`
+            // Role-aware deep link: hr_admin approvers go to the
+            // /hradmin variant so approving doesn't flip them into
+            // employee mode. Everyone else → /portal.
+            const actionUrl = await resolveApproverInboxUrl(approverUserId)
             await createNotification({
                 recipient_user_id: approverUserId,
                 type: 'leave_request_pending',
                 title: `${applicantNick} ขอ${leaveTypeTh}`,
                 body: `${dateLabel} (${totalDays} วัน) — ${reason || 'ไม่ระบุเหตุผล'}`,
-                action_url: '/portal/leave/inbox',
+                action_url: actionUrl,
                 action_label: 'ดูรายละเอียด',
                 entity_type: 'leave_request',
                 entity_id: leaveRequestId,
