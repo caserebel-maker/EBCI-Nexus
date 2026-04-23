@@ -9,6 +9,61 @@ import type { NavItem } from '@/config/navigation'
 import { useTranslation } from '@/contexts/language-context'
 
 const STORAGE_KEY = 'nexus:sidebar:expanded'
+const PENDING_POLL_MS = 60_000
+
+/**
+ * Poll `/api/leave/pending-count` for the approver badge. Pauses when
+ * the tab is hidden so we don't burn calls in the background. Returns
+ * 0 until the first request resolves so the badge never flickers
+ * between "some" and "none" during navigation.
+ */
+function usePendingApprovalCount(): number {
+    const [count, setCount] = useState(0)
+
+    useEffect(() => {
+        let cancelled = false
+        let timer: ReturnType<typeof setInterval> | null = null
+
+        const tick = async () => {
+            try {
+                const res = await fetch('/api/leave/pending-count', { cache: 'no-store' })
+                if (!res.ok) return
+                const json = await res.json()
+                if (!cancelled && typeof json.count === 'number') setCount(json.count)
+            } catch {
+                // ignore — transient network errors are fine, badge stays
+            }
+        }
+        const start = () => {
+            if (timer) return
+            timer = setInterval(tick, PENDING_POLL_MS)
+        }
+        const stop = () => {
+            if (timer) { clearInterval(timer); timer = null }
+        }
+        const onVisibility = () => {
+            if (document.visibilityState === 'visible') { void tick(); start() }
+            else stop()
+        }
+
+        void tick()
+        if (document.visibilityState === 'visible') start()
+        document.addEventListener('visibilitychange', onVisibility)
+        return () => {
+            cancelled = true
+            stop()
+            document.removeEventListener('visibilitychange', onVisibility)
+        }
+    }, [])
+
+    return count
+}
+
+/** Keys that should render the pending-approval badge. */
+const APPROVER_BADGE_HREFS = new Set<string>([
+    '/portal/leave/inbox',
+    '/hradmin/leave/admin',
+])
 
 /** Split an href like "/hradmin/leave?tab=requests" into ["/hradmin/leave", "tab=requests"]. */
 function splitHref(href: string): { path: string; query: string } {
@@ -91,6 +146,7 @@ export function SidebarNav({ items, onNavigate }: Props) {
     const searchParams = useSearchParams()
     const currentQuery = searchParams?.toString() ?? ''
     const { t } = useTranslation()
+    const pendingCount = usePendingApprovalCount()
 
     const [expanded, setExpanded] = useState<Set<string>>(new Set())
     const [hydrated, setHydrated] = useState(false)
@@ -130,11 +186,33 @@ export function SidebarNav({ items, onNavigate }: Props) {
         })
     }
 
+    /**
+     * Compute the badge count to render on a given item. Leaves that
+     * match an approver-inbox href show the full count; group parents
+     * show the max count from any matching child so approvers notice
+     * pending work without expanding the section.
+     */
+    const badgeFor = (item: NavItem): number => {
+        if (pendingCount <= 0) return 0
+        if (item.href && APPROVER_BADGE_HREFS.has(splitHref(item.href).path)) {
+            return pendingCount
+        }
+        if (item.children) {
+            for (const c of item.children) {
+                if (c.href && APPROVER_BADGE_HREFS.has(splitHref(c.href).path)) {
+                    return pendingCount
+                }
+            }
+        }
+        return 0
+    }
+
     return (
         <>
             {items.map((item, idx) => {
                 const hasChildren = Array.isArray(item.children) && item.children.length > 0
                 const highlighted = isGroupActive(item, pathname, currentQuery)
+                const badge = badgeFor(item)
                 // Before hydration we mirror the active state so SSR + first
                 // paint don't flash everything collapsed.
                 const isOpen = hasChildren
@@ -159,9 +237,10 @@ export function SidebarNav({ items, onNavigate }: Props) {
                             className={rowClass}
                         >
                             <item.icon size={20} className={cn(highlighted && 'text-white')} />
-                            <span className={cn('truncate', highlighted && 'font-semibold')}>
+                            <span className={cn('flex-1 truncate', highlighted && 'font-semibold')}>
                                 {label}
                             </span>
+                            {badge > 0 && <BadgePill count={badge} />}
                         </Link>
                     )
                 }
@@ -178,9 +257,10 @@ export function SidebarNav({ items, onNavigate }: Props) {
                                     className="flex items-center gap-3 flex-1 min-w-0"
                                 >
                                     <item.icon size={20} className={cn(highlighted && 'text-white')} />
-                                    <span className={cn('truncate', highlighted && 'font-semibold')}>
+                                    <span className={cn('flex-1 truncate', highlighted && 'font-semibold')}>
                                         {label}
                                     </span>
+                                    {badge > 0 && <BadgePill count={badge} />}
                                 </Link>
                                 <button
                                     type="button"
@@ -206,6 +286,7 @@ export function SidebarNav({ items, onNavigate }: Props) {
                                 <span className={cn('flex-1 truncate', highlighted && 'font-semibold')}>
                                     {label}
                                 </span>
+                                {badge > 0 && <BadgePill count={badge} />}
                                 <ChevronDown
                                     size={16}
                                     className={cn(
@@ -221,6 +302,7 @@ export function SidebarNav({ items, onNavigate }: Props) {
                             <div className="mt-1 ml-3 pl-3 border-l border-white/10 space-y-0.5">
                                 {item.children!.map((child, ci) => {
                                     const childActive = isLeafActive(child.href, pathname, currentQuery)
+                                    const childBadge = badgeFor(child)
                                     return (
                                         <Link
                                             key={ci}
@@ -240,9 +322,10 @@ export function SidebarNav({ items, onNavigate }: Props) {
                                                     className={cn('shrink-0', childActive && 'text-white')}
                                                 />
                                             )}
-                                            <span className={cn('truncate', childActive && 'font-semibold')}>
+                                            <span className={cn('flex-1 truncate', childActive && 'font-semibold')}>
                                                 {t(child.label)}
                                             </span>
+                                            {childBadge > 0 && <BadgePill count={childBadge} compact />}
                                         </Link>
                                     )
                                 })}
@@ -252,5 +335,28 @@ export function SidebarNav({ items, onNavigate }: Props) {
                 )
             })}
         </>
+    )
+}
+
+/**
+ * Small count pill used next to labels that carry a pending-work
+ * indicator. Amber palette — matches the bell's "new" chip so the
+ * visual language stays consistent across sidebar + topbar.
+ */
+function BadgePill({ count, compact = false }: { count: number; compact?: boolean }) {
+    const display = count > 99 ? '99+' : String(count)
+    return (
+        <span
+            aria-label={`${count} รายการรออนุมัติ`}
+            className={cn(
+                'shrink-0 inline-flex items-center justify-center rounded-full font-bold tabular-nums',
+                'bg-amber-400/95 text-[#561e23] ring-1 ring-amber-200/60 shadow',
+                compact
+                    ? 'min-w-[16px] h-[16px] px-1 text-[9px]'
+                    : 'min-w-[20px] h-[20px] px-1.5 text-[10px]',
+            )}
+        >
+            {display}
+        </span>
     )
 }
