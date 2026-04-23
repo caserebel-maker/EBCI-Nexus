@@ -27,6 +27,7 @@ import { NAVIGATION_CONFIG } from '@/config/navigation'
 import { LanguageToggle } from '@/components/ui/language-toggle'
 import { useTranslation } from '@/contexts/language-context'
 import { PortalBottomNav } from '@/components/layout/portal-bottom-nav'
+import { SidebarNav } from '@/components/layout/sidebar-nav'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 interface DashboardShellProps {
@@ -129,30 +130,10 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                     </div>
                 )}
 
-                {/* Nav Links */}
+                {/* Nav Links — SidebarNav handles nesting, active-chain,
+                    and localStorage-persisted expand/collapse per group. */}
                 <nav className="p-4 space-y-2 lg:space-y-1 flex-1 overflow-y-auto min-h-0 text-[11px] 2xl:text-sm [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded">
-                    {navItems.map((item, idx) => {
-                        const isActive = item.href === '/hradmin'
-                            ? pathname === '/hradmin'
-                            : pathname?.startsWith(item.href)
-
-                        return (
-                            <Link
-                                key={idx}
-                                href={item.href}
-                                className={cn(
-                                    "flex items-center gap-3 px-3 py-2.5 rounded-md transition-all duration-200",
-                                    "hover:bg-white/10 dark:hover:bg-accent dark:hover:text-accent-foreground",
-                                    isActive
-                                        ? "bg-white/15 text-white shadow-lg shadow-black/5 ring-1 ring-white/10"
-                                        : "text-white/70 hover:text-white dark:text-muted-foreground dark:hover:text-foreground"
-                                )}
-                            >
-                                <item.icon size={20} className={cn(isActive && "text-white")} />
-                                <span className={cn(isActive && "font-semibold")}>{t(item.label)}</span>
-                            </Link>
-                        )
-                    })}
+                    <SidebarNav items={navItems} />
                 </nav>
 
 

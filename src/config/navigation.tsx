@@ -1,31 +1,90 @@
-import { LayoutDashboard, Users, UserCircle, FileText, Settings, Megaphone, CalendarDays, ClipboardCheck, ShieldCheck, CalendarOff, MapPin, Network, Activity, ScrollText, BarChart3 } from 'lucide-react'
+import {
+    LayoutDashboard, Users, UserCircle, FileText, Settings, Megaphone,
+    CalendarDays, ClipboardCheck, ShieldCheck, CalendarOff, MapPin, Network,
+    Activity, ScrollText, BarChart3, Clock, Calendar, Briefcase, User,
+    Gift, Wallet, CheckCircle, Database,
+} from 'lucide-react'
 import { ROLES, type UserRole } from './roles'
 
+/**
+ * Navigation node — supports either a leaf (just `href`) or a group
+ * (no `href`, has `children`). When both are set, clicking the parent
+ * still navigates to `href` but `children` are rendered as a submenu.
+ *
+ * `matchPrefix` lets a group stay highlighted on URLs that don't start
+ * with its own href — e.g. the "การลา" group aggregates both /hradmin/leave
+ * and /portal/leave paths so it lights up for either.
+ */
 export interface NavItem {
     label: string
-    href: string
-    icon: any // LucideIcon type
+    href?: string
+    icon: any // LucideIcon
+    children?: NavItem[]
+    /** Extra URL prefixes that should mark this item active. */
+    matchPrefix?: string[]
 }
 
 export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
     [ROLES.HR_ADMIN]: [
-        { label: 'dashboard.title', href: '/hradmin/dashboard', icon: LayoutDashboard },
-        { label: 'dashboard.employees', href: '/hradmin/employees', icon: Users },
-        { label: 'ผังองค์กร', href: '/hradmin/organization', icon: Network },
-        // The legacy /hradmin/recruitment page still exists but reads the
-        // old applicants / applicant_educations tables. The modern view
-        // against job_applications lives at /hradmin/applicants and is
-        // the only entry point from the sidebar now.
-        { label: 'รับสมัครงาน', href: '/hradmin/applicants', icon: UserCircle },
-        { label: 'ประกาศข่าวสาร', href: '/hradmin/announcements', icon: Megaphone },
-        { label: 'การเข้างาน', href: '/hradmin/attendance', icon: MapPin },
-        { label: 'dashboard.holidays', href: '/hradmin/holidays', icon: CalendarOff },
-        { label: 'จัดการการลา', href: '/hradmin/leave', icon: BarChart3 },
-        { label: 'leave.title', href: '/hradmin/leave/admin', icon: CalendarDays },
-        { label: 'นโยบายการลา', href: '/hradmin/leave/policies', icon: ScrollText },
-        { label: 'common.view', href: '/hradmin/reports', icon: FileText },
-        { label: 'common.actions', href: '/hradmin/settings', icon: Settings },
-        { label: 'ระบบและทรัพยากร', href: '/hradmin/settings/quota', icon: Activity },
+        {
+            label: 'dashboard.title',
+            href: '/hradmin/dashboard',
+            icon: LayoutDashboard,
+        },
+        {
+            label: 'dashboard.employees',
+            icon: Users,
+            matchPrefix: ['/hradmin/employees', '/hradmin/organization'],
+            children: [
+                { label: 'รายชื่อ',   href: '/hradmin/employees',    icon: User },
+                { label: 'ผังองค์กร', href: '/hradmin/organization', icon: Network },
+            ],
+        },
+        {
+            label: 'ประกาศข่าวสาร',
+            href: '/hradmin/announcements',
+            icon: Megaphone,
+        },
+        {
+            label: 'เวลาทำงาน',
+            icon: Clock,
+            matchPrefix: ['/hradmin/attendance', '/hradmin/holidays'],
+            children: [
+                { label: 'การเข้างาน', href: '/hradmin/attendance', icon: MapPin },
+                { label: 'วันหยุด',    href: '/hradmin/holidays',   icon: Gift },
+            ],
+        },
+        {
+            label: 'การลา',
+            icon: Calendar,
+            // The group lights up on /hradmin/leave* AND /portal/leave*
+            // because "ของฉัน" + "อนุมัติการลา" live under /portal.
+            matchPrefix: ['/hradmin/leave', '/portal/leave'],
+            children: [
+                { label: 'ภาพรวม',         href: '/hradmin/leave',            icon: BarChart3 },
+                { label: 'ใบลาทั้งหมด',     href: '/hradmin/leave?tab=requests', icon: FileText },
+                { label: 'วันลาพนักงาน',    href: '/hradmin/leave?tab=balances', icon: Wallet },
+                { label: 'ปฏิทิน',          href: '/hradmin/leave?tab=calendar', icon: CalendarDays },
+                { label: 'ของฉัน',         href: '/portal/leave',             icon: UserCircle },
+                { label: 'อนุมัติการลา',    href: '/portal/leave/inbox',       icon: CheckCircle },
+                { label: 'นโยบายการลา',   href: '/hradmin/leave/policies',   icon: ScrollText },
+            ],
+        },
+        {
+            label: 'รับสมัครงาน',
+            href: '/hradmin/applicants',
+            icon: Briefcase,
+        },
+        {
+            label: 'ตั้งค่าระบบ',
+            icon: Settings,
+            matchPrefix: ['/hradmin/settings', '/hradmin/reports'],
+            children: [
+                { label: 'ระบบและทรัพยากร', href: '/hradmin/settings/quota', icon: Database },
+                { label: 'รายงาน',           href: '/hradmin/reports',        icon: FileText },
+                { label: 'ตั้งค่าทั่วไป',      href: '/hradmin/settings',       icon: Settings },
+            ],
+        },
     ],
     [ROLES.MANAGER]: [
         { label: 'dashboard.title', href: '/hradmin/dashboard', icon: LayoutDashboard },
