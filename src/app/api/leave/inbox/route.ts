@@ -17,9 +17,15 @@ export async function GET() {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const approverId = await resolveSessionEmployeeId(session)
-    if (!approverId) return NextResponse.json({ items: [], count: 0 })
+    if (!approverId) {
+        console.warn('[leave/inbox] resolveSessionEmployeeId returned null', {
+            sessionId: session.id, sessionEmployeeId: session.employeeId,
+        })
+        return NextResponse.json({ items: [], count: 0 })
+    }
 
-    const { data: rows, error } = await supabaseAdmin
+    // Primary lookup: approver_id stores employees.id.
+    const primary = await supabaseAdmin
         .from('leave_requests')
         .select(`
             id, reference_code, leave_type_id, start_date, end_date,
@@ -32,7 +38,45 @@ export async function GET() {
         .eq('status', 'pending')
         .order('submitted_at', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: true })
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (primary.error) {
+        console.error('[leave/inbox] primary query error:', primary.error)
+        return NextResponse.json({ error: primary.error.message }, { status: 500 })
+    }
+
+    let rows = primary.data ?? []
+
+    // Secondary fallback: a small number of older rows were inserted
+    // when approver_id referenced a different id (user_id instead of
+    // employees.id, depending on the era). If the primary lookup came
+    // back empty we retry using the raw session.id so legacy data still
+    // surfaces. Any duplicates are de-duped by id before returning.
+    if (rows.length === 0 && session.id && session.id !== approverId) {
+        const secondary = await supabaseAdmin
+            .from('leave_requests')
+            .select(`
+                id, reference_code, leave_type_id, start_date, end_date,
+                total_days, is_half_day, half_day_period, reason,
+                contact_during_leave, attachment_url, attachment_name,
+                submitted_at, created_at,
+                employee_id
+            `)
+            .eq('approver_id', session.id)
+            .eq('status', 'pending')
+            .order('submitted_at', { ascending: true, nullsFirst: false })
+            .order('created_at', { ascending: true })
+        if (!secondary.error && (secondary.data?.length ?? 0) > 0) {
+            console.warn('[leave/inbox] matched via session.id fallback — employees.id pathway returned 0', {
+                sessionId: session.id, approverId, rowCount: secondary.data?.length,
+            })
+            rows = secondary.data ?? []
+        }
+    }
+
+    console.log('[leave/inbox] resolved', {
+        sessionId: session.id,
+        approverId,
+        rowCount: rows.length,
+    })
 
     // Join applicant details + leave-type meta + current year's balance
     const list = rows ?? []
