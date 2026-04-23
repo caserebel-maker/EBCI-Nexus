@@ -4,7 +4,29 @@ import crypto from "crypto"
 import { supabaseAdmin } from "@/lib/supabase-admin"
 import { sendEmail, buildAnnouncementEmail } from "@/lib/email"
 import { getSession } from "@/lib/auth"
+import { createNotification, type NotificationColor } from "@/lib/notifications"
 import { revalidatePath } from "next/cache"
+
+// Priority → notification color/label used when fanning the announcement
+// out through the in-app notification center. Emergency/urgent get hot
+// palettes so they pop above routine updates in the bell.
+function priorityToNotificationColor(priority: string): NotificationColor {
+    switch (priority) {
+        case 'emergency': return 'red'
+        case 'urgent':    return 'amber'
+        case 'promote':   return 'blue'
+        default:          return 'blue'
+    }
+}
+
+function priorityLabelTh(priority: string): string {
+    switch (priority) {
+        case 'emergency': return 'ฉุกเฉิน'
+        case 'urgent':    return 'ด่วน'
+        case 'promote':   return 'ประชาสัมพันธ์'
+        default:          return 'ประกาศ'
+    }
+}
 
 export async function publishAnnouncement(formData: FormData) {
     const session = await getSession()
@@ -77,6 +99,52 @@ export async function publishAnnouncement(formData: FormData) {
         if (insertError) throw new Error('บันทึกประกาศไม่สำเร็จ: ' + insertError.message)
         console.log('Announcement created:', announcement.id)
 
+        // ── 2b. In-app notification fan-out ───────────────────────────────────
+        // Every active employee with a linked user_id gets a notification.
+        // Best-effort — per-recipient failures never break the publish.
+        try {
+            const { data: recipients, error: recipientsError } = await supabaseAdmin
+                .from('employees')
+                .select('user_id, first_name_th, nickname')
+                .eq('status', 'active')
+                .not('user_id', 'is', null)
+
+            if (recipientsError) {
+                console.error('[publishAnnouncement] recipients fetch error:', recipientsError)
+            } else if (recipients && recipients.length > 0) {
+                const color = priorityToNotificationColor(priority)
+                const badge = priorityLabelTh(priority)
+                const truncatedBody = content.length > 160
+                    ? content.slice(0, 157).trimEnd() + '…'
+                    : content
+                const notifTitle = priority === 'emergency' || priority === 'urgent'
+                    ? `[${badge}] ${headline}`
+                    : headline
+
+                // Fan out in parallel; tolerate failures. createNotification
+                // swallows errors internally and returns null.
+                const jobs = recipients.map(r => createNotification({
+                    recipient_user_id: r.user_id as string,
+                    type: 'announcement',
+                    title: notifTitle,
+                    body: truncatedBody,
+                    action_url: '/portal/announcements',
+                    action_label: 'ดูประกาศ',
+                    entity_type: 'announcement',
+                    entity_id: announcement.id,
+                    icon: 'Megaphone',
+                    color,
+                    sender_name: 'ฝ่ายบุคคล',
+                }))
+                const results = await Promise.allSettled(jobs)
+                const ok = results.filter(r => r.status === 'fulfilled' && r.value).length
+                console.log(`[publishAnnouncement] notifications sent: ${ok}/${recipients.length}`)
+            }
+        } catch (notifErr) {
+            console.error('[publishAnnouncement] notification fan-out exception:', notifErr)
+            // Swallow — announcement already persisted
+        }
+
         // ── 3. Email broadcast for urgent / emergency ─────────────────────────
         if (priority === 'urgent' || priority === 'emergency') {
             console.log(`Starting email broadcast (${priority})...`)
@@ -138,6 +206,7 @@ export async function publishAnnouncement(formData: FormData) {
         }
 
         revalidatePath('/dashboard')
+        revalidatePath('/portal/notifications')
         console.log('--- END publishAnnouncement SUCCESS ---')
         return { success: true }
 
