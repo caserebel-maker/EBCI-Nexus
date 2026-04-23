@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-    Home, Users, Bell, Megaphone, MoreHorizontal, Clock, CalendarDays,
+    Home, Users, Megaphone, MoreHorizontal, Clock, CalendarDays,
     ClipboardCheck, CheckSquare, LogOut, FileText,
     Settings, ChevronRight, X, UserRound, RefreshCw, Network,
     UserPlus, Upload, Activity,
@@ -45,34 +45,36 @@ const HR_ADMIN_SYSTEM_ACTIONS: MoreItem[] = [
     { label: 'ระบบและทรัพยากร', href: '/hradmin/settings/quota', icon: Activity },
 ]
 
-// hr_admin has two variants depending on whether they're in /hradmin or /portal
+// hr_admin has two variants depending on whether they're in /hradmin or /portal.
+// The "แจ้งเตือน" bell tab was removed — it duplicated the topbar bell. Replaced
+// with a role-appropriate shortcut (อนุมัติการลา in admin mode, การลา in portal).
 const HR_ADMIN_NAV_HRADMIN: NavItem[] = [
-    { label: 'หน้าแรก',   href: '/hradmin/dashboard',        icon: Home,      exact: true },
-    { label: 'พนักงาน',   href: '/hradmin/employees',        icon: Users },
-    { label: 'ประกาศ',    href: '/hradmin/hr/announcements', icon: Megaphone },
-    { label: 'แจ้งเตือน', href: '/portal/notifications',     icon: Bell },
+    { label: 'หน้าแรก',     href: '/hradmin/dashboard',        icon: Home,      exact: true },
+    { label: 'พนักงาน',     href: '/hradmin/employees',        icon: Users },
+    { label: 'ประกาศ',      href: '/hradmin/hr/announcements', icon: Megaphone },
+    { label: 'อนุมัติการลา', href: '/hradmin/leave/admin',      icon: ClipboardCheck },
 ]
 const HR_ADMIN_NAV_PORTAL: NavItem[] = [
-    { label: 'หน้าแรก',   href: '/portal/dashboard',         icon: Home,      exact: true },
-    { label: 'พนักงาน',   href: '/hradmin/employees',        icon: Users },
-    { label: 'ประกาศ',    href: '/hradmin/hr/announcements', icon: Megaphone },
-    { label: 'แจ้งเตือน', href: '/portal/notifications',     icon: Bell },
+    { label: 'หน้าแรก',  href: '/portal/dashboard',         icon: Home,      exact: true },
+    { label: 'พนักงาน',  href: '/hradmin/employees',        icon: Users },
+    { label: 'ประกาศ',   href: '/hradmin/hr/announcements', icon: Megaphone },
+    { label: 'การลา',    href: '/portal/leave',             icon: CalendarDays },
 ]
 
 const NAV_CONFIG: Record<Role, NavItem[]> = {
     hr_admin: HR_ADMIN_NAV_PORTAL, // default; overridden dynamically in component
 
     manager: [
-        { label: 'หน้าแรก',  href: '/portal/dashboard',      icon: Home,       exact: true },
-        { label: 'เช็คอิน',  href: '/portal/checkin',         icon: Clock },
-        { label: 'แจ้งเตือน', href: '/portal/notifications',  icon: Bell },
-        { label: 'โปรไฟล์',  href: '/portal/profile',         icon: UserRound },
+        { label: 'หน้าแรก', href: '/portal/dashboard', icon: Home,        exact: true },
+        { label: 'เช็คอิน', href: '/portal/checkin',   icon: Clock },
+        { label: 'การลา',   href: '/portal/leave',     icon: CalendarDays },
+        { label: 'โปรไฟล์', href: '/portal/profile',   icon: UserRound },
     ],
     employee: [
-        { label: 'หน้าแรก',  href: '/portal/dashboard',      icon: Home,       exact: true },
-        { label: 'เช็คอิน',  href: '/portal/checkin',         icon: Clock },
-        { label: 'แจ้งเตือน', href: '/portal/notifications',  icon: Bell },
-        { label: 'โปรไฟล์',  href: '/portal/profile',         icon: UserRound },
+        { label: 'หน้าแรก', href: '/portal/dashboard', icon: Home,        exact: true },
+        { label: 'เช็คอิน', href: '/portal/checkin',   icon: Clock },
+        { label: 'การลา',   href: '/portal/leave',     icon: CalendarDays },
+        { label: 'โปรไฟล์', href: '/portal/profile',   icon: UserRound },
     ],
 }
 
