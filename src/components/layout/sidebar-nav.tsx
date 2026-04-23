@@ -59,10 +59,11 @@ function usePendingApprovalCount(): number {
     return count
 }
 
-/** Keys that should render the pending-approval badge. */
+/** Paths that should render the pending-approval badge. */
 const APPROVER_BADGE_HREFS = new Set<string>([
-    '/portal/leave/inbox',
-    '/hradmin/leave/admin',
+    '/portal/leave/inbox',   // manager / employee approver inbox
+    '/hradmin/leave/inbox',  // hr_admin approver inbox (stays in admin shell)
+    '/hradmin/leave/admin',  // legacy HR override view
 ])
 
 /** Split an href like "/hradmin/leave?tab=requests" into ["/hradmin/leave", "tab=requests"]. */

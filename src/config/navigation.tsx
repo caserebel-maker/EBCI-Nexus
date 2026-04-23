@@ -58,16 +58,19 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
             label: 'การลา',
             icon: Calendar,
             // The group lights up on /hradmin/leave* AND /portal/leave*
-            // because "ของฉัน" + "อนุมัติการลา" live under /portal.
+            // because "ของฉัน" lives under /portal.
             matchPrefix: ['/hradmin/leave', '/portal/leave'],
             children: [
-                { label: 'ภาพรวม',         href: '/hradmin/leave',            icon: BarChart3 },
-                { label: 'ใบลาทั้งหมด',     href: '/hradmin/leave?tab=requests', icon: FileText },
-                { label: 'วันลาพนักงาน',    href: '/hradmin/leave?tab=balances', icon: Wallet },
-                { label: 'ปฏิทิน',          href: '/hradmin/leave?tab=calendar', icon: CalendarDays },
-                { label: 'ของฉัน',         href: '/portal/leave',             icon: UserCircle },
-                { label: 'อนุมัติการลา',    href: '/portal/leave/inbox',       icon: CheckCircle },
-                { label: 'นโยบายการลา',   href: '/hradmin/leave/policies',   icon: ScrollText },
+                { label: 'ภาพรวม',        href: '/hradmin/leave',              icon: BarChart3 },
+                { label: 'ใบลาทั้งหมด',   href: '/hradmin/leave?tab=requests', icon: FileText },
+                { label: 'วันลาพนักงาน',  href: '/hradmin/leave?tab=balances', icon: Wallet },
+                { label: 'ปฏิทิน',        href: '/hradmin/leave?tab=calendar', icon: CalendarDays },
+                { label: 'ของฉัน',        href: '/portal/leave',               icon: UserCircle },
+                // HR admins get the /hradmin variant of the inbox so approving
+                // a request doesn't flip the shell into employee mode. Manager
+                // + employee nav entries (below) still use /portal.
+                { label: 'อนุมัติการลา',   href: '/hradmin/leave/inbox',        icon: CheckCircle },
+                { label: 'นโยบายการลา',  href: '/hradmin/leave/policies',     icon: ScrollText },
             ],
         },
         {

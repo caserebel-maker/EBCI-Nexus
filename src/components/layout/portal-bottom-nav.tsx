@@ -52,7 +52,7 @@ const HR_ADMIN_NAV_HRADMIN: NavItem[] = [
     { label: 'หน้าแรก',     href: '/hradmin/dashboard',        icon: Home,      exact: true },
     { label: 'พนักงาน',     href: '/hradmin/employees',        icon: Users },
     { label: 'ประกาศ',      href: '/hradmin/hr/announcements', icon: Megaphone },
-    { label: 'อนุมัติการลา', href: '/hradmin/leave/admin',      icon: ClipboardCheck },
+    { label: 'อนุมัติการลา', href: '/hradmin/leave/inbox',      icon: ClipboardCheck },
 ]
 const HR_ADMIN_NAV_PORTAL: NavItem[] = [
     { label: 'หน้าแรก',  href: '/portal/dashboard',         icon: Home,      exact: true },
@@ -94,7 +94,7 @@ const HR_ADMIN_PORTAL_MORE: MoreItem[] = [
 
 const MORE_CONFIG: Record<Role, MoreItem[]> = {
     hr_admin: [
-        { label: 'อนุมัติการลา', desc: 'จัดการคำขอลาพนักงาน', href: '/hradmin/leave/admin', icon: ClipboardCheck },
+        { label: 'อนุมัติการลา', desc: 'จัดการคำขอลาพนักงาน', href: '/hradmin/leave/inbox', icon: ClipboardCheck },
         { label: 'ผังองค์กร',    desc: 'ดูโครงสร้างบริษัท',      href: '/hradmin/organization', icon: Network },
         { label: 'จัดการระบบ',   desc: 'ตั้งค่าและการจัดการ',    href: '/hradmin/settings',   icon: Settings },
         { label: 'รายงาน',       desc: 'ดูรายงานต่าง ๆ',          href: '/hradmin/reports',    icon: FileText },
