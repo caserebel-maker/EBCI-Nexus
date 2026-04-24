@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
-    X, Calendar, Clock, User, Paperclip, Phone, CheckCircle2, XCircle, Ban,
-    FileText, MessageCircle,
+    X, ChevronLeft, Calendar, Clock, User, Paperclip, Phone,
+    CheckCircle2, XCircle, Ban, FileText, MessageCircle,
 } from 'lucide-react'
 import { STATUS_META, type LeaveRequestItem } from './types'
 
@@ -14,13 +15,29 @@ interface Props {
 }
 
 /**
- * Slide-in drawer that shows the full leave request detail. All fields
- * are read-only here; mutations happen through the force-action buttons
- * at the bottom, which call the same handler as the row dropdown.
+ * Request detail sheet.
  *
- * ESC closes; click-outside closes (overlay has its own handler).
+ *   • Mobile (<768px) — portal to body, full-viewport takeover with
+ *     its own back-button header + sticky action footer. z-index 80
+ *     covers both the sticky topbar (z-40) and bottom nav (z-50);
+ *     safe-area insets keep controls clear of the iPhone notch and
+ *     home indicator.
+ *   • Desktop (≥768px) — right-slide drawer ~480px wide, X button in
+ *     header, backdrop dims the rest of the page.
+ *
+ * Portal matters: a `position: fixed` element inside a transformed
+ * ancestor would be trapped by that ancestor's viewport. Mounting to
+ * document.body guarantees the drawer always sits at the page root.
  */
 export function RequestDetailDrawer({ item, onClose, onForceAction }: Props) {
+    const [mounted, setMounted] = useState(false)
+
+    useEffect(() => {
+        // SSR-safe portal gate — only render into document.body once we're
+        // on the client.
+        setMounted(true)
+    }, [])
+
     useEffect(() => {
         if (!item) return
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -33,65 +50,79 @@ export function RequestDetailDrawer({ item, onClose, onForceAction }: Props) {
         }
     }, [item, onClose])
 
-    if (!item) return null
+    if (!mounted || !item) return null
 
     const meta = STATUS_META[item.status] ?? STATUS_META.pending
     const emp = item.employee
     const approver = item.approver
     const typeColor = item.leave_type?.color ?? '#f9c5cd'
-    const canApprove = item.status !== 'approved'
-    const canReject = item.status !== 'rejected'
-    const canCancel = item.status !== 'cancelled'
 
-    return (
-        <div className="fixed inset-0 z-[80]">
-            {/* Overlay */}
+    // Conditional action set by current status — HR override = prefix
+    // "บังคับ" to make the consequence obvious. The pending case is a
+    // regular approve/reject/cancel flow.
+    const actions = buildActions(item.status)
+
+    const content = (
+        <>
+            {/* Backdrop — desktop only; mobile is a full takeover */}
             <div
                 onClick={onClose}
-                className="absolute inset-0 bg-black/60"
                 aria-hidden="true"
+                className="absolute inset-0 bg-black/70 hidden md:block"
             />
 
-            {/* Panel */}
+            {/* Panel — mobile fills the viewport, desktop slides from the right */}
             <aside
                 role="dialog"
                 aria-labelledby="drawer-title"
-                className="absolute inset-y-0 right-0 w-full sm:max-w-md md:max-w-lg flex flex-col overflow-hidden shadow-2xl border-l border-white/10"
+                className="
+                    absolute bg-no-repeat flex flex-col overflow-hidden shadow-2xl
+                    inset-0
+                    md:inset-y-0 md:right-0 md:left-auto md:w-[480px] lg:w-[520px]
+                    md:border-l md:border-white/10
+                "
                 style={{
-                    background: 'linear-gradient(160deg, rgba(20,5,8,0.98) 0%, rgba(60,15,20,0.98) 60%, rgba(86,30,35,0.97) 100%)',
-                    backdropFilter: 'blur(14px)',
+                    background: 'linear-gradient(160deg, rgba(20,5,8,0.99) 0%, rgba(60,15,20,0.99) 60%, rgba(86,30,35,0.98) 100%)',
                 }}
             >
-                {/* Header */}
-                <header className="px-4 py-3 border-b border-white/10 flex items-center justify-between gap-3 shrink-0">
-                    <div className="min-w-0">
+                {/* Sticky mobile header — back arrow + title + ref.
+                    Desktop gets the same markup with an X button instead of
+                    the back arrow for pattern recognition. */}
+                <header
+                    className="shrink-0 flex items-center gap-2 px-2 md:px-4 border-b border-white/10"
+                    style={{
+                        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 6px)',
+                        paddingBottom: '6px',
+                        minHeight: '56px',
+                    }}
+                >
+                    <button
+                        onClick={onClose}
+                        aria-label="ปิด"
+                        className="h-12 w-12 md:h-10 md:w-10 rounded-full flex items-center justify-center text-white/75 hover:text-white hover:bg-white/10 active:bg-white/15 transition-colors shrink-0"
+                    >
+                        {/* Back on mobile, X on desktop — same action, different affordance */}
+                        <span className="md:hidden"><ChevronLeft size={22} /></span>
+                        <span className="hidden md:inline"><X size={18} /></span>
+                    </button>
+                    <div className="min-w-0 flex-1">
                         <h2 id="drawer-title" className="text-white font-bold text-base leading-tight truncate">
                             รายละเอียดใบลา
                         </h2>
-                        <p className="text-[11px] text-white/45 font-mono mt-0.5">{item.reference_code ?? '—'}</p>
+                        <p className="text-[11px] text-white/55 font-mono mt-0.5 truncate">
+                            {item.reference_code ?? '—'}
+                        </p>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="h-9 w-9 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-                        aria-label="ปิด"
+                    <span
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0"
+                        style={{ background: meta.bg, color: meta.color, boxShadow: `0 0 0 1px ${meta.ring}` }}
                     >
-                        <X size={17} />
-                    </button>
+                        {meta.label}
+                    </span>
                 </header>
 
                 {/* Scrollable body */}
                 <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-                    {/* Status pill */}
-                    <div>
-                        <span
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold"
-                            style={{ background: meta.bg, color: meta.color, boxShadow: `0 0 0 1px ${meta.ring}` }}
-                        >
-                            {meta.label}
-                        </span>
-                    </div>
-
-                    {/* Applicant card */}
                     <Section title="พนักงาน" icon={User}>
                         <div className="flex items-center gap-3">
                             {emp?.photo_url ? (
@@ -113,7 +144,6 @@ export function RequestDetailDrawer({ item, onClose, onForceAction }: Props) {
                         </div>
                     </Section>
 
-                    {/* Leave type + dates */}
                     <Section title="ประเภท & ช่วงเวลา" icon={Calendar}>
                         <div
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold mb-2"
@@ -128,21 +158,18 @@ export function RequestDetailDrawer({ item, onClose, onForceAction }: Props) {
                         </Field>
                     </Section>
 
-                    {/* Reason */}
                     <Section title="เหตุผล" icon={MessageCircle}>
                         <p className="text-sm text-white/85 whitespace-pre-wrap break-words">
                             {item.reason || <em className="text-white/45">ไม่ระบุ</em>}
                         </p>
                     </Section>
 
-                    {/* Contact */}
                     {item.contact_during_leave && (
                         <Section title="ติดต่อระหว่างลา" icon={Phone}>
                             <p className="text-sm text-white/85">{item.contact_during_leave}</p>
                         </Section>
                     )}
 
-                    {/* Attachment */}
                     {item.attachment_url && (
                         <Section title="เอกสารแนบ" icon={Paperclip}>
                             <a
@@ -157,7 +184,6 @@ export function RequestDetailDrawer({ item, onClose, onForceAction }: Props) {
                         </Section>
                     )}
 
-                    {/* Approver */}
                     <Section title="ผู้อนุมัติ" icon={User}>
                         {approver ? (
                             <div className="flex items-center gap-2">
@@ -179,7 +205,6 @@ export function RequestDetailDrawer({ item, onClose, onForceAction }: Props) {
                         )}
                     </Section>
 
-                    {/* Approval notes (HR audit trail) */}
                     {item.approval_notes && (
                         <Section title="บันทึกการอนุมัติ" icon={MessageCircle}>
                             <pre className="text-[11px] text-white/70 whitespace-pre-wrap font-mono leading-relaxed bg-white/5 rounded-lg p-3 border border-white/10">
@@ -188,7 +213,6 @@ export function RequestDetailDrawer({ item, onClose, onForceAction }: Props) {
                         </Section>
                     )}
 
-                    {/* Rejection reason */}
                     {item.rejection_reason && (
                         <Section title="เหตุผลการปฏิเสธ / ยกเลิก" icon={XCircle}>
                             <p className="text-sm text-red-200 bg-red-500/10 border border-red-400/20 rounded-lg px-3 py-2">
@@ -197,7 +221,6 @@ export function RequestDetailDrawer({ item, onClose, onForceAction }: Props) {
                         </Section>
                     )}
 
-                    {/* Timeline */}
                     <Section title="Timeline" icon={Clock}>
                         <Field label="ยื่นเมื่อ">{formatFull(item.submitted_at ?? item.created_at)}</Field>
                         {item.approved_at && (
@@ -211,37 +234,75 @@ export function RequestDetailDrawer({ item, onClose, onForceAction }: Props) {
                     </Section>
                 </div>
 
-                {/* Sticky action bar */}
-                <footer
-                    className="px-4 py-3 border-t border-white/10 shrink-0 grid grid-cols-3 gap-2"
-                    style={{ background: 'rgba(20,5,8,0.95)' }}
-                >
-                    <ActionButton
-                        icon={CheckCircle2}
-                        label="อนุมัติ"
-                        tone="green"
-                        disabled={!canApprove}
-                        onClick={() => onForceAction('approve')}
-                    />
-                    <ActionButton
-                        icon={XCircle}
-                        label="ปฏิเสธ"
-                        tone="red"
-                        disabled={!canReject}
-                        onClick={() => onForceAction('reject')}
-                    />
-                    <ActionButton
-                        icon={Ban}
-                        label="ยกเลิก"
-                        tone="gray"
-                        disabled={!canCancel}
-                        onClick={() => onForceAction('cancel')}
-                    />
-                </footer>
+                {/* Sticky action footer — only renders actions that are valid
+                    for the current status; prefixes "บังคับ" on non-pending
+                    states so HR sees they're overriding.
+                    Bottom inset keeps buttons above the iPhone home indicator
+                    and (on mobile) above the bottom nav bar when the drawer
+                    is closed; the drawer itself has z-[80] which sits above
+                    the nav, but the padding future-proofs against z-stack
+                    changes. */}
+                {actions.length > 0 && (
+                    <footer
+                        className="shrink-0 grid gap-2 border-t border-white/10 px-3 sm:px-4 pt-3"
+                        style={{
+                            gridTemplateColumns: `repeat(${actions.length}, minmax(0, 1fr))`,
+                            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 10px)',
+                            background: 'rgba(20,5,8,0.95)',
+                        }}
+                    >
+                        {actions.map(a => (
+                            <ActionButton
+                                key={a.action}
+                                icon={a.icon}
+                                label={a.label}
+                                tone={a.tone}
+                                onClick={() => onForceAction(a.action)}
+                            />
+                        ))}
+                    </footer>
+                )}
             </aside>
-        </div>
+        </>
+    )
+
+    return createPortal(
+        <div className="fixed inset-0 z-[80]">{content}</div>,
+        document.body,
     )
 }
+
+// ─── Action set per status ─────────────────────────────────────────────────
+
+type ActionSpec = {
+    action: 'approve' | 'reject' | 'cancel'
+    label: string
+    tone: 'green' | 'red' | 'gray'
+    icon: typeof CheckCircle2
+}
+
+/**
+ * Return the actions that make sense for the current status. A status
+ * never offers its own transition back to itself — no "approve" button
+ * on an already-approved row, etc. Non-pending transitions wear the
+ * "บังคับ" prefix so HR sees it's an override, not a normal flow.
+ */
+function buildActions(status: string): ActionSpec[] {
+    const approve: ActionSpec = { action: 'approve', label: 'อนุมัติ',  tone: 'green', icon: CheckCircle2 }
+    const reject:  ActionSpec = { action: 'reject',  label: 'ปฏิเสธ',   tone: 'red',   icon: XCircle }
+    const cancel:  ActionSpec = { action: 'cancel',  label: 'ยกเลิก',    tone: 'gray',  icon: Ban }
+    const force = (a: ActionSpec): ActionSpec => ({ ...a, label: `บังคับ${a.label}` })
+
+    switch (status) {
+        case 'pending':   return [reject, cancel, approve]
+        case 'approved':  return [force(reject), force(cancel)]
+        case 'rejected':  return [force(approve), force(cancel)]
+        case 'cancelled': return [force(approve), force(reject)]
+        default:          return [force(approve), force(reject), force(cancel)]
+    }
+}
+
+// ─── Presentational helpers ────────────────────────────────────────────────
 
 function Section({ title, icon: Icon, children }: { title: string; icon: typeof User; children: React.ReactNode }) {
     return (
@@ -265,29 +326,25 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function ActionButton({
-    icon: Icon, label, tone, disabled, onClick,
+    icon: Icon, label, tone, onClick,
 }: {
     icon: typeof CheckCircle2
     label: string
     tone: 'green' | 'red' | 'gray'
-    disabled: boolean
     onClick: () => void
 }) {
-    const toneClass = disabled
-        ? 'bg-white/[0.03] text-white/25 cursor-not-allowed'
-        : tone === 'green'
-            ? 'bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30 border border-emerald-400/30'
-            : tone === 'red'
-                ? 'bg-red-500/20 text-red-100 hover:bg-red-500/30 border border-red-400/30'
-                : 'bg-white/10 text-white/75 hover:bg-white/15 border border-white/15'
+    const toneClass = tone === 'green'
+        ? 'bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30 border border-emerald-400/30 active:bg-emerald-500/40'
+        : tone === 'red'
+            ? 'bg-red-500/20 text-red-100 hover:bg-red-500/30 border border-red-400/30 active:bg-red-500/40'
+            : 'bg-white/10 text-white/80 hover:bg-white/15 border border-white/15 active:bg-white/20'
     return (
         <button
-            disabled={disabled}
             onClick={onClick}
-            className={`inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-bold transition-all ${toneClass}`}
+            className={`inline-flex items-center justify-center gap-1.5 px-3 py-3 rounded-lg text-sm font-bold transition-all ${toneClass}`}
         >
-            <Icon size={14} />
-            {label}
+            <Icon size={15} />
+            <span className="truncate">{label}</span>
         </button>
     )
 }
