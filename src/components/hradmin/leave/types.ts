@@ -81,3 +81,40 @@ export const STATUS_META: Record<string, { label: string; color: string; bg: str
 }
 
 export const STATUS_ORDER = ['pending', 'approved', 'rejected', 'cancelled'] as const
+
+// ── Tab 3: balances ────────────────────────────────────────────────────────
+
+export interface BalanceCell {
+    id: string
+    employee_id: string
+    leave_type_id: string
+    total_days: number
+    used_days: number
+    pending_days: number
+    remaining_days: number | null
+    is_manually_adjusted: boolean | null
+    last_adjusted_by: string | null
+    last_adjusted_at: string | null
+    last_adjusted_by_name: string | null
+    notes: string | null
+}
+
+export interface EmployeeRowLite {
+    id: string
+    employee_code: string | null
+    first_name_th: string | null
+    last_name_th: string | null
+    nickname: string | null
+    department: string | null
+    position: string | null
+    photo_url: string | null
+    approval_level: number | null
+}
+
+export interface BalancesFilterState {
+    department: string[]
+    level: string[]        // stringified ints: '1','2',...
+    leave_type: string[]
+    q: string
+    quick: string          // '' | 'used_high' | 'unused' | 'adjusted'
+}

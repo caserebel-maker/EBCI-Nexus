@@ -3,10 +3,11 @@ import { getSession } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { OverviewView } from './overview-view'
 import { RequestsView } from './requests-view'
+import { BalancesView } from './balances-view'
 
 export const dynamic = 'force-dynamic'
 
-type TabKey = 'overview' | 'requests' | 'employees' | 'calendar'
+type TabKey = 'overview' | 'requests' | 'balances' | 'calendar'
 
 interface SearchParams {
     tab?: string
@@ -19,12 +20,16 @@ interface SearchParams {
     q?: string           // employee search (nickname / code)
     from?: string        // start_date filter YYYY-MM-DD
     to?: string          // start_date filter YYYY-MM-DD
+    // Tab 3 filter params
+    level?: string       // comma-separated approval_level (1..5)
+    filter?: string      // quick filter keyword: used_high | unused | adjusted
 }
 
 const PAGE_SIZE = 20
+const BALANCES_PAGE_SIZE = 25
 
-const ALLOWED_TABS = new Set<TabKey>(['overview', 'requests', 'employees', 'calendar'])
-const IMPLEMENTED_TABS = new Set<TabKey>(['overview', 'requests'])
+const ALLOWED_TABS = new Set<TabKey>(['overview', 'requests', 'balances', 'calendar'])
+const IMPLEMENTED_TABS = new Set<TabKey>(['overview', 'requests', 'balances'])
 
 function normalizeTab(raw: string | undefined): TabKey {
     const t = (raw ?? 'overview') as TabKey
@@ -115,6 +120,9 @@ export default async function LeaveOverviewPage({
 
     if (tab === 'requests') {
         return renderRequestsTab(sp, year)
+    }
+    if (tab === 'balances') {
+        return renderBalancesTab(sp, year)
     }
     return renderOverviewTab(sp, year)
 }
@@ -482,4 +490,202 @@ function parseCsv(raw: string | undefined): string[] {
 function normalizeDate(raw: string | undefined): string | null {
     if (!raw) return null
     return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : null
+}
+
+// ─── Tab 3: Balances ──────────────────────────────────────────────────────
+
+async function renderBalancesTab(sp: SearchParams, year: number) {
+    const departmentFilter = parseCsv(sp.department)
+    const levelFilter = parseCsv(sp.level).map(n => parseInt(n, 10)).filter(Number.isFinite)
+    const leaveTypeFilter = parseCsv(sp.leave_type)
+    const q = (sp.q ?? '').trim()
+    const quickFilter = (sp.filter ?? '').trim() // used_high | unused | adjusted | ''
+    const page = Math.max(1, parseInt(sp.page ?? '1', 10) || 1)
+
+    // Employee base query — paginate HERE so the pivot stays consistent per page.
+    // We sort by department + nickname so department grouping reads naturally.
+    let empQuery = supabaseAdmin
+        .from('employees')
+        .select('id, employee_code, first_name_th, last_name_th, nickname, department, position, photo_url, approval_level', { count: 'exact' })
+        .eq('status', 'active')
+
+    if (departmentFilter.length > 0) empQuery = empQuery.in('department', departmentFilter)
+    if (levelFilter.length > 0) empQuery = empQuery.in('approval_level', levelFilter)
+    if (q) {
+        const qLower = q.toLowerCase()
+        empQuery = empQuery.or(
+            `nickname.ilike.%${qLower}%,first_name_th.ilike.%${qLower}%,last_name_th.ilike.%${qLower}%,employee_code.ilike.%${qLower}%`,
+        )
+    }
+
+    // Apply the quick-filter that requires a balance-table lookup BEFORE
+    // paginating the employee list; otherwise the page-count math lies.
+    if (quickFilter === 'adjusted' || quickFilter === 'used_high' || quickFilter === 'unused') {
+        let balanceFilterQuery = supabaseAdmin
+            .from('leave_balances')
+            .select('employee_id, total_days, used_days, pending_days, is_manually_adjusted')
+            .eq('year', year)
+        if (leaveTypeFilter.length > 0) {
+            balanceFilterQuery = balanceFilterQuery.in('leave_type_id', leaveTypeFilter)
+        }
+        const { data: bData } = await balanceFilterQuery
+        const matched = new Set<string>()
+        for (const b of (bData ?? []) as Array<Record<string, unknown>>) {
+            const total = Number(b.total_days ?? 0)
+            const used = Number(b.used_days ?? 0)
+            const pending = Number(b.pending_days ?? 0)
+            const consumed = used + pending
+            if (quickFilter === 'adjusted' && b.is_manually_adjusted) matched.add(b.employee_id as string)
+            else if (quickFilter === 'used_high' && total > 0 && consumed / total > 0.5) matched.add(b.employee_id as string)
+            else if (quickFilter === 'unused' && total > 0 && used === 0) matched.add(b.employee_id as string)
+        }
+        const allow = Array.from(matched)
+        if (allow.length === 0) {
+            return (
+                <BalancesView
+                    year={year}
+                    filters={{ department: departmentFilter, level: levelFilter.map(String), leave_type: leaveTypeFilter, q, quick: quickFilter }}
+                    pagination={{ page, pageSize: BALANCES_PAGE_SIZE, total: 0, totalPages: 1 }}
+                    employees={[]}
+                    leaveTypes={[]}
+                    balancesByEmployee={{}}
+                    departments={[]}
+                />
+            )
+        }
+        empQuery = empQuery.in('id', allow)
+    }
+
+    const from = (page - 1) * BALANCES_PAGE_SIZE
+    const to = from + BALANCES_PAGE_SIZE - 1
+    empQuery = empQuery
+        .order('department', { ascending: true, nullsFirst: false })
+        .order('approval_level', { ascending: false, nullsFirst: false })
+        .order('nickname', { ascending: true, nullsFirst: false })
+        .range(from, to)
+
+    const { data: empRows, count: empCount } = await empQuery
+    const employees = (empRows ?? []) as Array<{
+        id: string
+        employee_code: string | null
+        first_name_th: string | null
+        last_name_th: string | null
+        nickname: string | null
+        department: string | null
+        position: string | null
+        photo_url: string | null
+        approval_level: number | null
+    }>
+    const totalEmployees = empCount ?? 0
+    const totalPages = Math.max(1, Math.ceil(totalEmployees / BALANCES_PAGE_SIZE))
+
+    const empIds = employees.map(e => e.id)
+
+    // Pull balances + leave_types in parallel; also the full department
+    // list for the filter dropdown.
+    const [balancesRes, leaveTypesRes, deptsRes, adjustersRes] = await Promise.all([
+        empIds.length
+            ? supabaseAdmin
+                .from('leave_balances')
+                .select('id, employee_id, leave_type_id, total_days, used_days, pending_days, remaining_days, is_manually_adjusted, last_adjusted_by, last_adjusted_at, notes, year')
+                .eq('year', year)
+                .in('employee_id', empIds)
+            : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+        supabaseAdmin
+            .from('leave_types')
+            .select('id, name_th, color, icon, display_order')
+            .eq('is_active', true)
+            .order('display_order', { ascending: true, nullsFirst: false }),
+        supabaseAdmin
+            .from('employees')
+            .select('department')
+            .eq('status', 'active')
+            .not('department', 'is', null),
+        // Adjuster name cache — every balance row that was touched by HR
+        // keeps the adjuster's employees.id so we need to look up names.
+        empIds.length
+            ? supabaseAdmin
+                .from('leave_balances')
+                .select('last_adjusted_by')
+                .eq('year', year)
+                .in('employee_id', empIds)
+                .not('last_adjusted_by', 'is', null)
+            : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+    ])
+
+    const balances = (balancesRes.data ?? []) as Array<{
+        id: string
+        employee_id: string
+        leave_type_id: string
+        total_days: number
+        used_days: number
+        pending_days: number
+        remaining_days: number | null
+        is_manually_adjusted: boolean | null
+        last_adjusted_by: string | null
+        last_adjusted_at: string | null
+        notes: string | null
+    }>
+    const leaveTypes = (leaveTypesRes.data ?? []) as Array<{
+        id: string
+        name_th: string
+        color: string | null
+        icon: string | null
+        display_order: number | null
+    }>
+    const departments = Array.from(
+        new Set(((deptsRes.data ?? []) as Array<{ department: string | null }>)
+            .map(r => r.department)
+            .filter((d): d is string => Boolean(d))),
+    ).sort()
+
+    const adjusterIds = Array.from(new Set(
+        (adjustersRes.data ?? [])
+            .map(r => (r as { last_adjusted_by: string | null }).last_adjusted_by)
+            .filter((v): v is string => Boolean(v)),
+    ))
+    const adjustersMap: Record<string, string> = {}
+    if (adjusterIds.length > 0) {
+        const { data: adjList } = await supabaseAdmin
+            .from('employees')
+            .select('id, nickname, first_name_th, last_name_th')
+            .in('id', adjusterIds)
+        for (const a of (adjList ?? []) as Array<{ id: string; nickname: string | null; first_name_th: string | null; last_name_th: string | null }>) {
+            const full = `${a.first_name_th ?? ''} ${a.last_name_th ?? ''}`.trim()
+            adjustersMap[a.id] = a.nickname ? `${full} (${a.nickname})` : full || a.id
+        }
+    }
+
+    // Group balances by employee_id → { leave_type_id: balance }
+    const balancesByEmployee: Record<string, Record<string, typeof balances[number] & { last_adjusted_by_name: string | null }>> = {}
+    for (const b of balances) {
+        if (!balancesByEmployee[b.employee_id]) balancesByEmployee[b.employee_id] = {}
+        balancesByEmployee[b.employee_id][b.leave_type_id] = {
+            ...b,
+            last_adjusted_by_name: b.last_adjusted_by ? adjustersMap[b.last_adjusted_by] ?? null : null,
+        }
+    }
+
+    return (
+        <BalancesView
+            year={year}
+            filters={{
+                department: departmentFilter,
+                level: levelFilter.map(String),
+                leave_type: leaveTypeFilter,
+                q,
+                quick: quickFilter,
+            }}
+            pagination={{
+                page,
+                pageSize: BALANCES_PAGE_SIZE,
+                total: totalEmployees,
+                totalPages,
+            }}
+            employees={employees}
+            leaveTypes={leaveTypes}
+            balancesByEmployee={balancesByEmployee}
+            departments={departments}
+        />
+    )
 }
