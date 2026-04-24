@@ -2,11 +2,35 @@ import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { OverviewView } from './overview-view'
+import { RequestsView } from './requests-view'
 
 export const dynamic = 'force-dynamic'
 
+type TabKey = 'overview' | 'requests' | 'employees' | 'calendar'
+
 interface SearchParams {
+    tab?: string
     year?: string
+    // Tab 2 filter params
+    page?: string
+    status?: string      // comma-separated: "pending,approved"
+    leave_type?: string  // comma-separated leave_type_id list
+    department?: string  // comma-separated department list
+    q?: string           // employee search (nickname / code)
+    from?: string        // start_date filter YYYY-MM-DD
+    to?: string          // start_date filter YYYY-MM-DD
+}
+
+const PAGE_SIZE = 20
+
+const ALLOWED_TABS = new Set<TabKey>(['overview', 'requests', 'employees', 'calendar'])
+const IMPLEMENTED_TABS = new Set<TabKey>(['overview', 'requests'])
+
+function normalizeTab(raw: string | undefined): TabKey {
+    const t = (raw ?? 'overview') as TabKey
+    if (!ALLOWED_TABS.has(t)) return 'overview'
+    if (!IMPLEMENTED_TABS.has(t)) return 'overview'
+    return t
 }
 
 interface RawLeaveRequest {
@@ -22,6 +46,15 @@ interface RawLeaveRequest {
     created_at: string
     updated_at: string | null
     reference_code: string | null
+    approver_id: string | null
+    approved_at: string | null
+    approval_notes: string | null
+    rejection_reason: string | null
+    attachment_url: string | null
+    attachment_name: string | null
+    is_half_day: boolean | null
+    half_day_period: string | null
+    contact_during_leave: string | null
 }
 
 interface RawEmployee {
@@ -32,6 +65,7 @@ interface RawEmployee {
     department: string | null
     position: string | null
     photo_url: string | null
+    email: string | null
 }
 
 interface RawLeaveType {
@@ -52,14 +86,14 @@ interface RawBalance {
 }
 
 /**
- * HR Leave Management — Overview dashboard (Tab 1 of 4).
+ * HR Leave Management — dispatches to the right tab view.
  *
- * HR-admin only. Pulls all leave_requests for the selected year +
- * the prior year (for the YoY delta on card 1), joins employees +
- * leave_types client-side in one round-trip.
+ *   • ?tab=overview  (default)  → Tab 1 aggregate dashboard
+ *   • ?tab=requests             → Tab 2 filterable request table
  *
- * The "Year Selector" uses query string (?year=2026) so bookmarks +
- * back-nav work naturally. Default is the current Gregorian year.
+ * Tabs 3/4 (employees / calendar) are rendered as disabled stubs by
+ * OverviewView so navigation hints stay visible; clicking them does
+ * nothing yet.
  */
 export default async function LeaveOverviewPage({
     searchParams,
@@ -71,13 +105,24 @@ export default async function LeaveOverviewPage({
     if (session.role !== 'hr_admin') redirect('/hradmin/dashboard')
 
     const sp = await searchParams
-    const nowYear = new Date().getFullYear()
-    const requested = parseInt(sp.year ?? '', 10)
-    const year = Number.isFinite(requested) && requested >= 2020 && requested <= 2100
-        ? requested
-        : nowYear
-    const prevYear = year - 1
+    const tab = normalizeTab(sp.tab)
 
+    const nowYear = new Date().getFullYear()
+    const requestedYear = parseInt(sp.year ?? '', 10)
+    const year = Number.isFinite(requestedYear) && requestedYear >= 2020 && requestedYear <= 2100
+        ? requestedYear
+        : nowYear
+
+    if (tab === 'requests') {
+        return renderRequestsTab(sp, year)
+    }
+    return renderOverviewTab(sp, year)
+}
+
+// ─── Tab 1: Overview ───────────────────────────────────────────────────────
+
+async function renderOverviewTab(_sp: SearchParams, year: number) {
+    const prevYear = year - 1
     const yStart = `${year}-01-01`
     const yEnd = `${year}-12-31`
     const pStart = `${prevYear}-01-01`
@@ -116,14 +161,12 @@ export default async function LeaveOverviewPage({
             .eq('year', year),
     ])
 
-    const curRequests: RawLeaveRequest[] = (curRequestsRes.data ?? []) as RawLeaveRequest[]
+    const curRequests = (curRequestsRes.data ?? []) as RawLeaveRequest[]
     const prevYearCount = prevRequestsCountRes.count ?? 0
-    const employees: RawEmployee[] = (employeesRes.data ?? []) as RawEmployee[]
-    const leaveTypes: RawLeaveType[] = (leaveTypesRes.data ?? []) as RawLeaveType[]
-    const balances: RawBalance[] = (balancesRes.data ?? []) as RawBalance[]
+    const employees = (employeesRes.data ?? []) as RawEmployee[]
+    const leaveTypes = (leaveTypesRes.data ?? []) as RawLeaveType[]
+    const balances = (balancesRes.data ?? []) as RawBalance[]
 
-    // Derived aggregates — computed server-side so the client renders
-    // instantly. The client still has the raw arrays for chart re-runs.
     const total = curRequests.length
     const pending = curRequests.filter(r => r.status === 'pending').length
     const approved = curRequests.filter(r => r.status === 'approved').length
@@ -132,24 +175,19 @@ export default async function LeaveOverviewPage({
     const pendingPct = total > 0 ? Math.round((pending / total) * 100) : 0
     const yoyDelta = prevYearCount > 0
         ? Math.round(((total - prevYearCount) / prevYearCount) * 100)
-        : null // null = "no prior-year data to compare"
+        : null
 
-    // Utilization rate — average of (used / total) across all balance rows
-    // that have a non-zero total (exclude unlimited types with total=0).
     const utilizationSamples = balances.filter(b => Number(b.total_days) > 0)
     const utilizationRate = utilizationSamples.length > 0
         ? Math.round(
             utilizationSamples.reduce((sum, b) => {
                 const used = Number(b.used_days) + Number(b.pending_days)
-                const total = Number(b.total_days)
-                return sum + (used / total)
+                const tot = Number(b.total_days)
+                return sum + (used / tot)
             }, 0) / utilizationSamples.length * 100,
         )
         : 0
 
-    // Average vacation-days-used per employee across the annual type.
-    // The annual leave_type is resolved by name_th === 'พักร้อน' or the
-    // canonical name_en 'annual'; fall back to display_order=1.
     const annualType = leaveTypes.find(t =>
         (t.name_th ?? '').includes('พักร้อน')
         || (t as unknown as { name_en?: string }).name_en === 'annual',
@@ -161,7 +199,6 @@ export default async function LeaveOverviewPage({
         ? +(annualBalances.reduce((sum, b) => sum + Number(b.used_days), 0) / annualBalances.length).toFixed(1)
         : 0
 
-    // Monthly trend: [{ month: 1..12, [leave_type_id]: count, ... }]
     const monthly: Array<Record<string, number | string>> = []
     for (let m = 1; m <= 12; m++) {
         const row: Record<string, number | string> = { month: m }
@@ -170,14 +207,13 @@ export default async function LeaveOverviewPage({
     }
     for (const r of curRequests) {
         if (r.status !== 'approved' && r.status !== 'pending') continue
-        const m = new Date(r.start_date).getMonth() // 0..11
+        const m = new Date(r.start_date).getMonth()
         const row = monthly[m]
         if (row && typeof row[r.leave_type_id] === 'number') {
             row[r.leave_type_id] = (row[r.leave_type_id] as number) + 1
         }
     }
 
-    // Pie: approved-only distribution by leave_type_id
     const pieRaw = new Map<string, number>()
     for (const r of curRequests) {
         if (r.status !== 'approved') continue
@@ -193,7 +229,6 @@ export default async function LeaveOverviewPage({
         }
     }).sort((a, b) => b.count - a.count)
 
-    // Department bars: sum total_days per department on approved requests
     const empMap = new Map(employees.map(e => [e.id, e]))
     const deptRaw = new Map<string, number>()
     for (const r of curRequests) {
@@ -207,7 +242,6 @@ export default async function LeaveOverviewPage({
         .sort((a, b) => b.total_days - a.total_days)
         .slice(0, 5)
 
-    // Recent activity: 10 latest requests (any status), joined with employee + type
     const recent = curRequests.slice(0, 10).map(r => {
         const emp = empMap.get(r.employee_id)
         const t = leaveTypes.find(x => x.id === r.leave_type_id)
@@ -237,15 +271,9 @@ export default async function LeaveOverviewPage({
         <OverviewView
             year={year}
             stats={{
-                total,
-                pending,
-                approved,
-                rejected,
-                approvedPct,
-                pendingPct,
-                yoyDelta,
-                utilizationRate,
-                avgAnnualUsed,
+                total, pending, approved, rejected,
+                approvedPct, pendingPct,
+                yoyDelta, utilizationRate, avgAnnualUsed,
             }}
             monthly={monthly}
             pie={pie}
@@ -254,4 +282,204 @@ export default async function LeaveOverviewPage({
             leaveTypes={leaveTypes}
         />
     )
+}
+
+// ─── Tab 2: Requests ───────────────────────────────────────────────────────
+
+async function renderRequestsTab(sp: SearchParams, year: number) {
+    // Filter params — all comma-separated arrays come in as string[] after split
+    const statusFilter = parseCsv(sp.status)
+    const leaveTypeFilter = parseCsv(sp.leave_type)
+    const departmentFilter = parseCsv(sp.department)
+    const q = (sp.q ?? '').trim()
+    const from = normalizeDate(sp.from) ?? `${year}-01-01`
+    const to = normalizeDate(sp.to) ?? `${year}-12-31`
+    const page = Math.max(1, parseInt(sp.page ?? '1', 10) || 1)
+
+    // Employee search narrows employee_id pool BEFORE the request query, so
+    // it composes naturally with other filters and keeps pagination honest.
+    let employeeIdPool: string[] | null = null
+    if (q) {
+        const qLower = q.toLowerCase()
+        const { data: matches } = await supabaseAdmin
+            .from('employees')
+            .select('id, nickname, first_name_th, last_name_th, employee_code')
+            .or(`nickname.ilike.%${qLower}%,first_name_th.ilike.%${qLower}%,last_name_th.ilike.%${qLower}%,employee_code.ilike.%${qLower}%`)
+            .limit(500)
+        employeeIdPool = (matches ?? []).map(m => m.id as string)
+        if (employeeIdPool.length === 0) {
+            // Early return — no employees match search.
+            return renderEmpty({ page, year, from, to })
+        }
+    }
+
+    // If department filter is set, narrow the same pool.
+    if (departmentFilter.length > 0) {
+        const { data: deptEmps } = await supabaseAdmin
+            .from('employees')
+            .select('id')
+            .in('department', departmentFilter)
+        const deptIds = (deptEmps ?? []).map(e => e.id as string)
+        employeeIdPool = employeeIdPool
+            ? employeeIdPool.filter(id => deptIds.includes(id))
+            : deptIds
+        if (employeeIdPool.length === 0) return renderEmpty({ page, year, from, to })
+    }
+
+    // Build main query
+    let query = supabaseAdmin
+        .from('leave_requests')
+        .select(
+            `id, employee_id, leave_type_id, start_date, end_date, total_days,
+             reason, status, submitted_at, created_at, updated_at, reference_code,
+             approver_id, approved_at, approval_notes, rejection_reason,
+             attachment_url, attachment_name, is_half_day, half_day_period,
+             contact_during_leave`,
+            { count: 'exact' },
+        )
+        .gte('start_date', from)
+        .lte('start_date', to)
+
+    if (statusFilter.length > 0) query = query.in('status', statusFilter)
+    if (leaveTypeFilter.length > 0) query = query.in('leave_type_id', leaveTypeFilter)
+    if (employeeIdPool) query = query.in('employee_id', employeeIdPool)
+
+    const fromRow = (page - 1) * PAGE_SIZE
+    const toRow = fromRow + PAGE_SIZE - 1
+    query = query
+        .order('created_at', { ascending: false })
+        .range(fromRow, toRow)
+
+    const { data: rows, count } = await query
+    const requests = (rows ?? []) as RawLeaveRequest[]
+    const total = count ?? 0
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+    // Join employees + leave_types — one trip each, scoped to referenced ids
+    const empIds = Array.from(new Set(requests.map(r => r.employee_id)))
+    const approverIds = Array.from(new Set(
+        requests.map(r => r.approver_id).filter((x): x is string => Boolean(x)),
+    ))
+    const allEmpIds = Array.from(new Set([...empIds, ...approverIds]))
+
+    const [empsRes, leaveTypesRes, deptsRes] = await Promise.all([
+        allEmpIds.length
+            ? supabaseAdmin
+                .from('employees')
+                .select('id, first_name_th, last_name_th, nickname, department, position, photo_url, email')
+                .in('id', allEmpIds)
+            : Promise.resolve({ data: [] as RawEmployee[] }),
+        supabaseAdmin
+            .from('leave_types')
+            .select('id, name_th, color, icon, display_order')
+            .eq('is_active', true)
+            .order('display_order', { ascending: true, nullsFirst: false }),
+        // Full department list for the filter dropdown — small table, cheap.
+        supabaseAdmin
+            .from('employees')
+            .select('department')
+            .eq('status', 'active')
+            .not('department', 'is', null),
+    ])
+
+    const empMap = new Map((empsRes.data ?? []).map(e => [e.id as string, e as RawEmployee]))
+    const leaveTypes = (leaveTypesRes.data ?? []) as RawLeaveType[]
+    const departments = Array.from(
+        new Set(((deptsRes.data ?? []) as Array<{ department: string | null }>)
+            .map(e => e.department)
+            .filter((d): d is string => Boolean(d))),
+    ).sort()
+
+    const items = requests.map(r => {
+        const emp = empMap.get(r.employee_id)
+        const approver = r.approver_id ? empMap.get(r.approver_id) : null
+        const t = leaveTypes.find(x => x.id === r.leave_type_id)
+        return {
+            id: r.id,
+            reference_code: r.reference_code,
+            status: r.status,
+            start_date: r.start_date,
+            end_date: r.end_date,
+            total_days: Number(r.total_days),
+            reason: r.reason,
+            submitted_at: r.submitted_at,
+            created_at: r.created_at,
+            updated_at: r.updated_at,
+            approved_at: r.approved_at,
+            approval_notes: r.approval_notes,
+            rejection_reason: r.rejection_reason,
+            attachment_url: r.attachment_url,
+            attachment_name: r.attachment_name,
+            is_half_day: r.is_half_day,
+            half_day_period: r.half_day_period,
+            contact_during_leave: r.contact_during_leave,
+            leave_type: t ? { id: t.id, name_th: t.name_th, color: t.color, icon: t.icon } : null,
+            employee: emp ? {
+                id: emp.id,
+                first_name_th: emp.first_name_th,
+                last_name_th: emp.last_name_th,
+                nickname: emp.nickname,
+                department: emp.department,
+                position: emp.position,
+                photo_url: emp.photo_url,
+                email: emp.email,
+            } : null,
+            approver: approver ? {
+                id: approver.id,
+                nickname: approver.nickname,
+                first_name_th: approver.first_name_th,
+                last_name_th: approver.last_name_th,
+                photo_url: approver.photo_url,
+            } : null,
+        }
+    })
+
+    return (
+        <RequestsView
+            year={year}
+            filters={{
+                status: statusFilter,
+                leave_type: leaveTypeFilter,
+                department: departmentFilter,
+                q,
+                from,
+                to,
+            }}
+            pagination={{
+                page,
+                pageSize: PAGE_SIZE,
+                total,
+                totalPages,
+            }}
+            items={items}
+            leaveTypes={leaveTypes}
+            departments={departments}
+        />
+    )
+}
+
+function renderEmpty({ page, year, from, to }: { page: number; year: number; from: string; to: string }) {
+    return (
+        <RequestsView
+            year={year}
+            filters={{
+                status: [], leave_type: [], department: [], q: '',
+                from, to,
+            }}
+            pagination={{ page, pageSize: PAGE_SIZE, total: 0, totalPages: 1 }}
+            items={[]}
+            leaveTypes={[]}
+            departments={[]}
+        />
+    )
+}
+
+function parseCsv(raw: string | undefined): string[] {
+    if (!raw) return []
+    return raw.split(',').map(s => s.trim()).filter(Boolean)
+}
+
+function normalizeDate(raw: string | undefined): string | null {
+    if (!raw) return null
+    return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : null
 }
