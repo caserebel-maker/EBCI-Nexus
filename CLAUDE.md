@@ -1,101 +1,142 @@
-# CLAUDE.md — EBCI Nexus session rules
+# EBCI Nexus — Claude Code Session Protocol
 
-> These rules apply to **every** Claude Code session on this repo.
-> Read this first before any file inspection, question answering, or
-> code change. They encode lessons from multi-device sessions where
-> stale local checkouts caused Claude to "not see" work that was
-> already shipped.
-
----
-
-## Session Start Protocol
-
-Every time a new Claude Code session starts on this repo, BEFORE doing
-any file inspection or answering questions about project state:
-
-1. Run `git fetch origin` to see what's on remote.
-2. Run `git status` — if behind `origin/main`, **STOP and report to
-   user** (how many commits behind + a sample of what landed).
-3. Suggest `git pull origin main --ff-only` before proceeding.
-4. After pulling, **THEN** start answering / working.
-
-Do not skip this even if the user's first prompt seems urgent or
-trivial. The cost of a stale checkout (wrong answers, duplicate work,
-re-doing a feature that already shipped) is much higher than a
-fetch + pull at the top of the session.
+> These rules apply to **every** Claude Code session on this repo,
+> across every machine. They encode lessons from the multi-device
+> workflow where a stale local checkout caused Claude to confidently
+> report "file does not exist" when the file was already on remote.
 
 ---
 
-## Source of Truth Hierarchy
+## MUST DO ON EVERY SESSION START (MANDATORY)
 
-When asked about files or features that "should exist":
+Before answering ANY question, inspecting ANY file, or making ANY
+assumption about project state — run this sync protocol:
 
-1. **Check `origin/main` on GitHub first** — via
-   `git log origin/main`, `git show origin/main:path/to/file`, or
-   `git ls-tree origin/main <path>`.
-2. **Check Vercel production deployments** — via
-   `npx vercel ls`, `npx vercel inspect`, or the Vercel MCP server
-   when available. Live URLs are `https://nexus.ebcitrade.com` +
-   `https://ebci-nexus.vercel.app`.
-3. **THEN check local working tree.**
+**Step 1:** `git fetch origin`
 
-If local is missing something that exists on remote, the user's
-local checkout is stale — **do not** assume the file doesn't exist.
-Ask them to pull or run the fetch yourself.
+**Step 2:** `git status` and `git log HEAD..origin/main --oneline`
 
----
-
-## Don't blindly trust user claims of "I just committed X"
-
-When the user says "I pushed commit X" or "file Y is on main":
-
-- Verify via `git log origin/main --oneline | grep <hash>` or
-  `git log origin/main --oneline -20`.
-- Or `git show origin/main:<path>` to inspect the file directly.
-- Only report back after verifying.
-
-This prevents the "home machine hasn't pulled" confusion pattern
-where Claude confidently says "that file doesn't exist" because it's
-looking at a stale local index.
-
----
-
-## On every resume
-
-- **Default to reading `docs/NEXT.md`** if it exists — the living
-  single-entry handoff that points to the next priority.
-- **Fall back to `docs/SESSION_HISTORY.md`** for archived context
-  from prior sessions.
-- The per-day `docs/SESSION_HANDOFF_APR*.md` files are historical
-  snapshots — read them only if `NEXT.md` references them or the
-  user asks explicitly.
-
-A typical resume in this repo looks like:
+**Step 3:** If behind, STOP and report to user in this format:
 
 ```
-$ git fetch origin
-$ git status              # 3 commits behind origin/main? report + pull
-$ git pull origin main --ff-only
-$ cat docs/NEXT.md        # pick up from the §3.x priority
+Local main is N commits behind origin/main.
+Latest remote commits:
+  <hash> <subject>
+  <hash> <subject>
+  ...
+กรุณา pull ก่อน: git pull origin main --ff-only
+รอจนกว่าจะ sync เสร็จก่อน ถึงจะตอบคำถามหรือทำงานได้ต่อ.
 ```
+
+**Step 4:** After pulling (or if already in sync), read `docs/NEXT.md`
+— this is the living handoff doc. Use its priority list to suggest
+what to work on. If `NEXT.md` doesn't exist, fall back to
+`docs/SESSION_HISTORY.md`, then the most recent
+`docs/SESSION_HANDOFF_*.md`.
+
+**Do NOT proceed** until user has pulled or explicitly says "ข้าม"
+(skip, with awareness of the risk).
 
 ---
 
-## Other repo-specific conventions
+## SOURCE OF TRUTH HIERARCHY
 
-- **Push pattern:** `git push origin HEAD:main` (we work on a worktree
-  branch, push refs to `main` directly).
-- **Deploy:** Vercel auto-deploys on every push to `main`. No manual
-  step. Smoke-test at `https://nexus.ebcitrade.com` after ~60 s.
-- **Test accounts:** Admin `tumyen@gmail.com / 0000` · L1 `l1test@ebci.test / 0000`
-  (see `docs/NEXT.md §4` for the full list).
-- **Notification `recipient_user_id`** holds the Supabase `auth.users.id`
-  UUID, **not** the legacy `public."User".id` CUID. See
-  `src/lib/notifications.ts` and the note in the APR24 handoff for
-  the rationale (FK to `User` was dropped).
-- **Leave balance transitions** must be verified via the DB after any
-  approve/reject/force-action test — `leave_requests.status` + the
-  matching `leave_balances` row are the authoritative record.
+When user says "I committed X" or "file Y should exist":
+
+1. **FIRST check `origin/main` (remote)** via:
+   - `git show origin/main:path/to/file`
+   - `git log origin/main --oneline | grep <hash>`
+2. **THEN check Vercel production** — `list_deployments` MCP or
+   `npx vercel ls`. Latest deploy commit = production truth.
+3. **LAST check local working tree** — local can be stale even if
+   user just pushed from another machine.
+
+**DO NOT** report "file does not exist" until all 3 are checked.
+
+---
+
+## MULTI-MACHINE CONTEXT
+
+User works across 3 machines:
+
+| Machine | User | Path |
+|---|---|---|
+| Office Mac mini | `ebcimord` | `/Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App` |
+| Home Mac | — | `~/C1TB/EB-CI/EBCI-Nexus` |
+| Laptop (in car) | — | varies (travel/meetings) |
+
+At session start, ask: **"อยู่เครื่องไหน? (office / home / laptop)"**
+Then confirm path matches, run sync protocol, proceed with `NEXT.md`.
+
+---
+
+## HANDOFF DOC PROTOCOL
+
+**`docs/NEXT.md`** — LIVING DOCUMENT (overwrite each session):
+
+- §0 TL;DR in 30 seconds
+- §1 commits shipped this session (table)
+- §2 what's live + usable right now
+- §3 priority list of what's open (§3.1 = most urgent)
+- §4 env vars + test accounts (stable reference)
+- §5 git state (last commit hash)
+- §6 quirks learned this session
+
+**User invocation:** `อ่าน docs/NEXT.md แล้วทำต่อ` (optionally append
+`§3.3` to jump to specific priority).
+
+**`docs/SESSION_HISTORY.md`** — APPEND ONLY ARCHIVE, never overwrite.
+Table of contents at top + each session verbatim below.
+
+**Before ending every session:** update `NEXT.md` with current state.
+Append a summary block to `SESSION_HISTORY.md`. **Don't create new
+`SESSION_HANDOFF_*.md` files going forward** — old ones stay as
+archive but new handoffs go through `NEXT.md` + `SESSION_HISTORY.md`.
+
+---
+
+## ANTI-PATTERNS TO AVOID
+
+1. **Don't blindly trust user claims of "I pushed X"** — user works
+   across machines, may have pushed from different one. Verify via
+   `origin/main` or Vercel MCP before confirming.
+
+2. **Don't assume local state = project state.** Local can be days
+   behind. Always sync first.
+
+3. **Don't confirm "file doesn't exist"** without checking remote.
+   Check `git show origin/main:<path>` first. 9/10 times file is on
+   remote and local needs pulling.
+
+4. **Don't start work on stale code.** Building on outdated local =
+   merge conflicts + confusion. Sync first, always.
+
+---
+
+## USER PREFERENCES (CONSISTENT ACROSS ALL MACHINES)
+
+- Thai language (casual, occasional English tech terms OK)
+- Prefer `ask_user_input_v0` tool for choices (not inline text)
+- UI fonts 20-30% larger than default (older staff use the app)
+- Explicit commits per feature (not one big mega-commit)
+- Test incrementally — small features then verify before next
+- When in doubt, ask via `ask_user_input_v0` — don't assume
+
+---
+
+## QUICK REFERENCE
+
+| Key | Value |
+|---|---|
+| Repo | `github.com/caserebel-maker/EBCI-Nexus` |
+| Prod URL | `https://ebci-nexus.vercel.app` (alias: `https://nexus.ebcitrade.com`) |
+| Dev URL | `localhost:3001` |
+| Supabase project | `cluirxjykhchthcpgosz` |
+| Vercel project | `prj_buArBae3HxOjH0wstTxZfZszCZT9` |
+| Vercel team | `team_EE8l0QHf5AlQg5klF8YhfpFJ` |
+| Default branch | `main` (direct push, no PRs for solo work) |
+| Default dev server port | `3001` |
+| Push pattern | `git push origin HEAD:main` (when on worktree branch) |
 
 ---
 
