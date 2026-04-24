@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import {
     CalendarDays, BarChart3, Users, CalendarRange,
     FileText, Clock, CheckCircle, TrendingUp, Info,
@@ -56,11 +57,11 @@ interface Props {
 
 type TabKey = 'overview' | 'requests' | 'employees' | 'calendar'
 
-const TABS: Array<{ key: TabKey; label: string; Icon: typeof BarChart3; comingSoon?: boolean }> = [
-    { key: 'overview',  label: 'ภาพรวม',             Icon: BarChart3 },
-    { key: 'requests',  label: 'ใบลาทั้งหมด',         Icon: FileText,      comingSoon: true },
-    { key: 'employees', label: 'วันลาของพนักงาน',    Icon: Users,         comingSoon: true },
-    { key: 'calendar',  label: 'ปฏิทิน',              Icon: CalendarRange, comingSoon: true },
+const TABS: Array<{ key: TabKey; label: string; Icon: typeof BarChart3; href?: string; comingSoon?: boolean }> = [
+    { key: 'overview',  label: 'ภาพรวม',           Icon: BarChart3,     href: '/hradmin/leave' },
+    { key: 'requests',  label: 'ใบลาทั้งหมด',       Icon: FileText,      href: '/hradmin/leave?tab=requests' },
+    { key: 'employees', label: 'วันลาของพนักงาน',  Icon: Users,         comingSoon: true },
+    { key: 'calendar',  label: 'ปฏิทิน',            Icon: CalendarRange, comingSoon: true },
 ]
 
 const GLASS_STYLE: React.CSSProperties = {
@@ -110,7 +111,7 @@ export function OverviewView({
                 className="flex gap-1 p-1 rounded-xl border border-white/10 overflow-x-auto"
                 style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)' }}
             >
-                {TABS.map(({ key, label, Icon, comingSoon }) => {
+                {TABS.map(({ key, label, Icon, href, comingSoon }) => {
                     const active = activeTab === key
                     if (comingSoon) {
                         return (
@@ -132,8 +133,9 @@ export function OverviewView({
                         )
                     }
                     return (
-                        <button
+                        <Link
                             key={key}
+                            href={href ?? '#'}
                             role="tab"
                             aria-selected={active}
                             className={cn(
@@ -145,7 +147,7 @@ export function OverviewView({
                         >
                             <Icon size={15} className="shrink-0" />
                             <span className="truncate">{label}</span>
-                        </button>
+                        </Link>
                     )
                 })}
             </div>
@@ -226,8 +228,7 @@ export function OverviewView({
             >
                 <Info size={13} className="shrink-0" />
                 <span>
-                    แท็บ <strong className="text-white/75">ใบลาทั้งหมด</strong>,
-                    {' '}<strong className="text-white/75">วันลาของพนักงาน</strong> และ
+                    แท็บ <strong className="text-white/75">วันลาของพนักงาน</strong> และ
                     {' '}<strong className="text-white/75">ปฏิทิน</strong> กำลังพัฒนา — เร็วๆ นี้
                 </span>
             </div>
