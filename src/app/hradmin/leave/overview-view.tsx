@@ -55,13 +55,13 @@ interface Props {
     leaveTypes: LeaveType[]
 }
 
-type TabKey = 'overview' | 'requests' | 'employees' | 'calendar'
+type TabKey = 'overview' | 'requests' | 'balances' | 'calendar'
 
 const TABS: Array<{ key: TabKey; label: string; Icon: typeof BarChart3; href?: string; comingSoon?: boolean }> = [
-    { key: 'overview',  label: 'ภาพรวม',           Icon: BarChart3,     href: '/hradmin/leave' },
-    { key: 'requests',  label: 'ใบลาทั้งหมด',       Icon: FileText,      href: '/hradmin/leave?tab=requests' },
-    { key: 'employees', label: 'วันลาของพนักงาน',  Icon: Users,         comingSoon: true },
-    { key: 'calendar',  label: 'ปฏิทิน',            Icon: CalendarRange, comingSoon: true },
+    { key: 'overview',  label: 'ภาพรวม',        Icon: BarChart3,     href: '/hradmin/leave' },
+    { key: 'requests',  label: 'ใบลาทั้งหมด',    Icon: FileText,      href: '/hradmin/leave?tab=requests' },
+    { key: 'balances',  label: 'วันลาพนักงาน',   Icon: Users,         href: '/hradmin/leave?tab=balances' },
+    { key: 'calendar',  label: 'ปฏิทิน',         Icon: CalendarRange, comingSoon: true },
 ]
 
 const GLASS_STYLE: React.CSSProperties = {
@@ -228,8 +228,7 @@ export function OverviewView({
             >
                 <Info size={13} className="shrink-0" />
                 <span>
-                    แท็บ <strong className="text-white/75">วันลาของพนักงาน</strong> และ
-                    {' '}<strong className="text-white/75">ปฏิทิน</strong> กำลังพัฒนา — เร็วๆ นี้
+                    แท็บ <strong className="text-white/75">ปฏิทิน</strong> กำลังพัฒนา — เร็วๆ นี้
                 </span>
             </div>
         </div>
