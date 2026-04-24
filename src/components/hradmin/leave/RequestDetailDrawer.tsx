@@ -6,6 +6,7 @@ import {
     X, ChevronLeft, Calendar, Clock, User, Paperclip, Phone,
     CheckCircle2, XCircle, Ban, FileText, MessageCircle,
 } from 'lucide-react'
+import { formatEmployeeName } from '@/lib/format-employee-name'
 import { STATUS_META, type LeaveRequestItem } from './types'
 
 interface Props {
@@ -135,8 +136,7 @@ export function RequestDetailDrawer({ item, onClose, onForceAction }: Props) {
                             )}
                             <div className="min-w-0">
                                 <p className="text-white font-semibold truncate">
-                                    {[emp?.first_name_th, emp?.last_name_th].filter(Boolean).join(' ')
-                                        + (emp?.nickname ? ` (${emp.nickname})` : '')}
+                                    {formatEmployeeName(emp)}
                                 </p>
                                 <p className="text-xs text-white/55 truncate">{emp?.position ?? '—'} · {emp?.department ?? '—'}</p>
                                 {emp?.email && <p className="text-[11px] text-white/40 truncate mt-0.5">{emp.email}</p>}
@@ -196,8 +196,7 @@ export function RequestDetailDrawer({ item, onClose, onForceAction }: Props) {
                                     </span>
                                 )}
                                 <span className="text-sm text-white/85">
-                                    {[approver.first_name_th, approver.last_name_th].filter(Boolean).join(' ')
-                                        + (approver.nickname ? ` (${approver.nickname})` : '')}
+                                    {formatEmployeeName(approver)}
                                 </span>
                             </div>
                         ) : (

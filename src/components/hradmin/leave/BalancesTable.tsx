@@ -2,6 +2,7 @@
 
 import { Pencil, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatEmployeeName, employeeInitials } from '@/lib/format-employee-name'
 import type { BalanceCell, EmployeeRowLite, LeaveTypeLite } from './types'
 
 interface Props {
@@ -104,12 +105,17 @@ function EmployeeRow({
                 <div className="flex items-center gap-2.5 min-w-0">
                     <Avatar emp={emp} />
                     <div className="min-w-0">
-                        <p className="text-white text-sm font-semibold truncate max-w-[200px]">
-                            {emp.nickname ?? emp.first_name_th ?? '—'}
+                        <p
+                            className="text-white text-sm font-semibold truncate max-w-[240px]"
+                            title={formatEmployeeName(emp)}
+                        >
+                            {formatEmployeeName(emp)}
                         </p>
-                        <p className="text-[11px] text-white/45 truncate max-w-[200px] font-mono">
-                            {emp.employee_code ?? ''}
-                        </p>
+                        {emp.employee_code && (
+                            <p className="text-[11px] text-white/45 truncate max-w-[240px] font-mono">
+                                {emp.employee_code}
+                            </p>
+                        )}
                     </div>
                 </div>
             </td>
@@ -208,14 +214,13 @@ export function BalanceCellBadge({ cell, onClick }: { cell: BalanceCell; onClick
 }
 
 function Avatar({ emp }: { emp: EmployeeRowLite }) {
-    const initials = [emp.nickname?.[0], emp.first_name_th?.[0]].filter(Boolean).join('').toUpperCase() || '?'
     return (
         <span className="rounded-full overflow-hidden bg-white/10 w-8 h-8 flex items-center justify-center shrink-0 border border-white/10">
             {emp.photo_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={emp.photo_url} alt={emp.nickname ?? ''} className="h-full w-full object-cover" />
             ) : (
-                <span className="text-white/75 text-[10px] font-bold">{initials}</span>
+                <span className="text-white/75 text-[10px] font-bold">{employeeInitials(emp)}</span>
             )}
         </span>
     )

@@ -2,6 +2,7 @@
 
 import { Pencil } from 'lucide-react'
 import { BalanceCellBadge } from './BalancesTable'
+import { formatEmployeeName, employeeInitials } from '@/lib/format-employee-name'
 import type { BalanceCell, EmployeeRowLite, LeaveTypeLite } from './types'
 
 interface Props {
@@ -56,20 +57,18 @@ export function BalancesCards({
                                     <img src={emp.photo_url} alt="" className="h-full w-full object-cover" />
                                 ) : (
                                     <span className="text-white/75 text-xs font-bold">
-                                        {(emp.nickname?.[0] ?? emp.first_name_th?.[0] ?? '?').toUpperCase()}
+                                        {employeeInitials(emp)}
                                     </span>
                                 )}
                             </span>
                             <div className="flex-1 min-w-0">
                                 <p className="text-white font-semibold text-sm truncate">
-                                    {emp.nickname ?? emp.first_name_th ?? '—'}
-                                    <span className="ml-1.5 text-white/45 font-normal text-[11px]">
-                                        {emp.employee_code ?? ''}
-                                    </span>
+                                    {formatEmployeeName(emp)}
                                 </p>
                                 <p className="text-[11px] text-white/50 truncate">
                                     {emp.department ?? '—'}
                                     {emp.approval_level ? ` · L${emp.approval_level}` : ''}
+                                    {emp.employee_code ? ` · ${emp.employee_code}` : ''}
                                 </p>
                             </div>
                             <button

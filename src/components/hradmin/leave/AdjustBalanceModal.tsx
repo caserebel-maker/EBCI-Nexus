@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Loader2, AlertTriangle, Pencil, Check } from 'lucide-react'
+import { formatEmployeeName } from '@/lib/format-employee-name'
 import type { BalanceCell, EmployeeRowLite, LeaveTypeLite } from './types'
 
 interface Props {
@@ -157,13 +158,17 @@ export function AdjustBalanceModal({
                         <Pencil size={15} className="text-amber-200" />
                     </span>
                     <div className="flex-1 min-w-0">
-                        <h2 id="adjust-balance-title" className="text-white font-bold truncate">
-                            ปรับยอดวันลา — {employee.nickname ?? employee.first_name_th ?? '—'}
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/45">
+                            ปรับยอดวันลา
+                        </p>
+                        <h2 id="adjust-balance-title" className="text-white font-bold truncate mt-0.5" title={formatEmployeeName(employee)}>
+                            {formatEmployeeName(employee)}
                         </h2>
                         <p className="text-[11px] text-white/50 mt-0.5 truncate">
                             {employee.department ?? '—'}
                             {employee.position ? ` · ${employee.position}` : ''}
                             {employee.approval_level ? ` · L${employee.approval_level}` : ''}
+                            {employee.employee_code ? ` · ${employee.employee_code}` : ''}
                             {` · ปี ${year + 543} (${year})`}
                         </p>
                     </div>

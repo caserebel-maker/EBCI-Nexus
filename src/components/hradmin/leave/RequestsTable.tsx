@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { MoreHorizontal, CheckCircle2, XCircle, Ban, Eye, FileText, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatEmployeeName, employeeInitials } from '@/lib/format-employee-name'
 import { STATUS_META, type LeaveRequestItem } from './types'
 
 interface Props {
@@ -110,10 +111,13 @@ function RequestRow({
                 <div className="flex items-center gap-2.5 min-w-0">
                     <Avatar emp={emp} />
                     <div className="min-w-0">
-                        <p className="text-white text-sm font-semibold truncate max-w-[180px]">
-                            {emp?.nickname ?? emp?.first_name_th ?? '—'}
+                        <p
+                            className="text-white text-sm font-semibold truncate max-w-[220px]"
+                            title={formatEmployeeName(emp)}
+                        >
+                            {formatEmployeeName(emp)}
                         </p>
-                        <p className="text-[11px] text-white/45 truncate max-w-[180px]">
+                        <p className="text-[11px] text-white/45 truncate max-w-[220px]">
                             {emp?.department ?? '—'}
                         </p>
                     </div>
@@ -181,8 +185,8 @@ function RequestCard({
                 <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                            <p className="text-white font-semibold text-sm truncate">
-                                {emp?.nickname ?? emp?.first_name_th ?? '—'}
+                            <p className="text-white font-semibold text-sm truncate" title={formatEmployeeName(emp)}>
+                                {formatEmployeeName(emp)}
                             </p>
                             <p className="text-[11px] text-white/45 truncate">{emp?.department ?? '—'}</p>
                         </div>
@@ -322,7 +326,6 @@ function MenuItem({
 
 function Avatar({ emp, size = 32 }: { emp: { photo_url: string | null; nickname: string | null; first_name_th: string | null; last_name_th: string | null } | null; size?: number }) {
     if (!emp) return <span className="block rounded-full bg-white/10" style={{ width: size, height: size }} />
-    const initials = [emp.nickname?.[0], emp.first_name_th?.[0]].filter(Boolean).join('').toUpperCase() || '?'
     return (
         <span
             className="rounded-full overflow-hidden bg-white/10 flex items-center justify-center shrink-0 border border-white/10"
@@ -332,7 +335,7 @@ function Avatar({ emp, size = 32 }: { emp: { photo_url: string | null; nickname:
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={emp.photo_url} alt={emp.nickname ?? ''} className="h-full w-full object-cover" />
             ) : (
-                <span className="text-white/75 text-[10px] font-bold">{initials}</span>
+                <span className="text-white/75 text-[10px] font-bold">{employeeInitials(emp)}</span>
             )}
         </span>
     )
