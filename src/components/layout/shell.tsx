@@ -178,8 +178,15 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                         Each control wears a persistent bg-white/10 chip
                         so the cluster reads as a grouped action bar
                         (Facebook/Messenger pattern) even with a small
-                        gap between circles. */}
-                    <div className="flex items-center gap-1.5 relative z-[100] ml-auto">
+                        gap between circles.
+
+                        z-[60] creates a stacking context that sits ABOVE
+                        the mobile bottom-nav (z-50) so the bell/language
+                        dropdowns (which use z-[60]/[70] internally) still
+                        cover the nav when open, but BELOW portaled
+                        drawers/modals (z-[80]+) so a leave detail sheet
+                        doesn't leave these chips floating over it. */}
+                    <div className="flex items-center gap-1.5 relative z-[60] ml-auto">
                         <button
                             onClick={() => window.location.reload()}
                             className="lg:hidden h-10 w-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white active:scale-95 transition-all"
