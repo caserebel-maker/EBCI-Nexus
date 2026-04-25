@@ -6,6 +6,7 @@ import {
     sendHrNotificationEmail,
 } from '@/lib/careers-emails'
 import { sanitizeApplyFields } from '@/lib/careers-sanitize'
+import { createNotification } from '@/lib/notifications'
 
 /**
  * POST /api/careers/apply/[id]/submit
@@ -135,6 +136,50 @@ export async function POST(
         }
     } catch (err) {
         console.error('[careers/submit] unexpected email error:', err)
+    }
+
+    // In-app notification fan-out for HR users. Best-effort: any failure
+    // here must NOT affect the submit response — the DB row + emails are
+    // the authoritative signals. Mirrors the leave/submit pattern.
+    try {
+        const { data: hrUsers, error: hrErr } = await supabaseAdmin
+            .from('User')
+            .select('id')
+            .eq('role', 'hr_admin')
+        if (hrErr) {
+            console.error('[careers/submit] hr-users lookup error:', hrErr)
+        }
+        const hrUserIds = (hrUsers ?? []).map(u => u.id as string).filter(Boolean)
+        if (hrUserIds.length > 0) {
+            const positionLabel = (row.position_applied as string | null)?.trim() || 'ตำแหน่งที่สมัคร'
+            const submittedDate = new Date(nowIso).toLocaleDateString('th-TH', {
+                day: '2-digit', month: 'short', year: 'numeric',
+            })
+            const title = applicantName
+                ? `${applicantName} สมัคร${positionLabel}`
+                : `ใบสมัครใหม่ — ${positionLabel}`
+            const body = `Ref: ${row.reference_code} · ส่ง ${submittedDate}`
+            await Promise.allSettled(
+                hrUserIds.map(uid =>
+                    createNotification({
+                        recipient_user_id: uid,
+                        type: 'application_received',
+                        title,
+                        body,
+                        action_url: `/hradmin/applicants/${id}`,
+                        action_label: 'ดูใบสมัคร',
+                        entity_type: 'job_application',
+                        entity_id: id,
+                        reference_code: String(row.reference_code),
+                        icon: 'Briefcase',
+                        color: 'blue',
+                        sender_name: applicantName || null,
+                    }),
+                ),
+            )
+        }
+    } catch (err) {
+        console.error('[careers/submit] notification fan-out error:', err)
     }
 
     return NextResponse.json({
