@@ -19,6 +19,7 @@
 | 7 | **24 เม.ย. (Laptop night)** | `SESSION_HANDOFF_APR24.md` | Notification Center v1 · Topbar polish · DB FK fix |
 | 8 | **25 เม.ย. (Office morning)** | `SESSION_HANDOFF_APR25.md` | Noti fixes · Leave Phase 3 Tab 1 (Overview) |
 | 9 | **25 เม.ย. (Office → Home)** | `SESSION_HANDOFF_APR25_HOME.md` | Sidebar consolidation · Inbox fix · Badge · Role-correct inbox · Email sender split |
+| 10 | **25 เม.ย. (Home night)** | (in this file, no separate handoff) | Leave Tab 4 Calendar · Careers ↔ Notification wiring (submit + status) |
 
 ---
 
@@ -1929,8 +1930,124 @@ Session ปิดที่ action_url fix. ถึงบ้านเปิดไ�
 
 ---
 
-## 📌 สิ้นสุด Session History
+## 📌 สิ้นสุด Session History (เก่า)
 
 ไฟล์ต้นฉบับทั้ง 9 ไฟล์ยังอยู่ในตำแหน่งเดิม — ไฟล์นี้แค่รวมไว้สำหรับอ่านย้อนหลังสะดวก.
 
-ถ้าเริ่มงาน session ใหม่ → ใช้ไฟล์ `docs/SESSION_HANDOFF_APR25_HOME.md` (ล่าสุด)
+> **เปลี่ยนกฎใหม่ตั้งแต่ §10:** ห้ามสร้าง `SESSION_HANDOFF_*.md` แยกอีก
+> session ใหม่ทุกครั้งให้ overwrite `docs/NEXT.md` + append บล็อกสรุปลงในไฟล์นี้แทน
+> (กฎนี้ระบุไว้ใน `CLAUDE.md` repo root)
+
+---
+
+
+
+<a id="section-10"></a>
+# §10. APR25 (Home night) — Leave Tab 4 + Careers Notifications
+
+*Source: this file directly (no separate handoff per CLAUDE.md rule).*
+*Date: 2026-04-25 evening at home (continuing from §9 which closed at office).*
+*Branch: `main` (worktree `claude/priceless-heisenberg-55cb19`).*
+*Commits shipped: 4.*
+
+---
+
+## 0. TL;DR
+
+| Track | What |
+|---|---|
+| Leave Tab 4 (ปฏิทิน) | Month grid + per-day event stack + day-detail modal + filters (dept/leave_type/status default approved+pending) — replaces "ในเร็วๆ นี้" stub. Holidays best-effort (table doesn't exist on this DB → silently empty). |
+| Careers → Notification Center | `application_received` fan-out to all `role='hr_admin'` users on submit; `application_status_changed` to applicant on status change (best-effort, soft email-match against employees → user_id; usually skipped because applicants aren't employees). |
+
+---
+
+## 1. Commits ของ session นี้ (เรียงจากใหม่ → เก่า)
+
+| # | Commit | Track | สรุป |
+|---|---|---|---|
+| 4 | `615a9d0` | Careers | wire status change → applicant notification (best-effort, email-match lookup, skip if no linkage) |
+| 3 | `c692160` | Careers | wire applicant submit → HR notification (fan out to all hr_admin users, mod excluded until permission-flag routing lands) |
+| 2 | `550c431` | Leave Tab 4 | activate Tab 4 link in overview/requests/balances tab navs; drop "ในเร็วๆ นี้" footnote + unused Info import |
+| 1 | `cf60c6b` | Leave Tab 4 | calendar month view — server fetch (overlap window), client grid + popover modal, filter chips (dept + leave_type), holidays best-effort |
+
+(4 ต่อจาก §9's last commit `cac1b31` = APR25_HOME)
+
+---
+
+## 2. สิ่งที่เพิ่งส่งมอบ — ใช้งานได้จริงแล้ว
+
+### Tab 4: ปฏิทิน (`/hradmin/leave?tab=calendar`)
+- Month grid (7 cols × 5–6 rows) with weekend tint (rose), today highlight (maroon), holiday rose-tinted cells
+- Each day cell: date number + event count badge + up to 3 avatar dots colored by leave_type + "+N" overflow chip
+- Click day → modal listing every leave touching that date (avatar, employee name with nickname, dept, leave_type pill, status pill, multi-day range, half-day annotation), each row links into Tab 2 by reference code
+- Filter chips: leave_type (with color dot from `palette.ts`) + department; "all-active" semantic when none selected
+- URL: `?month=YYYY-MM` (defaults to today's month if `year=current`, else Jan); `?status=` defaults to `approved+pending` per spec
+- Server: single `Promise.all`, requests overlapping the visible month, employees + leave_types + holidays. Holidays fetch wrapped to silently empty if table missing.
+- Reuses: `YearSelector`, `formatEmployeeName` + `employeeInitials`, `resolveLeaveColor` (palette), `STATUS_META` (types)
+
+### Careers — `application_received` (HR)
+- Fires after the row is flipped to `submitted` and the two careers emails dispatch
+- Recipients: every `User` with `role='hr_admin'` (currently only the admin/ปอนด์ row; mod won't get it until route auth itself transitions from role to permission flags)
+- Title: `{ชื่อผู้สมัคร} สมัคร{ตำแหน่ง}` · body: `Ref + Thai-formatted submitted date`
+- Icon: Briefcase, color: blue, action_url: `/hradmin/applicants/{id}`, sender_name = applicant
+- Best-effort: try/catch + `Promise.allSettled` so it can't break the submit response
+
+### Careers — `application_status_changed` (applicant)
+- Fires after the status flip + applicant email
+- Soft email-match against `employees.email` to derive a `user_id`. Most applicants aren't employees → no row → skip silently.
+- When linked: title = `สถานะใบสมัครของคุณเปลี่ยนเป็น "{th label}"`; body = position + Ref + optional notes
+- Color tracks status: hired→green, rejected→red, interview/shortlisted→blue, others→amber. Icon: Briefcase. action_url: `/portal/dashboard` (no `/portal/applications` route exists)
+
+---
+
+## 3. สิ่งที่ยังเปิดอยู่ — เรียงตาม priority (carry forward + new)
+
+### 3.1 ⭐ Leave Phase 2 end-to-end test — **ยังเร่งด่วน** (carry from §9)
+4 LVs ยัง pending ใน DB ตั้งแต่ Apr 23. ดู §3.1 ของ NEXT.md เก่า — test matrix เดิม ยังใช้ได้.
+
+### 3.2 Vercel env vars ใหม่ — ต้อง set ก่อน test email (carry from §9)
+`EMAIL_FROM_CAREERS`, `EMAIL_FROM_HR`, `EMAIL_FROM_SYSTEM`. ใช้ `npx vercel env add ... production` หรือ Dashboard → Settings.
+
+### 3.3 Permission-flag-based route auth (NEW — surfaced by Careers wiring)
+`/api/hradmin/applicants/[id]/status` (และ tab อื่นใน /hradmin) ยังเช็ก `session.role !== 'hr_admin'` ตรงๆ. ทำให้ มด (HR Manager preset, role='manager') ถูกบล็อก แม้จะมี permission flags ครบ. ถ้าจะให้ มด ใช้งาน /hradmin ได้ ต้องเปลี่ยน guard เป็น permission-based (`can_edit_employees` / `can_manage_system`). กระทบหลายไฟล์ — ทำเป็น sweep แยก iteration.
+
+### 3.4 Holiday data missing
+DB ไม่มีตาราง `holidays` → calendar cells ไม่ highlight วันหยุด (เห็นแต่เสาร์-อาทิตย์). Code ใน calendar tab รองรับแล้ว ถ้า table โผล่ขึ้นมาจะใช้งานได้ทันที. ต้องตัดสินใจว่าจะสร้าง schema + seed หรือใช้ external API.
+
+### 3.5 Bell icon registration for Briefcase
+`Briefcase` ถูก hardcode ในการ wire — ตรวจให้แน่ใจว่า `<NotificationItem />` รู้จัก lucide name นี้ใน switch ของ icon mapper. ถ้า fall through default ให้ Bell ก็ยังใช้ได้ (graceful) แต่ดูไม่สวย.
+
+### 3.6 Carryover deferred (จาก §9)
+- Bulk adjust balance modal · `email-leave.ts:238` hardcoded `/portal/leave/inbox` (hr_admin จะ click ผิด shell) · Careers Iter 2 zip download + review notes autosave · Pre-existing TS errors (embla-carousel, react-signature-canvas)
+
+---
+
+## 4. Env vars + test accounts (เหมือนเดิม)
+
+ดู §4 ของ NEXT.md (current). Test accounts unchanged from §9.
+
+---
+
+## 5. Git state
+
+- **Last commit:** `615a9d0` (status change → applicant notification)
+- **Local main vs origin:** in sync after this session's push
+- **Worktree:** `.claude/worktrees/priceless-heisenberg-55cb19` (branch `claude/priceless-heisenberg-55cb19`) — actually NOT used this session, work landed directly on main
+
+---
+
+## 6. Quirks ของ session นี้
+
+1. **Holidays table missing.** `from('holidays')` returns `relation does not exist` on this DB. The portal/calendar page already wraps the call in try/catch; new HR Tab 4 mirrors that with a `.then(ok, err→empty)` adapter so the parallel `Promise.all` doesn't reject. Decision deferred (see §3.4).
+
+2. **`User.username` not `User.email`.** Reaffirms what §1's seed found: `User` table uses `username` (text). Status-change wiring deliberately matches against `employees.email` (which exists), not `User.email` (which doesn't), to find the applicant↔employee linkage.
+
+3. **Cross-month leave spans clip cleanly.** A request that spans Apr 28 → May 3 now shows in BOTH the April and May calendar views — the server expansion clamps each per-day event to the current visible month so cells stay tidy.
+
+4. **`scroll: false` not used in calendar nav.** The month-jump uses `router.replace` without explicit scroll behavior — Next handles it. Filter chip toggles use the same. Watch this on mobile if scroll-to-top jumps annoy.
+
+5. **Status route line-shift.** My edit to `applicants/[id]/status/route.ts` pushed the pre-existing `result.success` TS error from line 100 → line 115. Same error, different line — not introduced by this session.
+
+---
+
+*End of §10 · Session ปิดที่ 4 commits + handoff updated. ถ้าเปิดเครื่องอื่น `git fetch && git pull origin main --ff-only` แล้วอ่าน `docs/NEXT.md` (ไม่ใช่ไฟล์นี้).*
