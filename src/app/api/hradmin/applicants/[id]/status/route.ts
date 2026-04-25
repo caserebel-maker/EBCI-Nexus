@@ -3,8 +3,23 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
 import { sendStatusChangeEmail } from '@/lib/careers-emails'
 import { canTransition, APPLICANT_STATUSES, type ApplicantStatus } from '@/lib/applicant-status'
+import { createNotification, type NotificationColor } from '@/lib/notifications'
 
 export const dynamic = 'force-dynamic'
+
+// Thai labels for notification titles. Kept here (not imported from
+// careers-emails) because the email templates render a richer narrative
+// per status — these are short, one-line equivalents fit for a bell
+// notification.
+const STATUS_TH: Record<ApplicantStatus, string> = {
+    draft:        'ฉบับร่าง',
+    submitted:    'รอพิจารณา',
+    reviewing:    'กำลังตรวจสอบ',
+    shortlisted:  'ผ่านการคัดเลือกรอบแรก',
+    interview:    'นัดสัมภาษณ์',
+    hired:        'ผ่านการคัดเลือก',
+    rejected:     'ไม่ผ่านการคัดเลือก',
+}
 
 /**
  * POST /api/hradmin/applicants/[id]/status
@@ -104,6 +119,48 @@ export async function POST(
         } catch (err) {
             console.error('[applicants/status] email threw:', err)
         }
+    }
+
+    // In-app notification for the applicant. Best-effort: failure here
+    // never blocks the status response (the row + email are authoritative).
+    //
+    // job_applications has no user_id column — applicants are typically
+    // not in the User table. We do a soft email-match against `employees`
+    // to catch the rare "existing employee re-applies" path; otherwise
+    // we silently skip (the email above already informed them).
+    try {
+        if (applicantEmail) {
+            const { data: emp } = await supabaseAdmin
+                .from('employees')
+                .select('user_id')
+                .ilike('email', applicantEmail)
+                .maybeSingle()
+            const linkedUserId = (emp?.user_id as string | null) ?? null
+            if (linkedUserId) {
+                const statusLabel = STATUS_TH[newStatus] ?? newStatus
+                const positionLabel = (row.position_applied as string | null)?.trim() || 'ใบสมัคร'
+                const color: NotificationColor =
+                    newStatus === 'hired'                                       ? 'green'
+                  : newStatus === 'rejected'                                    ? 'red'
+                  : newStatus === 'interview' || newStatus === 'shortlisted'    ? 'blue'
+                                                                                : 'amber'
+                await createNotification({
+                    recipient_user_id: linkedUserId,
+                    type: 'application_status_changed',
+                    title: `สถานะใบสมัครของคุณเปลี่ยนเป็น "${statusLabel}"`,
+                    body: `${positionLabel} · Ref: ${row.reference_code}${notes ? `\n${notes}` : ''}`,
+                    action_url: '/portal/dashboard',
+                    action_label: 'ไปที่หน้าหลัก',
+                    entity_type: 'job_application',
+                    entity_id: id,
+                    reference_code: String(row.reference_code),
+                    icon: 'Briefcase',
+                    color,
+                })
+            }
+        }
+    } catch (err) {
+        console.error('[applicants/status] notification error:', err)
     }
 
     return NextResponse.json({
