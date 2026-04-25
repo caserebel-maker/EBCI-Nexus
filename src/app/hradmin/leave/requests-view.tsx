@@ -25,7 +25,7 @@ const TABS: Array<{ key: TabKey; label: string; Icon: typeof BarChart3; href: st
     { key: 'overview',  label: 'ภาพรวม',        Icon: BarChart3,     href: '/hradmin/leave' },
     { key: 'requests',  label: 'ใบลาทั้งหมด',    Icon: FileText,      href: '/hradmin/leave?tab=requests' },
     { key: 'balances',  label: 'วันลาพนักงาน',   Icon: Users,         href: '/hradmin/leave?tab=balances' },
-    { key: 'calendar',  label: 'ปฏิทิน',         Icon: CalendarRange, href: '/hradmin/leave?tab=calendar',  comingSoon: true },
+    { key: 'calendar',  label: 'ปฏิทิน',         Icon: CalendarRange, href: '/hradmin/leave?tab=calendar' },
 ]
 
 interface Props {

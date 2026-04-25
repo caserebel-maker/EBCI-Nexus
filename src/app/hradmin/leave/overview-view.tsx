@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import {
     CalendarDays, BarChart3, Users, CalendarRange,
-    FileText, Clock, CheckCircle, TrendingUp, Info,
+    FileText, Clock, CheckCircle, TrendingUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { StatsCard } from '@/components/hradmin/leave/StatsCard'
@@ -61,7 +61,7 @@ const TABS: Array<{ key: TabKey; label: string; Icon: typeof BarChart3; href?: s
     { key: 'overview',  label: 'ภาพรวม',        Icon: BarChart3,     href: '/hradmin/leave' },
     { key: 'requests',  label: 'ใบลาทั้งหมด',    Icon: FileText,      href: '/hradmin/leave?tab=requests' },
     { key: 'balances',  label: 'วันลาพนักงาน',   Icon: Users,         href: '/hradmin/leave?tab=balances' },
-    { key: 'calendar',  label: 'ปฏิทิน',         Icon: CalendarRange, comingSoon: true },
+    { key: 'calendar',  label: 'ปฏิทิน',         Icon: CalendarRange, href: '/hradmin/leave?tab=calendar' },
 ]
 
 const GLASS_STYLE: React.CSSProperties = {
@@ -221,16 +221,6 @@ export function OverviewView({
                 </div>
             </div>
 
-            {/* Footnote — disabled-tabs breadcrumb */}
-            <div
-                className="flex items-center gap-2 text-xs text-white/55 px-4 py-2.5 rounded-lg"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
-            >
-                <Info size={13} className="shrink-0" />
-                <span>
-                    แท็บ <strong className="text-white/75">ปฏิทิน</strong> กำลังพัฒนา — เร็วๆ นี้
-                </span>
-            </div>
         </div>
     )
 }
