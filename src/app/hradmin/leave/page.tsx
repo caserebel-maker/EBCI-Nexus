@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { OverviewView } from './overview-view'
 import { RequestsView } from './requests-view'
 import { BalancesView } from './balances-view'
+import { CalendarView, type CalendarEvent, type CalendarHoliday } from './calendar-view'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,13 +24,15 @@ interface SearchParams {
     // Tab 3 filter params
     level?: string       // comma-separated approval_level (1..5)
     filter?: string      // quick filter keyword: used_high | unused | adjusted
+    // Tab 4 (calendar) filter params
+    month?: string       // YYYY-MM, defaults to current month
 }
 
 const PAGE_SIZE = 20
 const BALANCES_PAGE_SIZE = 25
 
 const ALLOWED_TABS = new Set<TabKey>(['overview', 'requests', 'balances', 'calendar'])
-const IMPLEMENTED_TABS = new Set<TabKey>(['overview', 'requests', 'balances'])
+const IMPLEMENTED_TABS = new Set<TabKey>(['overview', 'requests', 'balances', 'calendar'])
 
 function normalizeTab(raw: string | undefined): TabKey {
     const t = (raw ?? 'overview') as TabKey
@@ -123,6 +126,9 @@ export default async function LeaveOverviewPage({
     }
     if (tab === 'balances') {
         return renderBalancesTab(sp, year)
+    }
+    if (tab === 'calendar') {
+        return renderCalendarTab(sp, year)
     }
     return renderOverviewTab(sp, year)
 }
@@ -686,6 +692,184 @@ async function renderBalancesTab(sp: SearchParams, year: number) {
             leaveTypes={leaveTypes}
             balancesByEmployee={balancesByEmployee}
             departments={departments}
+        />
+    )
+}
+
+// ─── Tab 4: Calendar ──────────────────────────────────────────────────────
+
+function parseMonthParam(raw: string | undefined, fallbackYear: number): { year: number; month: number } {
+    // Accept "YYYY-MM"; fall back to current month of the requested year (or
+    // the calendar year when ?year= drives navigation).
+    if (raw && /^\d{4}-(0[1-9]|1[0-2])$/.test(raw)) {
+        const [y, m] = raw.split('-').map(Number)
+        return { year: y, month: m }
+    }
+    const now = new Date()
+    const useNowMonth = fallbackYear === now.getFullYear()
+    return {
+        year: fallbackYear,
+        month: useNowMonth ? now.getMonth() + 1 : 1,
+    }
+}
+
+async function renderCalendarTab(sp: SearchParams, requestedYear: number) {
+    const { year, month } = parseMonthParam(sp.month, requestedYear)
+
+    // Month-bound dates: first → last of `month` (inclusive). Pad ±1 day to
+    // capture leaves that crossed the boundary in either direction; the
+    // grid only shows cells in this month so cross-month spans clip cleanly.
+    const monthStart = `${year}-${String(month).padStart(2, '0')}-01`
+    const lastDay = new Date(year, month, 0).getDate()
+    const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+
+    const departmentFilter = parseCsv(sp.department)
+    const leaveTypeFilter = parseCsv(sp.leave_type)
+    // Status filter default per spec: ['approved','pending']. Explicit empty
+    // (`?status=`) is preserved as empty so power users can opt out.
+    const statusFilter = sp.status === undefined
+        ? ['approved', 'pending']
+        : parseCsv(sp.status)
+
+    // Fetch in parallel: leave requests overlapping the month (any leg of the
+    // span touches it), employees (full active list for filter dropdowns +
+    // joins), leave_types, and the holidays table (best-effort: silently
+    // empty if the table is missing on this DB).
+    const [requestsRes, employeesRes, leaveTypesRes, holidaysRes] = await Promise.all([
+        (async () => {
+            // overlap: end_date >= monthStart AND start_date <= monthEnd
+            let q = supabaseAdmin
+                .from('leave_requests')
+                .select('id, reference_code, employee_id, leave_type_id, start_date, end_date, total_days, is_half_day, half_day_period, status')
+                .gte('end_date', monthStart)
+                .lte('start_date', monthEnd)
+            if (statusFilter.length > 0) q = q.in('status', statusFilter)
+            if (leaveTypeFilter.length > 0) q = q.in('leave_type_id', leaveTypeFilter)
+            return q
+        })(),
+        supabaseAdmin
+            .from('employees')
+            .select('id, first_name_th, last_name_th, nickname, department, photo_url')
+            .eq('status', 'active'),
+        supabaseAdmin
+            .from('leave_types')
+            .select('id, name_th, color, icon, display_order')
+            .eq('is_active', true)
+            .order('display_order', { ascending: true, nullsFirst: false }),
+        supabaseAdmin
+            .from('holidays')
+            .select('date, name')
+            .gte('date', monthStart)
+            .lte('date', monthEnd)
+            .then(
+                r => r,
+                () => ({ data: [] as Array<{ date: string; name: string }>, error: null }),
+            ),
+    ])
+
+    const requests = (requestsRes.data ?? []) as Array<{
+        id: string
+        reference_code: string | null
+        employee_id: string
+        leave_type_id: string
+        start_date: string
+        end_date: string
+        is_half_day: boolean | null
+        half_day_period: string | null
+        status: string
+    }>
+    const employees = (employeesRes.data ?? []) as Array<{
+        id: string
+        first_name_th: string | null
+        last_name_th: string | null
+        nickname: string | null
+        department: string | null
+        photo_url: string | null
+    }>
+    const leaveTypes = (leaveTypesRes.data ?? []) as RawLeaveType[]
+    const holidays = (holidaysRes.data ?? []) as CalendarHoliday[]
+
+    const empMap = new Map(employees.map(e => [e.id, e]))
+    const typeMap = new Map(leaveTypes.map(t => [t.id, t]))
+
+    // Department filter is applied AFTER the request fetch so we can still
+    // see other rows when toggling departments. The spec calls for chip
+    // filtering, so this is cheap (≤ a few hundred requests/month).
+    const filteredRequests = departmentFilter.length === 0
+        ? requests
+        : requests.filter(r => {
+            const emp = empMap.get(r.employee_id)
+            return emp && emp.department && departmentFilter.includes(emp.department)
+        })
+
+    // Expand each request into its individual dates within this month.
+    const eventsByDate: Record<string, CalendarEvent[]> = {}
+    for (const r of filteredRequests) {
+        const emp = empMap.get(r.employee_id)
+        const t = typeMap.get(r.leave_type_id)
+        const start = new Date(r.start_date)
+        const end = new Date(r.end_date)
+        // Walk day-by-day from start to end. Clamp to the visible month so we
+        // don't waste cells on cross-month spans we won't render.
+        const cursor = new Date(start)
+        while (cursor <= end) {
+            const cYear = cursor.getFullYear()
+            const cMonth = cursor.getMonth() + 1
+            if (cYear === year && cMonth === month) {
+                const key = `${cYear}-${String(cMonth).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`
+                if (!eventsByDate[key]) eventsByDate[key] = []
+                eventsByDate[key].push({
+                    request_id: r.id,
+                    reference_code: r.reference_code,
+                    status: r.status,
+                    is_half_day: Boolean(r.is_half_day),
+                    half_day_period: r.half_day_period,
+                    start_date: r.start_date,
+                    end_date: r.end_date,
+                    employee_id: r.employee_id,
+                    employee_first_name: emp?.first_name_th ?? null,
+                    employee_last_name: emp?.last_name_th ?? null,
+                    employee_nickname: emp?.nickname ?? null,
+                    employee_department: emp?.department ?? null,
+                    employee_photo_url: emp?.photo_url ?? null,
+                    leave_type_id: r.leave_type_id,
+                    leave_type_name: t?.name_th ?? 'ไม่ทราบ',
+                    leave_type_color: t?.color ?? null,
+                })
+            }
+            cursor.setDate(cursor.getDate() + 1)
+        }
+    }
+
+    // Sort each day by status (approved first, then pending), then by name
+    // for stability across renders.
+    for (const arr of Object.values(eventsByDate)) {
+        arr.sort((a, b) => {
+            if (a.status !== b.status) {
+                if (a.status === 'approved') return -1
+                if (b.status === 'approved') return 1
+            }
+            return (a.employee_nickname ?? '').localeCompare(b.employee_nickname ?? '')
+        })
+    }
+
+    const departments = Array.from(
+        new Set(employees.map(e => e.department).filter((d): d is string => Boolean(d))),
+    ).sort()
+
+    return (
+        <CalendarView
+            year={year}
+            month={month}
+            eventsByDate={eventsByDate}
+            leaveTypes={leaveTypes}
+            departments={departments}
+            holidays={holidays}
+            filters={{
+                department: departmentFilter,
+                leave_type: leaveTypeFilter,
+                status: sp.status === undefined ? [] : statusFilter,
+            }}
         />
     )
 }
