@@ -1,22 +1,22 @@
 import crypto from "crypto"
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { getSession } from '@/lib/auth'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 
 // GET /api/applicants
 export async function GET(request: Request) {
-    const session = await getSession()
+    const auth = await getAuth()
 
-    if (!session) {
+    if (!auth) {
         return NextResponse.json(
             { success: false, message: 'กรุณาเข้าสู่ระบบก่อนใช้งาน' },
             { status: 401 }
         )
     }
 
-    if (session.role !== 'hr_admin') {
+    if (!isHrStaff(auth)) {
         return NextResponse.json(
-            { success: false, message: 'คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้ (เฉพาะ HR Admin)' },
+            { success: false, message: 'คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้ (HR เท่านั้น)' },
             { status: 403 }
         )
     }

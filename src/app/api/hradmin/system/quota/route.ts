@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getSession } from '@/lib/auth'
+import { getAuth, canManageSystem, isLegacyHrAdmin } from '@/lib/route-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,8 +42,10 @@ function monthsUntilFull(currentBytes: number, limitBytes: number, growthBytesPe
  * shaped for the dashboard, plus a recommendation level.
  */
 export async function GET() {
-    const session = await getSession()
-    if (!session || session.role !== 'hr_admin') {
+    // System quota is super-admin territory: gated by can_manage_system OR legacy hr_admin role
+    const auth = await getAuth()
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!canManageSystem(auth) && !isLegacyHrAdmin(auth)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

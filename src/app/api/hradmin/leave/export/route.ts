@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getSession } from '@/lib/auth'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,9 +17,9 @@ export const dynamic = 'force-dynamic'
  * No pagination — writes every matching row.
  */
 export async function GET(req: NextRequest) {
-    const session = await getSession()
-    if (!session) return new Response('Unauthorized', { status: 401 })
-    if (session.role !== 'hr_admin') return new Response('Forbidden', { status: 403 })
+    const auth = await getAuth()
+    if (!auth) return new Response('Unauthorized', { status: 401 })
+    if (!isHrStaff(auth)) return new Response('Forbidden', { status: 403 })
 
     const url = new URL(req.url)
     const from = url.searchParams.get('from')

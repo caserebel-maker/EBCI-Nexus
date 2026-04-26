@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getSession } from '@/lib/auth'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-    const session = await getSession()
-    if (!session || session.role !== 'hr_admin')
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const auth = await getAuth()
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!isHrStaff(auth)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { id } = await params
     const body = await req.json()
@@ -28,9 +28,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-    const session = await getSession()
-    if (!session || session.role !== 'hr_admin')
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const auth = await getAuth()
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!isHrStaff(auth)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { id } = await params
 

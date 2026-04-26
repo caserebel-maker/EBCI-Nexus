@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { getSession } from '@/lib/auth'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 
 const LEAVE_TYPE_LABELS: Record<string, string> = {
     sick: 'ลาป่วย',
@@ -25,11 +25,12 @@ function formatDate(date: Date | string): string {
     })
 }
 
-// GET /api/leave/export — export leave data as CSV (HR admin only)
+// GET /api/leave/export — export leave data as CSV (HR only)
 export async function GET(req: NextRequest) {
-    const session = await getSession()
-    if (!session || session.role !== 'hr_admin') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await getAuth()
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!isHrStaff(auth)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const { searchParams } = new URL(req.url)

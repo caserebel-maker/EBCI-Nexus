@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getSession } from '@/lib/auth'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { resolveSessionEmployeeId } from '@/lib/session-employee'
 
 export const dynamic = 'force-dynamic'
@@ -22,11 +22,12 @@ export const dynamic = 'force-dynamic'
  * and `pending_days` are owned by the leave-request flow.
  */
 export async function PATCH(req: NextRequest) {
-    const session = await getSession()
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (session.role !== 'hr_admin') {
-        return NextResponse.json({ error: 'เฉพาะ HR Admin เท่านั้น' }, { status: 403 })
+    const auth = await getAuth()
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!isHrStaff(auth)) {
+        return NextResponse.json({ error: 'เฉพาะ HR เท่านั้น' }, { status: 403 })
     }
+    const session = auth.session
 
     const actorId = await resolveSessionEmployeeId(session)
     if (!actorId) return NextResponse.json({ error: 'ไม่พบพนักงานที่เชื่อมโยงบัญชี' }, { status: 400 })

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getSession } from '@/lib/auth'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { resolveSessionEmployeeId } from '@/lib/session-employee'
 import { sendLeaveApproved, sendLeaveRejected } from '@/lib/email-leave'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
@@ -31,11 +31,12 @@ export const dynamic = 'force-dynamic'
  * detail drawer shows who did what.
  */
 export async function POST(req: NextRequest) {
-    const session = await getSession()
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (session.role !== 'hr_admin') {
-        return NextResponse.json({ error: 'เฉพาะ HR Admin เท่านั้น' }, { status: 403 })
+    const auth = await getAuth()
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!isHrStaff(auth)) {
+        return NextResponse.json({ error: 'เฉพาะ HR เท่านั้น' }, { status: 403 })
     }
+    const session = auth.session
 
     const actorEmployeeId = await resolveSessionEmployeeId(session)
     if (!actorEmployeeId) {

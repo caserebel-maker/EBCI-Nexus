@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { getSession } from '@/lib/auth'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 
 // Default entitled days per leave type per year
 const DEFAULT_ENTITLEMENTS: Record<string, number> = {
@@ -13,17 +13,19 @@ const DEFAULT_ENTITLEMENTS: Record<string, number> = {
 
 // GET /api/leave/balances — get leave balances for the current user
 export async function GET(req: NextRequest) {
-    const session = await getSession()
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await getAuth()
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const session = auth.session
 
     const { searchParams } = new URL(req.url)
     const year = searchParams.get('year') ? parseInt(searchParams.get('year')!) : new Date().getFullYear()
-    const employeeId = searchParams.get('employeeId') // HR admin can query specific employee
+    const employeeId = searchParams.get('employeeId') // HR can query specific employee
 
     try {
         let targetEmployeeId: string
 
-        if (session.role === 'hr_admin' && employeeId) {
+        // HR-staff override: query any employee's balance via ?employeeId=
+        if (isHrStaff(auth) && employeeId) {
             targetEmployeeId = employeeId
         } else {
             const employee = await prisma.employee.findFirst({ where: { userId: session.id } })
@@ -55,11 +57,12 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// PUT /api/leave/balances — HR admin update entitlement for an employee
+// PUT /api/leave/balances — HR update entitlement for an employee
 export async function PUT(req: NextRequest) {
-    const session = await getSession()
-    if (!session || session.role !== 'hr_admin') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await getAuth()
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!isHrStaff(auth)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     try {
