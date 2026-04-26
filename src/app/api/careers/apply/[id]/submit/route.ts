@@ -138,18 +138,25 @@ export async function POST(
         console.error('[careers/submit] unexpected email error:', err)
     }
 
-    // In-app notification fan-out for HR users. Best-effort: any failure
+    // In-app notification fan-out for HR staff. Best-effort: any failure
     // here must NOT affect the submit response — the DB row + emails are
     // the authoritative signals. Mirrors the leave/submit pattern.
+    //
+    // Recipient set matches `isHrStaff` from lib/route-auth: legacy
+    // hr_admin role OR can_edit_employees OR can_manage_system. Captures
+    // มด (HR Manager preset) alongside ปอนด์ (Super Admin) so HR notifications
+    // reach everyone responsible for processing applications.
     try {
         const { data: hrUsers, error: hrErr } = await supabaseAdmin
             .from('User')
             .select('id')
-            .eq('role', 'hr_admin')
+            .or('role.eq.hr_admin,can_edit_employees.eq.true,can_manage_system.eq.true')
         if (hrErr) {
             console.error('[careers/submit] hr-users lookup error:', hrErr)
         }
-        const hrUserIds = (hrUsers ?? []).map(u => u.id as string).filter(Boolean)
+        const hrUserIds = Array.from(new Set(
+            (hrUsers ?? []).map(u => u.id as string).filter(Boolean),
+        ))
         if (hrUserIds.length > 0) {
             const positionLabel = (row.position_applied as string | null)?.trim() || 'ตำแหน่งที่สมัคร'
             const submittedDate = new Date(nowIso).toLocaleDateString('th-TH', {
