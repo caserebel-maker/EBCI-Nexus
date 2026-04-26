@@ -1,7 +1,7 @@
 'use server'
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getSession } from '@/lib/auth'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { revalidatePath } from 'next/cache'
 
 export interface UpdateEmployeePayload {
@@ -30,8 +30,8 @@ export interface UpdateEmployeePayload {
 }
 
 export async function updateEmployee(employeeId: string, payload: UpdateEmployeePayload) {
-    const session = await getSession()
-    if (!session || session.role !== 'hr_admin') {
+    const auth = await getAuth()
+    if (!auth || !isHrStaff(auth)) {
         return { error: 'Unauthorized' }
     }
 
@@ -93,8 +93,8 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
 }
 
 export async function deleteEmployee(employeeId: string) {
-    const session = await getSession()
-    if (!session || session.role !== 'hr_admin') {
+    const auth = await getAuth()
+    if (!auth || !isHrStaff(auth)) {
         return { error: 'Unauthorized' }
     }
 
@@ -228,8 +228,8 @@ export async function deleteEmployee(employeeId: string) {
 }
 
 export async function uploadEmployeePhoto(employeeId: string, formData: FormData) {
-    const session = await getSession()
-    if (!session || session.role !== 'hr_admin') {
+    const auth = await getAuth()
+    if (!auth || !isHrStaff(auth)) {
         return { error: 'Unauthorized' }
     }
 

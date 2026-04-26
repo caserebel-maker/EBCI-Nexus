@@ -1,7 +1,7 @@
 'use server'
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getSession } from '@/lib/auth'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { revalidatePath } from 'next/cache'
 
 const DISCREPANCY_THRESHOLD_MIN = 10
@@ -81,10 +81,11 @@ function classify(
 export async function reconcileDate(
     date: string,
 ): Promise<{ processed: number; summary: ReconSummary } | { error: string }> {
-    const session = await getSession()
-    if (!session || session.role !== 'hr_admin') {
+    const auth = await getAuth()
+    if (!auth || !isHrStaff(auth)) {
         return { error: 'ไม่มีสิทธิ์เข้าถึง' }
     }
+    const session = auth.session
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         return { error: 'รูปแบบวันที่ไม่ถูกต้อง' }

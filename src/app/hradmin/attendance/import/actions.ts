@@ -1,7 +1,7 @@
 'use server'
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getSession } from '@/lib/auth'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { revalidatePath } from 'next/cache'
 import { reconcileDate } from '../reconcile/actions'
 
@@ -57,9 +57,9 @@ function combineDateTime(date: string, time: string): string {
 export async function validateCardRows(
     rows: RawCardRow[],
 ): Promise<ValidationResult | { error: string }> {
-    const session = await getSession()
-    if (!session || session.role !== 'hr_admin') {
-        return { error: 'ไม่มีสิทธิ์เข้าถึง — เฉพาะ HR Admin เท่านั้น' }
+    const auth = await getAuth()
+    if (!auth || !isHrStaff(auth)) {
+        return { error: 'ไม่มีสิทธิ์เข้าถึง — เฉพาะ HR เท่านั้น' }
     }
 
     if (!rows.length) return { error: 'ไม่มีข้อมูลในไฟล์' }
@@ -152,10 +152,11 @@ export async function importCardScans(
     rows: ValidatedRow[],
     sourceFile?: string,
 ): Promise<ImportResult> {
-    const session = await getSession()
-    if (!session || session.role !== 'hr_admin') {
+    const auth = await getAuth()
+    if (!auth || !isHrStaff(auth)) {
         return { inserted: 0, skipped: 0, error: 'ไม่มีสิทธิ์เข้าถึง' }
     }
+    const session = auth.session
 
     const valid = rows.filter(r => r.isValid && r.employeeId)
     if (!valid.length) {

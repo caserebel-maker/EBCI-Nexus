@@ -1,7 +1,7 @@
 'use server'
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getSession } from '@/lib/auth'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { revalidatePath } from 'next/cache'
 
 /**
@@ -10,9 +10,9 @@ import { revalidatePath } from 'next/cache'
  * handled by a separate GC job).
  */
 export async function deleteAnnouncement(id: string): Promise<{ success: true } | { error: string }> {
-    const session = await getSession()
-    if (!session || session.role !== 'hr_admin') {
-        return { error: 'ไม่มีสิทธิ์เข้าถึง — เฉพาะ HR Admin เท่านั้น' }
+    const auth = await getAuth()
+    if (!auth || !isHrStaff(auth)) {
+        return { error: 'ไม่มีสิทธิ์เข้าถึง — เฉพาะ HR เท่านั้น' }
     }
     if (!id) return { error: 'ไม่พบรหัสประกาศ' }
 
