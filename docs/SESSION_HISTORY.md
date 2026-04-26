@@ -21,6 +21,7 @@
 | 9 | **25 เม.ย. (Office → Home)** | `SESSION_HANDOFF_APR25_HOME.md` | Sidebar consolidation · Inbox fix · Badge · Role-correct inbox · Email sender split |
 | 10 | **25 เม.ย. (Home night)** | (in this file, no separate handoff) | Leave Tab 4 Calendar · Careers ↔ Notification wiring (submit + status) |
 | 11 | **25 เม.ย. (Home night, late)** | (in this file) | §3.1 verification finding — leave Phase 2 actually done Apr 23-24 (DB snapshot) · NEXT.md re-prioritized |
+| 12 | **25 เม.ย. (Home night, very late)** | (in this file) | Permission-flag-based route auth sweep (4 commits, 26 sites) · Holidays table + Thai 2026 seed |
 
 ---
 
@@ -2100,3 +2101,127 @@ The ที่ออฟฟิศ Apr 23-24 sessions did the UI work, side-effects
 ---
 
 *End of §11 · 0 source commits, 1 docs commit (NEXT.md + SESSION_HISTORY append). Next session starts at NEXT.md §3.2.*
+
+
+
+<a id="section-12"></a>
+# §12. APR25 (Home night, very late) — Route Auth Sweep + Holidays
+
+*Source: this file. 5 commits shipped (4 sweep + 1 holidays), 27 source files + 2 sql files, all pushed.*
+*Same evening as §10/§11.*
+
+---
+
+## 0. TL;DR
+
+| Track | What |
+|---|---|
+| **Permission-flag route auth sweep** | New `lib/route-auth.ts` helper + replace 26 `session.role !== 'hr_admin'` gates across 7 pages, 15 API routes, 4 server actions. มด (HR Manager preset, role='manager') can now access /hradmin/* per her permission flags. |
+| **Holidays table + 2026 seed** | DB had no `holidays` table — code wrote against it via try/catch. Created the schema (with idempotent UNIQUE + generated `year` + indexes), seeded 15 fixed-date Thai 2026 holidays. /hradmin/holidays admin UI now functional, Tab 4 calendar shows holidays. |
+
+---
+
+## 1. Commits
+
+| # | Commit | What |
+|---|---|---|
+| 5 | `4487768` | feat(db): create holidays table + seed Thai 2026 public holidays |
+| 4 | `829fc26` | refactor(hradmin/actions): permission-flag-based guards via isHrStaff |
+| 3 | `37947a1` | refactor(api): permission-flag-based guards via isHrStaff (15 routes) |
+| 2 | `dabe802` | refactor(hradmin/pages): permission-flag-based guards via isHrStaff |
+| 1 | `2213c73` | feat(auth): add lib/route-auth permission-based authorization helper |
+
+---
+
+## 2. Permission sweep design
+
+**Helper (`src/lib/route-auth.ts`):**
+
+```typescript
+export const isLegacyHrAdmin: AuthCheck = ({ session }) => session.role === 'hr_admin'
+export const canManageSystem:   AuthCheck = ({ permissions }) => permissions.can_manage_system
+export const canEditEmployees:  AuthCheck = ({ permissions }) => permissions.can_edit_employees
+export const canApproveLeave:   AuthCheck = ({ permissions }) => permissions.can_approve_leave
+// ... + canViewAllEmployees, canViewApprovalLimits, canEditApprovalLimits
+
+export const isHrStaff: AuthCheck = (ctx) =>
+    isLegacyHrAdmin(ctx) || canEditEmployees(ctx) || canManageSystem(ctx)
+
+export async function getAuth(): Promise<AuthContext | null> {
+    const session = await getSession()
+    if (!session) return null
+    const permissions = await getCurrentPermissions().catch(() => EMPTY_PERMISSIONS)
+    return { session, permissions }
+}
+```
+
+**Pattern (page):**
+
+```typescript
+const auth = await getAuth()
+if (!auth) redirect('/login')
+if (!isHrStaff(auth)) redirect('/portal/dashboard')
+```
+
+**Pattern (API):**
+
+```typescript
+const auth = await getAuth()
+if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+if (!isHrStaff(auth)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+```
+
+**Files touched (26):**
+- 7 server pages: announcements, applicants, applicants/[id], attendance, attendance/reconcile, attendance/import, leave
+- 15 API routes: applicants × 2, holidays × 2, hradmin/applicants/{evaluate,status}, hradmin/leave/{balances, balances/export, create-on-behalf, export, force-action}, hradmin/system/quota (narrower: canManageSystem only), leave/balances (HR-override widened), leave/export, leave/v2/hr-pending
+- 4 server actions: announcements, attendance/reconcile, attendance/import (2 actions), employees/[id] (3 actions)
+
+**Skipped (intentionally — different concern):**
+- `middleware.ts` — role-aware routing, not gating
+- `/api/auth/login` — login redirect logic
+- `/api/careers/apply/[id]/submit` — fan-out target query (still reaches role='hr_admin' rows; widening is a separate notification-routing decision)
+- `new-employee-form.tsx` — form picker for setting access role value (legitimate)
+- `/api/leave/{[id]/approve, [id]/reject, team}` — already permit role='manager' alongside hr_admin
+
+**Side benefits:**
+- Cookie+JSON.parse pattern in 6 pages collapsed into 3-line `getAuth()` form, dropping brittle try/catch
+- "HR Admin" → "HR" in user-facing forbidden messages (since มด ≠ admin)
+- Two-step pattern (401 if not signed in, 403 if not authorized) applied uniformly — was inconsistent before
+
+## 3. Holidays migration + seed
+
+**Schema (`supabase/migrations/20260425_create_holidays_table.sql`):**
+
+```sql
+CREATE TABLE IF NOT EXISTS public.holidays (
+    id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    date        date NOT NULL,
+    name        text NOT NULL,
+    type        text NOT NULL DEFAULT 'public',
+    year        int  NOT NULL GENERATED ALWAYS AS (EXTRACT(year FROM date)::int) STORED,
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (date, name)  -- idempotent re-seed
+);
+```
+
+**Seed (`supabase/seeds/holidays_2026.sql`):** 15 fixed-date Thai public holidays for 2026.
+
+**Excluded (need lunar calculation per year):** มาฆบูชา, วิสาขบูชา, อาฬหบูชา, เข้าพรรษา. Add via `/hradmin/holidays` admin UI when Royal Gazette publishes the year's calendar.
+
+**Verified:** April 2026 month query returns 4 holidays (จักรี + สงกรานต์ × 3) — Tab 4 calendar will render them.
+
+## 4. Lessons
+
+1. **`isHrStaff` is the right level of granularity for unlocking มด** — finer-grained narrowing per route can come later when there's a business case (Executive Viewer needs read-only HR dashboards, etc.). Don't over-design upfront.
+
+2. **`session = auth.session` shim** is needed in 4-5 files where the original code referenced `session.id` for audit fields (imported_by, reviewed_by, etc.). Cleanly absorbs the shape change without touching downstream code.
+
+3. **Idempotent migrations are mandatory in this workflow** — `CREATE TABLE IF NOT EXISTS` + `UNIQUE` constraint + `ON CONFLICT DO NOTHING` mean the seed file can be re-applied at any time without breakage. Critical for multi-machine work where another developer might re-run.
+
+4. **`year` as GENERATED ALWAYS column** keeps existing API queries (`eq('year', year)`) fast without rewriting them. Storage cost is negligible at this scale; the alternative (year stored manually) creates a drift risk.
+
+5. **Route-auth sweep showed how legacy patterns calcify:** 26 sites all copy-pasted the same `if (session.role !== 'hr_admin') { return 403 }` block. The helper makes the 27th site take 2 lines instead of 4 + makes the security policy auditable in one place.
+
+---
+
+*End of §12 · 5 commits + 1 migration + 1 seed file. Next session at NEXT.md §3.2 (Vercel env vars, dashboard step).*
