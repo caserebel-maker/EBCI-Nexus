@@ -27,5 +27,17 @@ INSERT INTO public.holidays (date, name, type) VALUES
     ('2026-12-31', 'วันสิ้นปี',                                       'public')
 ON CONFLICT (date, name) DO NOTHING;
 
--- Verify (expect 15 rows):
+-- ── Lunar Buddhist holidays (TENTATIVE — verify per Royal Gazette) ────
+-- Buddhist holiday dates shift each year per the Thai lunar calendar.
+-- The dates below are best-effort approximations from common references.
+-- ⚠️  Update via /hradmin/holidays admin UI when the official Royal
+-- Gazette announcement for 2569 is consulted.
+INSERT INTO public.holidays (date, name, type) VALUES
+    ('2026-03-03', 'วันมาฆบูชา (โดยประมาณ — โปรดยืนยัน)',     'religious'),
+    ('2026-05-31', 'วันวิสาขบูชา (โดยประมาณ — โปรดยืนยัน)',    'religious'),
+    ('2026-07-29', 'วันอาฬหบูชา (โดยประมาณ — โปรดยืนยัน)',     'religious'),
+    ('2026-07-30', 'วันเข้าพรรษา (โดยประมาณ — โปรดยืนยัน)',    'religious')
+ON CONFLICT (date, name) DO NOTHING;
+
+-- Verify (expect 19 rows: 15 fixed-date public + 4 tentative lunar religious):
 -- SELECT date, name, type FROM public.holidays WHERE year = 2026 ORDER BY date;
