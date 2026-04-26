@@ -194,6 +194,13 @@ export interface LeaveEmailContext {
     employeeEmail: string
     approverName: string | null
     approverEmail: string | null
+    /**
+     * Absolute or relative URL to the approver's inbox. Pass the result of
+     * `resolveApproverInboxUrl(approverUserId)` so hr_admin recipients land
+     * inside `/hradmin/leave/inbox` instead of the employee shell. Falls
+     * back to `/portal/leave/inbox` when omitted (works for every role).
+     */
+    approverInboxUrl?: string | null
     leaveTypeTh: string
     startDate: string
     endDate: string
@@ -235,7 +242,12 @@ export async function sendLeaveSubmittedToEmployee(c: LeaveEmailContext) {
 /** 2 / 5 — to the approver when a new request lands in their inbox */
 export async function sendLeaveSubmittedToApprover(c: LeaveEmailContext) {
     if (!c.approverEmail) return { success: false }
-    const inboxUrl = `${BASE_URL}/portal/leave/inbox`
+    // Role-aware: hr_admin recipients should land in /hradmin/leave/inbox so
+    // their approve/reject click doesn't flip the UI into employee shell.
+    // Caller passes the resolved URL via approverInboxUrl; default is the
+    // portal path which works for every role.
+    const inboxPath = c.approverInboxUrl ?? '/portal/leave/inbox'
+    const inboxUrl = inboxPath.startsWith('http') ? inboxPath : `${BASE_URL}${inboxPath}`
     const html = wrap({
         title: 'มีใบลารอการอนุมัติ',
         subhead: 'Leave · Awaiting Your Approval',

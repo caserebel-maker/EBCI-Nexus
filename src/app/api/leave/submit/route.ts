@@ -213,12 +213,22 @@ export async function POST(req: NextRequest) {
 
     const emailSent = { employee: false, approver: false }
 
+    // Resolve approver's inbox URL once and pass it into both the email
+    // (so the "ไปที่กล่องอนุมัติ" button is role-correct) and the bell
+    // notification below. Best-effort: returns /portal/leave/inbox on
+    // any failure, which works for every role.
+    const approverUserIdForUrl = await getEmployeeUserId(approver.id)
+    const approverInboxUrl = approverUserIdForUrl
+        ? await resolveApproverInboxUrl(approverUserIdForUrl)
+        : '/portal/leave/inbox'
+
     const emailCtx = {
         referenceCode,
         employeeName,
         employeeEmail,
         approverName,
         approverEmail,
+        approverInboxUrl,
         leaveTypeTh: leaveType.name_th,
         startDate,
         endDate,
@@ -248,23 +258,19 @@ export async function POST(req: NextRequest) {
 
     // In-app notification for the approver. Best-effort: failure here
     // never interrupts the response — the DB row + email are the
-    // authoritative signals.
+    // authoritative signals. Reuses the approverUserId + URL resolved
+    // above for the email (one round-trip, role-aware deep link).
     try {
-        const approverUserId = await getEmployeeUserId(approver.id)
-        if (approverUserId) {
+        if (approverUserIdForUrl) {
             const applicantNick = (employeeRow.data?.nickname as string | null) ?? employeeName
             const leaveTypeTh = leaveType.name_th ?? 'ลา'
             const dateLabel = startDate === endDate ? startDate : `${startDate} → ${endDate}`
-            // Role-aware deep link: hr_admin approvers go to the
-            // /hradmin variant so approving doesn't flip them into
-            // employee mode. Everyone else → /portal.
-            const actionUrl = await resolveApproverInboxUrl(approverUserId)
             await createNotification({
-                recipient_user_id: approverUserId,
+                recipient_user_id: approverUserIdForUrl,
                 type: 'leave_request_pending',
                 title: `${applicantNick} ขอ${leaveTypeTh}`,
                 body: `${dateLabel} (${totalDays} วัน) — ${reason || 'ไม่ระบุเหตุผล'}`,
-                action_url: actionUrl,
+                action_url: approverInboxUrl,
                 action_label: 'ดูรายละเอียด',
                 entity_type: 'leave_request',
                 entity_id: leaveRequestId,
