@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getSession } from '@/lib/auth'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { OverviewView } from './overview-view'
 import { RequestsView } from './requests-view'
@@ -108,9 +108,9 @@ export default async function LeaveOverviewPage({
 }: {
     searchParams: Promise<SearchParams>
 }) {
-    const session = await getSession()
-    if (!session) redirect('/login')
-    if (session.role !== 'hr_admin') redirect('/hradmin/dashboard')
+    const auth = await getAuth()
+    if (!auth) redirect('/login')
+    if (!isHrStaff(auth)) redirect('/hradmin/dashboard')
 
     const sp = await searchParams
     const tab = normalizeTab(sp.tab)

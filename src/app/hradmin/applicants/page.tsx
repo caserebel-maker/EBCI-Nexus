@@ -1,6 +1,6 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { ApplicantsListView } from './applicants-view'
 
 export const dynamic = 'force-dynamic'
@@ -21,14 +21,10 @@ export default async function HrApplicantsPage({
 }: {
     searchParams: Promise<SearchParams>
 }) {
-    // Auth guard
-    const store = await cookies()
-    const sessionCookie = store.get('nexus_session')
-    if (!sessionCookie?.value) redirect('/login')
-    try {
-        const s = JSON.parse(sessionCookie.value)
-        if (s.role !== 'hr_admin') redirect('/hradmin/dashboard')
-    } catch { redirect('/login') }
+    // Auth guard — HR staff (legacy hr_admin role OR can_edit_employees / can_manage_system)
+    const auth = await getAuth()
+    if (!auth) redirect('/login')
+    if (!isHrStaff(auth)) redirect('/hradmin/dashboard')
 
     const sp = await searchParams
     const q = (sp.q ?? '').trim()

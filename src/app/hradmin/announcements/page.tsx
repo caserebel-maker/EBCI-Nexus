@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Megaphone, Plus } from 'lucide-react'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getSession } from '@/lib/auth'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { resolveCreators, displayCreator } from '@/lib/creators'
 import { ManageAnnouncementsView } from './announcements-view'
 
@@ -20,9 +20,10 @@ export default async function HrAnnouncementsManagePage({
 }: {
     searchParams: Promise<SearchParams>
 }) {
-    const session = await getSession()
-    if (!session) redirect('/login')
-    if (session.role !== 'hr_admin') redirect('/portal/announcements')
+    const auth = await getAuth()
+    if (!auth) redirect('/login')
+    if (!isHrStaff(auth)) redirect('/portal/announcements')
+    const session = auth.session
 
     const sp = await searchParams
     const initialTab: 'active' | 'archive' = sp.tab === 'archive' ? 'archive' : 'active'

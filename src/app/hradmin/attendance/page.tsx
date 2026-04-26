@@ -1,24 +1,14 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { AttendanceView } from './attendance-view'
 import { getAttendanceForDate } from './actions'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AttendancePage() {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('nexus_session')
-    if (!sessionCookie?.value) redirect('/login')
-
-    // Parse cookie to check HR Admin role
-    try {
-        const session = JSON.parse(sessionCookie.value)
-        if (session.role !== 'hr_admin') {
-            redirect('/portal')
-        }
-    } catch {
-        redirect('/login')
-    }
+    const auth = await getAuth()
+    if (!auth) redirect('/login')
+    if (!isHrStaff(auth)) redirect('/portal')
 
     // Fetch initial data for today
     const today = new Date()

@@ -1,22 +1,15 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, FileUp } from 'lucide-react'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { CardImportView } from './import-view'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CardImportPage() {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('nexus_session')
-    if (!sessionCookie?.value) redirect('/login')
-
-    try {
-        const session = JSON.parse(sessionCookie.value)
-        if (session.role !== 'hr_admin') redirect('/portal')
-    } catch {
-        redirect('/login')
-    }
+    const auth = await getAuth()
+    if (!auth) redirect('/login')
+    if (!isHrStaff(auth)) redirect('/portal')
 
     return (
         <div className="space-y-6">

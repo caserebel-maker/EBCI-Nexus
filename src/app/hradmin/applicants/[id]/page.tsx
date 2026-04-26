@@ -1,6 +1,6 @@
-import { cookies } from 'next/headers'
 import { redirect, notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { refreshSignedUrl } from '@/lib/applicant-files'
 import type { SavedEvaluation } from '@/components/hradmin/applicants/InterviewEvaluation'
 import { ApplicantDetailView } from './detail-view'
@@ -14,14 +14,10 @@ export default async function ApplicantDetailPage({
 }) {
     const { id } = await params
 
-    // HR-admin guard
-    const store = await cookies()
-    const sessionCookie = store.get('nexus_session')
-    if (!sessionCookie?.value) redirect('/login')
-    try {
-        const s = JSON.parse(sessionCookie.value)
-        if (s.role !== 'hr_admin') redirect('/hradmin/dashboard')
-    } catch { redirect('/login') }
+    // HR-staff guard — legacy hr_admin role OR can_edit_employees / can_manage_system
+    const auth = await getAuth()
+    if (!auth) redirect('/login')
+    if (!isHrStaff(auth)) redirect('/hradmin/dashboard')
 
     const { data: a } = await supabaseAdmin
         .from('job_applications')

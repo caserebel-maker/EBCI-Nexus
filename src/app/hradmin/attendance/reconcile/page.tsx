@@ -1,21 +1,15 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { Scale } from 'lucide-react'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { ReconcileView } from './reconcile-view'
 import { reconcileDate } from './actions'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AttendanceReconcilePage() {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('nexus_session')
-    if (!sessionCookie?.value) redirect('/login')
-    try {
-        const session = JSON.parse(sessionCookie.value)
-        if (session.role !== 'hr_admin') redirect('/portal')
-    } catch {
-        redirect('/login')
-    }
+    const auth = await getAuth()
+    if (!auth) redirect('/login')
+    if (!isHrStaff(auth)) redirect('/portal')
 
     const today = new Date()
     const yyyy = today.getFullYear()
