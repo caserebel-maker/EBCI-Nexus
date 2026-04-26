@@ -20,6 +20,7 @@
 | 8 | **25 เม.ย. (Office morning)** | `SESSION_HANDOFF_APR25.md` | Noti fixes · Leave Phase 3 Tab 1 (Overview) |
 | 9 | **25 เม.ย. (Office → Home)** | `SESSION_HANDOFF_APR25_HOME.md` | Sidebar consolidation · Inbox fix · Badge · Role-correct inbox · Email sender split |
 | 10 | **25 เม.ย. (Home night)** | (in this file, no separate handoff) | Leave Tab 4 Calendar · Careers ↔ Notification wiring (submit + status) |
+| 11 | **25 เม.ย. (Home night, late)** | (in this file) | §3.1 verification finding — leave Phase 2 actually done Apr 23-24 (DB snapshot) · NEXT.md re-prioritized |
 
 ---
 
@@ -2051,3 +2052,51 @@ DB ไม่มีตาราง `holidays` → calendar cells ไม่ highli
 ---
 
 *End of §10 · Session ปิดที่ 4 commits + handoff updated. ถ้าเปิดเครื่องอื่น `git fetch && git pull origin main --ff-only` แล้วอ่าน `docs/NEXT.md` (ไม่ใช่ไฟล์นี้).*
+
+
+
+<a id="section-11"></a>
+# §11. APR25 (Home night, late) — §3.1 Verification + Reprioritize
+
+*Source: this file. No new commits to source code — only docs updated. Same evening as §10.*
+*Spawned by: user asking "ตอนนี้ในระบบล่าสุดถึงไหนแล้ว" → triggered DB state audit.*
+
+---
+
+## Finding
+
+§3.1 (Leave Phase 2 e2e test) was carried forward through the §9 → §10 handoffs as "ยังเร่งด่วน · 4 LVs ยัง pending". The DB snapshot tonight contradicts that completely.
+
+| Ref | NEXT.md said | Actual DB |
+|---|---|---|
+| LV-2026-0001 ม๊อด ลากิจ 25/4 | "pending — let จิม approve" | **rejected** by จิม Apr 23 ("วันนั้นมีประชุม...") |
+| LV-2026-0002 จอย ลาพักร้อน 1-3/5 | "pending — let Sunny reject" | **rejected** by Sunny Apr 23 ("ช่วงนี้งานเร่ง") |
+| LV-2026-0003 หวาน ลาป่วย 20-21/4 | "pending — let มด approve" | **approved** by มด Apr 24 ("หายไวๆจ้า") |
+| LV-2026-0004 ม๊อด ลาแต่งงาน 10-14/6 | (not listed) | **rejected** by HR override Apr 24 |
+| LV-2026-0005 หวาน ลากิจ 15/5 | (not listed) | **approved** (created-on-behalf by HR) |
+
+## Verified working end-to-end
+
+- **Email:** `rejection_reason` populated → HR moved through the UI which dispatches Resend
+- **Bell:** notifications table has `leave_request_pending` × 4, `leave_approved` × 4, `leave_rejected` × 3, all with `action_url=/portal/leave`
+- **Balance:** หวาน's leave_balances row updated correctly — ลาป่วย used=2/30 (matches LV-0003), ลากิจ used=1/3 (matches LV-0005). ม๊อด's rejected requests left balance untouched.
+
+## Why this slipped
+
+The ที่ออฟฟิศ Apr 23-24 sessions did the UI work, side-effects landed in DB, but no one pushed an updated `NEXT.md` to reflect that §3.1 was done. The next session (this one) opened the file and saw the stale priority.
+
+## Action taken (no code commits)
+
+- `docs/NEXT.md` rewritten:
+  - §3.1 marked ✅ done with verification snapshot
+  - Priority shuffle: §3.2 = permission-flag-based route auth (most urgent), §3.3 = env vars, §3.4 = holidays, §3.5 = Tab 4 polish, §3.6 = carryover
+  - Added §6 DB state snapshot
+  - Added §7 quirks/lessons including the "3 places must sync" rule
+
+## Lesson locked in
+
+**Code (commit) · DB (state) · Docs (NEXT.md) — must sync.** A session that does work via UI must still update `NEXT.md` to reflect the resulting DB transitions, otherwise future sessions will redo what's already done. The session-start protocol catches the COMMIT side; the NEXT-update-on-end protocol must catch the DB side.
+
+---
+
+*End of §11 · 0 source commits, 1 docs commit (NEXT.md + SESSION_HISTORY append). Next session starts at NEXT.md §3.2.*
