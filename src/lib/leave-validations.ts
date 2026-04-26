@@ -163,6 +163,19 @@ export async function validateLeaveRequest(
 
     // Rule 6 — balance (skip for unlimited types)
     if (!leaveType.is_unlimited) {
+        const totalEntitled = Number(balance?.total_days ?? 0)
+        // Rule 6a — explicit "no entitlement" state. Without this, the
+        // generic "วันลาไม่พอ" message misleads — it sounds like the user
+        // burned through their quota, when actually they were never
+        // granted any (HR didn't seed leave_balances for this type, or
+        // explicitly set total to 0). Surface the actionable next step.
+        if (totalEntitled <= 0) {
+            return {
+                ok: false,
+                field: 'days',
+                error: `คุณไม่มีสิทธิ์${leaveType.name_th}ในปีนี้ — กรุณาติดต่อ HR`,
+            }
+        }
         const remaining = computeRemaining(balance)
         if (totalDays > remaining) {
             return {
