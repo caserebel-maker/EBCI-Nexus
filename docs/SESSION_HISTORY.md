@@ -22,6 +22,7 @@
 | 10 | **25 เม.ย. (Home night)** | (in this file, no separate handoff) | Leave Tab 4 Calendar · Careers ↔ Notification wiring (submit + status) |
 | 11 | **25 เม.ย. (Home night, late)** | (in this file) | §3.1 verification finding — leave Phase 2 actually done Apr 23-24 (DB snapshot) · NEXT.md re-prioritized |
 | 12 | **25 เม.ย. (Home night, very late)** | (in this file) | Permission-flag-based route auth sweep (4 commits, 26 sites) · Holidays table + Thai 2026 seed |
+| 13 | **25 เม.ย. (Home, almost morning)** | (in this file) | Quick wins — lunar holidays · role-aware email URL · careers fan-out widening · explicit no-entitlement message |
 
 ---
 
@@ -2225,3 +2226,62 @@ CREATE TABLE IF NOT EXISTS public.holidays (
 ---
 
 *End of §12 · 5 commits + 1 migration + 1 seed file. Next session at NEXT.md §3.2 (Vercel env vars, dashboard step).*
+
+
+
+<a id="section-13"></a>
+# §13. APR25 (Home, almost morning) — Quick Wins Sweep
+
+*Source: this file. 4 commits shipped, all push.*
+*Spawned by: user picked "A — quick wins" from the 5-item backlog.*
+
+---
+
+## 0. TL;DR
+
+| Track | What |
+|---|---|
+| **§3.4 lunar holidays** | Added 4 tentative rows (มาฆ/วิสาข/อาฬห/เข้าพรรษา) marked "(โดยประมาณ — โปรดยืนยัน)" — 2026 holidays now 19 total |
+| **§3.3a bell icon mapper** | NO-OP — Briefcase already in ICON_MAP. Confirmed and skipped. |
+| **§3.6a email-leave URL** | hardcoded `/portal/leave/inbox` → role-aware via `resolveApproverInboxUrl`, single round-trip shared by email + bell |
+| **§3.6b careers fan-out** | `.eq('role', 'hr_admin')` → `.or(role.eq.hr_admin,can_edit_employees.eq.true,can_manage_system.eq.true)` so มด gets HR notifications too |
+| **§3.6c submit validation** | new "Rule 6a" in validateLeaveRequest — when total_entitled=0, return "คุณไม่มีสิทธิ์{type}ในปีนี้ — กรุณาติดต่อ HR" instead of confusing "วันลาไม่พอ" |
+
+---
+
+## 1. Commits
+
+| # | Commit | What |
+|---|---|---|
+| 4 | `03bca9c` | fix(leave/submit): explicit "no entitlement" message when total_days=0 |
+| 3 | `1cbbd7f` | feat(careers): widen submit notification fan-out to all HR staff |
+| 2 | `5f141a2` | fix(leave/email): role-aware approver inbox URL via resolveApproverInboxUrl |
+| 1 | `fb4e40a` | feat(db): seed 4 tentative lunar Buddhist holidays for 2026 |
+
+---
+
+## 2. Notable details
+
+**Lunar holidays — type='religious':** Distinguishing from fixed-date 'public' lets the calendar render them differently if needed (e.g. softer color, "religious" badge). Each name suffixed "(โดยประมาณ — โปรดยืนยัน)" so anyone reading the calendar can spot the uncertainty without consulting docs.
+
+**Email URL fix:** The hardcoded URL existed because the helper (`resolveApproverInboxUrl`) was created later but the email module was never updated. Now `LeaveEmailContext` carries an optional `approverInboxUrl` field; submit/route resolves it once and passes the same URL into both email + bell. Eliminates the duplicate `getEmployeeUserId` + `resolveApproverInboxUrl` calls that lived separately in each block.
+
+**Careers fan-out widening:** Original `.eq('role', 'hr_admin')` was a deliberate placeholder while the broader permission-flag system was being built. Now mirrors `isHrStaff` predicate via Supabase `.or()`. Includes a `Set` dedup so users matching multiple conditions (e.g. ปอนด์ has hr_admin AND can_manage_system AND can_edit_employees) get only one notification.
+
+**Submit validation Rule 6a:** Added BEFORE the existing Rule 6 ("balance check") so the more specific message wins. Skip path: `is_unlimited` types (e.g. ลาเพื่อพัฒนาความรู้) which never have a quota.
+
+---
+
+## 3. What's left from the original backlog
+
+- §3.2 Vercel env vars — 5 min, dashboard step (user task)
+- §3.3 Tab 4 mobile polish — needs iPhone testing
+- §3.5 Granular permission narrowing — phase 2 of the sweep, ~30-60 min
+- §3.6 carryover heavies: Bulk adjust balance modal, Careers Iter 2 zip + review notes
+- Pre-existing TS errors in 5 files — not introduced by this session
+
+Estimated remaining: ~3-4 hours for everything except §3.2 + §3.3 mobile.
+
+---
+
+*End of §13 · 4 commits. Total this evening across §10-§13: **18 commits, 4 tracks complete**. Next session at NEXT.md §3.2.*
