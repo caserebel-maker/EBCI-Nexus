@@ -8,6 +8,8 @@ export interface UpdateEmployeePayload {
     employee_code: string
     first_name_th: string
     last_name_th: string
+    first_name_en?: string | null
+    last_name_en?: string | null
     nickname?: string
     position: string
     department: string
@@ -17,14 +19,24 @@ export interface UpdateEmployeePayload {
     employment_type: string
     status: string
     start_date: string
+    probation_end_date?: string | null
+    date_of_birth?: string | null
+    gender?: string | null
     quit_date?: string
     quit_reason?: string
     approval_level?: number
     manager_id?: string | null
+    leave_approver_id?: string | null
     // Emergency contact (stored directly on employees, not applicants)
     emergency_contact_name?: string | null
     emergency_contact_phone?: string | null
     emergency_contact_relation?: string | null
+    emergency_contact_address?: string | null
+    // Home location — HR-captured, used for map preview + future analytics.
+    home_latitude?: number | null
+    home_longitude?: number | null
+    home_location_label?: string | null
+    home_location_note?: string | null
     // applicants table
     applicant_current_address: string
     applicant_phone: string  // legacy emergency contact (kept for backward compat)
@@ -61,12 +73,23 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
         }
     }
 
+    // Stamp home_location_updated_at iff any of the four location
+    // fields actually changed in this payload — no point bumping the
+    // timestamp when HR is editing unrelated fields.
+    const locationTouched =
+        'home_latitude' in employeeFields ||
+        'home_longitude' in employeeFields ||
+        'home_location_label' in employeeFields ||
+        'home_location_note' in employeeFields
+
     const { error: empError } = await supabaseAdmin
         .from('employees')
         .update({
             ...(newCode ? { employee_code: newCode } : {}),
             first_name_th: employeeFields.first_name_th,
             last_name_th: employeeFields.last_name_th,
+            first_name_en: employeeFields.first_name_en ?? null,
+            last_name_en: employeeFields.last_name_en ?? null,
             nickname: employeeFields.nickname ?? null,
             position: employeeFields.position,
             department: employeeFields.department,
@@ -76,13 +99,25 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
             employment_type: employeeFields.employment_type,
             status: employeeFields.status,
             start_date: employeeFields.start_date,
+            probation_end_date: employeeFields.probation_end_date || null,
+            date_of_birth: employeeFields.date_of_birth || null,
+            gender: employeeFields.gender ?? null,
             quit_date: employeeFields.quit_date || null,
             quit_reason: employeeFields.quit_reason || null,
             ...(employeeFields.approval_level !== undefined && { approval_level: employeeFields.approval_level }),
             manager_id: employeeFields.manager_id ?? null,
+            leave_approver_id: employeeFields.leave_approver_id ?? null,
             emergency_contact_name:     employeeFields.emergency_contact_name     ?? null,
             emergency_contact_phone:    employeeFields.emergency_contact_phone    ?? null,
             emergency_contact_relation: employeeFields.emergency_contact_relation ?? null,
+            emergency_contact_address:  employeeFields.emergency_contact_address  ?? null,
+            // Location — coerce to null when blank so the CHECK constraint
+            // doesn't fire on empty-string values.
+            home_latitude:  employeeFields.home_latitude  ?? null,
+            home_longitude: employeeFields.home_longitude ?? null,
+            home_location_label: employeeFields.home_location_label ?? null,
+            home_location_note:  employeeFields.home_location_note  ?? null,
+            ...(locationTouched && { home_location_updated_at: new Date().toISOString() }),
         })
         .eq('id', employeeId)
 

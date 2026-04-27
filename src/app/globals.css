@@ -215,6 +215,66 @@ body {
   .print-employee a[href]::after {
     content: '' !important;
   }
+
+  /* ── Single-page A4 compaction ──────────────────────────────────────
+     Goal: fit name, photo, personal info, address, contact, emergency
+     contact, and employment details onto one A4 page. The default web
+     layout uses generous padding and 1.05rem text — both push the
+     printout past the page boundary. These overrides shrink spacing
+     and font size only when printing, leaving the screen layout
+     untouched. */
+
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
+
+  /* Tighter base font on paper. Tailwind/inline 1.05rem reads as ~17pt
+     in print which is huge; 9.5pt fits the dense info-row layout we
+     have without hurting legibility. */
+  .print-employee {
+    font-size: 9.5pt !important;
+    line-height: 1.35 !important;
+  }
+  .print-employee h1, .print-employee h2 {
+    font-size: 12pt !important;
+    line-height: 1.25 !important;
+    margin: 0 0 4pt !important;
+  }
+  .print-employee h3 {
+    font-size: 10pt !important;
+    margin: 0 !important;
+  }
+
+  /* Glass cards — strip padding & shadows for print so the content
+     density goes up and we save a centimetre per card. */
+  .print-employee [class*="rounded-2xl"],
+  .print-employee [class*="rounded-xl"],
+  .print-employee section {
+    padding: 6pt 8pt !important;
+    margin-bottom: 4pt !important;
+    border-radius: 4pt !important;
+  }
+
+  /* InfoRow rows — the default 12px padding adds up across 20 rows.
+     Squeeze each row to single-line height. */
+  .print-employee .info-row,
+  .print-employee [data-info-row] {
+    padding: 1pt 0 !important;
+    min-height: 0 !important;
+  }
+
+  /* Hero card — keep the photo prominent but cut padding. */
+  .print-employee header,
+  .print-employee [data-print-section]:first-of-type {
+    margin-bottom: 6pt !important;
+  }
+
+  /* Section spacing override — Tailwind space-y-6 = 24px between
+     cards which is ~12pt on paper. Halve it. */
+  .print-employee > * + * {
+    margin-top: 4pt !important;
+  }
 }
 @layer base {
   html {

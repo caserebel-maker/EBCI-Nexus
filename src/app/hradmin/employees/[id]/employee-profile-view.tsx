@@ -16,6 +16,7 @@ import { ImageCropModal } from "@/components/ImageCropModal"
 import { EMPLOYEE_LEVELS, LEVEL_BADGE_COLORS } from "@/config/employee-levels"
 import { DEPARTMENTS } from "@/config/departments"
 import { ContractsCard } from "@/components/hradmin/employees/ContractsCard"
+import { LocationSection, LocationEmpty } from "@/components/hradmin/employees/LocationSection"
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList
 } from "recharts"
@@ -69,6 +70,26 @@ const LEAVE_STATUS_LABEL: Record<string, string> = {
 
 function fmtDate(d: string) {
     return new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+/**
+ * "32 ปี" / "32 ปี 6 เดือน" — chooses precision based on remaining
+ * months so a freshly-30 person doesn't read as "30 ปี" the same as
+ * someone three months past their birthday. Returns empty string for
+ * missing or invalid input so the caller can fall back gracefully.
+ */
+function calcAgeText(dob: string | Date | null | undefined): string {
+    if (!dob) return ''
+    const d = new Date(dob)
+    if (Number.isNaN(d.getTime())) return ''
+    const now = new Date()
+    let years = now.getFullYear() - d.getFullYear()
+    let months = now.getMonth() - d.getMonth()
+    if (now.getDate() < d.getDate()) months--
+    if (months < 0) { years--; months += 12 }
+    if (years < 0) return ''
+    if (years === 0) return months > 0 ? `${months} เดือน` : 'น้อยกว่า 1 เดือน'
+    return months > 0 ? `${years} ปี ${months} เดือน` : `${years} ปี`
 }
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -128,6 +149,8 @@ interface FormState {
     employee_code: string
     first_name_th: string
     last_name_th: string
+    first_name_en: string
+    last_name_en: string
     nickname: string
     position: string
     department: string
@@ -137,6 +160,9 @@ interface FormState {
     employment_type: string
     status: string
     start_date: string
+    probation_end_date: string
+    date_of_birth: string
+    gender: string
     quit_date: string
     quit_reason: string
     address: string
@@ -144,8 +170,17 @@ interface FormState {
     emergency_contact_name: string
     emergency_contact_phone: string
     emergency_contact_relation: string
+    emergency_contact_address: string
     approval_level: number
     manager_id: string
+    leave_approver_id: string
+    // Home location for the inline map preview. Stored as strings in
+    // the form to match the date-of-birth pattern; coerced to numeric
+    // (or null) before sending to the server action.
+    home_latitude: string
+    home_longitude: string
+    home_location_label: string
+    home_location_note: string
 }
 
 // ─── Section header ───────────────────────────────────────────────────────────
@@ -165,7 +200,7 @@ function InfoRow({ label, value, icon: Icon, editing, editNode }: {
     label: string; value: string; icon: any; editing?: boolean; editNode?: React.ReactNode
 }) {
     return (
-        <div className="flex items-start justify-between py-3 border-b border-white/5 last:border-0 px-3 hover:bg-white/5 rounded-lg transition-colors gap-4">
+        <div data-info-row className="flex items-start justify-between py-3 border-b border-white/5 last:border-0 px-3 hover:bg-white/5 rounded-lg transition-colors gap-4">
             <div className="flex items-center gap-2.5 text-white/75 shrink-0 pt-0.5">
                 <Icon size={15} className="text-amber-300" />
                 <span className="text-[0.8rem] font-bold uppercase tracking-widest">{label}</span>
@@ -303,6 +338,8 @@ export function EmployeeProfileView({
         employee_code: employee.employee_code ?? '',
         first_name_th: employee.first_name_th ?? '',
         last_name_th: employee.last_name_th ?? '',
+        first_name_en: employee.first_name_en ?? '',
+        last_name_en: employee.last_name_en ?? '',
         nickname: employee.nickname ?? '',
         position: employee.position ?? '',
         department: employee.department ?? '',
@@ -312,6 +349,11 @@ export function EmployeeProfileView({
         employment_type: employee.employment_type ?? 'full-time',
         status: employee.status ?? 'active',
         start_date: employee.start_date ? employee.start_date.slice(0, 10) : '',
+        probation_end_date: employee.probation_end_date
+            ? String(employee.probation_end_date).slice(0, 10) : '',
+        date_of_birth: employee.date_of_birth
+            ? String(employee.date_of_birth).slice(0, 10) : '',
+        gender: employee.gender ?? '',
         quit_date: employee.quit_date ? employee.quit_date.slice(0, 10) : '',
         quit_reason: employee.quit_reason ?? '',
         address: employee.applicants?.current_address ?? '',
@@ -319,8 +361,14 @@ export function EmployeeProfileView({
         emergency_contact_name:     employee.emergency_contact_name     ?? '',
         emergency_contact_phone:    employee.emergency_contact_phone    ?? '',
         emergency_contact_relation: employee.emergency_contact_relation ?? '',
+        emergency_contact_address:  employee.emergency_contact_address  ?? '',
         approval_level: employee.approval_level ?? 1,
         manager_id: employee.manager_id ?? '',
+        leave_approver_id: employee.leave_approver_id ?? '',
+        home_latitude: employee.home_latitude != null ? String(employee.home_latitude) : '',
+        home_longitude: employee.home_longitude != null ? String(employee.home_longitude) : '',
+        home_location_label: employee.home_location_label ?? '',
+        home_location_note: employee.home_location_note ?? '',
     })
 
     const [isEditing, setIsEditing] = useState(false)
@@ -392,10 +440,30 @@ export function EmployeeProfileView({
                     return
                 }
             }
+            // Coerce home_latitude/longitude to numeric, treating empty
+            // strings as NULL (the CHECK constraint rejects empty
+            // strings cast to numeric).
+            const lat = form.home_latitude.trim()
+                ? Number(form.home_latitude.trim())
+                : null
+            const lng = form.home_longitude.trim()
+                ? Number(form.home_longitude.trim())
+                : null
+            if (lat !== null && (Number.isNaN(lat) || lat < -90 || lat > 90)) {
+                showToast('error', 'Latitude ต้องอยู่ระหว่าง -90 ถึง 90')
+                return
+            }
+            if (lng !== null && (Number.isNaN(lng) || lng < -180 || lng > 180)) {
+                showToast('error', 'Longitude ต้องอยู่ระหว่าง -180 ถึง 180')
+                return
+            }
+
             const result = await updateEmployee(employee.id, {
                 employee_code: form.employee_code.trim(),
                 first_name_th: form.first_name_th,
                 last_name_th: form.last_name_th,
+                first_name_en: form.first_name_en || null,
+                last_name_en: form.last_name_en || null,
                 nickname: form.nickname,
                 position: form.position,
                 department: form.department,
@@ -405,15 +473,24 @@ export function EmployeeProfileView({
                 employment_type: form.employment_type,
                 status: form.status,
                 start_date: form.start_date,
+                probation_end_date: form.probation_end_date || null,
+                date_of_birth: form.date_of_birth || null,
+                gender: form.gender || null,
                 quit_date: form.quit_date || undefined,
                 quit_reason: form.quit_reason || undefined,
                 approval_level: form.approval_level,
                 applicant_current_address: form.address,
                 applicant_phone: form.emergency_contact,
                 manager_id: form.manager_id || null,
+                leave_approver_id: form.leave_approver_id || null,
                 emergency_contact_name:     form.emergency_contact_name     || null,
                 emergency_contact_phone:    form.emergency_contact_phone    || null,
                 emergency_contact_relation: form.emergency_contact_relation || null,
+                emergency_contact_address:  form.emergency_contact_address  || null,
+                home_latitude: lat,
+                home_longitude: lng,
+                home_location_label: form.home_location_label || null,
+                home_location_note: form.home_location_note || null,
             })
             if (result.error) {
                 showToast('error', `เกิดข้อผิดพลาด: ${result.error}`)
@@ -865,18 +942,12 @@ export function EmployeeProfileView({
                                         </select>
                                     }
                                 />
+                                <InfoRow label="ที่อยู่" icon={MapPin}
+                                    value={employee.emergency_contact_address || '—'}
+                                    editing={isEditing}
+                                    editNode={<textarea className={cn(inp, 'min-h-[60px] resize-none')} value={form.emergency_contact_address} onChange={set('emergency_contact_address')} placeholder="ที่อยู่ผู้ติดต่อฉุกเฉิน" />}
+                                />
                             </div>
-                        </div>
-                        <div className="pt-3 mt-1 border-t border-white/8 px-3">
-                            <p className="text-[0.75rem] font-bold text-white/65 uppercase tracking-widest mb-2">ที่อยู่</p>
-                            {isEditing ? (
-                                <textarea className={cn(inp, 'min-h-[72px] resize-none')} value={form.address}
-                                    onChange={set('address')} placeholder="ที่อยู่" />
-                            ) : (
-                                <p className="text-[0.95rem] text-white/88 leading-relaxed">
-                                    {employee.applicants?.current_address || '—'}
-                                </p>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -889,6 +960,11 @@ export function EmployeeProfileView({
                             value={fmtDate(employee.start_date)}
                             editing={isEditing}
                             editNode={<input type="date" className={inp} value={form.start_date} onChange={set('start_date')} />}
+                        />
+                        <InfoRow label="สิ้นสุดทดลองงาน" icon={Calendar}
+                            value={employee.probation_end_date ? fmtDate(employee.probation_end_date) : '—'}
+                            editing={isEditing}
+                            editNode={<input type="date" className={inp} value={form.probation_end_date} onChange={set('probation_end_date')} />}
                         />
                         <InfoRow label="แผนก" icon={Building}
                             value={employee.department || '—'}
@@ -936,13 +1012,176 @@ export function EmployeeProfileView({
                                 </select>
                             }
                         />
-                        <InfoRow label="สถานที่" icon={MapPin} value="Head Office (Nexus)" />
+                        <InfoRow label="ผู้อนุมัติการลา" icon={User}
+                            value={
+                                form.leave_approver_id
+                                    ? (allEmployees.find(e => e.id === form.leave_approver_id)
+                                        ? `${allEmployees.find(e => e.id === form.leave_approver_id)!.first_name_th} ${allEmployees.find(e => e.id === form.leave_approver_id)!.last_name_th}`
+                                        : '—')
+                                    : (employee.leave_approver_id ? '—' : 'ใช้ผู้บังคับบัญชา')
+                            }
+                            editing={isEditing}
+                            editNode={
+                                <select className={sel} value={form.leave_approver_id}
+                                    onChange={set('leave_approver_id')}>
+                                    <option value="">— ใช้ผู้บังคับบัญชา —</option>
+                                    {allEmployees.map(e => (
+                                        <option key={e.id} value={e.id}>
+                                            {e.first_name_th} {e.last_name_th}
+                                        </option>
+                                    ))}
+                                </select>
+                            }
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* ── 3b. Personal info + Address + Location (2-col grid) ────────────
+                The 4 columns (DOB / gender / EN name + address + map) are
+                grouped under one row of cards so HR sees biographical
+                detail and home location next to each other. The print
+                stylesheet drops the map iframe — see LocationSection. */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6" data-print-section>
+
+                {/* Personal info */}
+                <div style={glass} className="p-4 shadow-xl">
+                    <SHead icon={User} label="ข้อมูลส่วนตัว" />
+                    <div className="space-y-0.5">
+                        <InfoRow label="ชื่อ-สกุล (อังกฤษ)" icon={User}
+                            value={
+                                [employee.first_name_en, employee.last_name_en]
+                                    .filter(Boolean).join(' ') || '—'
+                            }
+                            editing={isEditing}
+                            editNode={
+                                <div className="flex gap-2">
+                                    <input className={inp} value={form.first_name_en} onChange={set('first_name_en')} placeholder="First name" />
+                                    <input className={inp} value={form.last_name_en} onChange={set('last_name_en')} placeholder="Last name" />
+                                </div>
+                            }
+                        />
+                        <InfoRow label="วันเกิด" icon={Calendar}
+                            value={
+                                employee.date_of_birth
+                                    ? `${fmtDate(employee.date_of_birth)}${calcAgeText(employee.date_of_birth) ? ` · อายุ ${calcAgeText(employee.date_of_birth)}` : ''}`
+                                    : '—'
+                            }
+                            editing={isEditing}
+                            editNode={<input type="date" className={inp} value={form.date_of_birth} onChange={set('date_of_birth')} />}
+                        />
+                        <InfoRow label="เพศ" icon={User}
+                            value={form.gender ? (form.gender === 'male' ? 'ชาย' : form.gender === 'female' ? 'หญิง' : form.gender) : (employee.gender === 'male' ? 'ชาย' : employee.gender === 'female' ? 'หญิง' : employee.gender || '—')}
+                            editing={isEditing}
+                            editNode={
+                                <select className={sel} value={form.gender} onChange={set('gender')}>
+                                    <option value="">— ไม่ระบุ —</option>
+                                    <option value="male">ชาย</option>
+                                    <option value="female">หญิง</option>
+                                    <option value="other">อื่นๆ</option>
+                                </select>
+                            }
+                        />
+                    </div>
+                </div>
+
+                {/* Address + Location */}
+                <div style={glass} className="p-4 shadow-xl">
+                    <SHead icon={MapPin} label="ที่อยู่" />
+                    <div className="space-y-3">
+                        <div>
+                            <p className="text-[0.72rem] font-bold text-white/55 uppercase tracking-widest mb-1.5">
+                                ที่อยู่ปัจจุบัน
+                            </p>
+                            {isEditing ? (
+                                <textarea
+                                    className={cn(inp, 'min-h-[64px] resize-none')}
+                                    value={form.address}
+                                    onChange={set('address')}
+                                    placeholder="ที่อยู่ปัจจุบันของพนักงาน"
+                                />
+                            ) : (
+                                <p className="text-[0.95rem] text-white/88 leading-relaxed">
+                                    {employee.applicants?.current_address || '—'}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Lat/Long inputs (edit) or map preview (read).
+                            Inline number fields keep the form short — most
+                            HR users will paste from Google Maps right-click
+                            "What's here?" which gives them a comma-separated
+                            string they can split into the two boxes. */}
+                        {isEditing ? (
+                            <div className="space-y-2 pt-2 border-t border-white/8">
+                                <p className="text-[0.72rem] font-bold text-white/55 uppercase tracking-widest">
+                                    พิกัด GPS
+                                </p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <input
+                                        className={inp}
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={form.home_latitude}
+                                        onChange={set('home_latitude')}
+                                        placeholder="Latitude (เช่น 13.756331)"
+                                    />
+                                    <input
+                                        className={inp}
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={form.home_longitude}
+                                        onChange={set('home_longitude')}
+                                        placeholder="Longitude (เช่น 100.501765)"
+                                    />
+                                </div>
+                                <input
+                                    className={inp}
+                                    type="text"
+                                    value={form.home_location_label}
+                                    onChange={set('home_location_label')}
+                                    placeholder="ป้ายชื่อ (เช่น บ้าน / หอพัก / บ้านพ่อแม่)"
+                                />
+                                <input
+                                    className={inp}
+                                    type="text"
+                                    value={form.home_location_note}
+                                    onChange={set('home_location_note')}
+                                    placeholder="หมายเหตุ (เช่น ตึก B ห้อง 502, ใกล้ปั๊ม PT)"
+                                />
+                                <p className="text-[0.7rem] text-white/45 leading-relaxed">
+                                    💡 หาพิกัดได้โดยเปิด Google Maps → คลิกขวาที่จุด → คลิกตัวเลขที่ขึ้นมาเพื่อ copy
+                                </p>
+                            </div>
+                        ) : (
+                            (employee.home_latitude != null && employee.home_longitude != null) ? (
+                                <div className="pt-2 border-t border-white/8">
+                                    <p className="text-[0.72rem] font-bold text-white/55 uppercase tracking-widest mb-2">
+                                        พิกัดบนแผนที่
+                                    </p>
+                                    <LocationSection
+                                        latitude={Number(employee.home_latitude)}
+                                        longitude={Number(employee.home_longitude)}
+                                        label={employee.home_location_label ?? null}
+                                        note={employee.home_location_note ?? null}
+                                        updatedAt={employee.home_location_updated_at ?? null}
+                                    />
+                                </div>
+                            ) : (
+                                <div className="pt-2 border-t border-white/8 print:hidden">
+                                    <LocationEmpty />
+                                </div>
+                            )
+                        )}
                     </div>
                 </div>
             </div>
 
             {/* ── 4. Leave Statistics Chart ─────────────────────────────────── */}
-            <div style={glass} className="p-4 shadow-xl">
+            {/* Hidden on print — Recharts SVGs grayscale weirdly and
+                eat ~30% of the page; the numeric balances are already
+                in the leave history snapshot below if needed. */}
+            <div style={glass} className="p-4 shadow-xl print:hidden">
                 <SHead icon={FileText} label="สถิติการลา" />
                 {chartData.length === 0 ? (
                     <p className="text-white/65 text-[0.95rem] text-center py-8">ยังไม่มีข้อมูลวันลา</p>
@@ -1001,7 +1240,11 @@ export function EmployeeProfileView({
             </div>
 
             {/* ── 5. Leave History (full, with filter + pagination) ─────────── */}
-            <div style={glass} className="p-4 shadow-xl">
+            {/* Hidden on print — the filter + pagination chrome doesn't
+                make sense on paper, and the full history can run for
+                pages. The hire-date + tenure on the hero card already
+                give HR enough signal for a file copy. */}
+            <div style={glass} className="p-4 shadow-xl print:hidden">
                 <SHead icon={Calendar} label="ประวัติใบลาทั้งหมด" />
                 {recentLeaves.length === 0 ? (
                     <p className="text-white/65 text-[0.95rem] text-center py-8">ยังไม่มีประวัติใบลา</p>
