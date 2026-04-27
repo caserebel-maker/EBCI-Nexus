@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { MapPin, Save, Loader2, CheckCircle2, XCircle, CreditCard, Wifi, WifiOff, ShieldCheck, ChevronRight } from 'lucide-react'
+import { MapPin, Save, Loader2, CheckCircle2, XCircle, CreditCard, Wifi, WifiOff, ShieldCheck, ChevronRight, History } from 'lucide-react'
 import { updateOfficeLocation } from './actions'
 
 interface Location {
@@ -87,6 +87,20 @@ export function SettingsClient({ initialLocation }: { initialLocation: Location 
                         <p className="text-[12px] text-white/55 leading-snug">มอบ/ถอน permission ให้ทีมงาน · มี audit log</p>
                     </div>
                     <ChevronRight size={16} className="text-white/40 group-hover:text-amber-300 transition-colors" />
+                </Link>
+
+                <Link
+                    href="/hradmin/settings/audit"
+                    className="group flex items-center gap-3 p-4 rounded-2xl border border-white/10 bg-white/[0.05] hover:bg-white/[0.08] hover:border-rose-300/30 transition-all"
+                >
+                    <div className="h-10 w-10 rounded-lg bg-rose-500/15 border border-rose-400/30 flex items-center justify-center text-rose-200 shrink-0">
+                        <History size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-[15px] font-bold text-white">Audit log</p>
+                        <p className="text-[12px] text-white/55 leading-snug">ประวัติการเปลี่ยนสิทธิ์ + แก้ข้อมูลพนักงาน</p>
+                    </div>
+                    <ChevronRight size={16} className="text-white/40 group-hover:text-rose-300 transition-colors" />
                 </Link>
             </div>
 
