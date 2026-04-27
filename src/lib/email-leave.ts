@@ -7,7 +7,7 @@ import { sendEmail } from '@/lib/email'
  * hr@ebcinext.com, not the careers address.
  */
 function sendLeaveEmail(args: { to: string | string[]; subject: string; html: string }) {
-    return sendLeaveEmail({ ...args, sender: 'hr' })
+    return sendEmail({ ...args, sender: 'hr' })
 }
 
 /**

@@ -7,7 +7,12 @@ import { sendEmail } from '@/lib/email'
  * careers@ebcinext.com, not the generic HR address.
  */
 function sendCareersEmail(args: { to: string | string[]; subject: string; html: string }) {
-    return sendCareersEmail({ ...args, sender: 'careers' })
+    return sendEmail({
+        to: args.to,
+        subject: args.subject,
+        html: args.html,
+        sender: 'careers',
+    })
 }
 
 const BASE_URL =

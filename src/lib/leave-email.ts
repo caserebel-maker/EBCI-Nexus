@@ -5,7 +5,12 @@ import { sendEmail } from './email'
  * 'hr' sender identity as the newer email-leave.ts module.
  */
 function sendLeaveEmail(args: { to: string | string[]; subject: string; html: string }) {
-    return sendLeaveEmail({ ...args, sender: 'hr' })
+    return sendEmail({
+        to: args.to,
+        subject: args.subject,
+        html: args.html,
+        sender: 'hr',
+    })
 }
 
 const LEAVE_TYPE_LABELS: Record<string, string> = {
