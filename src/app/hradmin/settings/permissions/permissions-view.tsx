@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import {
     ShieldCheck, X, Save, AlertTriangle, History, Loader2, Check,
-    ChevronRight,
+    ChevronRight, Search, UserPlus, Eye, EyeOff,
 } from 'lucide-react'
 import {
     EMPTY_PERMISSIONS,
@@ -18,7 +18,7 @@ import {
     detectPreset,
     type PresetName,
 } from '@/lib/permission-presets'
-import { updateUserPermissions } from './actions'
+import { updateUserPermissions, createUser } from './actions'
 
 export interface UserRow {
     id: string
@@ -43,10 +43,23 @@ export interface AuditEntry {
     note: string | null
 }
 
+/** Lightweight projection of an employee that doesn't have a User
+ *  account yet — used to populate the "link to employee" dropdown
+ *  in the Create-User modal. */
+export interface UnlinkedEmployee {
+    id: string
+    employee_code: string
+    display_name: string
+    department: string | null
+    position: string | null
+    email: string | null
+}
+
 interface Props {
     users: UserRow[]
     audits: AuditEntry[]
     currentUserId: string
+    unlinkedEmployees: UnlinkedEmployee[]
 }
 
 const PRESET_TONE: Record<PresetName | 'custom', { bg: string; text: string; border: string }> = {
@@ -60,8 +73,29 @@ const PRESET_TONE: Record<PresetName | 'custom', { bg: string; text: string; bor
 
 const CUSTOM_LABEL = '🛠️ Custom'
 
-export function PermissionsView({ users, audits, currentUserId }: Props) {
+export function PermissionsView({ users, audits, currentUserId, unlinkedEmployees }: Props) {
     const [editing, setEditing] = useState<UserRow | null>(null)
+    const [creating, setCreating] = useState(false)
+
+    // Search filter — case-insensitive match across name, username, role,
+    // and the resolved preset label so HR can type either "ปุ๋ย",
+    // "wiyada", "payroll", or "บัญชี" and find the right person fast.
+    const [query, setQuery] = useState('')
+    const filteredUsers = useMemo(() => {
+        const q = query.trim().toLowerCase()
+        if (!q) return users
+        return users.filter(u => {
+            const presetLabel = u.preset === 'custom'
+                ? CUSTOM_LABEL
+                : PERMISSION_PRESETS[u.preset].label
+            return (
+                u.name.toLowerCase().includes(q)
+                || u.username.toLowerCase().includes(q)
+                || u.role.toLowerCase().includes(q)
+                || presetLabel.toLowerCase().includes(q)
+            )
+        })
+    }, [users, query])
 
     return (
         <div className="space-y-5">
@@ -70,53 +104,92 @@ export function PermissionsView({ users, audits, currentUserId }: Props) {
                 <div className="h-11 w-11 rounded-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center shrink-0">
                     <ShieldCheck size={22} className="text-amber-200" />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                     <h1 className="text-xl sm:text-2xl font-bold text-white leading-tight">สิทธิ์การเข้าถึงระบบ</h1>
                     <p className="text-sm text-white/60 mt-0.5">
                         จัดการสิทธิ์ของผู้ใช้ทุกคน · เลือก preset หรือกำหนดทีละ flag · มี audit log ทุกการเปลี่ยนแปลง
                     </p>
                 </div>
+                <button
+                    type="button"
+                    onClick={() => setCreating(true)}
+                    className="shrink-0 inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-bold shadow-lg shadow-emerald-500/30"
+                >
+                    <UserPlus size={14} />
+                    <span className="hidden sm:inline">เพิ่มผู้ใช้ใหม่</span>
+                    <span className="sm:hidden">เพิ่ม</span>
+                </button>
             </div>
 
-            {/* Users table — desktop */}
-            <div
-                className="hidden md:block rounded-2xl border border-white/10 overflow-hidden"
-                style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)' }}
-            >
-                <table className="w-full text-sm">
-                    <thead>
-                        <tr className="border-b border-white/10 bg-white/[0.03]">
-                            <th className="text-left px-4 py-3 font-semibold text-white/65">ผู้ใช้</th>
-                            <th className="text-left px-4 py-3 font-semibold text-white/65">Role</th>
-                            <th className="text-left px-4 py-3 font-semibold text-white/65">Preset</th>
-                            <th className="text-left px-4 py-3 font-semibold text-white/65">Active flags</th>
-                            <th className="text-right px-4 py-3 font-semibold text-white/65">การกระทำ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {users.map(u => (
-                            <UserRowDesktop
+            {/* Search bar */}
+            <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
+                <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="ค้นหา — ชื่อ, อีเมล, role, preset (เช่น ปุ๋ย / wiyada / payroll)"
+                    className="w-full h-11 pl-9 pr-3 rounded-lg bg-black/25 border border-white/15 text-white placeholder-white/40 text-sm focus:outline-none focus:border-amber-300/50"
+                />
+                {query && (
+                    <button
+                        type="button"
+                        onClick={() => setQuery('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
+                        title="ล้างคำค้น"
+                    >
+                        <X size={14} />
+                    </button>
+                )}
+            </div>
+
+            {filteredUsers.length === 0 ? (
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center text-white/55 text-sm">
+                    ไม่พบผู้ใช้ที่ตรงกับ "{query}"
+                </div>
+            ) : (
+                <>
+                    {/* Users table — desktop */}
+                    <div
+                        className="hidden md:block rounded-2xl border border-white/10 overflow-hidden"
+                        style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)' }}
+                    >
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-white/10 bg-white/[0.03]">
+                                    <th className="text-left px-4 py-3 font-semibold text-white/65">ผู้ใช้</th>
+                                    <th className="text-left px-4 py-3 font-semibold text-white/65">Role</th>
+                                    <th className="text-left px-4 py-3 font-semibold text-white/65">Preset</th>
+                                    <th className="text-left px-4 py-3 font-semibold text-white/65">Active flags</th>
+                                    <th className="text-right px-4 py-3 font-semibold text-white/65">การกระทำ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredUsers.map(u => (
+                                    <UserRowDesktop
+                                        key={u.id}
+                                        user={u}
+                                        isSelf={u.id === currentUserId}
+                                        onEdit={() => setEditing(u)}
+                                    />
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Mobile cards */}
+                    <div className="md:hidden space-y-2">
+                        {filteredUsers.map(u => (
+                            <UserRowMobile
                                 key={u.id}
                                 user={u}
                                 isSelf={u.id === currentUserId}
                                 onEdit={() => setEditing(u)}
                             />
                         ))}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Mobile cards */}
-            <div className="md:hidden space-y-2">
-                {users.map(u => (
-                    <UserRowMobile
-                        key={u.id}
-                        user={u}
-                        isSelf={u.id === currentUserId}
-                        onEdit={() => setEditing(u)}
-                    />
-                ))}
-            </div>
+                    </div>
+                </>
+            )}
 
             {editing && (
                 <EditPermissionsModal
@@ -124,6 +197,13 @@ export function PermissionsView({ users, audits, currentUserId }: Props) {
                     audits={audits.filter(a => a.target_user_id === editing.id).slice(0, 8)}
                     isSelf={editing.id === currentUserId}
                     onClose={() => setEditing(null)}
+                />
+            )}
+
+            {creating && (
+                <CreateUserModal
+                    unlinkedEmployees={unlinkedEmployees}
+                    onClose={() => setCreating(false)}
                 />
             )}
         </div>
@@ -492,6 +572,333 @@ function EditPermissionsModal({
             </div>
         </div>,
         document.body,
+    )
+}
+
+// ─── Create User Modal ─────────────────────────────────────────────────
+
+function CreateUserModal({
+    unlinkedEmployees, onClose,
+}: {
+    unlinkedEmployees: UnlinkedEmployee[]
+    onClose: () => void
+}) {
+    const router = useRouter()
+
+    // Form state. Default to the Payroll Manager preset because that's
+    // the most common "add another teammate" scenario right now (more
+    // accounting hires after ปุ๋ย); HR can change it before saving.
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [name, setName] = useState('')
+    const [role, setRole] = useState<'employee' | 'manager' | 'hr_admin'>('employee')
+    const [employeeId, setEmployeeId] = useState<string>('')
+    const [presetName, setPresetName] = useState<PresetName>('payroll_manager')
+    const [permissions, setPermissions] = useState<UserPermissions>(
+        PERMISSION_PRESETS.payroll_manager.permissions,
+    )
+    const [showPassword, setShowPassword] = useState(false)
+    const [note, setNote] = useState('')
+    const [saving, setSaving] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+    // Lock body scroll while open + Esc to close
+    useEffect(() => {
+        const prev = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+        window.addEventListener('keydown', onKey)
+        return () => {
+            document.body.style.overflow = prev
+            window.removeEventListener('keydown', onKey)
+        }
+    }, [onClose])
+
+    // Auto-fill name + email + role from the linked employee (if any).
+    function pickEmployee(empId: string) {
+        setEmployeeId(empId)
+        if (!empId) return
+        const emp = unlinkedEmployees.find(e => e.id === empId)
+        if (!emp) return
+        if (!name.trim()) setName(emp.display_name)
+        if (!email.trim() && emp.email) setEmail(emp.email.toLowerCase())
+    }
+
+    function applyPreset(p: PresetName) {
+        setPresetName(p)
+        setPermissions(PERMISSION_PRESETS[p].permissions)
+    }
+
+    function toggleFlag(key: keyof UserPermissions) {
+        setPermissions(prev => {
+            const next = { ...prev, [key]: !prev[key] }
+            // Recompute preset — flips to "custom" when flags don't
+            // match any preset exactly (read-only display).
+            return next
+        })
+    }
+    const detected = detectPreset(permissions)
+
+    async function handleSubmit() {
+        if (saving) return
+        setError(null)
+
+        if (!email.trim()) return setError('ใส่อีเมลก่อน')
+        if (!password) return setError('ตั้งรหัสผ่านก่อน')
+        if (password.length < 4) return setError('รหัสผ่านต้องอย่างน้อย 4 ตัว')
+        if (!name.trim()) return setError('ใส่ชื่อก่อน')
+
+        setSaving(true)
+        try {
+            const result = await createUser({
+                email: email.trim().toLowerCase(),
+                password,
+                name: name.trim(),
+                role,
+                employeeId: employeeId || null,
+                permissions,
+                note: note.trim() || null,
+            })
+            if (!result.success) {
+                setError(result.error ?? 'ไม่สามารถสร้างผู้ใช้ได้')
+                return
+            }
+            router.refresh()
+            onClose()
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    return createPortal(
+        <div
+            className="fixed inset-0 z-[90] flex items-center justify-center p-3"
+            style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
+            onClick={onClose}
+        >
+            <div
+                className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl border border-white/15 bg-[#15040a] shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <header className="sticky top-0 z-10 flex items-center justify-between gap-3 px-5 py-4 border-b border-white/10 bg-[#15040a]">
+                    <div className="flex items-center gap-2.5">
+                        <div className="h-9 w-9 rounded-lg bg-emerald-500/15 border border-emerald-500/30 inline-flex items-center justify-center">
+                            <UserPlus size={16} className="text-emerald-300" />
+                        </div>
+                        <div>
+                            <h2 className="text-white font-bold text-base">สร้างผู้ใช้ใหม่</h2>
+                            <p className="text-white/55 text-xs">ระบบจะส่งอีเมล/รหัสผ่านให้ใช้ login ได้ทันที</p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={saving}
+                        className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-white/60 hover:text-white hover:bg-white/10"
+                    >
+                        <X size={16} />
+                    </button>
+                </header>
+
+                <div className="p-5 space-y-4">
+                    {/* Optional: pick from existing employees who don't
+                        have a User row yet. Auto-fills name + email so
+                        HR doesn't retype what's already in employees. */}
+                    {unlinkedEmployees.length > 0 && (
+                        <Field label="เชื่อมกับพนักงานที่มีอยู่ (optional)">
+                            <select
+                                value={employeeId}
+                                onChange={(e) => pickEmployee(e.target.value)}
+                                disabled={saving}
+                                className="w-full h-10 px-3 rounded-lg bg-black/25 border border-white/15 text-white text-sm focus:outline-none focus:border-amber-300/50"
+                            >
+                                <option value="" className="bg-[#15040a]">— ไม่เชื่อม (สร้าง user แบบ standalone) —</option>
+                                {unlinkedEmployees.map((emp) => (
+                                    <option key={emp.id} value={emp.id} className="bg-[#15040a]">
+                                        {emp.employee_code} · {emp.display_name}
+                                        {emp.department ? ` · ${emp.department}` : ''}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="text-[11px] text-white/45 mt-1">
+                                เลือกแล้ว ชื่อ + email จะถูก auto-fill · {unlinkedEmployees.length} คนที่ยังไม่มี account
+                            </p>
+                        </Field>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <Field label="อีเมล (ใช้ login) *">
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                disabled={saving}
+                                placeholder="user@ebcitrade.com"
+                                className="w-full h-10 px-3 rounded-lg bg-black/25 border border-white/15 text-white text-sm focus:outline-none focus:border-amber-300/50"
+                            />
+                        </Field>
+                        <Field label="รหัสผ่านเริ่มต้น *">
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    disabled={saving}
+                                    placeholder="≥ 4 ตัวอักษร"
+                                    className="w-full h-10 pl-3 pr-10 rounded-lg bg-black/25 border border-white/15 text-white text-sm focus:outline-none focus:border-amber-300/50"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(s => !s)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 inline-flex items-center justify-center text-white/55 hover:text-white"
+                                    title={showPassword ? 'ซ่อน' : 'แสดง'}
+                                >
+                                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                </button>
+                            </div>
+                        </Field>
+                        <Field label="ชื่อแสดงผล *">
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                disabled={saving}
+                                placeholder="เช่น สมชาย ใจดี (เอ)"
+                                className="w-full h-10 px-3 rounded-lg bg-black/25 border border-white/15 text-white text-sm focus:outline-none focus:border-amber-300/50"
+                            />
+                        </Field>
+                        <Field label="Role">
+                            <select
+                                value={role}
+                                onChange={(e) => setRole(e.target.value as typeof role)}
+                                disabled={saving}
+                                className="w-full h-10 px-3 rounded-lg bg-black/25 border border-white/15 text-white text-sm focus:outline-none focus:border-amber-300/50"
+                            >
+                                <option value="employee" className="bg-[#15040a]">employee</option>
+                                <option value="manager" className="bg-[#15040a]">manager</option>
+                                <option value="hr_admin" className="bg-[#15040a]">hr_admin</option>
+                            </select>
+                        </Field>
+                    </div>
+
+                    {/* Preset picker */}
+                    <Field label="Preset (เลือก preset แล้วทุก checkbox จะ auto)">
+                        <div className="flex flex-wrap gap-2">
+                            {PRESET_ORDER.map((p) => {
+                                const active = presetName === p && detected === p
+                                const tone = PRESET_TONE[p]
+                                return (
+                                    <button
+                                        key={p}
+                                        type="button"
+                                        onClick={() => applyPreset(p)}
+                                        disabled={saving}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                                            active ? `${tone.bg} ${tone.text} ${tone.border} ring-2 ring-amber-300/40` : 'bg-white/5 text-white/70 border-white/15 hover:bg-white/10'
+                                        }`}
+                                    >
+                                        {PERMISSION_PRESETS[p].label}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                        <p className="text-[11px] text-white/55 mt-1.5">
+                            ปัจจุบันคิดเป็น: <PresetBadge preset={detected} />
+                        </p>
+                    </Field>
+
+                    {/* Per-flag checkboxes */}
+                    <Field label="กำหนดทีละ flag (override preset)">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {PERMISSION_FLAGS.map(({ key, label, description }) => (
+                                <label
+                                    key={key}
+                                    className="flex items-start gap-2 p-2 rounded-lg bg-black/20 border border-white/10 hover:border-white/25 cursor-pointer transition-colors"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={permissions[key]}
+                                        onChange={() => toggleFlag(key)}
+                                        disabled={saving}
+                                        className="mt-0.5 h-4 w-4 accent-amber-400"
+                                    />
+                                    <div className="min-w-0">
+                                        <p className="text-white text-[0.85rem] font-semibold leading-tight">{label}</p>
+                                        <p className="text-white/55 text-[0.72rem] leading-snug">{description}</p>
+                                    </div>
+                                </label>
+                            ))}
+                        </div>
+                    </Field>
+
+                    {/* Audit note */}
+                    <Field label="เหตุผล (เก็บใน audit log)">
+                        <textarea
+                            value={note}
+                            onChange={(e) => setNote(e.target.value)}
+                            disabled={saving}
+                            rows={2}
+                            placeholder="เช่น เพิ่มทีมบัญชีคนใหม่ — ตามคำขอเมื่อ 28 เม.ย."
+                            className="w-full px-3 py-2 rounded-lg bg-black/25 border border-white/15 text-white text-sm focus:outline-none focus:border-amber-300/50 resize-none"
+                        />
+                    </Field>
+
+                    {error && (
+                        <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 p-2.5 text-[0.85rem] text-rose-200 inline-flex items-start gap-2 w-full">
+                            <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                            <span>{error}</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <footer className="sticky bottom-0 z-10 flex items-center justify-end gap-2 px-5 py-3 border-t border-white/10 bg-[#15040a]">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={saving}
+                        className="px-4 h-10 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-sm font-semibold border border-white/15"
+                    >
+                        ยกเลิก
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={saving}
+                        className="px-5 h-10 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-bold inline-flex items-center gap-2 disabled:opacity-60 shadow-lg shadow-emerald-500/30"
+                    >
+                        {saving ? (
+                            <>
+                                <Loader2 size={13} className="animate-spin" />
+                                กำลังสร้าง…
+                            </>
+                        ) : (
+                            <>
+                                <Check size={13} />
+                                สร้างผู้ใช้
+                            </>
+                        )}
+                    </button>
+                </footer>
+            </div>
+        </div>,
+        document.body,
+    )
+}
+
+// ─── Field wrapper (shared) ─────────────────────────────────────────────
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <label className="block">
+            <span className="text-[11px] uppercase tracking-wider text-white/55 font-bold mb-1.5 block">
+                {label}
+            </span>
+            {children}
+        </label>
     )
 }
 

@@ -46,7 +46,7 @@ export default async function PermissionsSettingsPage() {
         redirect('/hradmin/dashboard')
     }
 
-    const [usersRes, auditRes] = await Promise.all([
+    const [usersRes, auditRes, employeesRes] = await Promise.all([
         supabaseAdmin
             .from('User')
             .select('id, username, name, role, can_view_all_employees, can_edit_employees, can_view_approval_limits, can_edit_approval_limits, can_approve_leave, can_manage_system, can_manage_payroll, can_view_audit_log')
@@ -57,10 +57,29 @@ export default async function PermissionsSettingsPage() {
             .select('id, target_user_id, changed_by_user_id, changed_at, permissions_before, permissions_after, preset_before, preset_after, role_before, role_after, note')
             .order('changed_at', { ascending: false })
             .limit(50),
+        // Active employees with no linked user_id — these are the
+        // candidates HR can pick when creating a new login. Sort by
+        // employee_code so the list reads like the org chart.
+        supabaseAdmin
+            .from('employees')
+            .select('id, employee_code, first_name_th, last_name_th, nickname, department, position, email')
+            .eq('status', 'active')
+            .is('user_id', null)
+            .order('employee_code', { ascending: true }),
     ])
 
     const rawUsers = (usersRes.data ?? []) as RawUser[]
     const audits = (auditRes.data ?? []) as RawAudit[]
+    const unlinkedEmployees = (employeesRes.data ?? []) as Array<{
+        id: string
+        employee_code: string
+        first_name_th: string
+        last_name_th: string
+        nickname: string | null
+        department: string | null
+        position: string | null
+        email: string | null
+    }>
 
     // Resolve actor names for audit display from the same User snapshot
     // we already fetched. Map id → display name; fall back to username
@@ -108,6 +127,15 @@ export default async function PermissionsSettingsPage() {
             users={users}
             audits={auditEntries}
             currentUserId={auth.session.id}
+            unlinkedEmployees={unlinkedEmployees.map(e => ({
+                id: e.id,
+                employee_code: e.employee_code,
+                display_name: [e.first_name_th, e.last_name_th].filter(Boolean).join(' ')
+                    + (e.nickname ? ` (${e.nickname})` : ''),
+                department: e.department,
+                position: e.position,
+                email: e.email,
+            }))}
         />
     )
 }
