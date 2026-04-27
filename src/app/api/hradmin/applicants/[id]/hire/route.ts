@@ -81,13 +81,15 @@ export async function POST(
     if (readErr) return NextResponse.json({ error: readErr.message }, { status: 500 })
     if (!applicant) return NextResponse.json({ error: 'ไม่พบใบสมัคร' }, { status: 404 })
 
-    // Don't allow promoting from terminal-rejected or pre-interview states.
-    // 'interview' and 'hired' are both legitimate launch points (HR may
-    // tick "hired" on the status workflow first, or jump directly here).
-    const okStates = new Set(['interview', 'hired', 'shortlisted'])
-    if (!okStates.has(String(applicant.application_status))) {
+    // Block hire only from the two states where it makes no sense:
+    // 'draft' (applicant didn't submit) and 'rejected' (HR already
+    // said no). Every other state is fair game — HR sometimes meets
+    // candidates offline and wants to hire on the spot without
+    // walking through every status step.
+    const blockedStates = new Set(['draft', 'rejected'])
+    if (blockedStates.has(String(applicant.application_status))) {
         return NextResponse.json({
-            error: `ใบสมัครอยู่สถานะ "${applicant.application_status}" — ต้องเป็น interview / shortlisted / hired ก่อนถึงจะจ้างได้`,
+            error: `ใบสมัครอยู่สถานะ "${applicant.application_status}" — ไม่สามารถจ้างได้`,
         }, { status: 400 })
     }
 

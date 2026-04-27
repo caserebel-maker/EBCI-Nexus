@@ -48,10 +48,13 @@ export function ApplicantDetailView({
     const photoUrl = refreshedFiles.photo_url
     const status = (str(a.application_status) || 'submitted')
 
-    // Hire button is only meaningful from these states. Anywhere else
-    // (draft, submitted, reviewing, rejected) requires HR to advance
-    // the applicant first via the status dropdown.
-    const canHire = status === 'interview' || status === 'shortlisted' || status === 'hired'
+    // Hire button is hidden only on the two states where it makes no
+    // sense: 'draft' (applicant hasn't even submitted yet) and
+    // 'rejected' (HR already said no). Every other state — submitted,
+    // reviewing, shortlisted, interview, hired — is fair game, since
+    // sometimes HR meets a candidate offline and decides to hire on
+    // the spot without walking through every status step.
+    const canHire = status !== 'draft' && status !== 'rejected'
 
     return (
         <div className="max-w-5xl mx-auto space-y-5 pb-10">

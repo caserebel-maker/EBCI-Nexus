@@ -164,6 +164,67 @@ export async function POST(
         console.error('[applicants/status] notification error:', err)
     }
 
+    // ── HR-staff fan-out ─────────────────────────────────────────────
+    // Notify every HR teammate (except the actor) so the careers queue
+    // stays visible even when only one HR member processes the status.
+    // Same recipient query as careers/submit fan-out: legacy hr_admin
+    // role OR can_edit_employees OR can_manage_system. Keeps มด, ปอนด์
+    // and any future HR-permissioned user in the loop without us
+    // hard-coding names. Best-effort — failures here never block the
+    // status change response.
+    try {
+        const { data: hrUsers, error: hrErr } = await supabaseAdmin
+            .from('User')
+            .select('id')
+            .or('role.eq.hr_admin,can_edit_employees.eq.true,can_manage_system.eq.true')
+        if (hrErr) {
+            console.error('[applicants/status] hr-users lookup error:', hrErr)
+        }
+        // Skip the actor — no point pinging HR about a click they
+        // just made themselves. session.id is the User.id of the
+        // signed-in account.
+        const actorUserId = session.id
+        const hrUserIds = Array.from(new Set(
+            (hrUsers ?? [])
+                .map(u => u.id as string)
+                .filter(uid => uid && uid !== actorUserId),
+        ))
+        if (hrUserIds.length > 0) {
+            const statusLabel = STATUS_TH[newStatus] ?? newStatus
+            const positionLabel = (row.position_applied as string | null)?.trim() || 'ตำแหน่งที่สมัคร'
+            const actorName = session.name?.trim() || 'HR'
+            const color: NotificationColor =
+                newStatus === 'hired'                                    ? 'green'
+              : newStatus === 'rejected'                                 ? 'red'
+              : newStatus === 'interview' || newStatus === 'shortlisted' ? 'blue'
+                                                                         : 'amber'
+            const title = applicantName
+                ? `${actorName} เปลี่ยนสถานะ ${applicantName} → "${statusLabel}"`
+                : `สถานะใบสมัครเปลี่ยน → "${statusLabel}"`
+            const body = `${positionLabel} · Ref: ${row.reference_code}${notes ? `\n${notes}` : ''}`
+            await Promise.allSettled(
+                hrUserIds.map(uid =>
+                    createNotification({
+                        recipient_user_id: uid,
+                        type: 'application_status_changed',
+                        title,
+                        body,
+                        action_url: `/hradmin/applicants/${id}`,
+                        action_label: 'ดูใบสมัคร',
+                        entity_type: 'job_application',
+                        entity_id: id,
+                        reference_code: String(row.reference_code),
+                        icon: 'Briefcase',
+                        color,
+                        sender_name: actorName,
+                    }),
+                ),
+            )
+        }
+    } catch (err) {
+        console.error('[applicants/status] HR fan-out error:', err)
+    }
+
     return NextResponse.json({
         success: true,
         status: newStatus,
