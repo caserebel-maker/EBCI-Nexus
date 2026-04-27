@@ -11,13 +11,17 @@
 อ่าน docs/NEXT.md แล้วทำต่อ
 ```
 
-**ก่อนลุย:** `cd ~/path/to/EBCI-Nexus && git pull origin main --ff-only`
+**ก่อนลุย:** `cd ~/C1TB/EB-CI/EBCI-Nexus && git pull origin main --ff-only`
 
-**ตอบเครื่อง:** "อยู่ laptop"
+**ตอบเครื่อง:** "อยู่ home"
+
+**ทำก่อน (1 นาที):** Logout จาก production (ปอนด์: `tumyen@gmail.com / 0000`) แล้ว login ใหม่. เปิดหน้า profile พนักงานคนใดก็ได้ → ควรเห็น **การ์ด "สลิปเงินเดือน"** แล้ว (laptop session แก้ DB ให้แล้ว — ดู §3.1)
 
 ---
 
 ## 0. TL;DR ใน 30 วินาที
+
+**APR27 laptop night** — fix bug ปอนด์ไม่เห็น salary card (User.id cuid vs auth UUID divergence — pattern เดียวกับ notifications bug Apr 22). DB migrated, 1 file commit. **§3.1 closed.** ถัดไป: **§3.2 Permission editor UI** (~30-45 นาที).
 
 **APR27 office afternoon ปิด feature ใหญ่ 4 ตัว:**
 
@@ -117,17 +121,22 @@
 
 ## 3. สิ่งที่ยังเปิดอยู่ — เรียงตาม priority
 
-### 3.1 ⭐ **Verify salary card หลัง deploy** — 5 นาที, must-do แรก
+### 3.1 ✅ **Salary card visibility — แก้แล้วใน laptop session APR27 night**
 
-User report ก่อนเลิกงาน: "การ์ดสลิปเงินเดือนอยู่ตรงไหน" — น่าจะ Vercel ยัง deploy ไม่เสร็จ หรือ session cookie cache
+**Root cause (ไม่ใช่ deploy timing):** ปอนด์'s `User.id` = legacy Prisma cuid `cm6ml6x8n…` แต่ `session.id` = auth UUID `9dc14c59-…`. `getCurrentPermissions()` ที่ `src/lib/permissions-server.ts:16` ใช้ `.eq('id', session.id)` → ไม่เจอ row ของปอนด์ → คืน `EMPTY_PERMISSIONS` → `canViewPayroll=false` → การ์ดถูกซ่อน.
 
-**Test:**
-1. Pull main · refresh production
-2. Logout / login ใหม่ (เพื่อ refresh permission cache)
-3. เปิดหน้าโปรไฟล์พนักงาน → ควรเห็น **"สลิปเงินเดือน"** card (HR-only · gated `can_manage_payroll=true`)
-4. ลอง logout → login เป็น **มด** → ต้อง**ไม่เห็น**การ์ดเลย (verify exclusion ทำงาน)
+มด/จิม/ดำ ใช้ได้เพราะ User.id เป็น UUID ตรงกับ auth UUID อยู่แล้ว.
 
-ถ้ายังไม่เห็นทั้งที่ login เป็นปอนด์ → debug `getCurrentPermissions()` query
+**Pattern เดียวกับ bug notifications.recipient_user_id ที่เจอวันที่ Apr 22** (commit `e15ec5a`).
+
+**Fix:** UPDATE ปอนด์'s `User.id` cuid → auth UUID. **0 FK refs ในทั้ง 7 ตาราง** (verified ก่อน update) — safe one-liner. Migration: `supabase/migrations/20260427_realign_admin_user_id_to_auth_uuid.sql`.
+
+**Verify ที่บ้าน:**
+1. Logout จาก production (ปอนด์ token เก่ายังใช้ได้แต่ permission ไม่อ่านใหม่)
+2. Login ใหม่ → เปิดหน้า profile พนักงานคนใดก็ได้ → เห็นการ์ด "สลิปเงินเดือน" ✅
+3. (Optional) Logout → login เป็น **มด** (`c.arthit@ebcitrade.com / 0839964333`) → **ไม่เห็น**การ์ด ✅
+
+ถ้า verify ผ่านแล้ว → ลุย §3.2 ต่อ.
 
 ### 3.2 ⭐ **UI Permission editor** — 30-45 นาที
 
