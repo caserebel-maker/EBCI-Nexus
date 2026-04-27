@@ -2285,3 +2285,87 @@ Estimated remaining: ~3-4 hours for everything except §3.2 + §3.3 mobile.
 ---
 
 *End of §13 · 4 commits. Total this evening across §10-§13: **18 commits, 4 tracks complete**. Next session at NEXT.md §3.2.*
+
+
+<a id="section-14"></a>
+# §14. APR24 office afternoon — §3.6 carryover sweep
+
+*5 commits · ปิด §3.6 carryover ครบ + critical email recursion fix*
+
+## TL;DR
+
+Office afternoon (Apr 24) ตามคำสั่ง "จัดสิ่งที่ยังไม่ทำให้หมดเลย". ระหว่างเริ่ม session
+sync protocol สังเกตเห็น `email-leave.ts` มี infinite recursion ใน wrapper — รุนแรงพอ
+เป็น critical bug ที่ block leave + careers email ทุกตัวมาตั้งแต่ Apr 23 commit `dcccec1`.
+แก้ปัญหานั้นก่อน แล้วค่อยลุย §3.6 carryover ทั้ง 4 ข้อ.
+
+## Commits
+
+| # | Commit | Track | Note |
+|---|---|---|---|
+| 5 | `6c4c20a` | TS sweep | 22 → 0 errors · `tsc --noEmit` exit 0 |
+| 4 | `e75d154` | §3.6.1 | bulk adjust balance modal · preview/apply 2-step |
+| 3 | `d1e0f70` | §3.6.2 | zip download applicant docs (jszip) |
+| 2 | `65142be` | §3.6.3 | review notes autosave + audit metadata cols |
+| 1 | `ded6fdd` | 🔥 fix | infinite recursion 3 email wrappers |
+
+## What broke (and why it slipped through)
+
+`sendLeaveEmail` / `sendCareersEmail` ใน 3 ไฟล์ wrapper เรียก ตัวเอง แทน `sendEmail`
+ที่ import จาก `@/lib/email`. Bug ติดมาตั้งแต่ Apr 23 commit `dcccec1` (separate sender
+identities) แต่ไม่มีใครเจอเพราะ:
+
+1. ทุก wrapper-routed email ส่งใน try/catch ที่ swallow exception → log แต่ไม่ throw
+2. `announcement broadcast` ใน `hradmin/hr/actions.ts` ยังเรียก `sendEmail` ตรง — ไม่ผ่าน wrapper
+3. Code never run end-to-end ในสภาพ "บั๊ก = pure recursion" เพราะ session ก่อนๆ
+   ใช้ direct callers (Apr 23-25 e2e tests ผ่าน หลัง apr 25 home night session ที่
+   wrapper เริ่มกระจายตัว — ไม่มี leave email submit ตั้งแต่นั้น)
+
+## §3.6 deliverables
+
+### §3.6.3 Review notes autosave
+- `PATCH /api/hradmin/applicants/[id]/review-notes` (8 KB cap, fallback for older schema)
+- `ReviewNotes.tsx` client — debounce 1.5s, save-on-blur, beforeunload guard, "saved Xs ago"
+- Migration: `review_notes_updated_at` + `review_notes_updated_by` cols
+
+### §3.6.2 Zip download
+- `GET /api/hradmin/applicants/[id]/download-zip` — bundles 6 single-fields + other_documents
+- README.txt manifest with skipped-files list
+- Service-role downloads (signed URLs never leak to client)
+- Filename: `applicant-<ref>-<nick>-YYYYMMDD.zip`
+- jszip 3.10.1 added
+
+### §3.6.1 Bulk adjust modal
+- `POST /api/hradmin/leave/balances/bulk` — preview / apply 2-mode
+- Actions: `set_total` / `add_total` / `reset_used`
+- Scope: all / departments / levels (employee_ids[] also supported)
+- Preview must run before Apply enables; config change resets preview
+
+### §3.6.4 TS sweep
+22 errors → 0:
+- 5× recharts Formatter signature widening (DepartmentBar / LeaveTypePie / MonthlyTrend / hr-dashboard ×2)
+- hr-dashboard.tsx missing `useRouter()` call in HRDashboard component
+- portal/checkin/actions.ts CheckInPayload widening for WFH (no GPS)
+- portal/leave/my-leave-view.tsx `?? null` for filterTypeName
+- portal/profile/page.tsx Supabase `as unknown as EmpRow` casts (× 3)
+- lib/employee-profile.ts `?? authUserId ?? ''` fallbacks (× 2)
+- next.config.ts `as NextConfig` for eslint config
+
+## Build state at end
+
+- `npx tsc --noEmit` → exit **0**
+- `npm run build` → ✓ Compiled in 3.1s · 98 routes
+- 3 new routes (review-notes / download-zip / balances/bulk)
+- 0 new TS errors introduced
+
+## Quirks learned
+
+1. **Email wrapper recursion** — explicit forward beats spread; spread also tripped TS quirk
+2. **Recharts `T | undefined`** — `(v) => Number(v ?? 0)` instead of `(v: number) =>`
+3. **Web Response BodyInit** — Uint8Array fails in Next 16 lib.dom; wrap in Blob
+4. **Preview-then-apply gate** — config change invalidates preview to prevent stale apply
+5. **Audit metadata fallback** — API try-with-metadata, fall back to text-only on schema mismatch
+
+---
+
+*End of §14 · 5 commits · §3.6 carryover ปิดครบ. Next session = §3.2 Vercel env vars (5 min, requires user dashboard access) หรือ §3.3 Tab 4 mobile polish (requires real iPhone).*
