@@ -17,6 +17,7 @@ import { EMPLOYEE_LEVELS, LEVEL_BADGE_COLORS } from "@/config/employee-levels"
 import { DEPARTMENTS } from "@/config/departments"
 import { ContractsCard } from "@/components/hradmin/employees/ContractsCard"
 import { LocationSection, LocationEmpty } from "@/components/hradmin/employees/LocationSection"
+import { SalarySlipsCard, type SalarySlip } from "@/components/hradmin/employees/SalarySlipsCard"
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList
 } from "recharts"
@@ -127,6 +128,8 @@ interface Props {
     id: string
     isHrAdmin: boolean
     contracts: ContractEntry[]
+    canViewPayroll: boolean   // page-level gate from can_manage_payroll
+    salarySlips: SalarySlip[]
 }
 
 // Mirrors employee_contracts schema (only the fields the card consumes).
@@ -330,7 +333,7 @@ function LeaveHistory({ leaves }: { leaves: LeaveRequest[] }) {
 export function EmployeeProfileView({
     employee, photoUrl, displayName, supervisorName, tenure,
     leaveBalances, recentLeaves, allEmployees, id, isHrAdmin,
-    contracts,
+    contracts, canViewPayroll, salarySlips,
 }: Props) {
     const router = useRouter()
 
@@ -1272,6 +1275,19 @@ export function EmployeeProfileView({
                         canEdit={isHrAdmin}
                     />
                 </div>
+            )}
+
+            {/* ── 5c. Salary slips — gated by can_manage_payroll flag.
+                Decoupled from isHrAdmin: HR Manager (มด) lands on this
+                page fine, but the salary card is invisible because she
+                doesn't have payroll permission. Hidden in print too —
+                slips are exported via the dedicated download flow, not
+                bundled into the profile PDF. ─────────────────────────── */}
+            {canViewPayroll && (
+                <SalarySlipsCard
+                    employeeId={id}
+                    slips={salarySlips}
+                />
             )}
 
             {/* ── 6. Danger Zone (hr_admin only) ───────────────────────────── */}

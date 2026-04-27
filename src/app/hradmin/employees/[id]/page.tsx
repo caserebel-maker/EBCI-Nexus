@@ -2,6 +2,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin"
 import { notFound } from "next/navigation"
 import { cookies } from "next/headers"
 import { EmployeeProfileView } from "./employee-profile-view"
+import { getCurrentPermissions } from "@/lib/permissions-server"
 
 export const dynamic = 'force-dynamic'
 
@@ -101,6 +102,30 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
     const leaveBalances: { leave_type: string; entitled_days: number; used_days: number; remaining_days: number }[] =
         leaveBalancesRaw ?? []
 
+    // ── Payroll permission gate ────────────────────────────────────────────────
+    // Only users with can_manage_payroll see the salary-slips card.
+    // HR Manager (มด) hits this page fine but the slips section is hidden.
+    const perms = await getCurrentPermissions()
+    const canViewPayroll = perms.can_manage_payroll === true
+
+    // ── Salary slips (only fetched when viewer has the flag) ───────────────────
+    let salarySlips: Array<{
+        id: string; year: number; month: number;
+        file_name: string | null; file_size: number | null;
+        mime_type: string | null; notes: string | null;
+        uploaded_at: string;
+    }> = []
+    if (canViewPayroll) {
+        const { data: slipsRaw } = await supabaseAdmin
+            .from('salary_slips')
+            .select('id, year, month, file_name, file_size, mime_type, notes, uploaded_at')
+            .eq('employee_id', employee.id)
+            .is('deleted_at', null)
+            .order('year', { ascending: false })
+            .order('month', { ascending: false })
+        salarySlips = (slipsRaw ?? []) as typeof salarySlips
+    }
+
     // ── Employment contracts (HR scans) ────────────────────────────────────────
     // Returned newest-first so the most recent contract is the one HR
     // sees first when scrolling. Soft-deleted rows are filtered out
@@ -168,6 +193,8 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             id={id}
             isHrAdmin={isHrAdmin}
             contracts={contracts}
+            canViewPayroll={canViewPayroll}
+            salarySlips={salarySlips}
         />
     )
 }

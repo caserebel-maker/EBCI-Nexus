@@ -8,6 +8,13 @@ export type UserPermissions = {
     can_edit_approval_limits: boolean
     can_approve_leave: boolean
     can_manage_system: boolean
+    /**
+     * Allow-list flag for salary slips. Decoupled from `role` and
+     * from the other HR flags so HR Managers can hold full HR
+     * access without seeing payroll data. An employee can always
+     * view their OWN slips regardless of this flag.
+     */
+    can_manage_payroll: boolean
 }
 
 export const EMPTY_PERMISSIONS: UserPermissions = {
@@ -17,6 +24,7 @@ export const EMPTY_PERMISSIONS: UserPermissions = {
     can_edit_approval_limits: false,
     can_approve_leave: false,
     can_manage_system: false,
+    can_manage_payroll: false,
 }
 
 export type ApprovalTier = 'small' | 'medium' | 'large' | 'unlimited'

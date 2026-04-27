@@ -44,6 +44,15 @@ export const canApproveLeave: AuthCheck = ({ permissions }) => permissions.can_a
 export const canViewApprovalLimits: AuthCheck = ({ permissions }) => permissions.can_view_approval_limits === true
 export const canEditApprovalLimits: AuthCheck = ({ permissions }) => permissions.can_edit_approval_limits === true
 
+/**
+ * Salary-slip access. Standalone allow-list flag — does NOT inherit
+ * from hr_admin or any other HR check. Mirrors the can_view_audit_log
+ * pattern used elsewhere: HR Manager privileges are the baseline,
+ * payroll visibility is opt-in per user. Employees viewing their OWN
+ * slips bypass this check via a separate code path in the portal API.
+ */
+export const canManagePayroll: AuthCheck = ({ permissions }) => permissions.can_manage_payroll === true
+
 // ── Composite checks (the most common ones) ──────────────────────────
 
 /**
