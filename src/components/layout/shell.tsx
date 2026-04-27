@@ -159,7 +159,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent lg:pl-64">
                 {/* Top Navbar */}
                 <header
-                    className="h-auto flex items-center justify-between border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground px-3 lg:px-8 pb-1 lg:py-1"
+                    className="h-auto flex items-center justify-between border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground px-3 lg:px-8 pb-1 lg:py-1 print:hidden"
                     style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)', paddingBottom: '8px' }}
                 >
                     {/* Mobile Logo — left-aligned */}
@@ -204,11 +204,20 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
 
                 {/* Page Content */}
                 <div className="flex-1 overflow-auto pt-3 px-4 pb-4 lg:p-8">
-                    {/* Priority alerts — top of content on every viewport */}
-                    {emergencyBanner && <div className="mb-4">{emergencyBanner}</div>}
+                    {/* Priority alerts — top of content on every viewport.
+                        Hidden on print so a one-off "ส้วมระเบิด..." banner
+                        doesn't tag along with every PDF export. */}
+                    {emergencyBanner && <div className="mb-4 print:hidden">{emergencyBanner}</div>}
 
-                    {/* Mobile Identity Header — shown on every page */}
-                    <div className="lg:hidden mb-3 pb-3 border-b border-white/10">
+                    {/* Mobile Identity Header — shown on every page.
+                        `lg:hidden` only kicks in at the desktop breakpoint;
+                        the print engine emulates a narrower viewport so
+                        without `print:hidden` this whole identity card —
+                        the daily greeting, the photo, the role line —
+                        leaks into PDF exports of unrelated pages
+                        (e.g. an HR printing someone else's profile would
+                        see their own name + email at the top). */}
+                    <div className="lg:hidden mb-3 pb-3 border-b border-white/10 print:hidden">
                         {/* Greeting — daily/payday/birthday */}
                         <DailyGreeting
                             variant="mobile"
@@ -272,17 +281,27 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                     </div>
 
                     {children}
-                    {/* Mobile bottom nav spacer — height = nav bar + iPhone safe area */}
+                    {/* Mobile bottom nav spacer — height = nav bar + iPhone safe area.
+                        print:hidden because the print engine uses a narrow
+                        viewport, which makes `lg:hidden` evaluate true and
+                        this spacer reserves dead space at the bottom of
+                        every PDF page. */}
                     <div
-                        className="lg:hidden shrink-0"
+                        className="lg:hidden shrink-0 print:hidden"
                         aria-hidden="true"
                         style={{ height: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}
                     />
                 </div>
             </main>
 
-            {/* Mobile Bottom Navigation — portal only */}
-            {showBottomNav && <PortalBottomNav />}
+            {/* Mobile Bottom Navigation — portal only.
+                Wrapped print:hidden for the same lg:hidden-leaks-on-print
+                reason as the spacer above. */}
+            {showBottomNav && (
+                <div className="print:hidden">
+                    <PortalBottomNav />
+                </div>
+            )}
         </div>
     )
 }
