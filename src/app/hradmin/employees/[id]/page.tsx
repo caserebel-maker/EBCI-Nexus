@@ -101,6 +101,32 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
     const leaveBalances: { leave_type: string; entitled_days: number; used_days: number; remaining_days: number }[] =
         leaveBalancesRaw ?? []
 
+    // ── Employment contracts (HR scans) ────────────────────────────────────────
+    // Returned newest-first so the most recent contract is the one HR
+    // sees first when scrolling. Soft-deleted rows are filtered out
+    // so HR doesn't have to ignore the trash.
+    const { data: contractsRaw } = await supabaseAdmin
+        .from('employee_contracts')
+        .select('id, contract_type, signed_date, effective_start, effective_end, file_path, file_name, file_size, mime_type, page_count, notes, uploaded_at')
+        .eq('employee_id', employee.id)
+        .is('deleted_at', null)
+        .order('signed_date', { ascending: false })
+
+    const contracts = (contractsRaw ?? []) as Array<{
+        id: string
+        contract_type: 'probation' | 'permanent' | 'amendment' | 'renewal' | 'termination'
+        signed_date: string
+        effective_start: string | null
+        effective_end: string | null
+        file_path: string
+        file_name: string | null
+        file_size: number | null
+        mime_type: string | null
+        page_count: number | null
+        notes: string | null
+        uploaded_at: string
+    }>
+
     // ── All leave requests ─────────────────────────────────────────────────────
     const { data: recentLeavesRaw } = await supabaseAdmin
         .from('leave_requests')
@@ -141,6 +167,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             allEmployees={allEmployees}
             id={id}
             isHrAdmin={isHrAdmin}
+            contracts={contracts}
         />
     )
 }

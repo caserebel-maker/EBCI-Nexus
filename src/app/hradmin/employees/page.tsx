@@ -1,5 +1,6 @@
 import { EmployeesTable, Employee } from "./employees-table"
 import { EmployeesHeader } from "./header"
+import { ContractsCoverageBanner } from "@/components/hradmin/employees/ContractsCoverageBanner"
 import { supabaseAdmin } from "@/lib/supabase-admin"
 import { cookies } from "next/headers"
 
@@ -37,6 +38,22 @@ export default async function EmployeesPage() {
         console.error("Supabase Employees Fetch Error:", error)
     }
 
+    // ── Contracts coverage stats (HR-only banner) ──────────────────────────────
+    // Goal: every active employee has ≥ 1 contract on file within 3 months
+    // (decided with HR Apr 27 2026). We surface a progress bar at the top of
+    // the list so HR can see at a glance how the backfill is going.
+    const isHr = userRole === 'hr_admin'
+    let contractsCoverage: { withContract: number; activeTotal: number } | null = null
+    if (isHr) {
+        const activeTotal = (employeesRaw ?? []).filter((e: any) => e.status === 'active').length
+        const { data: covRows } = await supabaseAdmin
+            .from('employee_contracts')
+            .select('employee_id')
+            .is('deleted_at', null)
+        const withContract = new Set((covRows ?? []).map((r: any) => r.employee_id as string)).size
+        contractsCoverage = { withContract, activeTotal }
+    }
+
     // 3. Transform to Table Format
     const employees: Employee[] = (employeesRaw || []).map((e: any) => ({
         id: e.id,
@@ -62,6 +79,12 @@ export default async function EmployeesPage() {
     return (
         <div className="space-y-6">
             <EmployeesHeader />
+            {contractsCoverage && (
+                <ContractsCoverageBanner
+                    withContract={contractsCoverage.withContract}
+                    activeTotal={contractsCoverage.activeTotal}
+                />
+            )}
             <EmployeesTable initialData={employees} isHrAdmin={userRole === 'hr_admin'} />
         </div>
     )

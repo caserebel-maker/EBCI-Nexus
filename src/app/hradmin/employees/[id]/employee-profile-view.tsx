@@ -15,6 +15,7 @@ import { updateEmployee, uploadEmployeePhoto, deleteEmployee } from "./actions"
 import { ImageCropModal } from "@/components/ImageCropModal"
 import { EMPLOYEE_LEVELS, LEVEL_BADGE_COLORS } from "@/config/employee-levels"
 import { DEPARTMENTS } from "@/config/departments"
+import { ContractsCard } from "@/components/hradmin/employees/ContractsCard"
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList
 } from "recharts"
@@ -104,6 +105,23 @@ interface Props {
     allEmployees: EmployeeOption[]
     id: string
     isHrAdmin: boolean
+    contracts: ContractEntry[]
+}
+
+// Mirrors employee_contracts schema (only the fields the card consumes).
+interface ContractEntry {
+    id: string
+    contract_type: 'probation' | 'permanent' | 'amendment' | 'renewal' | 'termination'
+    signed_date: string
+    effective_start: string | null
+    effective_end: string | null
+    file_path: string
+    file_name: string | null
+    file_size: number | null
+    mime_type: string | null
+    page_count: number | null
+    notes: string | null
+    uploaded_at: string
 }
 
 interface FormState {
@@ -276,7 +294,8 @@ function LeaveHistory({ leaves }: { leaves: LeaveRequest[] }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function EmployeeProfileView({
     employee, photoUrl, displayName, supervisorName, tenure,
-    leaveBalances, recentLeaves, allEmployees, id, isHrAdmin
+    leaveBalances, recentLeaves, allEmployees, id, isHrAdmin,
+    contracts,
 }: Props) {
     const router = useRouter()
 
@@ -940,6 +959,17 @@ export function EmployeeProfileView({
                     <LeaveHistory leaves={recentLeaves} />
                 )}
             </div>
+
+            {/* ── 5b. Employment contracts (HR-only — RLS enforces this on
+                the server too, but we hide the card client-side so non-HR
+                viewers don't even see the empty state). ───────────────── */}
+            {isHrAdmin && (
+                <ContractsCard
+                    employeeId={id}
+                    contracts={contracts}
+                    canEdit={isHrAdmin}
+                />
+            )}
 
             {/* ── 6. Danger Zone (hr_admin only) ───────────────────────────── */}
             {isHrAdmin && (
