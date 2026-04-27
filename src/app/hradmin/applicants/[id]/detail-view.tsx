@@ -6,7 +6,7 @@ import {
     ArrowLeft, Printer, Mail, Phone, Calendar, MapPin, Briefcase,
     User, Users2, Heart, IdCard, Home, GraduationCap, FileText,
     Languages, Sparkles, HeartPulse, PhoneCall, ShieldCheck,
-    FileSignature, Car, Download,
+    FileSignature, Car, Download, UserPlus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { StatusBadge } from '@/components/hradmin/applicants/StatusBadge'
@@ -14,6 +14,7 @@ import { StatusDropdown } from '@/components/hradmin/applicants/StatusDropdown'
 import { FilesList } from '@/components/hradmin/applicants/FilesList'
 import { InterviewEvaluation, type SavedEvaluation } from '@/components/hradmin/applicants/InterviewEvaluation'
 import { ReviewNotes } from '@/components/hradmin/applicants/ReviewNotes'
+import { HireModal } from '@/components/hradmin/applicants/HireModal'
 
 // ── Types ────────────────────────────────────────────────────────────────
 // We keep everything as `unknown` pulled from the DB row and narrow at
@@ -40,11 +41,17 @@ export function ApplicantDetailView({
     application: a, id, refreshedFiles, otherDocuments, savedEvaluation,
 }: Props) {
     const [tab, setTab] = useState<TabKey>('personal')
+    const [hireOpen, setHireOpen] = useState(false)
 
     const fullName = `${str(a.first_name_th)} ${str(a.last_name_th)}`.trim()
         + (str(a.nickname) ? ` (${str(a.nickname)})` : '')
     const photoUrl = refreshedFiles.photo_url
     const status = (str(a.application_status) || 'submitted')
+
+    // Hire button is only meaningful from these states. Anywhere else
+    // (draft, submitted, reviewing, rejected) requires HR to advance
+    // the applicant first via the status dropdown.
+    const canHire = status === 'interview' || status === 'shortlisted' || status === 'hired'
 
     return (
         <div className="max-w-5xl mx-auto space-y-5 pb-10">
@@ -58,6 +65,17 @@ export function ApplicantDetailView({
                     กลับไปหน้ารายการ
                 </Link>
                 <div className="flex items-center gap-1.5">
+                    {canHire && (
+                        <button
+                            type="button"
+                            onClick={() => setHireOpen(true)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold border border-emerald-400 shadow-lg shadow-emerald-500/30"
+                            title="โอนข้อมูลใบสมัครไปสร้างพนักงานใหม่"
+                        >
+                            <UserPlus size={13} />
+                            จ้างเข้าทำงาน
+                        </button>
+                    )}
                     <a
                         href={`/api/hradmin/applicants/${id}/download-zip`}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/75 hover:text-white text-xs font-semibold border border-white/10"
@@ -76,6 +94,25 @@ export function ApplicantDetailView({
                     </button>
                 </div>
             </div>
+
+            {/* Hire modal — portal-mounted so it sits above the sticky header */}
+            <HireModal
+                open={hireOpen}
+                onClose={() => setHireOpen(false)}
+                applicant={{
+                    id,
+                    fullName: fullName || 'ไม่ระบุชื่อ',
+                    referenceCode: str(a.reference_code) || '—',
+                    positionApplied: str(a.position_applied) || null,
+                    email: str(a.email) || null,
+                    phone: str(a.phone_mobile) || null,
+                    photoUrl,
+                    dateOfBirth: str(a.date_of_birth) || null,
+                    emergencyContactName: str(a.emergency_contact_name) || null,
+                    emergencyContactPhone: str(a.emergency_contact_phone) || null,
+                    canStartDate: str(a.can_start_date) || null,
+                }}
+            />
 
             {/* Sticky header card */}
             <header
