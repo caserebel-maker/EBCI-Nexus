@@ -71,10 +71,11 @@ export function LeaveTypePie({ data }: Props) {
                                     })}
                                 </Pie>
                                 <Tooltip
-                                    formatter={(value: number, _name: string, props: { payload?: PieSlice }) => {
-                                        const slice = props.payload
-                                        const pct = total > 0 ? Math.round((value / total) * 100) : 0
-                                        return [`${value} ใบ (${pct}%)`, slice?.name_th ?? '']
+                                    formatter={(value, _name, props) => {
+                                        const slice = (props as { payload?: PieSlice })?.payload
+                                        const v = Number(value ?? 0)
+                                        const pct = total > 0 ? Math.round((v / total) * 100) : 0
+                                        return [`${v} ใบ (${pct}%)`, slice?.name_th ?? '']
                                     }}
                                     contentStyle={{
                                         background: 'rgba(20,5,8,0.96)',

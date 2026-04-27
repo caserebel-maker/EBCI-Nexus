@@ -160,7 +160,10 @@ function DeptDonut({ data, total }: { data: any[]; total: number }) {
                             ))}
                         </Pie>
                         <Tooltip
-                            formatter={(v: any, name: string) => [`${v} คน (${Math.round(v / total * 100)}%)`, name]}
+                            formatter={(v, name) => {
+                                const num = Number(v ?? 0)
+                                return [`${num} คน (${Math.round(num / total * 100)}%)`, String(name ?? '')]
+                            }}
                             contentStyle={{ background: 'rgba(20,5,8,0.96)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, fontSize: 13 }}
                             itemStyle={{ color: '#fff' }}
                         />
@@ -500,11 +503,11 @@ export function HRDashboard({
     pendingLeaves, contractsExpiring, anniversaries,
     weekDays, leavesToday, urgentBanners, newsAnnouncements, birthdays,
 }: Props) {
+    const router = useRouter()
     const [pending, setPending] = useState(pendingLeaves)
     const removePending = (id: string) => setPending(prev => prev.filter(r => r.id !== id))
     const [selectedNews, setSelectedNews] = useState<any>(null)
     const [selectedDay, setSelectedDay] = useState<Date | null>(null)
-    console.log('leaveChartData:', leaveChartData)
 
     return (
         <div className="space-y-6">
@@ -581,7 +584,7 @@ export function HRDashboard({
                                     <Tooltip
                                         contentStyle={{ background: 'rgba(20,5,8,0.96)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, fontSize: 13 }}
                                         itemStyle={{ color: '#fff' }}
-                                        formatter={(v: any, name: string) => [`${v} คน`, name === 'present' ? 'มาทำงาน' : 'ลา/ขาด']}
+                                        formatter={(v, name) => [`${Number(v ?? 0)} คน`, String(name) === 'present' ? 'มาทำงาน' : 'ลา/ขาด']}
                                     />
                                     <Legend formatter={v => <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13 }}>{v === 'present' ? 'มาทำงาน' : 'ลา/ขาด'}</span>} />
                                     <Line type="monotone" dataKey="present" stroke="#60A5FA" strokeWidth={2.5} dot={{ r: 4, fill: '#60A5FA' }} isAnimationActive={false} />

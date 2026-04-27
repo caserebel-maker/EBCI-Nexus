@@ -80,7 +80,7 @@ export function DepartmentBarChart({ data }: Props) {
                                 }}
                                 labelStyle={{ color: 'rgba(255,255,255,0.85)', fontWeight: 700 }}
                                 itemStyle={{ color: '#fff' }}
-                                formatter={(v: number) => [`${v} วัน`, 'รวม']}
+                                formatter={(v) => [`${Number(v ?? 0)} วัน`, 'รวม']}
                             />
                             <Bar
                                 dataKey="total_days"

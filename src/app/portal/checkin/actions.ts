@@ -26,9 +26,13 @@ async function getEmployeeId(): Promise<string | null> {
 
 export interface CheckInPayload {
     type: 'office' | 'wfh'
-    latitude: number
-    longitude: number
-    accuracy: number
+    // GPS is required for office check-in (gated client-side) but
+    // optional for WFH where the user might be on a desktop without
+    // location services. Server validates type==='office' branch
+    // before persisting any non-null lat/lng.
+    latitude: number | null
+    longitude: number | null
+    accuracy: number | null
     notes?: string
 }
 
@@ -49,8 +53,13 @@ export async function checkIn(payload: CheckInPayload) {
         return { error: 'เช็คอินได้เฉพาะเวลา 7:00-9:30 น. เท่านั้น' }
     }
 
-    // ── Anti-Trick #2: GPS accuracy (reject if > 100m = likely spoofed) ─────
-    if (payload.accuracy > 100) {
+    // Office check-in requires accurate GPS — WFH skips the check entirely.
+    // The GPS-spoof guard rejects > 100m only when we actually have a reading.
+    const hasGps = payload.latitude !== null && payload.longitude !== null
+    if (payload.type === 'office' && !hasGps) {
+        return { error: 'ต้องมีสัญญาณ GPS สำหรับเช็คอินที่ออฟฟิศ — เปิด location services แล้วลองใหม่' }
+    }
+    if (hasGps && payload.accuracy !== null && payload.accuracy > 100) {
         return { error: `สัญญาณ GPS ไม่แม่นยำพอ (${Math.round(payload.accuracy)} ม.) กรุณาไปยังที่โล่งแจ้งและลองใหม่` }
     }
 
@@ -80,19 +89,18 @@ export async function checkIn(payload: CheckInPayload) {
         return { error: 'ยังไม่ได้ตั้งค่าตำแหน่งออฟฟิศ' }
     }
 
-    const distance = haversineDistance(
-        payload.latitude,
-        payload.longitude,
-        location.latitude,
-        location.longitude
-    )
+    // Distance check only runs when we have GPS (WFH may skip it entirely).
+    // For office, the early-return above guarantees both lat/lng are non-null.
+    const distance = (payload.latitude !== null && payload.longitude !== null)
+        ? haversineDistance(payload.latitude, payload.longitude, location.latitude, location.longitude)
+        : null
 
     // Determine actual type based on GPS vs user intent
     let actualType: 'office' | 'wfh' | 'offsite' = payload.type
-    if (payload.type === 'office' && distance > location.radius_meters) {
+    if (payload.type === 'office' && distance !== null && distance > location.radius_meters) {
         // User claims office but GPS says not near
-        return { 
-            error: `คุณอยู่ห่างจากออฟฟิศ ${Math.round(distance)} เมตร (เกินรัศมี ${location.radius_meters} ม.) กรุณาเข้ามาใกล้กว่านี้หรือเลือก WFH` 
+        return {
+            error: `คุณอยู่ห่างจากออฟฟิศ ${Math.round(distance)} เมตร (เกินรัศมี ${location.radius_meters} ม.) กรุณาเข้ามาใกล้กว่านี้หรือเลือก WFH`
         }
     }
     if (payload.type === 'wfh') {
@@ -132,7 +140,7 @@ export async function checkIn(payload: CheckInPayload) {
         id: data.id,
         type: data.type,
         checked_in_at: data.checked_in_at,
-        distance_meters: Math.round(distance),
+        distance_meters: distance !== null ? Math.round(distance) : null,
     }
 }
 

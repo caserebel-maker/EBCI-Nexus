@@ -153,7 +153,9 @@ export function MyLeaveView({ year }: Props) {
         )
     }, [requests, tab, filterType])
 
-    const filterTypeName = filterType ? balances.find(b => b.leave_type_id === filterType)?.name_th : null
+    const filterTypeName: string | null = filterType
+        ? balances.find(b => b.leave_type_id === filterType)?.name_th ?? null
+        : null
 
     return (
         <div className="max-w-5xl mx-auto space-y-6 pb-10">

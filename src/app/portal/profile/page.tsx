@@ -44,7 +44,7 @@ async function findEmployee(userId: string): Promise<EmpRow | null> {
         .eq('user_id', userId)
         .maybeSingle()
 
-    if (byId) return byId as EmpRow
+    if (byId) return byId as unknown as EmpRow
 
     const { data: authData } = await supabaseAdmin.auth.admin.getUserById(userId)
     const userEmail = authData?.user?.email
@@ -62,9 +62,9 @@ async function findEmployee(userId: string): Promise<EmpRow | null> {
     await supabaseAdmin
         .from('employees')
         .update({ user_id: userId })
-        .eq('id', (byEmail as EmpRow).id)
+        .eq('id', (byEmail as unknown as EmpRow).id)
 
-    return byEmail as EmpRow
+    return byEmail as unknown as EmpRow
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

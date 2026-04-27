@@ -95,13 +95,14 @@ export function MonthlyTrendChart({ data, leaveTypes }: Props) {
                                 }}
                                 labelStyle={{ color: 'rgba(255,255,255,0.85)', fontWeight: 700, marginBottom: 4 }}
                                 itemStyle={{ color: '#fff', padding: 0 }}
-                                formatter={(value: number | string, name: string) => {
-                                    const t = leaveTypes.find(x => x.id === name)
-                                    return [`${value} ใบ`, t?.name_th ?? name]
+                                formatter={(value, name) => {
+                                    const key = String(name ?? '')
+                                    const t = leaveTypes.find(x => x.id === key)
+                                    return [`${value ?? 0} ใบ`, t?.name_th ?? key]
                                 }}
                             />
                             <Legend
-                                onClick={onLegendClick}
+                                onClick={(entry) => onLegendClick({ dataKey: entry?.dataKey as string | number | undefined })}
                                 iconSize={10}
                                 formatter={(value: string) => {
                                     const t = leaveTypes.find(x => x.id === value)

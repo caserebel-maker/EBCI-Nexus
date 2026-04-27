@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
+// `eslint` exists at runtime in Next 16 but the published `NextConfig`
+// type drops it on certain channels — cast through a wider shape so
+// the config compiles without losing the option.
+const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -33,6 +36,6 @@ const nextConfig: NextConfig = {
     deviceSizes: [640, 750, 1080, 1200],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
-};
+} as NextConfig;
 
 export default nextConfig;

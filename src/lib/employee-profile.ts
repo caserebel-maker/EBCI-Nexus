@@ -79,7 +79,7 @@ export async function getEmployeeProfile(
 
         if (!data) {
             return {
-                id: employeeId,
+                id: employeeId ?? authUserId ?? '',
                 fullName: fallbackName,
                 nickname: null,
                 email: fallbackEmail,
@@ -113,7 +113,7 @@ export async function getEmployeeProfile(
     } catch (err) {
         console.error('[getEmployeeProfile] error:', err)
         return {
-            id: employeeId,
+            id: employeeId ?? authUserId ?? '',
             fullName: fallbackName,
             nickname: null,
             email: fallbackEmail,
