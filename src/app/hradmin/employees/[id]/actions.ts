@@ -50,17 +50,22 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
 
     const { applicant_current_address, applicant_phone, ...employeeFields } = payload
 
+    // Snapshot the employee row BEFORE the update so the audit can record
+    // a real before/after diff. Single round-trip: pulls every column we
+    // might touch in this action so the audit insert later doesn't need
+    // a second fetch.
+    const { data: before } = await supabaseAdmin
+        .from('employees')
+        .select('employee_code, first_name_th, last_name_th, first_name_en, last_name_en, nickname, position, department, secondary_department, phone, email, employment_type, status, start_date, probation_end_date, date_of_birth, gender, quit_date, quit_reason, approval_level, manager_id, leave_approver_id, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, emergency_contact_address, home_latitude, home_longitude, home_location_label, home_location_note')
+        .eq('id', employeeId)
+        .maybeSingle()
+
     // Pre-flight duplicate check on employee_code if it changed.
     // employee_code is display-only (not an FK target — `employees.id` is)
     // so editing it is safe, but uniqueness is still enforced for sanity.
     const newCode = (employeeFields.employee_code ?? '').trim()
     if (newCode) {
-        const { data: cur } = await supabaseAdmin
-            .from('employees')
-            .select('employee_code')
-            .eq('id', employeeId)
-            .maybeSingle()
-        if (cur?.employee_code !== newCode) {
+        if (before?.employee_code !== newCode) {
             const { data: clash } = await supabaseAdmin
                 .from('employees')
                 .select('id')
@@ -124,6 +129,49 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
     if (empError) {
         console.error('updateEmployee error:', empError)
         return { error: empError.message }
+    }
+
+    // Audit log — best-effort. We compute a per-field diff between the
+    // before snapshot and the payload, then write ONE row containing the
+    // map of changes. Empty diff = silent (no audit row for "save with
+    // no actual change"). The User UPDATE has already landed; an audit
+    // failure here is recoverable.
+    try {
+        if (before) {
+            const beforeRecord = before as Record<string, unknown>
+            const afterRecord = employeeFields as unknown as Record<string, unknown>
+            const oldDiff: Record<string, unknown> = {}
+            const newDiff: Record<string, unknown> = {}
+            for (const k of Object.keys(beforeRecord)) {
+                // Skip keys not present in payload — caller didn't intend to touch them.
+                if (!(k in afterRecord) && k !== 'employee_code') continue
+                const oldVal = beforeRecord[k] ?? null
+                let newVal: unknown
+                if (k === 'employee_code') newVal = newCode || beforeRecord.employee_code
+                else newVal = afterRecord[k] ?? null
+                // Treat empty string and null as equivalent — many fields
+                // arrive as '' from form blanks.
+                const oldNorm = oldVal === '' ? null : oldVal
+                const newNorm = newVal === '' ? null : newVal
+                if (String(oldNorm) !== String(newNorm)) {
+                    oldDiff[k] = oldVal
+                    newDiff[k] = newVal
+                }
+            }
+            if (Object.keys(newDiff).length > 0) {
+                await supabaseAdmin
+                    .from('employee_audit_log')
+                    .insert({
+                        actor_user_id:      auth.session.id,
+                        target_employee_id: employeeId,
+                        action:             'update_employee',
+                        old_value:          oldDiff,
+                        new_value:          newDiff,
+                    })
+            }
+        }
+    } catch (err) {
+        console.error('[employees/update] audit insert failed:', err)
     }
 
     // Update applicants table if address / phone changed
