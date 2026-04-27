@@ -1267,12 +1267,16 @@ export function EmployeeProfileView({
                 viewers don't even see the empty state). Hidden in print
                 because the contract files themselves are big and live as
                 separate PDFs that HR exports individually. ───────────── */}
+            {/* canEdit gates the upload form + per-row delete button.
+                Following the user's request: even HR can only upload
+                while in profile edit mode — keeps the read view tidy
+                and avoids accidental clicks on the green button. */}
             {isHrAdmin && (
                 <div className="print:hidden">
                     <ContractsCard
                         employeeId={id}
                         contracts={contracts}
-                        canEdit={isHrAdmin}
+                        canEdit={isEditing}
                     />
                 </div>
             )}
@@ -1287,6 +1291,7 @@ export function EmployeeProfileView({
                 <SalarySlipsCard
                     employeeId={id}
                     slips={salarySlips}
+                    canEdit={isEditing}
                 />
             )}
 

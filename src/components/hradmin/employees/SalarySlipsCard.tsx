@@ -38,9 +38,14 @@ export interface SalarySlip {
 interface Props {
     employeeId: string         // employee_code or UUID
     slips: SalarySlip[]
+    /** Mirror ContractsCard pattern: only show upload + delete
+     *  while the parent profile is in edit mode, so the read
+     *  view stays clean and HR doesn't click the green button by
+     *  accident. */
+    canEdit: boolean
 }
 
-export function SalarySlipsCard({ employeeId, slips }: Props) {
+export function SalarySlipsCard({ employeeId, slips, canEdit }: Props) {
     const router = useRouter()
     const [showForm, setShowForm] = useState(false)
     const [isDeleting, startDelete] = useTransition()
@@ -96,7 +101,7 @@ export function SalarySlipsCard({ employeeId, slips }: Props) {
                         ({slips.length} รายการ)
                     </span>
                 </div>
-                {!showForm && (
+                {canEdit && !showForm && (
                     <button
                         type="button"
                         onClick={() => setShowForm(true)}
@@ -108,7 +113,7 @@ export function SalarySlipsCard({ employeeId, slips }: Props) {
                 )}
             </div>
 
-            {showForm && (
+            {canEdit && showForm && (
                 <UploadForm
                     employeeId={employeeId}
                     onClose={() => setShowForm(false)}
@@ -138,6 +143,7 @@ export function SalarySlipsCard({ employeeId, slips }: Props) {
                             key={slip.id}
                             slip={slip}
                             employeeId={employeeId}
+                            canDelete={canEdit}
                             onDelete={() => handleDelete(slip.id, `${THAI_MONTHS[slip.month - 1]} ${slip.year + 543}`)}
                             isDeleting={isDeleting}
                         />
@@ -151,10 +157,11 @@ export function SalarySlipsCard({ employeeId, slips }: Props) {
 // ── Pieces ──────────────────────────────────────────────────────────────
 
 function SlipRow({
-    slip, employeeId, onDelete, isDeleting,
+    slip, employeeId, canDelete, onDelete, isDeleting,
 }: {
     slip: SalarySlip
     employeeId: string
+    canDelete: boolean
     onDelete: () => void
     isDeleting: boolean
 }) {
@@ -189,15 +196,17 @@ function SlipRow({
                 <Download size={12} />
                 ดาวน์โหลด
             </a>
-            <button
-                type="button"
-                onClick={onDelete}
-                disabled={isDeleting}
-                className="shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/20 disabled:opacity-50"
-                title="ลบสลิป (soft delete)"
-            >
-                {isDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-            </button>
+            {canDelete && (
+                <button
+                    type="button"
+                    onClick={onDelete}
+                    disabled={isDeleting}
+                    className="shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/20 disabled:opacity-50"
+                    title="ลบสลิป (soft delete)"
+                >
+                    {isDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                </button>
+            )}
         </li>
     )
 }
