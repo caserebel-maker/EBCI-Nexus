@@ -5,7 +5,7 @@ import {
     ArrowLeft, User, Phone, Mail, MapPin, Building, Briefcase,
     Calendar, Shield, ChevronRight, Pencil, X, Check,
     AlertCircle, CheckCircle2, Camera, Trash2, Clock, FileText,
-    Lock, LogOut,
+    Lock, LogOut, Printer,
 } from "lucide-react"
 import type { LucideIcon } from 'lucide-react'
 import Link from "next/link"
@@ -475,7 +475,36 @@ export function EmployeeProfileView({
     }
 
     return (
-        <div className="space-y-6 max-w-5xl mx-auto pb-24" style={{ fontSize: '1.05rem' }}>
+        <div className="space-y-6 max-w-5xl mx-auto pb-24 print-employee" style={{ fontSize: '1.05rem' }}>
+
+            {/* ── Print-only header — only renders on paper. Carries the
+                org name + employee identity + the print date so the
+                printout stands on its own when filed away from the app.
+                Tailwind's `hidden print:block` swaps display for print. */}
+            <header className="hidden print:block preserve-color" style={{
+                borderBottom: '2px solid #000',
+                paddingBottom: 12,
+                marginBottom: 14,
+            }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                    <div>
+                        <p style={{ margin: 0, fontSize: '10pt', letterSpacing: '0.2em', color: '#666' }}>
+                            EBCI · ข้อมูลพนักงาน
+                        </p>
+                        <h1 style={{ margin: '4px 0 0', fontSize: '18pt', fontWeight: 700, color: '#000' }}>
+                            {displayName}
+                            <span style={{ marginLeft: 10, fontSize: '11pt', fontWeight: 400, color: '#666' }}>
+                                {employee.employee_code}
+                            </span>
+                        </h1>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '9pt', color: '#666' }}>
+                        พิมพ์เมื่อ {new Date().toLocaleDateString('th-TH', {
+                            day: '2-digit', month: 'long', year: 'numeric',
+                        })}
+                    </p>
+                </div>
+            </header>
 
             {/* ── Delete Confirm Dialog ─────────────────────────────────────── */}
             {showDeleteConfirm && (
@@ -521,7 +550,7 @@ export function EmployeeProfileView({
             {/* ── Toast ────────────────────────────────────────────────────── */}
             {toast && (
                 <div className={cn(
-                    'fixed top-6 right-6 z-50 flex items-center gap-2 px-5 py-3 rounded-xl shadow-xl text-[1rem] font-semibold',
+                    'fixed top-6 right-6 z-50 flex items-center gap-2 px-5 py-3 rounded-xl shadow-xl text-[1rem] font-semibold print:hidden',
                     toast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
                 )}>
                     {toast.type === 'success' ? <CheckCircle2 size={17} /> : <AlertCircle size={17} />}
@@ -530,13 +559,22 @@ export function EmployeeProfileView({
             )}
 
             {/* ── Breadcrumb + Actions ──────────────────────────────────────── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
                 <div className="flex items-center gap-2 text-[0.95rem] text-white/92">
                     <Link href="/hradmin/employees" className="hover:text-white transition-colors">พนักงาน</Link>
                     <ChevronRight size={14} />
                     <span className="text-white font-medium">โปรไฟล์พนักงาน</span>
                 </div>
                 <div className="flex items-center gap-3">
+                    {isHrAdmin && !isEditing && (
+                        <button
+                            onClick={() => window.print()}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[0.95rem] font-semibold bg-white/10 hover:bg-white/18 text-white/92 hover:text-white border border-white/15 transition-all"
+                            title="พิมพ์ / บันทึกเป็น PDF (ขาวดำ + รูปสี)"
+                        >
+                            <Printer size={14} /> ส่งออก PDF
+                        </button>
+                    )}
                     {isHrAdmin && !isEditing && (
                         <button
                             onClick={handleEdit}
@@ -570,12 +608,16 @@ export function EmployeeProfileView({
             <div style={silverCard} className="p-6 shadow-2xl">
                 <div className="flex flex-col md:flex-row gap-6 items-start">
 
-                    {/* Photo */}
+                    {/* Photo — `preserve-color` keeps the print version
+                        in colour while the rest of the card flattens to
+                        b/w. The wrapper carries the class because the
+                        photo's gradient placeholder also needs to print
+                        with its EBCI maroon when there's no real image. */}
                     <div className="flex flex-col items-center gap-2 shrink-0">
-                        <div className="relative">
+                        <div className="relative preserve-color">
                             <div className="h-36 w-36 rounded-2xl bg-gradient-to-br from-[#882136] to-[#3a0d14] flex items-center justify-center text-white font-black text-5xl border-2 border-white/20 overflow-hidden shadow-xl">
                                 {(photoPreview || photoUrl)
-                                    ? <img src={photoPreview ?? photoUrl!} className="h-full w-full object-cover" alt={currentDisplayName} />
+                                    ? <img src={photoPreview ?? photoUrl!} className="h-full w-full object-cover preserve-color" alt={currentDisplayName} />
                                     : <span>{currentDisplayName.charAt(0)}</span>
                                 }
                             </div>
@@ -962,18 +1004,22 @@ export function EmployeeProfileView({
 
             {/* ── 5b. Employment contracts (HR-only — RLS enforces this on
                 the server too, but we hide the card client-side so non-HR
-                viewers don't even see the empty state). ───────────────── */}
+                viewers don't even see the empty state). Hidden in print
+                because the contract files themselves are big and live as
+                separate PDFs that HR exports individually. ───────────── */}
             {isHrAdmin && (
-                <ContractsCard
-                    employeeId={id}
-                    contracts={contracts}
-                    canEdit={isHrAdmin}
-                />
+                <div className="print:hidden">
+                    <ContractsCard
+                        employeeId={id}
+                        contracts={contracts}
+                        canEdit={isHrAdmin}
+                    />
+                </div>
             )}
 
             {/* ── 6. Danger Zone (hr_admin only) ───────────────────────────── */}
             {isHrAdmin && (
-                <div style={{
+                <div className="print:hidden" style={{
                     background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #b91c1c 100%)',
                     border: '2px solid #ef4444',
                     borderRadius: '16px',

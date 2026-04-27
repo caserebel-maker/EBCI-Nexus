@@ -155,6 +155,66 @@ body {
   .print-break-inside-avoid {
     break-inside: avoid;
   }
+
+  /* ── Employee profile printable card ────────────────────────────────
+     Used by /hradmin/employees/[id] when HR clicks "ส่งออก PDF". The
+     dark glass UI fights the printer (waste of toner + unreadable),
+     so we flatten everything to black-on-white text and grayscale
+     the badges/icons. Photos and anything else marked
+     `.preserve-color` keep their original color. */
+
+  /* Hide the app shell — sidebar, top nav, bottom mobile nav. */
+  aside,
+  header[data-app-header],
+  [data-no-print] {
+    display: none !important;
+  }
+
+  /* Reset the printable subtree to paper-friendly defaults. The
+     universal selector is heavy but scoped to the .print-employee
+     container, so it only affects this one page. */
+  .print-employee {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+  .print-employee *:not(.preserve-color):not(.preserve-color *) {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    color: black !important;
+    border-color: #888 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    backdrop-filter: none !important;
+    filter: grayscale(100%) !important;
+  }
+
+  /* Photos (and anything tagged `preserve-color`) opt out of the
+     grayscale rule so the printout still has a recognizable face.
+     `print-color-adjust: exact` forces Chromium/Safari to honour
+     the colour even on default-printer settings. */
+  .print-employee .preserve-color,
+  .print-employee .preserve-color *,
+  .print-employee img.preserve-color {
+    filter: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Page-break hints. Cards shouldn't split mid-section. */
+  .print-employee section,
+  .print-employee [data-print-section] {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-bottom: 8pt;
+  }
+
+  /* Hide URL trailing text Chrome appends to <a> in printouts. */
+  .print-employee a[href]::after {
+    content: '' !important;
+  }
 }
 @layer base {
   html {
