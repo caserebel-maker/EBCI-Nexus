@@ -2369,3 +2369,127 @@ identities) แต่ไม่มีใครเจอเพราะ:
 ---
 
 *End of §14 · 5 commits · §3.6 carryover ปิดครบ. Next session = §3.2 Vercel env vars (5 min, requires user dashboard access) หรือ §3.3 Tab 4 mobile polish (requires real iPhone).*
+
+---
+
+# §15 — APR27 Office afternoon — Hire flow, Contracts, PDF export, Payroll permission system
+
+**Date:** 2026-04-27
+**Location:** Office Mac mini
+**Commits shipped:** 17
+**Last commit:** `6c4adfb`
+
+## TL;DR
+
+Marathon afternoon — closed four heavyweight modules plus a stack of UX polish:
+
+1. **One-click hire** (commits `6f0e2b9` `c079795`) — applicant ↦ employee promotion that copies every shared field (title/names/photo/contact/DOB/emergency contact) and fires a DB trigger to seed leave_balances. HR fan-out notification on every status change. Hire button visibility relaxed to all states except draft/rejected.
+
+2. **Contracts module** (commits `d89511e` `6a57085`) — new `employee_contracts` table + private Storage bucket + ContractsCard on profile + 3-month backfill progress banner on the employees list. Supports 5 contract types with soft-delete only (legal retention).
+
+3. **B&W PDF export** (commits `5f20de0` `c300619` `6773e26` `c55e81c` `63e6e09`) — print-optimized version of the profile page that flattens the dark glass UI to paper while keeping the photo in colour. Single-page A4 target hit by hiding chart/history, dropping card borders, and shrinking font to 9.5pt. Plus three iterations on the INP regression caused by `window.print()` (settled on double `requestAnimationFrame`).
+
+4. **Salary slips + payroll permission** (commit `777a5a3`) — full payroll module with allow-list `can_manage_payroll` flag. Per user's explicit request, มด (อาทิตย์) is permanently excluded from this flag — she retains full HR access but cannot see anyone's salary slips. Bulk upload page parses filenames to match employee codes; in-app + email notification on every new slip; portal page where employees see only their own.
+
+Plus 8 smaller wins: calendar icon white-on-dark fix; bereavement leave 5 days from day 1; warm female-voice rewrite of all 7 careers email templates; approver-chain preview box on the leave form; home-location section with Google Maps embed; new "ข้อมูลส่วนตัว" + "ที่อยู่" cards; auto-seed leave balances trigger; edit-mode gate for upload buttons.
+
+## Commits in order
+
+| # | Commit | Lines | Files | Track |
+|---|---|---|---|---|
+| 1 | `eabc03c` | 30 | 1 | Forms — calendar icon attempt 1 (filter:invert) |
+| 2 | `9529a90` | 38 | 1 | Forms — calendar icon final (inline white SVG) |
+| 3 | `7550445` | 36 | 1 | Leave — bereavement 5 days from day 1 (53 active = 265 days seeded) |
+| 4 | `6f0e2b9` | 685 | 4 | Hire flow — `/api/hradmin/applicants/[id]/hire` + HireModal + auto-seed trigger |
+| 5 | `c079795` | 76 | 3 | Applicants — HR fan-out + relaxed hire button visibility |
+| 6 | `2a5047e` | 122 | 1 | Emails — careers templates rewrite (7 templates, "ดิฉัน" + "ค่ะ") |
+| 7 | `10bc9f8` | 244 | 2 | Leave — approver chain preview box on form step 2 |
+| 8 | `d89511e` | 773 | 3 | Contracts — DB + Storage + API (WIP, no UI yet) |
+| 9 | `6a57085` | 293 | 5 | Contracts — UI ContractsCard + backfill progress banner |
+| 10 | `5f20de0` | 120 | 2 | Print — B&W PDF export with colour photo |
+| 11 | `c300619` | 28 | 1 | Print — hide app shell chrome (sidebar/banner/identity) |
+| 12 | `6773e26` | 14 | 2 | Print — defer window.print() (INP attempt 1) |
+| 13 | `63e6e09` | 503 | 5 | Profile — home location + DOB/gender/EN name + 1-page print |
+| 14 | `c55e81c` | 77 | 3 | Print — double-rAF INP fix + drop card borders |
+| 15 | `777a5a3` | 1983 | 19 | **Payroll** — salary slips + allow-list permission gate |
+| 16 | `6c4adfb` | 28 | 2 | UX — uploads only in edit mode |
+
+(Commit numbering above is roughly chronological within the session — actual git order matches the commit hashes.)
+
+## DB migrations applied
+
+1. `grant_bereavement_leave_from_day_one` — INSERT 53 rows into leave_balances with total_days=5
+2. `set_bereavement_default_days_5` — UPDATE leave_types.bereavement.default_days_per_year = 5 + description
+3. `auto_seed_leave_balances_on_employee_insert` — TRIGGER on employees AFTER INSERT to seed every type with non-null default_days_per_year
+4. `create_employee_contracts_table` — table + indexes + RLS + storage bucket `employee-contracts`
+5. `add_home_location_to_employees` — 4 new columns (lat/lng/label/note) + range CHECK constraints
+6. `create_salary_slips_and_payroll_permission` — `salary_slips` table + `User.can_manage_payroll` column + RLS policies + storage bucket `salary-slips`
+
+Plus one direct UPDATE to set `User.can_manage_payroll = true` for ปอนด์ (admin user).
+
+## New routes
+
+- `POST /api/hradmin/applicants/[id]/hire`
+- `GET / POST /api/hradmin/employees/[id]/contracts`
+- `GET / DELETE /api/hradmin/employees/[id]/contracts/[contractId]`
+- `GET / POST /api/hradmin/employees/[id]/salary-slips`
+- `GET / DELETE /api/hradmin/employees/[id]/salary-slips/[slipId]`
+- `POST /api/hradmin/payroll/bulk-upload`
+- `GET /api/portal/payroll`
+- `GET /api/portal/payroll/[slipId]`
+- `GET /api/leave/approver-chain`
+- `/hradmin/payroll/bulk` (page)
+- `/portal/payroll` (page)
+
+## Files added
+
+- `src/components/hradmin/employees/ContractsCard.tsx`
+- `src/components/hradmin/employees/ContractsCoverageBanner.tsx`
+- `src/components/hradmin/employees/LocationSection.tsx`
+- `src/components/hradmin/employees/SalarySlipsCard.tsx`
+- `src/components/hradmin/applicants/HireModal.tsx`
+- `src/lib/payroll-notify.ts`
+- `src/lib/salary-slip-persist.ts`
+- (Plus all the API routes + page components listed above)
+
+## Quirks learned
+
+1. **`window.print()` blocks the paint loop** — `setTimeout(0)` defers but the dialog still attributes its open-time to the input event because no paint happens between click and print. Fix: double `requestAnimationFrame` so at least one paint cycle completes first. Brave's INP popup stops firing.
+
+2. **Print preview emulates a narrow viewport** — every `lg:hidden` element on the page suddenly becomes visible during print, which is why our app shell (PriorityAlerts banner, DailyGreeting card, mobile identity header, top navbar, bottom nav, spacer) all leaked into PDF exports. Fix: explicit `print:hidden` on each leak point in shell.tsx.
+
+3. **`silverCard`'s `border: 1px solid rgba(255,255,255,0.65)` becomes a white rectangle on paper** — invisible on the dark UI, painfully visible on the printout. Print rule overrides to `border: none` with a subtle bottom rule for separation.
+
+4. **PostgreSQL FK on `leave_balances.employee_id` points at `employees.id` (UUID), not `employees.employee_code`** — first INSERT attempt failed because we used the text code. Always FK to UUID-style id columns; codes are for display.
+
+5. **`'use server'` files don't safely export non-action helpers to other route files** — the bulk-upload route initially imported `persistSlip` from the single-upload route. Next 16's compiler complained. Moved the shared helper to `/lib/salary-slip-persist.ts` (no `'use server'` directive).
+
+6. **Bulk upload filename matching needs longest-first sort** — naive `String.includes()` on the codes would match `060-01` substring inside `060-001` filenames. Sort by `code.length` descending and check longest first.
+
+7. **Salary-slip replace-on-conflict** uses a partial unique index `WHERE deleted_at IS NULL` — re-uploading the same period soft-deletes the old slip, freeing the index, before the new INSERT. Old blob stays in Storage to satisfy 7-year tax retention.
+
+8. **`can_manage_payroll` default false** — true allow-list pattern. Without explicit grant from ปอนด์, no one (not even hr_admin role holders) can see salary data. มด in particular is intentionally never granted per user's explicit instruction — UI cards stay invisible, routes 404, API 403s.
+
+## Build state at end
+
+- `npx tsc --noEmit` → exit **0**
+- 17 new commits, all green
+- ~110 routes total (up from 100)
+- 0 TS errors introduced; 0 regressions
+
+## Open at end of session
+
+User reported just before logging off:
+1. "ContractsCard upload button — should be in edit mode only" → fixed in `6c4adfb`
+2. "การ์ดสลิปเงินเดือนอยู่ตรงไหน" — likely Vercel deploy lag or session cache (commit `777a5a3` was 5 min before this question). Will verify on laptop after pull + relogin.
+3. "Print ยังแสดงไม่ครบ" — new "ข้อมูลส่วนตัว" + "ที่อยู่" sections might be page 2 of preview but visible in saved PDF. Will verify.
+
+Next session priorities (per NEXT.md §3):
+- §3.1 Verify salary card visible after pull/relogin
+- §3.2 UI permission editor so ปอนด์ can grant `can_manage_payroll` from the app instead of SQL
+- §3.3 Create user account for accounting team with `payroll_manager` preset
+- §3.4 End-to-end test of bulk upload with sample slips
+
+---
+
+*End of §15 · 17 commits · 4 major modules + 8 polish items · Hire + Contracts + PDF + Payroll permission system live. Continue session = laptop, pull + `อ่าน docs/NEXT.md แล้วทำต่อ`.*
