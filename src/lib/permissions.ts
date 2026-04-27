@@ -15,6 +15,11 @@ export type UserPermissions = {
      * view their OWN slips regardless of this flag.
      */
     can_manage_payroll: boolean
+    /**
+     * Read access to the employee_audit_log + user_permission_audit_log
+     * tables. Default off — only Super Admin sees system-wide audit.
+     */
+    can_view_audit_log: boolean
 }
 
 export const EMPTY_PERMISSIONS: UserPermissions = {
@@ -25,7 +30,29 @@ export const EMPTY_PERMISSIONS: UserPermissions = {
     can_approve_leave: false,
     can_manage_system: false,
     can_manage_payroll: false,
+    can_view_audit_log: false,
 }
+
+/**
+ * Ordered list of every permission flag, paired with a Thai label and a
+ * one-line description. The editor renders checkboxes off this list so
+ * adding a new flag here makes it appear in the UI without code changes
+ * elsewhere.
+ */
+export const PERMISSION_FLAGS: Array<{
+    key: keyof UserPermissions
+    label: string
+    description: string
+}> = [
+    { key: 'can_view_all_employees',   label: 'ดูข้อมูลพนักงานทุกคน',     description: 'เข้าถึงรายชื่อ + โปรไฟล์พนักงานทั้งบริษัท' },
+    { key: 'can_edit_employees',       label: 'แก้ไขข้อมูลพนักงาน',       description: 'อัปเดต/ลบ/เพิ่มพนักงาน · ตั้งค่าผู้บังคับบัญชา' },
+    { key: 'can_view_approval_limits', label: 'ดูวงเงินอนุมัติเป๊ะ',       description: 'เห็นตัวเลข budget เต็ม (ไม่ใช่แค่ tier)' },
+    { key: 'can_edit_approval_limits', label: 'แก้ไขวงเงินอนุมัติ',        description: 'กำหนดวงเงิน budget approval ของพนักงาน' },
+    { key: 'can_approve_leave',        label: 'อนุมัติการลา',              description: 'อนุมัติ/ปฏิเสธคำขอลานอกเหนือสายบังคับบัญชา' },
+    { key: 'can_manage_system',        label: 'จัดการระบบ',                description: 'แก้ไขสิทธิ์ของผู้ใช้คนอื่น · ดู system quota · super-admin' },
+    { key: 'can_manage_payroll',       label: 'จัดการเงินเดือน (สลิป)',    description: 'อัปโหลด/ดูสลิปเงินเดือนของพนักงานทุกคน' },
+    { key: 'can_view_audit_log',       label: 'ดู audit log',              description: 'อ่านประวัติการแก้ไขข้อมูล + เปลี่ยนสิทธิ์' },
+]
 
 export type ApprovalTier = 'small' | 'medium' | 'large' | 'unlimited'
 

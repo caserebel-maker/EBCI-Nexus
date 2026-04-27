@@ -12,7 +12,7 @@ export async function getCurrentPermissions(): Promise<UserPermissions> {
 
     const { data } = await supabaseAdmin
         .from('User')
-        .select('can_view_all_employees, can_edit_employees, can_view_approval_limits, can_edit_approval_limits, can_approve_leave, can_manage_system, can_manage_payroll')
+        .select('can_view_all_employees, can_edit_employees, can_view_approval_limits, can_edit_approval_limits, can_approve_leave, can_manage_system, can_manage_payroll, can_view_audit_log')
         .eq('id', session.id)
         .maybeSingle()
 
@@ -25,5 +25,6 @@ export async function getCurrentPermissions(): Promise<UserPermissions> {
         can_approve_leave:        Boolean(data.can_approve_leave),
         can_manage_system:        Boolean(data.can_manage_system),
         can_manage_payroll:       Boolean(data.can_manage_payroll),
+        can_view_audit_log:       Boolean(data.can_view_audit_log),
     }
 }

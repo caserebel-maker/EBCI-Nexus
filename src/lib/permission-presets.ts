@@ -3,7 +3,7 @@ import type { UserPermissions } from './permissions'
 export const PERMISSION_PRESETS = {
     super_admin: {
         label: '🔑 Super Admin',
-        description: 'ทุก permission — จัดการระบบได้เต็มที่ + ดู/อัปโหลดสลิปเงินเดือน',
+        description: 'ทุก permission — จัดการระบบได้เต็มที่ + ดู/อัปโหลดสลิปเงินเดือน + audit log',
         permissions: {
             can_view_all_employees:   true,
             can_edit_employees:       true,
@@ -12,6 +12,7 @@ export const PERMISSION_PRESETS = {
             can_approve_leave:        true,
             can_manage_system:        true,
             can_manage_payroll:       true,
+            can_view_audit_log:       true,
         },
     },
     executive: {
@@ -25,6 +26,7 @@ export const PERMISSION_PRESETS = {
             can_approve_leave:        true,
             can_manage_system:        false,
             can_manage_payroll:       false,
+            can_view_audit_log:       false,
         },
     },
     hr_manager: {
@@ -38,6 +40,7 @@ export const PERMISSION_PRESETS = {
             can_approve_leave:        true,
             can_manage_system:        false,
             can_manage_payroll:       false,
+            can_view_audit_log:       false,
         },
     },
     payroll_manager: {
@@ -51,6 +54,7 @@ export const PERMISSION_PRESETS = {
             can_approve_leave:        false,
             can_manage_system:        false,
             can_manage_payroll:       true,
+            can_view_audit_log:       false,
         },
     },
     employee: {
@@ -64,11 +68,21 @@ export const PERMISSION_PRESETS = {
             can_approve_leave:        false,
             can_manage_system:        false,
             can_manage_payroll:       false,
+            can_view_audit_log:       false,
         },
     },
 } as const satisfies Record<string, { label: string; description: string; permissions: UserPermissions }>
 
 export type PresetName = keyof typeof PERMISSION_PRESETS
+
+/**
+ * Convenience: stable iteration order for the editor's preset dropdown.
+ * Object.keys() ordering happens to match insertion order in V8 but
+ * making it explicit removes any doubt.
+ */
+export const PRESET_ORDER: PresetName[] = [
+    'super_admin', 'hr_manager', 'payroll_manager', 'executive', 'employee',
+]
 
 export function detectPreset(perms: UserPermissions): PresetName | 'custom' {
     for (const [name, preset] of Object.entries(PERMISSION_PRESETS)) {
