@@ -5,13 +5,14 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
     CalendarDays, BarChart3, Users, CalendarRange, FileText, Download,
-    RefreshCw, ChevronLeft, ChevronRight, Info, Wallet,
+    RefreshCw, ChevronLeft, ChevronRight, Info, Wallet, Layers,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BalancesFilters } from '@/components/hradmin/leave/BalancesFilters'
 import { BalancesTable } from '@/components/hradmin/leave/BalancesTable'
 import { BalancesCards } from '@/components/hradmin/leave/BalancesCards'
 import { AdjustBalanceModal } from '@/components/hradmin/leave/AdjustBalanceModal'
+import { BulkAdjustModal } from '@/components/hradmin/leave/BulkAdjustModal'
 import { YearSelector } from '@/components/hradmin/leave/YearSelector'
 import type {
     BalanceCell, EmployeeRowLite, LeaveTypeLite, BalancesFilterState,
@@ -61,6 +62,7 @@ export function BalancesView({
         employeeId: string
         focusTypeId: string | null
     } | null>(null)
+    const [bulkOpen, setBulkOpen] = useState(false)
     const [toast, setToast] = useState<string | null>(null)
 
     const refreshList = () => {
@@ -179,6 +181,14 @@ export function BalancesView({
                 </p>
                 <div className="flex items-center gap-1.5">
                     <button
+                        onClick={() => setBulkOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-amber-400 text-[#2a0a0e] shadow hover:bg-amber-300 transition-colors"
+                    >
+                        <Layers size={13} />
+                        <span className="hidden sm:inline">ปรับยอดหลายคน</span>
+                        <span className="sm:hidden">Bulk</span>
+                    </button>
+                    <button
                         onClick={exportCsv}
                         disabled={pagination.total === 0}
                         className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-white/80 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors disabled:opacity-50"
@@ -260,6 +270,20 @@ export function BalancesView({
                 cells={modalCells}
                 year={year}
                 focusTypeId={modalState?.focusTypeId ?? null}
+            />
+
+            {/* Bulk adjust modal */}
+            <BulkAdjustModal
+                open={bulkOpen}
+                onClose={() => setBulkOpen(false)}
+                onApplied={msg => {
+                    setBulkOpen(false)
+                    showToast(msg)
+                    refreshList()
+                }}
+                leaveTypes={leaveTypes}
+                departments={departments}
+                year={year}
             />
 
             {/* Toast */}
