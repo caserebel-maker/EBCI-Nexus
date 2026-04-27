@@ -160,4 +160,34 @@ body {
   html {
     font-size: 22px;
   }
+
+  /* Make native date / time pickers visible on dark backgrounds.
+     Without this, the calendar icon ships near-black on near-black
+     and looks like the field has no picker at all. `color-scheme:
+     dark` flips the browser's own light controls; the explicit
+     filter+opacity covers older Chromium where color-scheme alone
+     doesn't recolor the indicator. */
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="week"] {
+    color-scheme: dark;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  input[type="month"]::-webkit-calendar-picker-indicator,
+  input[type="week"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(1.4);
+    opacity: 0.95;
+    cursor: pointer;
+    padding: 2px;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator:hover,
+  input[type="time"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
 }
