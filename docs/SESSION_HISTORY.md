@@ -26,6 +26,8 @@
 | 14 | **24 เม.ย. (Office afternoon)** | (in this file) | §3.6 carryover sweep |
 | 15 | **27 เม.ย. (Office afternoon)** | (in this file) | Hire flow · Contracts · PDF export · Payroll permission system |
 | 16 | **27 เม.ย. (Home night)** | (in this file) | Permission editor UI · Print 2-col fix |
+| 17 | **27 เม.ย. (Home, late)** | (in this file) | Audit log viewer + wire updateEmployee audit · pre-existing TS errors closed |
+| 18 | **27→28 เม.ย. (Home, overnight)** | (in this file) | Print flat layout · ปุ๋ย account onboarding · permission-driven sidebar menu |
 
 ---
 
@@ -2796,3 +2798,124 @@ So the next code-only push needs new direction from you. Most leftover items are
 ---
 
 *End of §17 · 2 source commits · audit pipeline closed end-to-end · pre-existing TS errors retired. Total this evening §16+§17: 6 source + 2 docs commits.*
+
+
+
+<a id="section-18"></a>
+# §18. APR27→28 (Home, overnight) — Print Flat + ปุ๋ย Onboarding + Permission Menu
+
+*Source: this file. 2 source commits + 1 DB-only change, all push.*
+*Continued from §17 — same evening, user kept iterating into the early morning.*
+
+---
+
+## 0. TL;DR
+
+| Track | What |
+|---|---|
+| **Print flat layout** | User saw the print preview and asked "กรอบมันแปลกๆ ถ้าไม่เอากรอบได้มั้ย ให้เป็นข้อมูลอย่างเดียว". Stripped all card frames in @media print except the hero (photo+name) which keeps a thin frame as the page anchor. |
+| **ปุ๋ย onboarding (DB only)** | Created User account `wiyada` for วิยะดา เหง้าเทพ (449-62, แผนกบัญชี) with Payroll Manager preset. employees.user_id linked to the new User row. Triggered by user trying to find the Payroll Manager preset and us discovering she had no login at all. |
+| **Permission-driven sidebar menu** | User chose the "minimal + clean" path: keep admin toggle as-is, just bolt one extra menu item onto employees who have can_manage_payroll. shell.tsx now appends "อัปโหลดสลิปเงินเดือน" to the nav when the flag is true. /portal/payslips → /portal/payroll typo also fixed. |
+
+---
+
+## 1. Commits
+
+| # | Commit | What |
+|---|---|---|
+| 2 | `a0a8347` | feat(nav): permission-driven extra menu — payroll uploaders see one extra link |
+| 1 | `ba46170` | fix(print): strip card frames — flat data layout, hero stays framed |
+
+(Plus 1 DB-only change for ปุ๋ย's User row + linkage — recorded here for completeness, no commit.)
+
+---
+
+## 2. Print flat layout — design call
+
+User feedback: "ให้เป็นข้อมูลอย่างเดียวเลย เรียงเป็นบรรทัดๆ section บนที่มีรูปก็เอาไว้เหมือนเดิม".
+
+**Why the previous CSS didn't already do this:** silverCard + glass styles use inline `style={{ border: '1px solid rgba(...)' }}`. Inline beats class selectors on specificity, but `!important` from CSS DOES beat plain inline styles. The earlier print rule had `border: none !important` then re-added `border-bottom: 1px solid #d1d5db !important`, which preserved a visible line between cards — and the inline 4-side border bled through with grey colour from the universal greyscale rule.
+
+**Fix:**
+
+1. Tag hero card with `data-print-hero` (the one with photo + name + badges)
+2. Rewrite the print card rule to FULLY strip non-hero cards via `:not([data-print-hero])`:
+   - padding: 0
+   - margin: 0 0 6pt
+   - border: 0
+   - background: transparent
+   - box-shadow: none
+3. Explicit `[data-print-hero]` rule keeps a thin dark frame around the photo+name block
+4. Print rule for h2/h3 (SHead) — bottom border + tighter padding so the section break is carried by the heading itself
+5. data-print-section gap tightened to `4pt`
+
+PDF result: hero card with photo + name + badges anchors the top, then a single column of section headings + InfoRow data flows beneath, all on one A4.
+
+## 3. ปุ๋ย onboarding — DB-only sequence
+
+**Setup:** User wanted to grant payroll permission to a "บัญชี" person and asked where the button is. Their screenshot showed they were on the employee profile page, not the permissions editor — a navigation discoverability gap that we'll address with a deeper /hradmin/employees/[id] → /settings/permissions cross-link in a future iteration.
+
+**Discovery:** Queried for the employee in question (วิยะดา, employee_code=449-62, แผนกบัญชี). Found `user_id = NULL` — she had no login at all. Without a User row, no permission editing was possible.
+
+**Resolution:** Single SQL via Supabase MCP — INSERT into `User` + UPDATE `employees.user_id` to link:
+
+```sql
+WITH new_user AS (
+    INSERT INTO "User" (id, username, password, role, name, ...flags...)
+    VALUES (gen_random_uuid()::text, 'wiyada', '0000', 'manager',
+            'วิยะดา เหง้าเทพ (ปุ๋ย)', ..., true, false)  -- payroll only
+    RETURNING id
+)
+UPDATE employees SET user_id = (SELECT id FROM new_user)
+WHERE id = '1853ad0b-51fd-4a0b-9b93-9da10f397652'
+RETURNING id, employee_code, nickname, user_id;
+```
+
+Later changed her role from `manager` → `employee` after the permission-driven nav landed (see §4) so her sidebar baseline is the cleaner EMPLOYEE nav, not the rarely-used MANAGER nav.
+
+**Gap surfaced:** No UI for creating User accounts. Hire flow creates `employees` rows but doesn't create User accounts. This is C-list backlog: "สร้าง user account UI" — should live next to the permissions editor at `/hradmin/settings/permissions`.
+
+## 4. Permission-driven menu — minimal-touch design
+
+User considered two designs:
+
+**Option A (heavy):** Drop the admin/employee shell distinction entirely. One unified shell, sidebar fully permission-driven, no toggle button. Requires unifying NAVIGATION_CONFIG + restyling /hradmin chrome to match /portal.
+
+**Option B (minimal):** Keep everything as-is. Just append ONE extra menu item to employees with `can_manage_payroll`. Toggle button stays for hr_admin.
+
+User picked B explicitly: "เพราะระบบมันเกือบจะสมบูรณ์แล้ว แต่มีแค่ประเด็นของบัญชี... แค่ให้มีเมนูมากกว่าคนอื่นขึ้นมาอันนึง".
+
+**Implementation (4 files, 53 insertions):**
+
+1. **shell.tsx** — accepts `permissions` prop. After picking the role-based base nav, conditionally appends an extra `{ label: 'อัปโหลดสลิปเงินเดือน', href: '/hradmin/payroll/bulk', icon: Wallet }` when `perms.can_manage_payroll` is true and the base nav doesn't already include it (dedup guard for future).
+
+2. **portal/layout.tsx + hradmin/layout.tsx** — both fetch `getCurrentPermissions()` in their existing parallel `Promise.all` (alerts + profile + permissions, no extra waterfall) and pass through to the shell.
+
+3. **hradmin/layout.tsx layout-level gate widened** — was "role hr_admin OR manager", now also allows anyone with `can_manage_payroll=true`. Without this, ปุ๋ย would get redirected to /portal when she clicks her new menu link, even though her individual page guard (canManagePayroll) would let her in.
+
+4. **navigation.tsx EMPLOYEE nav fix** — the `'/portal/payslips'` link was a typo (no such route). Real route is `/portal/payroll`. Caught while reading the same nav for the new feature.
+
+**ปุ๋ย's experience after this:**
+- Login → land /portal/dashboard like every other employee
+- Sidebar shows the standard 8 employee menus PLUS "อัปโหลดสลิปเงินเดือน" at the end (Wallet icon)
+- Click → /hradmin/payroll/bulk loads. The /hradmin layout's widened gate lets her in.
+- No toggle button (still hr_admin-only as before)
+
+**Bonus side effect:** ม๊อด/มด/ดำ/จิม also get "อัปโหลดสลิปเงินเดือน" in their sidebar (because they have `can_manage_payroll` via Super Admin preset / explicit grant). Previously they had to type the URL — now there's a sidebar shortcut for everyone with the flag.
+
+---
+
+## 5. Lessons
+
+1. **`!important` beats plain inline styles** but DOES NOT beat inline `!important`. The print fix needed the override to be ALL of: in `@media print`, the highest-specificity selector won, AND `!important` on every property — only then did the inline silverCard border give way.
+
+2. **Permission-driven UI is additive, not subtractive** — easier to add "show menu when user has flag" than to refactor to "show only menus user has flag for". Picked the additive path tonight (Option B). The subtractive Option A is still there if/when complexity grows.
+
+3. **User-creation UI is a real gap** — you can grant permissions to existing users but creating new ones requires SQL. Should land next iteration: an "Add user" modal at /hradmin/settings/permissions that creates the User row + employees linkage in one form.
+
+4. **Cross-page nav matters** — user expected the Payroll Manager preset button to be ON the employee profile page. It lives on a separate /settings/permissions page. The mental model "I'm editing this person, so their settings should be here" is real. Worth a "🔐 จัดการสิทธิ์" button on the employee profile that deep-links to the editor pre-filtered to that user.
+
+---
+
+*End of §18 · 2 source commits + 1 DB seed. Total this evening §16+§17+§18: 8 source commits + 3 docs commits + 1 DB-only.*
+*Next session: §3.3 verification (login as wiyada/0000 + verify menu + bulk upload e2e).*

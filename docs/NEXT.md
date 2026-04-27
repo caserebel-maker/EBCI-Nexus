@@ -11,26 +11,33 @@
 อ่าน docs/NEXT.md แล้วทำต่อ
 ```
 
-**ก่อนลุย:** `cd ~/C1TB/EB-CI/EBCI-Nexus && git pull origin main --ff-only`
+**ก่อนลุย:** `cd <office-path>/EBCI-Nexus && git pull origin main --ff-only`
 
-**ตอบเครื่อง:** "อยู่ home"
+**ตอบเครื่อง:** "อยู่ office"
 
-**ทำก่อน (1 นาที):** เปิด `/hradmin/settings/permissions` (ใหม่!) แล้วลอง grant `can_manage_payroll` ให้ใครก็ได้ → verify audit log โผล่ใน modal · ตรวจ §3.1 (logout/login → ดูการ์ดสลิปเงินเดือน) ในขั้นเดียวกัน.
+**ทำก่อนทุกอย่าง (3 นาที verify):**
+1. Logout → login `wiyada / 0000` (ปุ๋ย, บัญชี) — ใหม่!
+2. ดู sidebar — ควรเห็น **9 เมนู** = 8 employee เดิม + **"💰 อัปโหลดสลิปเงินเดือน"** (Wallet icon) ที่เป็นลิ้งก์ไป /hradmin/payroll/bulk
+3. Click → ต้อง land หน้า bulk upload โดยไม่โดน redirect
+4. ลองพิมพ์ `/hradmin/employees` ตรงๆ → ควรโดน redirect (ปุ๋ยไม่มีสิทธิ์ HR ปกติ)
+5. กลับ login เป็น admin (ปอนด์/ม๊อด) — sidebar ของ admin ก็จะมี "อัปโหลดสลิปเงินเดือน" เพิ่มขึ้น (เพราะ flag = true)
 
 ---
 
 ## 0. TL;DR ใน 30 วินาที
 
-**APR27 home night ปิด 7 commits (ขยาย 4 → 7 ใน night-late session):**
+**APR27→28 home overnight ปิด 9 commits + 1 DB seed:**
 
-1. **§3.2 ✅ Permission editor** ที่ `/hradmin/settings/permissions`
-2. **§3.5 ✅ Print PDF fix** — `print:grid-cols-2` บังคับ 2-col
-3. **🆕 Audit viewer + employee audit wiring** — `/hradmin/settings/audit` (2 tabs) + `updateEmployee` เขียน audit log อัตโนมัติแล้ว
-4. **Pre-existing TS errors ✅** — 8 errors หายหมดหลัง `npm install` (stale node_modules ตามไม่ทัน package.json ใหม่)
+1. **§3.2 ✅ Permission editor** `/hradmin/settings/permissions`
+2. **§3.5 ✅ Print** — flat layout, hero card frame อยู่, ส่วนล่างเป็นบรรทัดข้อมูลล้วน (ตามที่ user ขอ)
+3. **§3.5b ✅ Audit pipeline** — viewer + updateEmployee เขียน audit อัตโนมัติ
+4. **§3.3 ✅ สร้าง user "ปุ๋ย"** — `wiyada/0000`, Payroll Manager preset, link ↔ employee 449-62 (วิยะดา)
+5. **🆕 Permission-driven sidebar menu** — ปุ๋ยเห็น "อัปโหลดสลิปเงินเดือน" เพิ่มในเมนูพนักงานปกติ ไม่ต้องสลับ admin
+6. **Pre-existing TS errors ✅** — `npm install` แก้หมด
 
-**§3.1 ✅** — laptop session คืนก่อน (admin User.id realign)
+**§3.1 ✅** — laptop session
 
-**ที่เร่งด่วนที่สุดถัดไป:** **§3.3 สร้าง user account ให้บัญชี** (~5-10 นาที — ใช้ editor ใหม่ apply preset `payroll_manager`).
+**ที่เร่งด่วนที่สุดถัดไป:** **§3.4 Test bulk salary slip upload e2e** (login เป็น wiyada → upload PDF จริง 3-5 ไฟล์)
 
 ---
 
@@ -38,15 +45,19 @@
 
 | # | Commit | Track | สรุป |
 |---|---|---|---|
-| 7 | `b830ffa` | 📜 Audit | viewer ที่ /hradmin/settings/audit + nav link + 2 tabs (perm/employee) |
+| 9 | `a0a8347` | 🆕 Nav | permission-driven extra menu — payroll uploaders see one extra link |
+| 8 | `ba46170` | 🖨️ Print | strip card frames, hero stays framed (flat data layout) |
+| 7 | `b830ffa` | 📜 Audit | viewer ที่ /hradmin/settings/audit + nav link + 2 tabs |
 | 6 | `449a8f7` | 📜 Audit | wire updateEmployee → employee_audit_log + canViewAuditLog AuthCheck |
 | 5 | `3796dd1` | 📚 Docs | refresh NEXT + §16 SESSION_HISTORY |
 | 4 | `57c2893` | 🖨️ Print | 2-col grids บน print → personal+address ไม่ตก page 2 |
 | 3 | `9eccbd0` | ⚙️ Settings | link to permissions editor from /hradmin/settings |
 | 2 | `170d60f` | 🔐 Permissions | editor ที่ /hradmin/settings/permissions (page + view + actions) |
-| 1 | `123c290` | 🔐 Permissions | foundation — can_view_audit_log flag + user_permission_audit_log table + PERMISSION_FLAGS list |
+| 1 | `123c290` | 🔐 Permissions | foundation — can_view_audit_log flag + user_permission_audit_log table |
 
-(7 ต่อจาก `336f211` ที่เป็น admin User.id realign จาก laptop คืนก่อน)
+**+ DB-only:** ปุ๋ย User row + linkage (no commit, recorded in §18 SESSION_HISTORY)
+
+(9 ต่อจาก `336f211` admin User.id realign)
 
 ---
 
@@ -85,26 +96,33 @@ Verify อีกที: `/hradmin/employees/[id]` → ควรเห็นก�
 
 ### 3.2 ✅ ~~Permission editor UI~~ — DONE คืนนี้ (commits 1-3)
 
-### 3.3 ⭐ **สร้าง user account ให้บัญชี** — 5-10 นาที (now unblocked!)
+### 3.3 ✅ ~~สร้าง user account ให้บัญชี~~ — DONE (DB seed Apr 28)
 
-ตอนนี้ editor พร้อมแล้ว:
-1. ปอนด์ login → `/hradmin/settings/permissions` (link จาก `/hradmin/settings`)
-2. (ก่อนหน้านั้น) สร้าง user "บัญชี" ผ่าน flow ปกติ (ใครจะเป็นยังไม่ได้คุย)
-3. หา user ใน table → กด "แก้ไข"
-4. คลิก preset **💰 Payroll Manager** → ทุก checkbox ติ๊ก auto
-5. ใส่ note "มอบอำนาจ payroll ให้บัญชี" → กด "บันทึก"
-6. Verify modal โชว์ history entry ใหม่
-7. ส่ง credentials ให้ทีมบัญชี
-8. ทดสอบเข้า `/hradmin/payroll/bulk` แล้ว upload PDF จริง
+User created via Supabase MCP:
+- `username: wiyada` / `password: 0000`
+- Linked to employee `449-62` (วิยะดา เหง้าเทพ, แผนกบัญชี)
+- `role: employee` · `can_manage_payroll: true` · ทุก flag อื่น false (Payroll Manager preset)
 
-### 3.4 **Test bulk salary slip upload e2e** — 20 นาที
+ส่ง credentials ให้ปุ๋ย:
+```
+URL:      https://nexus.ebcitrade.com
+Username: wiyada
+Password: 0000  (ขอให้เปลี่ยนเอง — แต่ระบบยังไม่มี UI เปลี่ยนรหัส, gap)
+```
+
+🎯 **ทำต่อ §3.4** เพื่อ verify upload e2e
+
+### 3.4 ⭐ **Test bulk salary slip upload e2e** — 20 นาที (เร่งด่วนสุดแล้ว)
 
 ทดสอบ flow จริง:
-1. ออกสลิป test 3-5 ไฟล์ (PDF dummy ก็ได้)
-2. ตั้งชื่อตาม pattern: `Slip_060-01_2026-04.pdf` ฯลฯ
-3. Upload ที่ `/hradmin/payroll/bulk` · เลือก เม.ย. 2569
-4. ตรวจ preview → matched ครบไหม
-5. ยืนยัน → ดู email + 🔔 ใน account พนักงาน
+1. Login `wiyada / 0000` → sidebar เห็น "อัปโหลดสลิปเงินเดือน"
+2. คลิก → /hradmin/payroll/bulk
+3. ออกสลิป test 3-5 ไฟล์ (PDF dummy ก็ได้)
+4. ตั้งชื่อตาม pattern: `Slip_060-01_2026-04.pdf` ฯลฯ
+5. Upload · เลือก เม.ย. 2569
+6. Preview → ตรวจว่า matched ครบไหม
+7. ยืนยัน → ดู email + 🔔 ใน account พนักงาน
+8. Logout → login เป็นพนักงานคนหนึ่งที่ได้สลิป → /portal/payroll → เห็น PDF + download ได้
 
 ### 3.5 ✅ ~~Print PDF: ข้อมูลส่วนตัว+ที่อยู่ ขึ้นใน PDF~~ — Code fixed (`57c2893`)
 
@@ -181,7 +199,7 @@ EMAIL_FROM_CAREERS · EMAIL_FROM_HR · EMAIL_FROM_SYSTEM
 ## 5. Git + deploy state
 
 - **Repo:** `caserebel-maker/EBCI-Nexus`
-- **Last commit:** `b830ffa` (audit viewer + nav link)
+- **Last commit:** `a0a8347` (permission-driven sidebar menu)
 - **Vercel deploy:** auto — `https://nexus.ebcitrade.com`
 - **Build:** ✓ TS clean (0 errors after npm install · 8 "pre-existing" turned out to be stale node_modules)
 
@@ -225,5 +243,5 @@ EMAIL_FROM_CAREERS · EMAIL_FROM_HR · EMAIL_FROM_SYSTEM
 
 ---
 
-*Generated end of APR27 home-night session · 7 commits shipped · §3.2 + §3.5 + audit pipeline ✅ · Last commit `b830ffa` · routes ~112*
-*Next session: §3.3 (สร้าง user account บัญชี) — apply Payroll Manager preset ผ่าน editor ใหม่.*
+*Generated APR28 dawn (overnight session ตามมาจาก APR27 night) · 9 commits + 1 DB seed · §3.1 + §3.2 + §3.3 + §3.5 ✅ · Last commit `a0a8347` · routes ~112*
+*Next session at ออฟฟิศ 7 โมง: §3.4 — login `wiyada/0000` แล้ว test bulk upload e2e.*
