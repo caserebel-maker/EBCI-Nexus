@@ -568,7 +568,15 @@ export function EmployeeProfileView({
                 <div className="flex items-center gap-3">
                     {isHrAdmin && !isEditing && (
                         <button
-                            onClick={() => window.print()}
+                            // window.print() blocks the click handler for as
+                            // long as the user sits in the print dialog
+                            // (could be minutes) — Brave/Chrome flag that as
+                            // an INP issue ("event handler blocked UI for
+                            // 179s"). Deferring with setTimeout(…, 0) lets
+                            // the handler return immediately so the browser
+                            // measures the click as <1ms instead of
+                            // however-long-the-dialog-was-open.
+                            onClick={() => setTimeout(() => window.print(), 0)}
                             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[0.95rem] font-semibold bg-white/10 hover:bg-white/18 text-white/92 hover:text-white border border-white/15 transition-all"
                             title="พิมพ์ / บันทึกเป็น PDF (ขาวดำ + รูปสี)"
                         >
