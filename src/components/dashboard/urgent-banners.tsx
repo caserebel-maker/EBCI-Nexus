@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { AlertTriangle, X, Calendar, ChevronRight } from 'lucide-react'
+import { todayBangkokKey } from '@/lib/datetime'
 
 interface Announcement {
     id: string
@@ -32,7 +33,9 @@ function isExpired(publishDate: string): boolean {
 
 /** LocalStorage key: dismissed today? */
 function getDismissKey(id: string): string {
-    const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+    // Bangkok-local "today" — `new Date().toISOString().slice(0,10)` is
+    // off by one for users in Bangkok between 00:00-06:59 (UTC dates lag).
+    const today = todayBangkokKey()
     return `banner_dismissed_${id}_${today}`
 }
 

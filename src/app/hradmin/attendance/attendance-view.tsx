@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { MapPin, Users, Building, Home, HelpCircle, RefreshCw, Calendar, CheckCircle2, Clock, LogOut, MapPinOff, FileUp } from 'lucide-react'
+import { todayBangkokKey } from '@/lib/datetime'
 import { cn } from '@/lib/utils'
 import { formatBangkokTime } from '@/lib/datetime'
 import { getAttendanceForDate, type AttendanceStats, type AttendanceRecord } from './actions'
@@ -93,9 +94,11 @@ export function AttendanceView({ initialDate, initialData }: Props) {
         return true
     })
 
-    // Quick date presets
-    const presetToday = new Date().toISOString().slice(0, 10)
-    const presetYesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+    // Quick date presets — Bangkok-local so users in Bangkok between
+    // 00:00–06:59 don't see yesterday's date as "today".
+    const presetToday = todayBangkokKey()
+    const yesterdayDate = new Date(Date.now() - 86400000)
+    const presetYesterday = yesterdayDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
 
     return (
         <div className="max-w-5xl mx-auto space-y-5">

@@ -83,6 +83,49 @@ export function formatBangkokTimeWithSeconds(
     }).format(d)
 }
 
+/**
+ * Bangkok-local YYYY-MM-DD key for grouping. Use this whenever you'd
+ * normally `string.slice(0, 10)` on an ISO timestamp — that produces
+ * the UTC date, which is off by one day for events between 17:00-24:00
+ * UTC (= 00:00-07:00 the next day in Bangkok).
+ *
+ * Example:
+ *   raw = "2026-04-24T19:00:00"  (UTC wall-clock = 02:00 Bangkok next day)
+ *   slice(0,10)         → "2026-04-24"  ❌
+ *   bangkokDateKey()    → "2026-04-25"  ✓
+ */
+export function bangkokDateKey(
+    raw: string | null | undefined,
+    source: 'utc' | 'bangkok' = 'utc',
+): string | null {
+    const d = toDate(raw, source)
+    if (!d) return null
+    // Build YYYY-MM-DD from Bangkok-zoned parts. Intl.DateTimeFormat with
+    // the right timeZone gives us the calendar date as Bangkok sees it.
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: BANGKOK_TZ,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).formatToParts(d)
+    const y = parts.find(p => p.type === 'year')?.value
+    const m = parts.find(p => p.type === 'month')?.value
+    const day = parts.find(p => p.type === 'day')?.value
+    if (!y || !m || !day) return null
+    return `${y}-${m}-${day}`
+}
+
+/**
+ * Today's Bangkok-local YYYY-MM-DD. Use this whenever you'd reach
+ * for `new Date().toISOString().slice(0, 10)` — that returns the UTC
+ * date, off by one for night users in Bangkok (00:00–06:59 UTC+7).
+ *
+ * Safe on the server and in the client.
+ */
+export function todayBangkokKey(): string {
+    return bangkokDateKey(new Date().toISOString(), 'utc') ?? ''
+}
+
 /** Format a stored timestamp as a Thai "21 เม.ย. 2569 · 08:03". */
 export function formatBangkokDateTime(
     raw: string | null | undefined,

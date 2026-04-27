@@ -2,6 +2,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
+import { bangkokDateKey } from '@/lib/datetime'
 
 // ─── Attendance Report ───────────────────────────────────────────────────────
 
@@ -63,10 +64,15 @@ export async function getAttendanceReport(year: number, month: number, departmen
         .in('employee_id', employeeIds)
     if (chkErr) return { error: chkErr.message }
 
-    // Count unique days per employee per type (not per checkin)
+    // Count unique days per employee per type (not per checkin).
+    // `checked_in_at` is stored as UTC wall-clock — slicing the raw
+    // ISO directly produces the wrong calendar date for events between
+    // 17:00-24:00 UTC (= 00:00-07:00 Bangkok next day). Convert to the
+    // Bangkok-local YYYY-MM-DD before grouping.
     const perEmp = new Map<string, { office: Set<string>; wfh: Set<string>; offsite: Set<string> }>()
     for (const c of checkins ?? []) {
-        const day = (c.checked_in_at as string).slice(0, 10)
+        const day = bangkokDateKey(c.checked_in_at as string, 'utc')
+        if (!day) continue
         const bucket = perEmp.get(c.employee_id) ?? { office: new Set(), wfh: new Set(), offsite: new Set() }
         const t = c.type as string
         if (t === 'office') bucket.office.add(day)
