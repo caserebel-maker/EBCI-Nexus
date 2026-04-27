@@ -42,15 +42,27 @@ export type Employee = {
     approvalLevel?: number | null
 }
 
-type SortKey = "name_asc" | "name_desc" | "status" | "tenure_desc" | "tenure_asc" | "dept_asc"
+type SortKey =
+    | "name_asc" | "name_desc"
+    | "status" | "tenure_desc" | "tenure_asc" | "dept_asc"
+    // Inactive-tab specific — quit_date / quit_reason rather than tenure.
+    | "quit_date_desc" | "quit_date_asc" | "quit_reason_asc"
 
-const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+const ACTIVE_SORT_OPTIONS: { value: SortKey; label: string }[] = [
     { value: "name_asc",    label: "ชื่อ (ก → ฮ)" },
     { value: "name_desc",   label: "ชื่อ (ฮ → ก)" },
     { value: "status",      label: "สถานะ (ปฏิบัติงานก่อน)" },
     { value: "tenure_desc", label: "อายุงาน (มากไปน้อย)" },
     { value: "tenure_asc",  label: "อายุงาน (น้อยไปมาก)" },
     { value: "dept_asc",    label: "ฝ่าย (ก → ฮ)" },
+]
+
+const INACTIVE_SORT_OPTIONS: { value: SortKey; label: string }[] = [
+    { value: "quit_date_desc",  label: "วันที่ออก (ใหม่สุดก่อน)" },
+    { value: "quit_date_asc",   label: "วันที่ออก (เก่าสุดก่อน)" },
+    { value: "quit_reason_asc", label: "สาเหตุ (ก → ฮ)" },
+    { value: "name_asc",        label: "ชื่อ (ก → ฮ)" },
+    { value: "dept_asc",        label: "ฝ่าย (ก → ฮ)" },
 ]
 
 const QUIT_REASON_LABELS: Record<string, string> = {
@@ -80,9 +92,26 @@ function sortEmployees(data: Employee[], key: SortKey): Employee[] {
             return sorted.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
         case "dept_asc":
             return sorted.sort((a, b) => a.department.localeCompare(b.department, 'th'))
+        case "quit_date_desc":
+            // Newest quit first; rows missing quit_date sink to the bottom.
+            return sorted.sort((a, b) => quitDateMs(b) - quitDateMs(a))
+        case "quit_date_asc":
+            return sorted.sort((a, b) => quitDateMs(a) - quitDateMs(b))
+        case "quit_reason_asc":
+            return sorted.sort((a, b) =>
+                (QUIT_REASON_LABELS[a.quitReason ?? ''] ?? a.quitReason ?? 'ไม่ระบุ')
+                    .localeCompare(QUIT_REASON_LABELS[b.quitReason ?? ''] ?? b.quitReason ?? 'ไม่ระบุ', 'th'))
         default:
             return sorted
     }
+}
+
+/** Quit timestamp for sorting; missing dates fall to the end (DESC) /
+ *  start (ASC) by virtue of returning a sentinel value. */
+function quitDateMs(e: Employee): number {
+    if (!e.quitDate) return 0
+    const t = new Date(e.quitDate).getTime()
+    return Number.isFinite(t) ? t : 0
 }
 
 function tenureText(startDate: Date): string {
@@ -110,6 +139,9 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
     const [deptFilter, setDeptFilter] = useState<string>("all")
     const [levelFilter, setLevelFilter] = useState<string>("all")
     const [sortKey, setSortKey] = useState<SortKey>("name_asc")
+    // Inactive-tab specific filters — only rendered when activeTab='inactive'.
+    const [yearFilter, setYearFilter] = useState<string>("all")
+    const [reasonFilter, setReasonFilter] = useState<string>("all")
 
     const activeEmployees = initialData.filter(e => e.status === 'active' || e.status === 'on_leave')
     const inactiveEmployees = initialData.filter(e => e.status !== 'active' && e.status !== 'on_leave')
@@ -119,6 +151,17 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
     const dbDepts = tabData.map(e => e.department).filter(Boolean)
     const departments = Array.from(new Set([...DEPARTMENTS, ...dbDepts])).sort((a, b) =>
         a.localeCompare(b, 'th'))
+
+    // Year + reason filter dropdowns are only meaningful on the inactive
+    // tab. Compute their option lists once from the visible tab data so
+    // the dropdowns only show values that actually exist.
+    const quitYears = activeTab === 'inactive'
+        ? Array.from(new Set(
+            inactiveEmployees
+                .map(e => e.quitDate ? new Date(e.quitDate).getFullYear() : null)
+                .filter((y): y is number => Boolean(y))
+        )).sort((a, b) => b - a)  // newest year first
+        : []
 
     const filtered = tabData.filter((e) => {
         const fullTH = `${e.firstNameTH} ${e.lastNameTH}`.toLowerCase()
@@ -130,16 +173,26 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
             e.email.toLowerCase().includes(searchTerm.toLowerCase())
         const matchDept = deptFilter === "all" || e.department === deptFilter
         const matchLevel = levelFilter === "all" || String(e.approvalLevel ?? 1) === levelFilter
-        return matchSearch && matchDept && matchLevel
+        const matchYear = activeTab !== 'inactive' || yearFilter === "all"
+            || (e.quitDate ? String(new Date(e.quitDate).getFullYear()) === yearFilter : false)
+        const matchReason = activeTab !== 'inactive' || reasonFilter === "all"
+            || (e.quitReason ?? '') === reasonFilter
+        return matchSearch && matchDept && matchLevel && matchYear && matchReason
     })
 
     const displayData = sortEmployees(filtered, sortKey)
+    const sortOptions = activeTab === 'inactive' ? INACTIVE_SORT_OPTIONS : ACTIVE_SORT_OPTIONS
 
     const handleTabChange = (tab: 'active' | 'inactive') => {
         setActiveTab(tab)
         setSearchTerm("")
         setDeptFilter("all")
         setLevelFilter("all")
+        setYearFilter("all")
+        setReasonFilter("all")
+        // Default sort differs per tab — inactive tab is almost always
+        // browsed by "who left most recently?" so newest quit_date wins.
+        setSortKey(tab === 'inactive' ? 'quit_date_desc' : 'name_asc')
     }
 
     return (
@@ -234,7 +287,9 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                         </select>
                     </div>
 
-                    {/* Sort */}
+                    {/* Sort — option list switches per tab so inactive
+                        users see quit_date / quit_reason variants and not
+                        irrelevant active-tab choices. */}
                     <div className="flex items-center gap-1.5 h-10 px-3 rounded-lg border border-white/10 bg-black/20 flex-1 min-w-[180px]">
                         <ArrowUpDown className="h-3.5 w-3.5 text-white/40 shrink-0" />
                         <select
@@ -242,12 +297,43 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                             value={sortKey}
                             onChange={(e) => setSortKey(e.target.value as SortKey)}
                         >
-                            {SORT_OPTIONS.map(o => (
+                            {sortOptions.map(o => (
                                 <option key={o.value} value={o.value} className="bg-slate-900">{o.label}</option>
                             ))}
                         </select>
                     </div>
                 </div>
+
+                {/* Inactive-tab extra filters: year + quit reason.
+                    Hidden by default to avoid clutter on the active tab. */}
+                {activeTab === 'inactive' && (
+                    <div className="flex flex-wrap gap-2">
+                        <select
+                            className="h-10 px-3 rounded-lg border border-white/10 bg-black/20 text-white text-sm focus:outline-none cursor-pointer flex-1 min-w-[140px] appearance-none"
+                            value={yearFilter}
+                            onChange={(e) => setYearFilter(e.target.value)}
+                        >
+                            <option value="all" className="bg-slate-900">ทุกปี</option>
+                            {quitYears.map(y => (
+                                <option key={y} value={String(y)} className="bg-slate-900">
+                                    {/* Year shown as พ.ศ. for HR familiarity */}
+                                    {y + 543} ({y})
+                                </option>
+                            ))}
+                        </select>
+                        <select
+                            className="h-10 px-3 rounded-lg border border-white/10 bg-black/20 text-white text-sm focus:outline-none cursor-pointer flex-1 min-w-[160px] appearance-none"
+                            value={reasonFilter}
+                            onChange={(e) => setReasonFilter(e.target.value)}
+                        >
+                            <option value="all" className="bg-slate-900">ทุกสาเหตุ</option>
+                            <option value="resigned"       className="bg-slate-900">ลาออกเอง</option>
+                            <option value="retired"        className="bg-slate-900">เกษียณอายุ</option>
+                            <option value="contract_ended" className="bg-slate-900">สัญญาหมด</option>
+                            <option value="other"          className="bg-slate-900">อื่นๆ</option>
+                        </select>
+                    </div>
+                )}
             </div>
 
             {/* Table */}
@@ -344,7 +430,7 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                                         </tr>
                                     ))
                                 ) : (
-                                    <EmptyRow colSpan={6} />
+                                    <EmptyRow colSpan={6} variant="inactive" />
                                 )}
                             </tbody>
                         </table>
@@ -406,14 +492,24 @@ function EmployeePositionCell({ employee }: { employee: Employee }) {
     )
 }
 
-function EmptyRow({ colSpan }: { colSpan: number }) {
+function EmptyRow({ colSpan, variant = 'active' }: { colSpan: number; variant?: 'active' | 'inactive' }) {
     return (
         <tr>
             <td colSpan={colSpan} className="h-64 text-center">
                 <div className="flex flex-col items-center justify-center text-white/40">
                     <User className="h-12 w-12 mb-4 opacity-50" />
-                    <p className="text-lg font-medium">ไม่พบพนักงาน</p>
-                    <p className="text-sm opacity-70">ลองเปลี่ยนเงื่อนไขการค้นหาหรือตัวกรอง</p>
+                    {variant === 'inactive' ? (
+                        <>
+                            <p className="text-lg font-medium">ยังไม่มีพนักงานพ้นสภาพ</p>
+                            <p className="text-sm opacity-70 mt-1">เมื่อมีพนักงานออกจากระบบจะแสดงในแท็บนี้ — เก็บข้อมูลไว้อย่างน้อย 5 ปี</p>
+                            <p className="text-xs opacity-50 mt-2">หรือลองเปลี่ยนตัวกรอง ปี / สาเหตุ ด้านบน</p>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-lg font-medium">ไม่พบพนักงาน</p>
+                            <p className="text-sm opacity-70">ลองเปลี่ยนเงื่อนไขการค้นหาหรือตัวกรอง</p>
+                        </>
+                    )}
                 </div>
             </td>
         </tr>
