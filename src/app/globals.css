@@ -246,22 +246,57 @@ body {
     margin: 0 !important;
   }
 
-  /* Glass cards — strip padding & shadows for print so the content
-     density goes up and we save a centimetre per card. The dark UI
-     uses a `border: 1px solid rgba(255,255,255,0.65)` on silverCard
-     and similar styles on glass; in print those rendered as visible
-     pale-grey rectangles around every section ("กรอบขาว"). Force
-     the border off entirely — section spacing alone is enough
-     visual separation on white paper. */
-  .print-employee [class*="rounded-2xl"],
-  .print-employee [class*="rounded-xl"],
-  .print-employee section {
-    padding: 6pt 8pt !important;
-    margin-bottom: 4pt !important;
+  /* Cards in print → flat. User feedback (Apr 27 night): "กรอบมันแปลก
+     อยากให้เป็นข้อมูลอย่างเดียว เรียงเป็นบรรทัดๆ". So every glass /
+     silverCard / rounded card under .print-employee strips its inline
+     `border` + `padding` + `background` and renders as bare content
+     stacked vertically. Section headings (SHead) carry the visual
+     separation instead.
+
+     The hero card (top, with photo) is marked `data-print-hero` and
+     opts BACK IN to a frame because the photo needs an anchor. */
+  .print-employee [class*="rounded-2xl"]:not([data-print-hero]),
+  .print-employee [class*="rounded-xl"]:not([data-print-hero]),
+  .print-employee section:not([data-print-hero]) {
+    padding: 0 !important;
+    margin: 0 0 6pt !important;
+    border: 0 !important;
     border-radius: 0 !important;
-    border: none !important;
-    border-bottom: 1px solid #d1d5db !important;
+    background: transparent !important;
+    background-color: transparent !important;
     box-shadow: none !important;
+  }
+
+  /* Hero card — keep a thin dark frame so the photo + name read as
+     a header block on the page. */
+  .print-employee [data-print-hero] {
+    padding: 6pt 8pt !important;
+    margin-bottom: 8pt !important;
+    border: 1px solid #999 !important;
+    border-radius: 4pt !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* Section heading (SHead) — give it a visible bottom rule so flat
+     content underneath reads as belonging to that section. The icon
+     in the heading gets greyscale-flattened by the universal rule
+     above; the underline is what carries the section break visually. */
+  .print-employee h2,
+  .print-employee h3 {
+    border-bottom: 1px solid #888 !important;
+    padding-bottom: 2pt !important;
+    margin-bottom: 3pt !important;
+    font-size: 10.5pt !important;
+    font-weight: 700 !important;
+  }
+
+  /* Grid containers (data-print-section) — drop their gap so child
+     sections collapse into one continuous data column. The 2-col
+     layout still applies within the grid (per print:grid-cols-2 in
+     the JSX); we just ditch the white gutter between rows. */
+  .print-employee [data-print-section] {
+    gap: 4pt !important;
   }
 
   /* Photo wrapper — keep its rounded box but with a dark thin

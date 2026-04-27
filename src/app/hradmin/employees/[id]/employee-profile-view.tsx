@@ -699,7 +699,11 @@ export function EmployeeProfileView({
             </div>
 
             {/* ── 1. HERO SECTION ──────────────────────────────────────────── */}
-            <div style={silverCard} className="p-6 shadow-2xl">
+            {/* `data-print-hero` opts this card out of the "strip all card
+                frames" rule in @media print — keeps the photo + name +
+                badges visually anchored at the top of the printout while
+                everything below renders as flat text rows. */}
+            <div style={silverCard} className="p-6 shadow-2xl" data-print-hero>
                 <div className="flex flex-col md:flex-row gap-6 items-start">
 
                     {/* Photo — `preserve-color` keeps the print version
