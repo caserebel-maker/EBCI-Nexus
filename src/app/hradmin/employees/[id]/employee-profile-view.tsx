@@ -4,8 +4,10 @@ import { useState, useTransition, useRef } from "react"
 import {
     ArrowLeft, User, Phone, Mail, MapPin, Building, Briefcase,
     Calendar, Shield, ChevronRight, Pencil, X, Check,
-    AlertCircle, CheckCircle2, Camera, Trash2, Clock, FileText
+    AlertCircle, CheckCircle2, Camera, Trash2, Clock, FileText,
+    Lock, LogOut,
 } from "lucide-react"
+import type { LucideIcon } from 'lucide-react'
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -33,7 +35,16 @@ const silverCard: React.CSSProperties = {
     borderRadius: '18px',
 }
 const inp = "w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-[1rem] text-white placeholder-white/30 focus:outline-none focus:border-[#ad5f6c] focus:ring-1 focus:ring-[#ad5f6c]/40 transition-colors"
-const sel = "w-full bg-[#1a0608] border border-white/20 rounded-xl px-3 py-2 text-[1rem] text-white focus:outline-none focus:border-[#ad5f6c] focus:ring-1 focus:ring-[#ad5f6c]/40 transition-colors appearance-none"
+// `appearance-none` strips the native ⌄ chevron — without re-adding one
+// the field reads as a plain dark button. Inline SVG via background-image
+// keeps the chevron visible so HR can spot which fields are dropdowns.
+const sel = "w-full bg-[#1a0608] border border-white/20 rounded-xl px-3 py-2 pr-9 text-[1rem] text-white cursor-pointer focus:outline-none focus:border-[#ad5f6c] focus:ring-1 focus:ring-[#ad5f6c]/40 transition-colors appearance-none bg-no-repeat"
+const SEL_CHEVRON: React.CSSProperties = {
+    backgroundImage:
+        "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.65)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
+    backgroundPosition: 'right 12px center',
+    backgroundSize: '14px 14px',
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const LEAVE_LABELS: Record<string, string> = {
@@ -96,6 +107,7 @@ interface Props {
 }
 
 interface FormState {
+    employee_code: string
     first_name_th: string
     last_name_th: string
     nickname: string
@@ -269,6 +281,7 @@ export function EmployeeProfileView({
     const router = useRouter()
 
     const initForm = (): FormState => ({
+        employee_code: employee.employee_code ?? '',
         first_name_th: employee.first_name_th ?? '',
         last_name_th: employee.last_name_th ?? '',
         nickname: employee.nickname ?? '',
@@ -361,6 +374,7 @@ export function EmployeeProfileView({
                 }
             }
             const result = await updateEmployee(employee.id, {
+                employee_code: form.employee_code.trim(),
                 first_name_th: form.first_name_th,
                 last_name_th: form.last_name_th,
                 nickname: form.nickname,
@@ -607,56 +621,119 @@ export function EmployeeProfileView({
                             </div>
                         )}
 
-                        {/* Badge row */}
-                        <div className="flex flex-wrap gap-2 pt-1">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/92 text-[0.85rem] font-semibold">
-                                <Briefcase size={13} className="text-amber-300" />
-                                {employee.employee_code}
-                            </span>
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/92 text-[0.85rem] font-semibold">
-                                <Clock size={13} className="text-amber-300" />
-                                อายุงาน {tenure}
-                            </span>
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/92 text-[0.85rem] font-semibold">
-                                <User size={13} className="text-amber-300" />
-                                {isEditing
-                                    ? <select className="bg-transparent text-white/92 focus:outline-none text-[0.85rem]" value={form.employment_type} onChange={set('employment_type')}>
-                                        <option value="full-time">ประจำ</option>
-                                        <option value="part-time">นอกเวลา</option>
-                                        <option value="contract">สัญญาจ้าง</option>
-                                        <option value="probation">ทดลองงาน</option>
-                                    </select>
-                                    : EMPLOYMENT_LABELS[employee.employment_type] ?? employee.employment_type
-                                }
-                            </span>
-                        </div>
-
-                        {/* Status + Department edit */}
-                        {isEditing && (
+                        {/* Display mode: read-only badges. Tenure is computed
+                            (always read-only); employee_code + employment_type
+                            move to the edit form below when isEditing flips. */}
+                        {!isEditing && (
                             <div className="flex flex-wrap gap-2 pt-1">
-                                <select className={cn(sel, 'max-w-[160px]')} value={form.status} onChange={set('status')}>
-                                    <option value="active">ปฏิบัติงาน</option>
-                                    <option value="on_leave">ลา</option>
-                                    <option value="inactive">พ้นสภาพ</option>
-                                </select>
-                                <select className={cn(sel, 'max-w-[200px]')} value={form.department} onChange={set('department')}>
-                                    {form.department && !(DEPARTMENTS as readonly string[]).includes(form.department) && (
-                                        <option value={form.department}>{form.department}</option>
-                                    )}
-                                    {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-                                </select>
-                                {form.status === 'inactive' && (
-                                    <>
-                                        <input type="date" className={cn(inp, 'max-w-[160px]')} value={form.quit_date} onChange={set('quit_date')} />
-                                        <select className={cn(sel, 'max-w-[160px]')} value={form.quit_reason} onChange={set('quit_reason')}>
-                                            <option value="">— สาเหตุ —</option>
-                                            <option value="resigned">ลาออกเอง</option>
-                                            <option value="retired">เกษียณอายุ</option>
-                                            <option value="contract_ended">สัญญาหมด</option>
-                                            <option value="other">อื่นๆ</option>
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/92 text-[0.85rem] font-semibold">
+                                    <Briefcase size={13} className="text-amber-300" />
+                                    {employee.employee_code}
+                                </span>
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/92 text-[0.85rem] font-semibold">
+                                    <Clock size={13} className="text-amber-300" />
+                                    อายุงาน {tenure}
+                                </span>
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/92 text-[0.85rem] font-semibold">
+                                    <User size={13} className="text-amber-300" />
+                                    {EMPLOYMENT_LABELS[employee.employment_type] ?? employee.employment_type}
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Edit mode: read-only band (tenure only) + grouped
+                            editable card so HR can spot at a glance which
+                            fields are interactive vs computed. */}
+                        {isEditing && (
+                            <div className="space-y-3 pt-1">
+                                {/* Read-only band — gray border + lock icon
+                                    so it's obviously not editable */}
+                                <div className="flex flex-wrap gap-2 items-center">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/8 text-white/55 text-[0.78rem]">
+                                        <Lock size={11} />
+                                        <Clock size={11} />
+                                        อายุงาน {tenure}
+                                        <span className="text-white/30 ml-1">(คำนวณอัตโนมัติ)</span>
+                                    </span>
+                                </div>
+
+                                {/* Editable controls — labelled + chevron-bearing dropdowns */}
+                                <div
+                                    className="rounded-xl border border-amber-300/20 bg-amber-300/[0.04] p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
+                                >
+                                    <EditField label="รหัสพนักงาน" icon={Briefcase}>
+                                        <input
+                                            className={cn(inp, 'text-sm')}
+                                            value={form.employee_code}
+                                            onChange={set('employee_code')}
+                                            placeholder="เช่น 180-52"
+                                        />
+                                    </EditField>
+                                    <EditField label="ประเภทการจ้าง" icon={User}>
+                                        <select
+                                            className={cn(sel, 'text-sm')}
+                                            style={SEL_CHEVRON}
+                                            value={form.employment_type}
+                                            onChange={set('employment_type')}
+                                        >
+                                            <option value="full-time">ประจำ</option>
+                                            <option value="part-time">นอกเวลา</option>
+                                            <option value="contract">สัญญาจ้าง</option>
+                                            <option value="probation">ทดลองงาน</option>
                                         </select>
-                                    </>
-                                )}
+                                    </EditField>
+                                    <EditField label="สถานะการทำงาน" icon={CheckCircle2}>
+                                        <select
+                                            className={cn(sel, 'text-sm')}
+                                            style={SEL_CHEVRON}
+                                            value={form.status}
+                                            onChange={set('status')}
+                                        >
+                                            <option value="active">ปฏิบัติงาน</option>
+                                            <option value="on_leave">ลา</option>
+                                            <option value="inactive">พ้นสภาพ</option>
+                                        </select>
+                                    </EditField>
+                                    <EditField label="แผนก" icon={Building}>
+                                        <select
+                                            className={cn(sel, 'text-sm')}
+                                            style={SEL_CHEVRON}
+                                            value={form.department}
+                                            onChange={set('department')}
+                                        >
+                                            {form.department && !(DEPARTMENTS as readonly string[]).includes(form.department) && (
+                                                <option value={form.department}>{form.department}</option>
+                                            )}
+                                            {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                                        </select>
+                                    </EditField>
+                                    {form.status === 'inactive' && (
+                                        <>
+                                            <EditField label="วันที่พ้นสภาพ" icon={Calendar}>
+                                                <input
+                                                    type="date"
+                                                    className={cn(inp, 'text-sm')}
+                                                    value={form.quit_date}
+                                                    onChange={set('quit_date')}
+                                                />
+                                            </EditField>
+                                            <EditField label="สาเหตุ" icon={LogOut}>
+                                                <select
+                                                    className={cn(sel, 'text-sm')}
+                                                    style={SEL_CHEVRON}
+                                                    value={form.quit_reason}
+                                                    onChange={set('quit_reason')}
+                                                >
+                                                    <option value="">— สาเหตุ —</option>
+                                                    <option value="resigned">ลาออกเอง</option>
+                                                    <option value="retired">เกษียณอายุ</option>
+                                                    <option value="contract_ended">สัญญาหมด</option>
+                                                    <option value="other">อื่นๆ</option>
+                                                </select>
+                                            </EditField>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -917,5 +994,28 @@ export function EmployeeProfileView({
                 />
             )}
         </div>
+    )
+}
+
+/**
+ * EditField — labelled wrapper for an editable form control. Used inside
+ * the amber-tinted "editable" card so HR sees a clear label above each
+ * input/select instead of guessing what each box represents.
+ */
+function EditField({
+    label, icon: Icon, children,
+}: {
+    label: string
+    icon: LucideIcon
+    children: React.ReactNode
+}) {
+    return (
+        <label className="flex flex-col gap-1.5 text-xs">
+            <span className="inline-flex items-center gap-1.5 text-amber-200/85 font-bold uppercase tracking-wider text-[10px]">
+                <Icon size={11} />
+                {label}
+            </span>
+            {children}
+        </label>
     )
 }

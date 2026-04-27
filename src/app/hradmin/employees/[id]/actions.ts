@@ -5,6 +5,7 @@ import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { revalidatePath } from 'next/cache'
 
 export interface UpdateEmployeePayload {
+    employee_code: string
     first_name_th: string
     last_name_th: string
     nickname?: string
@@ -37,9 +38,33 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
 
     const { applicant_current_address, applicant_phone, ...employeeFields } = payload
 
+    // Pre-flight duplicate check on employee_code if it changed.
+    // employee_code is display-only (not an FK target — `employees.id` is)
+    // so editing it is safe, but uniqueness is still enforced for sanity.
+    const newCode = (employeeFields.employee_code ?? '').trim()
+    if (newCode) {
+        const { data: cur } = await supabaseAdmin
+            .from('employees')
+            .select('employee_code')
+            .eq('id', employeeId)
+            .maybeSingle()
+        if (cur?.employee_code !== newCode) {
+            const { data: clash } = await supabaseAdmin
+                .from('employees')
+                .select('id')
+                .eq('employee_code', newCode)
+                .neq('id', employeeId)
+                .maybeSingle()
+            if (clash?.id) {
+                return { error: `รหัสพนักงาน "${newCode}" ใช้งานอยู่กับคนอื่นแล้ว` }
+            }
+        }
+    }
+
     const { error: empError } = await supabaseAdmin
         .from('employees')
         .update({
+            ...(newCode ? { employee_code: newCode } : {}),
             first_name_th: employeeFields.first_name_th,
             last_name_th: employeeFields.last_name_th,
             nickname: employeeFields.nickname ?? null,
