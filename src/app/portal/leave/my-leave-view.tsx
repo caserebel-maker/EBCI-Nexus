@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import {
     CalendarDays, Plus, CheckCircle2, XCircle, Clock, Ban, Loader2, AlertCircle,
     X, ChevronRight, ChevronLeft, UploadCloud, Paperclip, Eye, Info,
-    Palmtree, User, Heart, GraduationCap, Cross,
+    Palmtree, User, Heart, GraduationCap, Cross, Send,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -628,6 +628,13 @@ function Field({ label, value }: { label: string; value: string }) {
 // ── New leave modal (4 steps) ────────────────────────────────────────────────
 type NewLeaveStep = 1 | 2 | 3 | 4
 
+interface ApproverChainStep {
+    id: string
+    name: string
+    role: 'supervisor' | 'manager' | 'hr' | 'md'
+    role_label: string
+}
+
 function NewLeaveModal({
     balances, onClose, onSuccess,
 }: {
@@ -646,6 +653,25 @@ function NewLeaveModal({
     const [attachment, setAttachment] = useState<File | null>(null)
     const [submitting, startSubmitTransition] = useTransition()
     const [err, setErr] = useState<string | null>(null)
+
+    // Fetch the approval chain once when the modal opens. This is
+    // read-only — the form just shows the user where the request will
+    // route. The actual chain that fires at submit time is computed
+    // server-side again in lib/leave-approval-actions; we don't trust
+    // anything from the client about routing.
+    const [approverChain, setApproverChain] = useState<ApproverChainStep[] | null>(null)
+    useEffect(() => {
+        let cancelled = false
+        fetch('/api/leave/approver-chain', { cache: 'no-store' })
+            .then(r => r.json())
+            .then((data) => {
+                if (cancelled) return
+                if (Array.isArray(data?.chain)) setApproverChain(data.chain)
+                else setApproverChain([])
+            })
+            .catch(() => { if (!cancelled) setApproverChain([]) })
+        return () => { cancelled = true }
+    }, [])
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -734,6 +760,7 @@ function NewLeaveModal({
                             reason={reason} setReason={setReason}
                             contact={contact} setContact={setContact}
                             totalDays={totalDays}
+                            approverChain={approverChain}
                         />
                     )}
                     {step === 3 && selectedType && (
@@ -871,6 +898,7 @@ function Step2Dates({
     type, startDate, setStartDate, endDate, setEndDate,
     isHalfDay, setIsHalfDay, halfDayPeriod, setHalfDayPeriod,
     reason, setReason, contact, setContact, totalDays,
+    approverChain,
 }: {
     type: BalanceEntry
     startDate: string
@@ -886,6 +914,7 @@ function Step2Dates({
     contact: string
     setContact: (v: string) => void
     totalDays: number
+    approverChain: ApproverChainStep[] | null
 }) {
     const today = todayBangkokIso()
     const minDate = type.leave_type_id === 'sick'
@@ -904,6 +933,13 @@ function Step2Dates({
                     {!type.is_unlimited && ` · คงเหลือ ${type.remaining_days} / ${type.total_days} วัน`}
                 </span>
             </div>
+
+            {/* Approver routing — purely informational so the user knows
+                where the request will go before submitting. The actual
+                chain is computed again server-side at submit time, so
+                this is a read-only preview. */}
+            <ApproverChainBox chain={approverChain} />
+
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <DateField label="วันที่เริ่ม" value={startDate} onChange={(v) => { setStartDate(v); if (isHalfDay) setEndDate(v) }} min={minDate} max={maxDate} />
@@ -973,6 +1009,61 @@ function Step2Dates({
                     className="mt-1.5 w-full h-11 rounded-lg bg-black/25 border border-white/15 text-white text-sm px-3 focus:outline-none focus:border-amber-300/50"
                 />
             </label>
+        </div>
+    )
+}
+
+function ApproverChainBox({ chain }: { chain: ApproverChainStep[] | null }) {
+    // Loading: show a quiet placeholder so the form doesn't jump as
+    // soon as the modal opens. We never block the user on this fetch.
+    if (chain === null) {
+        return (
+            <div className="p-3 rounded-lg bg-white/5 border border-white/10 text-xs text-white/55">
+                กำลังโหลดผู้อนุมัติ…
+            </div>
+        )
+    }
+
+    // Empty chain = HR hasn't wired this employee's approver yet.
+    // We surface this as a warning so the user nudges HR before
+    // submitting (otherwise the request will route to no one).
+    if (chain.length === 0) {
+        return (
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-100 text-xs inline-flex items-start gap-2 w-full">
+                <AlertCircle size={13} className="mt-0.5 shrink-0" />
+                <span>
+                    <strong>ยังไม่มีผู้อนุมัติในระบบ</strong> — กรุณาแจ้งฝ่ายบุคคล (HR) ตั้งผู้บังคับบัญชาให้ก่อนยื่นใบลา ไม่เช่นนั้นระบบจะไม่รู้ว่าจะส่งใบลาไปหาใคร
+                </span>
+            </div>
+        )
+    }
+
+    return (
+        <div className="p-3 rounded-lg bg-emerald-500/8 border border-emerald-500/25">
+            <p className="text-[11px] uppercase tracking-wider text-emerald-200/85 font-bold mb-2 inline-flex items-center gap-1.5">
+                <Send size={11} />
+                ใบลานี้จะส่งไปที่
+            </p>
+            <ol className="space-y-1.5">
+                {chain.map((step, i) => (
+                    <li
+                        key={step.id}
+                        className="flex items-center gap-2.5 text-[0.85rem]"
+                    >
+                        <span className="shrink-0 h-5 w-5 inline-flex items-center justify-center rounded-full bg-emerald-500/20 text-emerald-200 text-[10px] font-bold">
+                            {i + 1}
+                        </span>
+                        <span className="text-white font-semibold">{step.name}</span>
+                        <span className="text-white/55 text-[0.78rem]">· {step.role_label}</span>
+                    </li>
+                ))}
+            </ol>
+            <p className="mt-2.5 text-[11px] text-white/45 leading-relaxed">
+                หากผู้อนุมัติคนแรกอนุมัติ ระบบจะส่งต่อไปยังคนถัดไปอัตโนมัติ — ใบลาจะถือว่าสมบูรณ์เมื่อ HR อนุมัติเป็นขั้นสุดท้าย
+            </p>
+            <p className="mt-1 text-[11px] text-white/40">
+                * หากชื่อนี้ไม่ถูกต้อง กรุณาแจ้งฝ่ายบุคคลให้แก้ไขผู้บังคับบัญชาในโปรไฟล์
+            </p>
         </div>
     )
 }
