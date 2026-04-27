@@ -896,7 +896,7 @@ export function EmployeeProfileView({
             </div>
 
             {/* ── 2+3. Contact & Work Info ──────────────────────────────────── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-6 print:gap-3" data-print-section>
 
                 {/* Contact */}
                 <div style={glass} className="p-4 shadow-xl">
@@ -1050,8 +1050,14 @@ export function EmployeeProfileView({
                 The 4 columns (DOB / gender / EN name + address + map) are
                 grouped under one row of cards so HR sees biographical
                 detail and home location next to each other. The print
-                stylesheet drops the map iframe — see LocationSection. */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6" data-print-section>
+                stylesheet drops the map iframe — see LocationSection.
+
+                `print:grid-cols-2 print:gap-3` keeps the 2-col layout on
+                paper even when Tailwind's md: breakpoint isn't hit by the
+                print viewport — without this, both cards stack and tip
+                onto page 2, which the user (Apr 27) reported as "ข้อมูล
+                ส่วนตัว + ที่อยู่ ยังแสดงไม่ครบ". */}
+            <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-6 print:gap-3" data-print-section>
 
                 {/* Personal info */}
                 <div style={glass} className="p-4 shadow-xl">
