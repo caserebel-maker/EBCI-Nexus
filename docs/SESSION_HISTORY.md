@@ -2643,3 +2643,156 @@ The DB User row has 8 permission columns but `UserPermissions` TS type modeled o
 ---
 
 *End of §16 · 4 commits · §3.2 + §3.5 done. Next session: §3.3 — create user for บัญชี and apply Payroll Manager preset via the new editor.*
+
+
+
+<a id="section-17"></a>
+# §17. APR27 (Home, late) — Audit Pipeline Completion
+
+*Source: this file. 2 source commits + closed 1 long-standing carryover (pre-existing TS errors).*
+*Same evening as §16, sparked by user "เหลือไรอีกบ้าง จัดเลย".*
+
+---
+
+## 0. TL;DR
+
+| Track | What |
+|---|---|
+| **Pre-existing TS errors closed** | All 8 historic "Cannot find module" errors were **stale node_modules** lagging behind office Mac's package.json. `npm install` → 0 errors. Carryover bullet that was haunting NEXT.md for ~5 sessions: gone. |
+| **Audit log viewer + employee audit wiring** | New page `/hradmin/settings/audit` (2 tabs: permission / employee) + `updateEmployee` now writes to `employee_audit_log` automatically. Both audit tables now have a writer + reader. |
+
+---
+
+## 1. Commits
+
+| # | Commit | What |
+|---|---|---|
+| 2 | `b830ffa` | feat(audit): viewer at /hradmin/settings/audit |
+| 1 | `449a8f7` | feat(employees): wire updateEmployee to write employee_audit_log |
+
+---
+
+## 2. Audit pipeline — completed end-to-end
+
+Before tonight: `employee_audit_log` table existed (since the original org-authority migration) but **nothing wrote to it**. The new `user_permission_audit_log` (created in §16) had its writer (the editor's server action) but no reader UI. Half-built on both ends.
+
+After tonight:
+
+```
+Write side:
+- updateEmployee  → employee_audit_log         (new this commit, 449a8f7)
+- editor save     → user_permission_audit_log  (already wired in §16)
+
+Read side:
+- /hradmin/settings/audit → both tables, 2 tabs (b830ffa)
+- /hradmin/settings/permissions edit modal → per-target last 8 entries (already in §16)
+```
+
+### updateEmployee audit pattern
+
+```typescript
+// Snapshot before
+const { data: before } = await supabaseAdmin.from('employees').select('...').eq('id', employeeId).maybeSingle()
+
+// ... existing UPDATE ...
+
+// Per-field diff
+try {
+    const oldDiff: Record<string, unknown> = {}
+    const newDiff: Record<string, unknown> = {}
+    for (const k of Object.keys(beforeRecord)) {
+        const oldNorm = beforeRecord[k] === '' ? null : beforeRecord[k]
+        const newNorm = afterRecord[k] === '' ? null : afterRecord[k]
+        if (String(oldNorm) !== String(newNorm)) {
+            oldDiff[k] = beforeRecord[k]
+            newDiff[k] = afterRecord[k]
+        }
+    }
+    if (Object.keys(newDiff).length > 0) {
+        await supabaseAdmin.from('employee_audit_log').insert({
+            actor_user_id: auth.session.id,
+            target_employee_id: employeeId,
+            action: 'update_employee',
+            old_value: oldDiff,
+            new_value: newDiff,
+        })
+    }
+} catch (err) {
+    console.error('[employees/update] audit insert failed:', err)
+}
+```
+
+Three deliberate properties:
+
+1. **'' → null normalization** — many fields arrive as `''` from form blanks. Without this, "save with no edits" would record every empty string field as a change.
+2. **Empty diff = no row** — if nothing changed, no audit row. Silent.
+3. **Best-effort try/catch** — User UPDATE has already landed; an audit gap is recoverable, a partial UPDATE is not. Pattern matches the editor's audit insert.
+
+### Viewer architecture
+
+`/hradmin/settings/audit` server-fetches both tables in parallel. The active tab gets a `count: exact` + paginated range (PAGE_SIZE = 50); the inactive tab gets `head: true` (count only, for the tab badge — cheap).
+
+Names resolved from a single `User` + `employees` snapshot, no N+1.
+
+Each row shows: timestamp · actor · target · action/preset diff · changed-count badge. Click to expand → full per-field/per-flag diff + note/reason.
+
+Gated by `canViewAuditLog || canManageSystem || isLegacyHrAdmin` — Super Admin always sees, narrower flag for grant-able cases later.
+
+---
+
+## 3. The "pre-existing TS errors" lesson
+
+Multiple SESSION_HISTORY entries (§13, §15, §16) listed "Pre-existing TS errors (embla-carousel, signature-canvas, recharts Formatter, etc.)" as carryover. Tonight on this home Mac:
+
+```
+$ npx tsc --noEmit | grep -c "error TS"
+8
+
+$ ls node_modules/jszip
+ls: node_modules/jszip: No such file or directory
+
+$ npm install
+... (1 min)
+
+$ npx tsc --noEmit | grep -c "error TS"
+0
+```
+
+All 8 errors were `Cannot find module` for libs that ARE in package.json but were never installed on this checkout (or got blown away by some past cleanup). Not real bugs — stale environment. The recharts Formatter ones I remember from prior sessions must have been similar (or were fixed quietly on the office Mac).
+
+**Lesson:** "Pre-existing" in carryover doesn't always mean "real bug we deferred". Sometimes it means "your environment is stale — try `npm install`". Worth checking before adding more entries to the deferred bucket.
+
+Carryover bullet removed from NEXT.md §3.6 going forward.
+
+---
+
+## 4. State snapshot
+
+- **Commits this evening (§16 + §17):** 6 source + 2 docs
+- **Routes:** ~112 (+1 from §17 — `/hradmin/settings/audit`)
+- **TypeScript:** 0 errors (clean for the first time in ~5 sessions)
+- **DB:** 2 audit tables, both with writers + reader
+
+---
+
+## 5. What's autonomous-blocked vs user-task
+
+Going forward, the remaining backlog splits cleanly:
+
+**User tasks (waiting on you):**
+- §3.1 verify (logout/login)
+- §3.3 create บัญชี user account (decision: who?)
+- §3.4 bulk salary upload e2e test
+- §3.5 PDF visual verify
+- §3.8 mobile testing
+- B section (HR data inputs)
+
+**Autonomous-doable (deferred but possible):**
+- §3.6 Phase 2 Profile — pull job_applications data into profile (~2-3 hr, big)
+- C2 Granular permissions Phase 2 — needs flag specifics from user
+
+So the next code-only push needs new direction from you. Most leftover items are now testing or input-waiting.
+
+---
+
+*End of §17 · 2 source commits · audit pipeline closed end-to-end · pre-existing TS errors retired. Total this evening §16+§17: 6 source + 2 docs commits.*

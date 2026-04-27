@@ -21,12 +21,14 @@
 
 ## 0. TL;DR ใน 30 วินาที
 
-**APR27 home night ปิด 4 commits:**
+**APR27 home night ปิด 7 commits (ขยาย 4 → 7 ใน night-late session):**
 
-1. **§3.2 ✅ Permission editor** ที่ `/hradmin/settings/permissions` — table + edit modal + audit log + 5 presets + 8 flag checkboxes. ปอนด์ไม่ต้องแก้ DB ตรงๆ อีก
-2. **§3.5 ✅ Print PDF fix** — `print:grid-cols-2` บังคับ 2-col บน paper เพื่อให้ Personal info + Address ไม่ตก page 2
+1. **§3.2 ✅ Permission editor** ที่ `/hradmin/settings/permissions`
+2. **§3.5 ✅ Print PDF fix** — `print:grid-cols-2` บังคับ 2-col
+3. **🆕 Audit viewer + employee audit wiring** — `/hradmin/settings/audit` (2 tabs) + `updateEmployee` เขียน audit log อัตโนมัติแล้ว
+4. **Pre-existing TS errors ✅** — 8 errors หายหมดหลัง `npm install` (stale node_modules ตามไม่ทัน package.json ใหม่)
 
-**§3.1 ✅** — แก้ใน laptop session คืนก่อน (admin User.id realign กับ auth UUID)
+**§3.1 ✅** — laptop session คืนก่อน (admin User.id realign)
 
 **ที่เร่งด่วนที่สุดถัดไป:** **§3.3 สร้าง user account ให้บัญชี** (~5-10 นาที — ใช้ editor ใหม่ apply preset `payroll_manager`).
 
@@ -36,12 +38,15 @@
 
 | # | Commit | Track | สรุป |
 |---|---|---|---|
+| 7 | `b830ffa` | 📜 Audit | viewer ที่ /hradmin/settings/audit + nav link + 2 tabs (perm/employee) |
+| 6 | `449a8f7` | 📜 Audit | wire updateEmployee → employee_audit_log + canViewAuditLog AuthCheck |
+| 5 | `3796dd1` | 📚 Docs | refresh NEXT + §16 SESSION_HISTORY |
 | 4 | `57c2893` | 🖨️ Print | 2-col grids บน print → personal+address ไม่ตก page 2 |
 | 3 | `9eccbd0` | ⚙️ Settings | link to permissions editor from /hradmin/settings |
 | 2 | `170d60f` | 🔐 Permissions | editor ที่ /hradmin/settings/permissions (page + view + actions) |
 | 1 | `123c290` | 🔐 Permissions | foundation — can_view_audit_log flag + user_permission_audit_log table + PERMISSION_FLAGS list |
 
-(4 ต่อจาก `336f211` ที่เป็น admin User.id realign จาก laptop คืนก่อน)
+(7 ต่อจาก `336f211` ที่เป็น admin User.id realign จาก laptop คืนก่อน)
 
 ---
 
@@ -110,6 +115,16 @@ Verify อีกที: `/hradmin/employees/[id]` → ควรเห็นก�
 
 ถ้ายังตก → อาจต้องลด font size อีก หรือซ่อน emergency contact card บน print.
 
+### 3.5b ✅ ~~Audit log viewer + employee audit wiring~~ — DONE (`449a8f7` + `b830ffa`)
+
+ปอนด์ดูได้ที่ `/hradmin/settings/audit` หรือผ่านลิงก์จาก `/hradmin/settings`:
+- **Tab 1:** ประวัติการเปลี่ยนสิทธิ์ (จาก editor §3.2)
+- **Tab 2:** ประวัติการแก้ข้อมูลพนักงาน (auto จาก `updateEmployee` — เริ่มเก็บตั้งแต่ commit นี้, ของเก่าจะไม่มี)
+
+แต่ละแถว expandable → ดู diff per field/flag · note + reason แสดงด้วย
+
+Gated: `can_view_audit_log || can_manage_system || legacy hr_admin role`
+
 ### 3.6 **Phase 2 Profile** (deferred) — 2-3 ชม.
 
 ดึงข้อมูลเพิ่มจาก `job_applications` (สำหรับคนที่ผ่าน hire flow ใหม่):
@@ -166,9 +181,9 @@ EMAIL_FROM_CAREERS · EMAIL_FROM_HR · EMAIL_FROM_SYSTEM
 ## 5. Git + deploy state
 
 - **Repo:** `caserebel-maker/EBCI-Nexus`
-- **Last commit:** `57c2893` (print 2-col fix)
+- **Last commit:** `b830ffa` (audit viewer + nav link)
 - **Vercel deploy:** auto — `https://nexus.ebcitrade.com`
-- **Build:** ✓ TS clean · 0 new regression
+- **Build:** ✓ TS clean (0 errors after npm install · 8 "pre-existing" turned out to be stale node_modules)
 
 **Push pattern:** `git push origin HEAD:main`
 
@@ -188,8 +203,8 @@ EMAIL_FROM_CAREERS · EMAIL_FROM_HR · EMAIL_FROM_SYSTEM
 
 ## 7. Build + types state
 
-- **Routes:** ~111 (+1 จาก §3.2 — `/hradmin/settings/permissions`)
-- **TypeScript:** clean
+- **Routes:** ~112 (+2 จาก §3.2 + audit — `/hradmin/settings/permissions` + `/hradmin/settings/audit`)
+- **TypeScript:** clean (0 errors · all 8 historic "pre-existing" errors were stale node_modules — fixed by `npm install`)
 - **Build:** ✓ Compiled
 
 ---
@@ -210,5 +225,5 @@ EMAIL_FROM_CAREERS · EMAIL_FROM_HR · EMAIL_FROM_SYSTEM
 
 ---
 
-*Generated end of APR27 home-night session · 4 commits shipped · §3.2 + §3.5 ✅ · Last commit `57c2893` · routes ~111*
+*Generated end of APR27 home-night session · 7 commits shipped · §3.2 + §3.5 + audit pipeline ✅ · Last commit `b830ffa` · routes ~112*
 *Next session: §3.3 (สร้าง user account บัญชี) — apply Payroll Manager preset ผ่าน editor ใหม่.*
