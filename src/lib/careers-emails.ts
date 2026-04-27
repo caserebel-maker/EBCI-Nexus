@@ -197,6 +197,23 @@ function escapeHtml(s: string): string {
         .replace(/"/g, '&quot;')
 }
 
+/**
+ * Closing block — every applicant-facing email signs off the same way
+ * so the tone reads as one consistent person (HR woman) writing rather
+ * than a templated bot. The `closing` line is the literal phrase that
+ * sits above the signature ("ขอแสดงความยินดี" vs "ขอแสดงความนับถือ"
+ * etc.); pick whichever fits the email's emotional register.
+ */
+function signOff(closing: string): string {
+    return `
+    <div style="margin-top:28px;padding-top:18px;border-top:1px solid ${BORDER_LIGHT};">
+      <p style="margin:0 0 10px;font-size:15px;line-height:1.6;color:${TEXT_PRIMARY};">${escapeHtml(closing)}</p>
+      <p style="margin:0;font-size:14px;line-height:1.5;color:${TEXT_PRIMARY};font-weight:600;">ฝ่ายบุคคล · EBCI Careers</p>
+      <p style="margin:2px 0 0;font-size:12px;line-height:1.5;color:${TEXT_DIM};">หากมีข้อสงสัย ติดต่อกลับได้ที่ <a href="mailto:${HR_NOTIFY_EMAIL}" style="color:${MAROON};text-decoration:none;">${HR_NOTIFY_EMAIL}</a></p>
+    </div>
+  `
+}
+
 // ══════════════════════════════════════════════════════════════════════════
 // Templates
 // ══════════════════════════════════════════════════════════════════════════
@@ -208,18 +225,24 @@ export async function sendDraftSavedEmail(args: {
     position?: string | null
 }) {
     const resumeUrl = `${BASE_URL}/careers/apply?ref=${encodeURIComponent(args.referenceCode)}`
+    const positionLine = args.position
+        ? ` สำหรับตำแหน่ง <strong style="color:${TEXT_PRIMARY};">${escapeHtml(args.position)}</strong>`
+        : ''
     const html = wrap({
-        title: 'ใบสมัครงาน EBCI บันทึกเรียบร้อย',
+        title: 'บันทึกใบสมัครเป็นร่างไว้ให้เรียบร้อยแล้วค่ะ',
         subhead: 'Careers · Draft Saved',
         bodyHtml: `
-            ${paragraph('สวัสดีค่ะ / สวัสดีครับ')}
-            ${paragraph(`เราได้รับใบสมัครของคุณ${args.position ? ` สำหรับตำแหน่ง <strong style="color:${TEXT_PRIMARY};">${escapeHtml(args.position)}</strong>` : ''} และบันทึกเป็นร่างไว้ให้เรียบร้อยแล้ว`)}
+            ${paragraph('สวัสดีค่ะ')}
+            ${paragraph(`ดิฉันเขียนมาแจ้งให้ทราบว่า ระบบได้บันทึกข้อมูลที่คุณกรอกไว้ในใบสมัคร${positionLine} เรียบร้อยแล้วนะคะ ขณะนี้ใบสมัครของคุณยังอยู่ในสถานะ <strong style="color:${TEXT_PRIMARY};">"ร่าง"</strong> ซึ่งหมายความว่ายังไม่ได้ถูกส่งให้ฝ่ายบุคคลพิจารณา — คุณสามารถกลับมากรอกข้อมูลต่อให้ครบถ้วนก่อนกดส่งได้ตามสบายค่ะ`)}
             ${referenceBlock(args.referenceCode)}
-            ${paragraph('คุณสามารถกลับมากรอกใบสมัครต่อได้ตลอด ระบบจะบันทึกข้อมูลให้โดยอัตโนมัติทุก 3 วินาที ไม่ต้องกังวลว่าจะหายระหว่างกรอก', { small: true, muted: true })}
-            ${button(resumeUrl, 'กรอกใบสมัครต่อ')}
+            ${paragraph('เพื่อความสบายใจของคุณ ระบบจะบันทึกข้อมูลที่กรอกโดยอัตโนมัติทุก ๆ 3 วินาที ดังนั้นแม้ปิดเบราว์เซอร์ไประหว่างกรอก หรือไฟดับ ข้อมูลทั้งหมดก็จะยังอยู่ครบ ไม่ต้องเริ่มกรอกใหม่ตั้งแต่ต้นนะคะ')}
+            ${paragraph('กรุณาเก็บ <strong>รหัสใบสมัคร</strong> ด้านบนไว้ให้ดี เพราะใช้สำหรับเปิดใบสมัครเดิมขึ้นมาแก้ไขในครั้งถัดไป รวมถึงใช้อ้างอิงเวลาสอบถามกับฝ่ายบุคคลด้วยค่ะ')}
+            ${button(resumeUrl, 'กลับมากรอกใบสมัครต่อ')}
+            ${paragraph('หากระหว่างกรอกพบปัญหา หรือมีคำถามใด ๆ สามารถตอบกลับอีเมลฉบับนี้ หรือติดต่อดิฉันได้โดยตรงตามอีเมลด้านล่างเลยค่ะ', { small: true, muted: true })}
+            ${signOff('ขอบคุณที่ให้ความสนใจ EBCI นะคะ')}
         `,
     })
-    return sendCareersEmail({ to: args.to, subject: 'ใบสมัครงาน EBCI บันทึกเรียบร้อย', html })
+    return sendCareersEmail({ to: args.to, subject: 'บันทึกร่างใบสมัครงาน EBCI เรียบร้อย', html })
 }
 
 // ── 2. Application submitted — sent to applicant ────────────────────────────
@@ -229,19 +252,33 @@ export async function sendApplicationSubmittedEmail(args: {
     applicantName?: string | null
     position?: string | null
 }) {
+    const greeting = args.applicantName
+        ? `สวัสดีค่ะ คุณ<strong style="color:${TEXT_PRIMARY};">${escapeHtml(args.applicantName)}</strong>`
+        : 'สวัสดีค่ะ'
+    const positionLine = args.position
+        ? ` สำหรับตำแหน่ง <strong style="color:${TEXT_PRIMARY};">${escapeHtml(args.position)}</strong>`
+        : ''
     const html = wrap({
-        title: 'ขอบคุณสำหรับการสมัครงาน',
+        title: 'ขอบคุณสำหรับการสมัครงานกับ EBCI ค่ะ',
         subhead: 'Careers · Application Received',
         bodyHtml: `
-            ${paragraph(`สวัสดี${args.applicantName ? ` คุณ<strong style="color:${TEXT_PRIMARY};">${escapeHtml(args.applicantName)}</strong>` : ''}`)}
-            ${paragraph(`เราได้รับใบสมัครของคุณ${args.position ? ` สำหรับตำแหน่ง <strong style="color:${TEXT_PRIMARY};">${escapeHtml(args.position)}</strong>` : ''} เรียบร้อยแล้ว`)}
+            ${paragraph(greeting)}
+            ${paragraph(`ขอบคุณมากที่ให้ความสนใจร่วมงานกับเรา และสละเวลากรอกใบสมัคร${positionLine} เข้ามาในระบบนะคะ ดิฉันได้รับใบสมัครของคุณเรียบร้อยแล้วเมื่อสักครู่ และจะนำเข้าสู่ขั้นตอนการพิจารณาทันที`)}
             ${referenceBlock(args.referenceCode)}
-            ${paragraph('ทีม HR จะพิจารณาใบสมัครและ<strong>ติดต่อกลับภายใน 7 วันทำการ</strong> โปรดเก็บรหัสใบสมัครไว้เพื่อใช้อ้างอิง', { muted: true })}
+            ${paragraph(`<strong style="color:${TEXT_PRIMARY};">ขั้นตอนหลังจากนี้จะเป็นแบบนี้ค่ะ:</strong>`)}
+            <ul style="margin:0 0 16px;padding-left:22px;font-size:15px;line-height:1.75;color:${TEXT_MUTED};">
+              <li>ทีมฝ่ายบุคคลจะเริ่มพิจารณาใบสมัครภายใน <strong style="color:${TEXT_PRIMARY};">1–2 วันทำการ</strong></li>
+              <li>หากใบสมัครผ่านการคัดกรองรอบแรก ดิฉันจะติดต่อกลับเพื่อ<strong style="color:${TEXT_PRIMARY};">นัดวัน-เวลาสัมภาษณ์</strong></li>
+              <li>โดยรวม กระบวนการพิจารณาทั้งหมดจะใช้เวลา <strong style="color:${TEXT_PRIMARY};">ไม่เกิน 7 วันทำการ</strong></li>
+            </ul>
+            ${paragraph('ในระหว่างนี้ คุณจะได้รับอีเมลแจ้งสถานะทุกครั้งที่ใบสมัครมีความคืบหน้า ไม่ว่าจะเป็น "เริ่มพิจารณา" "ผ่านรอบแรก" หรือ "นัดสัมภาษณ์" ดังนั้นไม่ต้องกังวลว่าจะพลาดข้อมูลใดนะคะ — เพียงตรวจ inbox และโฟลเดอร์ junk/spam อย่างสม่ำเสมอก็พอค่ะ')}
+            ${paragraph('กรุณาเก็บรหัสใบสมัครด้านบนไว้สำหรับอ้างอิงทุกครั้งที่ติดต่อกลับ', { small: true, muted: true })}
+            ${signOff('ขอบคุณอีกครั้งที่ไว้วางใจส่งใบสมัครมาให้พิจารณาค่ะ')}
         `,
     })
     return sendCareersEmail({
         to: args.to,
-        subject: `ขอบคุณสำหรับการสมัครงาน EBCI [${args.referenceCode}]`,
+        subject: `ได้รับใบสมัครของคุณแล้วค่ะ [${args.referenceCode}]`,
         html,
     })
 }
@@ -286,9 +323,10 @@ export interface StatusEmailContext {
 }
 
 function statusHeader(ctx: StatusEmailContext): string {
-    return `
-        ${paragraph(`สวัสดี${ctx.applicantName ? ` คุณ<strong style="color:${TEXT_PRIMARY};">${escapeHtml(ctx.applicantName)}</strong>` : ''}`)}
-    `
+    const greeting = ctx.applicantName
+        ? `สวัสดีค่ะ คุณ<strong style="color:${TEXT_PRIMARY};">${escapeHtml(ctx.applicantName)}</strong>`
+        : 'สวัสดีค่ะ'
+    return paragraph(greeting)
 }
 
 function statusMeta(ctx: StatusEmailContext): string {
@@ -299,16 +337,21 @@ function statusMeta(ctx: StatusEmailContext): string {
 
 // ── 4a. reviewing ──────────────────────────────────────────────────────────
 export async function sendStatusReviewingEmail(ctx: StatusEmailContext) {
+    const positionPhrase = ctx.position
+        ? ` สำหรับตำแหน่ง <strong style="color:${TEXT_PRIMARY};">${escapeHtml(ctx.position)}</strong>`
+        : ''
     const html = wrap({
-        title: 'ใบสมัครของคุณกำลังถูกพิจารณา',
+        title: 'ใบสมัครของคุณเข้าสู่ขั้นตอนพิจารณาแล้วค่ะ',
         subhead: 'Careers · Under Review',
         bodyHtml: `
             ${statusHeader(ctx)}
-            ${paragraph('ทีม HR ได้รับใบสมัครของคุณเรียบร้อย และ<strong>กำลังพิจารณา</strong>อยู่')}
-            ${statusMeta(ctx)}
+            ${paragraph(`ดิฉันเขียนมาแจ้งให้ทราบว่า ใบสมัครของคุณ${positionPhrase} ขณะนี้ได้เข้าสู่ขั้นตอน <strong style="color:${TEXT_PRIMARY};">"พิจารณาโดยฝ่ายบุคคล"</strong> เรียบร้อยแล้วนะคะ`)}
+            ${paragraph('นั่นหมายความว่าทีมของเรากำลังตรวจสอบประวัติ ทักษะ และประสบการณ์ของคุณอย่างละเอียด เพื่อพิจารณาความเหมาะสมกับตำแหน่งงานและทีมที่คุณจะเข้าร่วม')}
             ${referenceBlock(ctx.referenceCode)}
-            ${paragraph('เราจะแจ้งผลให้ทราบอีกครั้งเมื่อมีความคืบหน้า ขอขอบคุณที่รอคอย', { small: true, muted: true })}
+            ${paragraph(`<strong style="color:${TEXT_PRIMARY};">กระบวนการในรอบนี้จะใช้เวลาประมาณ 3–5 วันทำการ</strong> หลังจากนั้น หากคุณผ่านการคัดเลือกรอบแรก ดิฉันจะส่งอีเมลฉบับใหม่มาแจ้งและนัดสัมภาษณ์ในลำดับต่อไป — แต่ถ้าใบสมัครของคุณยังไม่ตรงกับสิ่งที่เรามองหาในรอบนี้ ดิฉันก็จะเขียนมาแจ้งคุณตรง ๆ เช่นกันค่ะ ไม่ปล่อยเงียบแน่นอน`)}
+            ${paragraph('ในระหว่างนี้ ขอให้คุณรอผลก่อนนะคะ ไม่ต้องส่งเอกสารเพิ่มเติม หรือสอบถามความคืบหน้าซ้ำ — ดิฉันจะติดต่อกลับทันทีที่มีข้อมูลใหม่ค่ะ', { small: true, muted: true })}
             ${optionalHrNotes(ctx.notes)}
+            ${signOff('ขอบคุณที่อดทนรอ และขอให้ผ่านการพิจารณาด้วยดีนะคะ')}
         `,
     })
     return sendCareersEmail({
@@ -321,83 +364,123 @@ export async function sendStatusReviewingEmail(ctx: StatusEmailContext) {
 // ── 4b. shortlisted ────────────────────────────────────────────────────────
 export async function sendStatusShortlistedEmail(ctx: StatusEmailContext) {
     const html = wrap({
-        title: 'ใบสมัครของคุณผ่านรอบแรก',
+        title: 'ยินดีด้วยค่ะ — ผ่านการพิจารณารอบแรก',
         subhead: 'Careers · Shortlisted',
         accent: 'green',
         bodyHtml: `
             ${statusHeader(ctx)}
-            ${paragraph('<strong style="color:#047857;">ขอแสดงความยินดี!</strong> ใบสมัครของคุณผ่านการพิจารณารอบแรกเรียบร้อย')}
+            ${paragraph('<strong style="color:#047857;font-size:18px;">ดิฉันมีข่าวดีมาแจ้งค่ะ</strong>')}
+            ${paragraph(`ใบสมัครของคุณได้ <strong style="color:#047857;">ผ่านการพิจารณารอบแรก</strong> เรียบร้อยแล้ว — ทีมของเราประทับใจในประวัติและคุณสมบัติของคุณ จึงอยากเชิญคุณเข้าสู่ขั้นตอนการสัมภาษณ์งานในลำดับต่อไป`)}
             ${statusMeta(ctx)}
             ${referenceBlock(ctx.referenceCode, 'green')}
-            ${paragraph('ทีม HR จะติดต่อกลับภายในไม่กี่วันเพื่อนัดวัน-เวลาสัมภาษณ์ โปรดเตรียมเอกสารประกอบที่อาจต้องใช้ในวันสัมภาษณ์', { muted: true })}
+            ${paragraph(`<strong style="color:${TEXT_PRIMARY};">ขั้นตอนถัดไปจะเป็นแบบนี้ค่ะ:</strong>`)}
+            <ul style="margin:0 0 16px;padding-left:22px;font-size:15px;line-height:1.75;color:${TEXT_MUTED};">
+              <li>ดิฉันจะติดต่อทางโทรศัพท์ภายใน <strong style="color:${TEXT_PRIMARY};">1–2 วันทำการ</strong> เพื่อยืนยันวัน-เวลาที่คุณสะดวก</li>
+              <li>การสัมภาษณ์จะใช้เวลาประมาณ <strong style="color:${TEXT_PRIMARY};">30–60 นาที</strong> ขึ้นอยู่กับลักษณะของตำแหน่งงาน</li>
+              <li>คุณจะได้พบกับ<strong style="color:${TEXT_PRIMARY};">หัวหน้าแผนก</strong>ที่คุณสมัคร และซักถามเกี่ยวกับงาน บริษัท และสวัสดิการได้ตามต้องการ</li>
+            </ul>
+            ${paragraph(`<strong style="color:${TEXT_PRIMARY};">เอกสารที่อยากให้เตรียมในวันสัมภาษณ์:</strong>`)}
+            <ul style="margin:0 0 16px;padding-left:22px;font-size:15px;line-height:1.75;color:${TEXT_MUTED};">
+              <li>บัตรประจำตัวประชาชน (ตัวจริง)</li>
+              <li>สำเนาวุฒิการศึกษาล่าสุด</li>
+              <li>Portfolio หรือผลงานที่อยากนำเสนอ (ถ้ามี)</li>
+            </ul>
+            ${paragraph('หากในวันที่ดิฉันโทรไป คุณไม่สะดวกรับสาย หรือยังตัดสินใจไม่ได้ทันที สามารถตอบกลับอีเมลฉบับนี้เพื่อให้ดิฉันโทรกลับในเวลาอื่นได้นะคะ — เราอยากให้กระบวนการนี้ราบรื่นและไม่กดดันคุณค่ะ', { small: true, muted: true })}
             ${optionalHrNotes(ctx.notes)}
+            ${signOff('ขอแสดงความยินดีอีกครั้ง พบกันค่ะ')}
         `,
     })
     return sendCareersEmail({
         to: ctx.to,
-        subject: `ใบสมัครของคุณผ่านรอบแรก [${ctx.referenceCode}]`,
+        subject: `ยินดีด้วยค่ะ — ผ่านการพิจารณารอบแรก [${ctx.referenceCode}]`,
         html,
     })
 }
 
 // ── 4c. interview ──────────────────────────────────────────────────────────
 export async function sendStatusInterviewEmail(ctx: StatusEmailContext) {
+    const positionPhrase = ctx.position
+        ? `ตำแหน่ง <strong style="color:${TEXT_PRIMARY};">${escapeHtml(ctx.position)}</strong>`
+        : 'ตำแหน่งที่คุณสมัคร'
     const html = wrap({
-        title: 'นัดสัมภาษณ์',
+        title: 'เรียนเชิญสัมภาษณ์งานค่ะ',
         subhead: 'Careers · Interview Scheduled',
         bodyHtml: `
             ${statusHeader(ctx)}
-            ${paragraph('ขอเชิญคุณเข้าร่วม<strong>สัมภาษณ์งาน</strong>ในขั้นตอนถัดไป')}
-            ${statusMeta(ctx)}
+            ${paragraph(`ตามที่ใบสมัครของคุณผ่านการพิจารณามาแล้วก่อนหน้านี้ ดิฉันยินดีเรียนเชิญคุณเข้ามา <strong style="color:${TEXT_PRIMARY};">สัมภาษณ์งาน</strong> สำหรับ${positionPhrase} ค่ะ`)}
             ${referenceBlock(ctx.referenceCode)}
-            ${paragraph('ทีม HR จะติดต่อทางโทรศัพท์หรืออีเมลเพื่อนัดวัน-เวลา-สถานที่สัมภาษณ์ โปรดเตรียมพร้อมและตอบกลับภายใน 2-3 วัน', { muted: true })}
+            ${paragraph(`<strong style="color:${TEXT_PRIMARY};">รายละเอียดวัน-เวลา-สถานที่</strong> ดิฉันจะส่งอีกครั้งทาง <strong>อีเมล</strong> หรือ <strong>โทรศัพท์</strong> ภายใน 1–2 วันนี้ — โปรดสังเกต inbox และเช็คโฟลเดอร์ junk/spam อย่างสม่ำเสมอด้วยนะคะ`)}
+            ${paragraph(`<strong style="color:${TEXT_PRIMARY};">แนวทางการเตรียมตัวที่อยากแนะนำ:</strong>`)}
+            <ul style="margin:0 0 16px;padding-left:22px;font-size:15px;line-height:1.75;color:${TEXT_MUTED};">
+              <li>ศึกษาเกี่ยวกับ <strong style="color:${TEXT_PRIMARY};">EBCI</strong> และธุรกิจของเราเบื้องต้น เพื่อให้พูดคุยกับหัวหน้าแผนกได้ราบรื่น</li>
+              <li>ทบทวนประสบการณ์การทำงานและผลงานเด่นที่อยากเล่าให้เราฟัง</li>
+              <li>เตรียม<strong style="color:${TEXT_PRIMARY};">คำถามที่อยากถามเรา</strong> เช่น ลักษณะงานในแต่ละวัน, สวัสดิการ, วัฒนธรรมองค์กร, โอกาสเติบโต — สิ่งที่คุณอยากรู้ก่อนตัดสินใจ</li>
+              <li>เตรียมเอกสาร: บัตรประชาชน, สำเนาวุฒิการศึกษา, Portfolio (ถ้ามี)</li>
+            </ul>
+            ${paragraph(`การสัมภาษณ์จะเป็นการสนทนาแบบ<strong style="color:${TEXT_PRIMARY};">เป็นกันเอง</strong> ไม่ต้องเครียดหรือเกร็งนะคะ — เป้าหมายของเราคือทำความรู้จักคุณให้มากขึ้น และให้คุณได้รู้จักเราเช่นกัน เพื่อจะตัดสินใจร่วมกันได้ว่าเหมาะสมหรือไม่`)}
+            ${paragraph('หากต้องการเลื่อนวันสัมภาษณ์ หรือมีข้อสงสัยใด ๆ สามารถตอบกลับอีเมลนี้ได้เลย ดิฉันจะรีบประสานงานให้ค่ะ', { small: true, muted: true })}
             ${optionalHrNotes(ctx.notes)}
+            ${signOff('พบกันในวันสัมภาษณ์นะคะ')}
         `,
     })
     return sendCareersEmail({
         to: ctx.to,
-        subject: `นัดสัมภาษณ์ [${ctx.referenceCode}]`,
+        subject: `เรียนเชิญสัมภาษณ์งาน [${ctx.referenceCode}]`,
         html,
     })
 }
 
 // ── 4d. hired ──────────────────────────────────────────────────────────────
 export async function sendStatusHiredEmail(ctx: StatusEmailContext) {
+    const positionPhrase = ctx.position
+        ? `ในตำแหน่ง <strong style="color:${TEXT_PRIMARY};">${escapeHtml(ctx.position)}</strong>`
+        : 'ในตำแหน่งที่คุณสมัคร'
     const html = wrap({
-        title: 'ยินดีต้อนรับสู่ EBCI!',
+        title: 'ยินดีต้อนรับสู่ครอบครัว EBCI ค่ะ',
         subhead: 'Careers · Offer Extended',
         accent: 'green',
         bodyHtml: `
             ${statusHeader(ctx)}
-            ${paragraph('<strong style="color:#047857;font-size:18px;">ขอแสดงความยินดีอย่างยิ่ง!</strong>')}
-            ${paragraph('เรายินดีเสนอให้คุณเข้าร่วมงานกับทีม EBCI')}
-            ${statusMeta(ctx)}
+            ${paragraph('<strong style="color:#047857;font-size:20px;line-height:1.5;">ขอแสดงความยินดีอย่างยิ่งค่ะ!</strong>')}
+            ${paragraph(`หลังจากพิจารณาอย่างถี่ถ้วนทั้งจากใบสมัครและการสัมภาษณ์ ทีมและดิฉันมีความยินดีเป็นอย่างยิ่งที่จะ <strong style="color:#047857;">เสนอตำแหน่งงาน</strong> ${positionPhrase} ให้กับคุณ — เรามองเห็นถึงทักษะ ทัศนคติ และความตั้งใจของคุณที่จะร่วมเติบโตไปกับเรา`)}
             ${referenceBlock(ctx.referenceCode, 'green')}
-            ${paragraph('ทีม HR จะติดต่อเพื่อแจ้งรายละเอียดของสัญญาจ้าง วันเริ่มงาน และเอกสารที่ต้องเตรียมในลำดับถัดไป', { muted: true })}
+            ${paragraph(`<strong style="color:${TEXT_PRIMARY};">ในไม่กี่วันข้างหน้า ดิฉันจะติดต่อกลับทางโทรศัพท์เพื่อ:</strong>`)}
+            <ul style="margin:0 0 16px;padding-left:22px;font-size:15px;line-height:1.75;color:${TEXT_MUTED};">
+              <li>พูดคุยรายละเอียด<strong style="color:${TEXT_PRIMARY};">เงื่อนไขการจ้าง</strong> — เงินเดือน สวัสดิการ ระยะทดลองงาน เวลาเข้า-ออก</li>
+              <li>นัด<strong style="color:${TEXT_PRIMARY};">วันเริ่มงาน</strong> และวันที่สะดวกเข้ามาเซ็นสัญญาจ้าง</li>
+              <li>แจ้ง<strong style="color:${TEXT_PRIMARY};">เอกสารที่ต้องเตรียม</strong>ในวันแรก เช่น สำเนาบัตรประชาชน สำเนาทะเบียนบ้าน รูปถ่าย เอกสารทางทหาร (สำหรับเพศชาย) เป็นต้น</li>
+            </ul>
+            ${paragraph('ในระหว่างนี้ หากคุณมีคำถามเรื่องเงื่อนไขการจ้าง อยากต่อรองรายละเอียดบางส่วน หรือมีข้อกังวลใด ๆ ขอให้ตอบกลับอีเมลฉบับนี้ หรือโทรเข้ามาคุยกับดิฉันได้โดยตรงเลยนะคะ — เราอยากให้คุณตัดสินใจอย่างสบายใจที่สุด ไม่กดดันให้ตอบรับโดยทันทีค่ะ')}
+            ${paragraph(`ดิฉันและทีม <strong style="color:${TEXT_PRIMARY};">ตื่นเต้นและรอคอยที่จะได้ต้อนรับคุณ</strong>เข้าสู่ครอบครัว EBCI ในเร็ว ๆ นี้นะคะ`)}
             ${optionalHrNotes(ctx.notes)}
+            ${signOff('ขอแสดงความยินดีอีกครั้ง และพบกันในวันแรกของงานค่ะ')}
         `,
     })
     return sendCareersEmail({
         to: ctx.to,
-        subject: `ยินดีต้อนรับสู่ EBCI! [${ctx.referenceCode}]`,
+        subject: `ยินดีต้อนรับสู่ EBCI ค่ะ [${ctx.referenceCode}]`,
         html,
     })
 }
 
 // ── 4e. rejected — softer maroon, no accent band ───────────────────────────
 export async function sendStatusRejectedEmail(ctx: StatusEmailContext) {
+    const positionPhrase = ctx.position
+        ? `ในตำแหน่ง <strong style="color:${TEXT_PRIMARY};">${escapeHtml(ctx.position)}</strong>`
+        : 'ในตำแหน่งที่คุณสมัคร'
     const html = wrap({
-        title: 'ผลการพิจารณาใบสมัคร',
+        title: 'ผลการพิจารณาใบสมัครงาน',
         subhead: 'Careers · Application Update',
         bodyHtml: `
             ${statusHeader(ctx)}
-            ${paragraph('ขอบคุณที่ให้ความสนใจร่วมงานกับ EBCI และสละเวลากรอกใบสมัครให้เรา')}
-            ${statusMeta(ctx)}
+            ${paragraph(`ก่อนอื่น ดิฉันต้องขอบคุณคุณมากที่ให้ความสนใจสมัครงาน${positionPhrase}กับ EBCI และสละเวลากรอกใบสมัคร เตรียมเอกสาร รวมถึงเข้าสู่ขั้นตอนการพิจารณาร่วมกับเราอย่างตั้งใจค่ะ`)}
             ${referenceBlock(ctx.referenceCode)}
-            ${paragraph('หลังจากพิจารณาอย่างถี่ถ้วนแล้ว เราเสียใจที่ต้องแจ้งให้ทราบว่า<strong>ใบสมัครของคุณยังไม่ตรงกับที่เรามองหาในรอบนี้</strong>', { muted: true })}
-            ${paragraph('อย่างไรก็ดี เราจะเก็บข้อมูลของคุณไว้สำหรับโอกาสในอนาคต หากมีตำแหน่งที่เหมาะสมเราจะรีบติดต่อกลับ', { small: true, muted: true })}
-            ${paragraph('ขอให้คุณพบโอกาสดี ๆ ในเส้นทางอาชีพข้างหน้า', { small: true, muted: true })}
+            ${paragraph(`ดิฉันต้องเรียนแจ้งคุณตรง ๆ ว่า — หลังจากพิจารณาใบสมัครของผู้สมัครหลายท่านอย่างละเอียดแล้ว เราจำเป็นต้องเลือกผู้ที่มีคุณสมบัติตรงกับสิ่งที่ทีมมองหาในรอบนี้มากที่สุด ดังนั้น <strong style="color:${TEXT_PRIMARY};">ใบสมัครของคุณจึงยังไม่ผ่านการพิจารณาในรอบนี้ค่ะ</strong>`)}
+            ${paragraph('การตัดสินใจนี้<strong>ไม่ได้สะท้อนถึงความสามารถหรือคุณค่าของคุณ</strong>เลยนะคะ — ผู้สมัครแต่ละท่านมีจุดเด่นที่แตกต่างกัน และบ่อยครั้งความเหมาะสมระหว่างผู้สมัครกับตำแหน่งงานก็เป็นเรื่องของจังหวะ ทิศทางทีม และบริบทเฉพาะหน้าของบริษัทในช่วงเวลานั้น ๆ มากกว่าตัวคุณค่ะ')}
+            ${paragraph(`อย่างไรก็ดี ดิฉันจะ<strong>เก็บข้อมูลใบสมัครของคุณไว้ในระบบ</strong> หากในอนาคต EBCI มีตำแหน่งใหม่ที่คุณสมบัติของคุณตรงกัน ดิฉันจะรีบติดต่อกลับโดยตรงนะคะ — และหากคุณยังสนใจร่วมงานกับเราในตำแหน่งอื่น ๆ ก็ยินดีให้สมัครเข้ามาใหม่ได้ตลอดค่ะ`)}
+            ${paragraph('ขอเป็นกำลังใจให้คุณในเส้นทางอาชีพที่กำลังจะเดินต่อไป ขอให้พบกับโอกาสที่ดีและทีมที่ใช่นะคะ')}
             ${optionalHrNotes(ctx.notes)}
+            ${signOff('ขอบคุณอีกครั้งที่ให้ความสนใจ EBCI ค่ะ')}
         `,
     })
     return sendCareersEmail({
