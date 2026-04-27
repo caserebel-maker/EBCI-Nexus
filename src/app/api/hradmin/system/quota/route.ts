@@ -149,6 +149,40 @@ export async function GET() {
         }
     }
 
+    // ─── Forecast / projections ───────────────────────────────────────────
+    // The RPC only reports storage_growth_30d_bytes today. DB and auth
+    // growth aren't tracked yet (would need a daily snapshot table), so
+    // their forecast falls back to "no projection available". When a
+    // snapshot table lands (B-list backlog), populate `db_growth_30d_bytes`
+    // and `auth_growth_30d` here without touching the dashboard shape.
+    const dailyStorageGrowthMb = storageGrowthMb30d / 30
+    const monthlyStorageGrowthMb = storageGrowthMb30d
+    const yearlyStorageProjectionMb = storageMb + storageGrowthMb30d * 12
+    const forecast = {
+        storage: {
+            daily_growth_mb:    +dailyStorageGrowthMb.toFixed(3),
+            monthly_growth_mb:  +monthlyStorageGrowthMb.toFixed(2),
+            months_until_full:  storageMonthsLeft,
+            year_projection_mb: +yearlyStorageProjectionMb.toFixed(2),
+            year_projection_percent: +((yearlyStorageProjectionMb / storageLimitMb) * 100).toFixed(2),
+        },
+        database: {
+            // No growth telemetry yet — forecast = null. Dashboard renders
+            // a "ยังไม่มีข้อมูล" empty-state for null projections.
+            daily_growth_mb: null,
+            monthly_growth_mb: null,
+            months_until_full: null,
+        },
+        auth: {
+            monthly_growth: rpc.auth_users_growth_30d,
+            months_until_full: monthsUntilFull(authUsers, authLimit, rpc.auth_users_growth_30d),
+        },
+    }
+
+    // ─── Vercel usage (optional — needs VERCEL_API_TOKEN) ─────────────────
+    const { getVercelUsage } = await import('@/lib/vercel-api')
+    const vercelUsage = await getVercelUsage(process.env.VERCEL_PROJECT_ID)
+
     return NextResponse.json({
         database: {
             size_mb: +dbSizeMb.toFixed(2),
@@ -177,12 +211,24 @@ export async function GET() {
         tables,
         total_rows: totalRows,
         services: {
-            vercel: { plan: 'Hobby (Free)', status: 'active', cost_thb: 0, note: 'usage metrics ต้องเชื่อม API (phase ถัดไป)' },
+            vercel: {
+                plan: 'Hobby (Free)',
+                status: 'active',
+                cost_thb: 0,
+                note: vercelUsage.has_token
+                    ? null
+                    : 'ตั้ง VERCEL_API_TOKEN เพื่อเปิดข้อมูล deployment',
+                usage: vercelUsage.has_token ? {
+                    project: vercelUsage.project,
+                    deployments: vercelUsage.deployments,
+                } : null,
+            },
             supabase: { plan: 'Free', status: 'active', cost_thb: 0, note: null },
             github: { plan: 'Free', status: 'active', cost_thb: 0, note: null },
             domain: { plan: 'เช่าโฮส', status: 'active', cost_thb: null, note: 'จัดการแยก' },
         },
         recommendation,
+        forecast,
         computed_at: rpc.computed_at,
     })
 }

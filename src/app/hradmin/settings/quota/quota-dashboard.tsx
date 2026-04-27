@@ -42,7 +42,28 @@ interface QuotaPayload {
     tables: TableEntry[]
     total_rows: number
     services: {
-        vercel: { plan: string; status: string; cost_thb: number; note: string | null }
+        vercel: {
+            plan: string
+            status: string
+            cost_thb: number
+            note: string | null
+            usage?: {
+                project: {
+                    id: string
+                    name: string
+                    framework: string | null
+                    latest_deployment_at: string | null
+                    latest_deployment_state: string | null
+                    latest_deployment_url: string | null
+                } | null
+                deployments: {
+                    last_30_days: number
+                    last_7_days: number
+                    success_rate_30d: number
+                    failed_30d: number
+                } | null
+            } | null
+        }
         supabase: { plan: string; status: string; cost_thb: number; note: string | null }
         github: { plan: string; status: string; cost_thb: number; note: string | null }
         domain: { plan: string; status: string; cost_thb: number | null; note: string | null }
@@ -52,6 +73,24 @@ interface QuotaPayload {
         headline: string
         body: string
         action?: { label: string; href: string } | null
+    }
+    forecast?: {
+        storage: {
+            daily_growth_mb: number
+            monthly_growth_mb: number
+            months_until_full: number | null
+            year_projection_mb: number
+            year_projection_percent: number
+        }
+        database: {
+            daily_growth_mb: number | null
+            monthly_growth_mb: number | null
+            months_until_full: number | null
+        }
+        auth: {
+            monthly_growth: number
+            months_until_full: number | null
+        }
     }
     computed_at: string
 }
@@ -263,6 +302,13 @@ export function QuotaDashboard() {
                     {/* ─── Section 5: Recommendation ────────────────────────────── */}
                     <RecommendationCard recommendation={data.recommendation} storageMonthsLeft={data.storage.months_until_full} />
 
+                    {/* ─── Section 5b: Forecast / projections ─────────────────────
+                        Projects storage / DB / auth users use into the next year
+                        based on the 30-day growth rate. DB growth isn't tracked
+                        yet (would need a daily snapshot table) — the card shows
+                        an empty state for that one until the snapshot lands. */}
+                    {data.forecast && <ForecastSection forecast={data.forecast} storageLimit={data.storage.limit_mb} />}
+
                     {/* ─── Section 2: Storage buckets ───────────────────────────── */}
                     <section className="p-5 sm:p-6" style={glass}>
                         <div className="flex items-center justify-between mb-4">
@@ -340,6 +386,16 @@ export function QuotaDashboard() {
                             <Server size={16} />
                             สถานะบริการที่ใช้
                         </h2>
+
+                        {/* Vercel deployment stats — only renders when
+                            VERCEL_API_TOKEN is set + project metadata fetched. */}
+                        {data.services.vercel.usage?.deployments && (
+                            <VercelUsageCard
+                                project={data.services.vercel.usage.project}
+                                deployments={data.services.vercel.usage.deployments}
+                            />
+                        )}
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                             <ServiceCard
                                 icon={Sparkles}
@@ -477,4 +533,252 @@ function ServiceCard({
             )}
         </div>
     )
+}
+
+// ─── Forecast section ───────────────────────────────────────────────────────
+// Three projection cards based on 30-day growth rate. Storage has rich
+// telemetry (RPC reports growth_30d_bytes); DB has none yet — its card
+// renders an empty state until a daily snapshot table feeds the API.
+function ForecastSection({
+    forecast, storageLimit,
+}: {
+    forecast: NonNullable<QuotaPayload['forecast']>
+    storageLimit: number
+}) {
+    return (
+        <section className="p-5 sm:p-6" style={glass}>
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-bold text-white inline-flex items-center gap-2">
+                    <TrendingUp size={16} />
+                    คาดการณ์การใช้งาน 12 เดือนข้างหน้า
+                </h2>
+                <span className="text-[11px] text-white/45">
+                    คำนวณจากอัตราการเติบโตในช่วง 30 วันล่าสุด
+                </span>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Storage — full data */}
+                <ForecastCard
+                    icon={HardDrive}
+                    label="พื้นที่เก็บไฟล์"
+                    daily={`${forecast.storage.daily_growth_mb.toFixed(2)} MB/วัน`}
+                    monthly={`${forecast.storage.monthly_growth_mb.toFixed(2)} MB/เดือน`}
+                    yearProjection={`~${(forecast.storage.year_projection_mb / 1024).toFixed(2)} GB ใน 12 เดือน`}
+                    yearProjectionPercent={forecast.storage.year_projection_percent}
+                    monthsUntilFull={forecast.storage.months_until_full}
+                    storageLimit={storageLimit}
+                />
+
+                {/* Database — telemetry pending */}
+                <ForecastCard
+                    icon={Database}
+                    label="ฐานข้อมูล"
+                    daily={null}
+                    monthly={null}
+                    yearProjection={null}
+                    yearProjectionPercent={null}
+                    monthsUntilFull={null}
+                    storageLimit={null}
+                    emptyMessage="ยังไม่มี telemetry รายวัน — รอ snapshot table"
+                />
+
+                {/* Auth users */}
+                <ForecastCard
+                    icon={Users}
+                    label="ผู้ใช้ระบบ"
+                    daily={null}
+                    monthly={`+${forecast.auth.monthly_growth} คน/เดือน`}
+                    yearProjection={null}
+                    yearProjectionPercent={null}
+                    monthsUntilFull={forecast.auth.months_until_full}
+                    storageLimit={null}
+                    emptyMessage={forecast.auth.monthly_growth === 0 ? 'ไม่มีผู้ใช้ใหม่ใน 30 วันล่าสุด' : undefined}
+                />
+            </div>
+        </section>
+    )
+}
+
+function ForecastCard({
+    icon: Icon, label, daily, monthly, yearProjection, yearProjectionPercent,
+    monthsUntilFull, storageLimit, emptyMessage,
+}: {
+    icon: typeof Database
+    label: string
+    daily: string | null
+    monthly: string | null
+    yearProjection: string | null
+    yearProjectionPercent: number | null
+    monthsUntilFull: number | null
+    storageLimit: number | null
+    emptyMessage?: string
+}) {
+    const hasData = daily !== null || monthly !== null || yearProjection !== null
+    const tone = monthsUntilFull === null ? 'ok'
+        : monthsUntilFull < 6 ? 'critical'
+        : monthsUntilFull < 12 ? 'warning'
+        : 'ok'
+    const meta = STATUS_META[tone]
+
+    return (
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="flex items-center gap-2 mb-3">
+                <span className="h-7 w-7 rounded-lg bg-white/10 flex items-center justify-center">
+                    <Icon size={13} className="text-white/75" />
+                </span>
+                <span className="text-white/85 text-sm font-bold">{label}</span>
+            </div>
+
+            {!hasData && emptyMessage && (
+                <p className="text-[11px] text-white/40 leading-relaxed py-2">{emptyMessage}</p>
+            )}
+
+            {hasData && (
+                <div className="space-y-1.5 text-[12px]">
+                    {daily && (
+                        <Row label="ต่อวัน" value={daily} />
+                    )}
+                    {monthly && (
+                        <Row label="ต่อเดือน" value={monthly} />
+                    )}
+                    {yearProjection && (
+                        <Row label="ใน 12 เดือน" value={yearProjection} />
+                    )}
+                    {yearProjectionPercent !== null && storageLimit !== null && (
+                        <div className="mt-2.5">
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="text-[10px] text-white/45 uppercase tracking-wider">
+                                    คาดการณ์ % ของ limit
+                                </span>
+                                <span className={cn(
+                                    'text-[11px] font-bold tabular-nums',
+                                    yearProjectionPercent > 80 ? 'text-red-300'
+                                        : yearProjectionPercent > 50 ? 'text-amber-200'
+                                        : 'text-emerald-200',
+                                )}>
+                                    {yearProjectionPercent.toFixed(1)}%
+                                </span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                                <div
+                                    className={cn(
+                                        'h-full rounded-full bg-gradient-to-r',
+                                        meta.bar,
+                                    )}
+                                    style={{ width: `${Math.min(100, yearProjectionPercent)}%` }}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {monthsUntilFull !== null && (
+                <div className={cn(
+                    'mt-3 px-2.5 py-1.5 rounded-lg text-[11px] font-bold inline-flex items-center gap-1',
+                    meta.chip,
+                )}>
+                    <Clock size={11} />
+                    เต็มในอีก {monthsUntilFull} เดือน
+                </div>
+            )}
+        </div>
+    )
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="flex items-center justify-between gap-2">
+            <span className="text-white/55">{label}</span>
+            <span className="text-white/90 font-semibold tabular-nums">{value}</span>
+        </div>
+    )
+}
+
+// ─── Vercel usage card ──────────────────────────────────────────────────────
+function VercelUsageCard({
+    project, deployments,
+}: {
+    project: NonNullable<QuotaPayload['services']['vercel']['usage']>['project']
+    deployments: NonNullable<NonNullable<QuotaPayload['services']['vercel']['usage']>['deployments']>
+}) {
+    const successPct = (deployments.success_rate_30d * 100).toFixed(1)
+    const failureBadge = deployments.failed_30d > 0
+    const lastDeployIso = project?.latest_deployment_at
+    const lastDeployRel = lastDeployIso ? formatRelative(lastDeployIso) : '—'
+    const stateColor = (project?.latest_deployment_state ?? '').toUpperCase() === 'READY'
+        ? 'text-emerald-300'
+        : 'text-amber-300'
+
+    return (
+        <div className="mb-3 p-4 rounded-xl border border-white/10 bg-white/[0.04]">
+            <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                    <Sparkles size={14} className="text-amber-200" />
+                    <span className="text-sm font-bold text-white">Vercel — deployment activity</span>
+                    {project?.name && <span className="text-[11px] text-white/45 font-mono">{project.name}</span>}
+                </div>
+                {project?.latest_deployment_url && (
+                    <a
+                        href={project.latest_deployment_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-white/55 hover:text-white inline-flex items-center gap-1"
+                    >
+                        ดู deployment ล่าสุด
+                        <ExternalLink size={10} />
+                    </a>
+                )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <Stat label="30 วันล่าสุด" value={String(deployments.last_30_days)} />
+                <Stat label="7 วันล่าสุด"  value={String(deployments.last_7_days)} />
+                <Stat
+                    label="Success rate"
+                    value={`${successPct}%`}
+                    tone={deployments.success_rate_30d >= 0.9 ? 'green' : 'amber'}
+                />
+                <Stat
+                    label="Failed"
+                    value={String(deployments.failed_30d)}
+                    tone={failureBadge ? 'red' : 'neutral'}
+                />
+            </div>
+            <p className="mt-3 text-[11px] text-white/45 inline-flex items-center gap-1.5">
+                <Clock size={11} />
+                deployment ล่าสุด:
+                <span className={cn('font-semibold', stateColor)}>
+                    {project?.latest_deployment_state ?? '—'}
+                </span>
+                <span className="text-white/40">· {lastDeployRel}</span>
+            </p>
+        </div>
+    )
+}
+
+function Stat({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'green' | 'amber' | 'red' | 'neutral' }) {
+    const toneClass = tone === 'green' ? 'text-emerald-200'
+        : tone === 'amber' ? 'text-amber-200'
+        : tone === 'red'   ? 'text-red-200'
+        : 'text-white'
+    return (
+        <div>
+            <p className={cn('text-2xl font-bold tabular-nums', toneClass)}>{value}</p>
+            <p className="text-[10px] text-white/55 uppercase tracking-wider">{label}</p>
+        </div>
+    )
+}
+
+function formatRelative(iso: string): string {
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return '—'
+    const diff = Date.now() - d.getTime()
+    const min = Math.floor(diff / 60000)
+    if (min < 1) return 'เมื่อสักครู่'
+    if (min < 60) return `${min} นาทีที่แล้ว`
+    const hr = Math.floor(min / 60)
+    if (hr < 24) return `${hr} ชม.ที่แล้ว`
+    const day = Math.floor(hr / 24)
+    if (day < 7) return `${day} วันที่แล้ว`
+    return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
 }
