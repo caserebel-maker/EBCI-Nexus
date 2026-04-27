@@ -105,6 +105,8 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         { label: 'อนุมัติการลา', href: '/portal/leave/inbox', icon: ClipboardCheck },
         { label: 'ผังองค์กร', href: '/portal/organization', icon: Network },
         { label: 'dashboard.announcements', href: '/portal/announcements', icon: Megaphone },
-        { label: 'common.view', href: '/portal/payslips', icon: FileText },
+        // Was '/portal/payslips' which doesn't exist as a route — the actual
+        // page is at '/portal/payroll'. Fixed Apr 28.
+        { label: 'สลิปของฉัน', href: '/portal/payroll', icon: FileText },
     ],
 }

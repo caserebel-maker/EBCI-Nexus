@@ -21,14 +21,15 @@ function calcTenure(startDate: string): string {
 import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LogOut, RefreshCw } from 'lucide-react'
+import { LogOut, RefreshCw, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { NAVIGATION_CONFIG } from '@/config/navigation'
+import { NAVIGATION_CONFIG, type NavItem } from '@/config/navigation'
 import { LanguageToggle } from '@/components/ui/language-toggle'
 import { useTranslation } from '@/contexts/language-context'
 import { PortalBottomNav } from '@/components/layout/portal-bottom-nav'
 import { SidebarNav } from '@/components/layout/sidebar-nav'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
+import { EMPTY_PERMISSIONS, type UserPermissions } from '@/lib/permissions'
 
 interface DashboardShellProps {
     children: React.ReactNode
@@ -36,6 +37,14 @@ interface DashboardShellProps {
     userName?: string
     showBottomNav?: boolean
     emergencyBanner?: React.ReactNode
+    /**
+     * Per-user permission flags resolved server-side. Used to append
+     * permission-gated nav items (e.g. payroll bulk upload) on top of
+     * the role's base navigation. Defaults to EMPTY_PERMISSIONS so
+     * callers that don't pass it (older usages) keep working — no
+     * extras get appended in that case.
+     */
+    permissions?: UserPermissions
     profile?: {
         fullName: string
         nickname: string | null
@@ -49,13 +58,28 @@ interface DashboardShellProps {
     }
 }
 
-export function DashboardShell({ children, role, userName, showBottomNav = false, profile, emergencyBanner }: DashboardShellProps) {
+export function DashboardShell({ children, role, userName, showBottomNav = false, profile, emergencyBanner, permissions }: DashboardShellProps) {
     const pathname = usePathname()
     const { t } = useTranslation()
 
     // Navigation Items — HR Admin in /portal sees employee nav (their "portal mode")
     const effectiveRole = (role === 'hr_admin' && pathname?.startsWith('/portal')) ? 'employee' : role
-    const navItems = NAVIGATION_CONFIG[effectiveRole] || []
+    const baseItems = NAVIGATION_CONFIG[effectiveRole] || []
+
+    // Permission-driven extras — appended on top of the role's base nav
+    // for users who hold an allow-list flag the role itself doesn't grant.
+    // Per user request (Apr 28): keep admin/manager/employee shells as-is,
+    // just bolt one extra menu onto the employee that bridges them into a
+    // single /hradmin admin page. No mode toggle needed.
+    const perms = permissions ?? EMPTY_PERMISSIONS
+    const navItems: NavItem[] = [...baseItems]
+    if (perms.can_manage_payroll && !navItems.some(i => i.href === '/hradmin/payroll/bulk')) {
+        navItems.push({
+            label: 'อัปโหลดสลิปเงินเดือน',
+            href: '/hradmin/payroll/bulk',
+            icon: Wallet,
+        })
+    }
 
     return (
         <div className="flex h-screen overflow-hidden bg-brand-gradient bg-fixed dark:bg-background lg:pt-0 transition-colors duration-300">

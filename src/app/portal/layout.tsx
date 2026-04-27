@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { PriorityAlerts } from '@/components/dashboard/priority-alerts'
 import { fetchPriorityAlerts } from '@/lib/priority-alerts-fetch'
 import { getEmployeeProfile } from '@/lib/employee-profile'
+import { getCurrentPermissions } from '@/lib/permissions-server'
 
 export default async function EmployeeLayout({
     children,
@@ -16,7 +17,7 @@ export default async function EmployeeLayout({
         redirect('/login')
     }
 
-    const [alerts, profile] = await Promise.all([
+    const [alerts, profile, permissions] = await Promise.all([
         fetchPriorityAlerts(),
         getEmployeeProfile(
             session.employeeId,
@@ -25,6 +26,7 @@ export default async function EmployeeLayout({
             session.role,
             session.id,
         ),
+        getCurrentPermissions(),
     ])
 
     return (
@@ -32,6 +34,7 @@ export default async function EmployeeLayout({
             role={session.role}
             userName={session.name}
             profile={profile}
+            permissions={permissions}
             showBottomNav
             emergencyBanner={alerts.length > 0 ? <PriorityAlerts alerts={alerts} /> : null}
         >

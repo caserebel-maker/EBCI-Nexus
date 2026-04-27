@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { PriorityAlerts } from '@/components/dashboard/priority-alerts'
 import { fetchPriorityAlerts } from '@/lib/priority-alerts-fetch'
 import { getEmployeeProfile } from '@/lib/employee-profile'
+import { getCurrentPermissions } from '@/lib/permissions-server'
 
 export default async function AdminLayout({
     children,
@@ -12,9 +13,21 @@ export default async function AdminLayout({
 }) {
     const session = await getSession()
 
-    if (!session || (session.role !== 'hr_admin' && session.role !== 'manager')) {
-        redirect('/login')
-    }
+    if (!session) redirect('/login')
+
+    // Pre-fetch permissions so the shell can decide what to render before
+    // we apply the role/permission gate below — saves a duplicate query.
+    const permissions = await getCurrentPermissions()
+
+    // Layout-level access: anyone with role manager/hr_admin OR a flag
+    // that grants any /hradmin page (currently only can_manage_payroll
+    // qualifies via /hradmin/payroll/bulk). Page-level guards still
+    // apply for finer control.
+    const hasAnyHradminAccess =
+        session.role === 'hr_admin' ||
+        session.role === 'manager' ||
+        permissions.can_manage_payroll
+    if (!hasAnyHradminAccess) redirect('/portal')
 
     const [alerts, profile] = await Promise.all([
         fetchPriorityAlerts(),
@@ -29,9 +42,10 @@ export default async function AdminLayout({
 
     return (
         <DashboardShell
-            role={session.role as 'hr_admin' | 'manager'}
+            role={session.role as 'hr_admin' | 'manager' | 'employee'}
             userName={session.name}
             profile={profile}
+            permissions={permissions}
             showBottomNav
             emergencyBanner={alerts.length > 0 ? <PriorityAlerts alerts={alerts} /> : null}
         >
