@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { MapPin, Save, Loader2, CheckCircle2, XCircle, CreditCard, Wifi, WifiOff } from 'lucide-react'
+import Link from 'next/link'
+import { MapPin, Save, Loader2, CheckCircle2, XCircle, CreditCard, Wifi, WifiOff, ShieldCheck, ChevronRight } from 'lucide-react'
 import { updateOfficeLocation } from './actions'
 
 interface Location {
@@ -70,6 +71,23 @@ export function SettingsClient({ initialLocation }: { initialLocation: Location 
             <div>
                 <h1 className="text-[22px] font-bold text-white">ตั้งค่าระบบ</h1>
                 <p className="text-[14px] text-white/60 mt-1">จัดการการตั้งค่าออฟฟิศและระบบ</p>
+            </div>
+
+            {/* Quick links — sub-pages live under this settings tree */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Link
+                    href="/hradmin/settings/permissions"
+                    className="group flex items-center gap-3 p-4 rounded-2xl border border-white/10 bg-white/[0.05] hover:bg-white/[0.08] hover:border-amber-300/30 transition-all"
+                >
+                    <div className="h-10 w-10 rounded-lg bg-amber-500/15 border border-amber-400/30 flex items-center justify-center text-amber-200 shrink-0">
+                        <ShieldCheck size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-[15px] font-bold text-white">สิทธิ์ผู้ใช้</p>
+                        <p className="text-[12px] text-white/55 leading-snug">มอบ/ถอน permission ให้ทีมงาน · มี audit log</p>
+                    </div>
+                    <ChevronRight size={16} className="text-white/40 group-hover:text-amber-300 transition-colors" />
+                </Link>
             </div>
 
             {/* Office Location Card */}
