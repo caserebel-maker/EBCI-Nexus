@@ -296,7 +296,7 @@ export function ApplicantsListView({
                         <p className="text-sm">ยังไม่มีใบสมัครที่ตรงกับตัวกรอง</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
                         {items.map(a => (
                             <ApplicantCard key={a.id} a={a} />
                         ))}
