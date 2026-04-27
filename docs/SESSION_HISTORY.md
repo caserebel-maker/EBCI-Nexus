@@ -23,6 +23,9 @@
 | 11 | **25 เม.ย. (Home night, late)** | (in this file) | §3.1 verification finding — leave Phase 2 actually done Apr 23-24 (DB snapshot) · NEXT.md re-prioritized |
 | 12 | **25 เม.ย. (Home night, very late)** | (in this file) | Permission-flag-based route auth sweep (4 commits, 26 sites) · Holidays table + Thai 2026 seed |
 | 13 | **25 เม.ย. (Home, almost morning)** | (in this file) | Quick wins — lunar holidays · role-aware email URL · careers fan-out widening · explicit no-entitlement message |
+| 14 | **24 เม.ย. (Office afternoon)** | (in this file) | §3.6 carryover sweep |
+| 15 | **27 เม.ย. (Office afternoon)** | (in this file) | Hire flow · Contracts · PDF export · Payroll permission system |
+| 16 | **27 เม.ย. (Home night)** | (in this file) | Permission editor UI · Print 2-col fix |
 
 ---
 
@@ -2493,3 +2496,150 @@ Next session priorities (per NEXT.md §3):
 ---
 
 *End of §15 · 17 commits · 4 major modules + 8 polish items · Hire + Contracts + PDF + Payroll permission system live. Continue session = laptop, pull + `อ่าน docs/NEXT.md แล้วทำต่อ`.*
+
+
+
+<a id="section-16"></a>
+# §16. APR27 (Home night) — Permission Editor + Print 2-col Fix
+
+*Source: this file. 4 commits shipped, all push.*
+*Spawned by: user pulled 35 commits + said "รันโลด" (full-load mode).*
+
+---
+
+## 0. TL;DR
+
+| Track | What |
+|---|---|
+| **§3.2 ✅ Permission editor UI** | New page `/hradmin/settings/permissions` — table + edit modal + audit log + 5 presets + 8 flag checkboxes. ปอนด์ไม่ต้องแก้ DB ตรงๆ อีก. |
+| **§3.5 ✅ Print 2-col fix** | `print:grid-cols-2 print:gap-3` keeps Personal info + Address grids on page 1 even when print viewport falls below `md:` breakpoint. |
+
+---
+
+## 1. Commits
+
+| # | Commit | What |
+|---|---|---|
+| 4 | `57c2893` | fix(print): keep 2-col grids on paper so personal+address don't fall on page 2 |
+| 3 | `9eccbd0` | feat(settings): link to permissions editor from /hradmin/settings |
+| 2 | `170d60f` | feat(permissions): editor at /hradmin/settings/permissions |
+| 1 | `123c290` | feat(permissions): can_view_audit_log flag + audit log table |
+
+---
+
+## 2. Permission editor design
+
+**Architecture:**
+
+```
+src/app/hradmin/settings/permissions/
+├── page.tsx              # Server component — fetch users + audit, super-admin gate
+├── permissions-view.tsx  # Client — table + portal modal
+└── actions.ts            # Server action — updateUserPermissions
+
+src/lib/
+├── permissions.ts          # +can_view_audit_log + PERMISSION_FLAGS list
+├── permission-presets.ts   # +can_view_audit_log in all presets + PRESET_ORDER
+└── permissions-server.ts   # Select can_view_audit_log
+
+supabase/migrations/
+└── 20260427_create_user_permission_audit_log.sql
+```
+
+**Auth gate:** `canManageSystem || isLegacyHrAdmin` (mirrors `/api/hradmin/system/quota`).
+
+**Edit modal flow:**
+1. User clicks "แก้ไข" on table row → portal modal opens (z-[90])
+2. State: `permissions` (UserPermissions), `note` (string)
+3. Preset chips → applies preset's flag set (5 chips: Super Admin / HR Manager / Payroll Manager / Executive / Employee)
+4. Per-flag checkboxes → toggles individual flag (8 flags incl. new can_view_audit_log)
+5. `detectPreset(permissions)` re-runs every render → highlights matching preset chip OR shows "Custom"
+6. Self-edit warning fires when about to strip own can_manage_system
+7. Audit history (last 8 entries for this target) — timestamp · actor · before→after preset · note
+8. Save → server action → DB UPDATE + audit insert + revalidatePath
+
+**Server action (`updateUserPermissions`):**
+- Re-checks auth (server-side, never trust client)
+- Reads current state for before/after snapshot
+- Sanitizes payload — accepts only known FLAG_KEYS, coerces to bool
+- No-op detection: identical flags → return success early, skip both UPDATE + audit
+- Atomic UPDATE on User
+- Best-effort INSERT into user_permission_audit_log (failure here doesn't roll back UPDATE — flag state is authoritative)
+- revalidatePath('/hradmin/settings/permissions')
+
+**Audit log table:**
+
+```sql
+CREATE TABLE public.user_permission_audit_log (
+    id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    target_user_id        text REFERENCES "User"(id) ON DELETE CASCADE,
+    changed_by_user_id    text REFERENCES "User"(id) ON DELETE SET NULL,
+    changed_at            timestamptz DEFAULT now(),
+    permissions_before    jsonb,
+    permissions_after     jsonb,
+    preset_before         text,    -- 'super_admin' | ... | 'custom' | NULL
+    preset_after          text,
+    role_before           text,
+    role_after            text,
+    note                  text     -- optional reason
+);
+```
+
+Indexes on (target_user_id, changed_at DESC) + (changed_by_user_id, changed_at DESC) + (preset_after, changed_at DESC).
+
+Distinct from `employee_audit_log` — different concern (permission changes are security events; employee changes are business-data events). Mixing them complicates retention policy.
+
+---
+
+## 3. Print 2-col fix
+
+**User report (Apr 27 office):** "ข้อมูลตอน print ยังแสดงไม่ครบ" — personal info + address sections render on screen but missing from PDF.
+
+**Root cause:** Two grids (`contact+work`, then `personal+address`) used Tailwind `grid-cols-1 md:grid-cols-2`. The `md:` breakpoint (768px) wasn't always hit by the print viewport in Brave/Chrome — both grids collapsed to single column, doubling vertical height. Personal+address fell past the A4 page break, and the user (looking at the print preview) saw only page 1.
+
+**Fix:** Two-line CSS class addition.
+
+```diff
+- <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
++ <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-6 print:gap-3" data-print-section>
+```
+
+Adds:
+- `print:grid-cols-2` — forces 2-col layout under `@media print` regardless of viewport width
+- `print:gap-3` — tighter gutter on paper
+- `data-print-section` on the contact+work grid — picks up the existing `page-break-inside: avoid` rule
+
+Screen layout unchanged.
+
+**Verify:** Open `/hradmin/employees/[id]` → "ส่งออก PDF" → save → all 4 sections (contact, work, personal, address) should land on page 1.
+
+---
+
+## 4. Type system extension: can_view_audit_log
+
+The DB User row has 8 permission columns but `UserPermissions` TS type modeled only 7. The orphan column was `can_view_audit_log` — added by an earlier migration but never wired into the type system, presets, or `getCurrentPermissions()`. Fixed in commit 1:
+
+- `UserPermissions` extended with `can_view_audit_log: boolean`
+- `EMPTY_PERMISSIONS` adds the default false
+- All 5 presets explicitly include the flag (super_admin = true, others = false)
+- `getCurrentPermissions()` selects + maps the column
+- New `PERMISSION_FLAGS` list — single source of truth for the editor's checkbox order + Thai labels
+- New `PRESET_ORDER` — stable iteration order for the preset picker (avoids relying on V8's insertion-order quirk)
+
+---
+
+## 5. Lessons
+
+1. **Editor as dogfooding for `lib/route-auth`** — first feature built directly on top of the permission-flag sweep from §12. Revealed that `getAuth() + canManageSystem || isLegacyHrAdmin` is the right pattern for super-admin-only routes.
+
+2. **Audit log = full snapshots, not diffs** — store `permissions_before` + `permissions_after` as complete jsonb objects rather than computed deltas. The editor renders "what changed" by comparing the two; we get free history without an aggregation query, and an admin reading row N doesn't need rows N-1, N-2, etc.
+
+3. **No-op detection is critical for re-saves** — without it, repeatedly clicking "Save" on an unchanged form would pollute the audit log with identical entries. The check is cheap (single loop over 8 keys) and the UX win is clear.
+
+4. **Print bugs are usually `@media print` rule conflicts, not layout** — the existing 2-col layout was correct on paper too; it just got collapsed by Tailwind's responsive breakpoint when the print viewport was narrow. Forcing print:* override is a 2-line fix vs rewriting the layout.
+
+5. **Best-effort audit pattern keeps UX honest** — if the audit row insert fails AFTER the User UPDATE landed, we still report success. The flag state is the authoritative truth; an audit gap is recoverable, a partial UPDATE is not.
+
+---
+
+*End of §16 · 4 commits · §3.2 + §3.5 done. Next session: §3.3 — create user for บัญชี and apply Payroll Manager preset via the new editor.*
