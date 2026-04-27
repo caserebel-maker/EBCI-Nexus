@@ -645,15 +645,21 @@ export function EmployeeProfileView({
                 <div className="flex items-center gap-3">
                     {isHrAdmin && !isEditing && (
                         <button
-                            // window.print() blocks the click handler for as
-                            // long as the user sits in the print dialog
-                            // (could be minutes) — Brave/Chrome flag that as
-                            // an INP issue ("event handler blocked UI for
-                            // 179s"). Deferring with setTimeout(…, 0) lets
-                            // the handler return immediately so the browser
-                            // measures the click as <1ms instead of
-                            // however-long-the-dialog-was-open.
-                            onClick={() => setTimeout(() => window.print(), 0)}
+                            // INP fix: setTimeout(0) wasn't enough — window
+                            // .print() still blocks the event loop while
+                            // the dialog is open, so the next paint after
+                            // the click never happens until the user
+                            // dismisses it. Brave/Chrome then attribute
+                            // the entire dialog duration to the click as
+                            // an INP regression. Double requestAnimation
+                            // Frame guarantees at least one paint cycle
+                            // completes between the click event and the
+                            // dialog open, which reset the INP timer.
+                            onClick={() => {
+                                requestAnimationFrame(() => {
+                                    requestAnimationFrame(() => window.print())
+                                })
+                            }}
                             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[0.95rem] font-semibold bg-white/10 hover:bg-white/18 text-white/92 hover:text-white border border-white/15 transition-all"
                             title="พิมพ์ / บันทึกเป็น PDF (ขาวดำ + รูปสี)"
                         >

@@ -247,13 +247,29 @@ body {
   }
 
   /* Glass cards — strip padding & shadows for print so the content
-     density goes up and we save a centimetre per card. */
+     density goes up and we save a centimetre per card. The dark UI
+     uses a `border: 1px solid rgba(255,255,255,0.65)` on silverCard
+     and similar styles on glass; in print those rendered as visible
+     pale-grey rectangles around every section ("กรอบขาว"). Force
+     the border off entirely — section spacing alone is enough
+     visual separation on white paper. */
   .print-employee [class*="rounded-2xl"],
   .print-employee [class*="rounded-xl"],
   .print-employee section {
     padding: 6pt 8pt !important;
     margin-bottom: 4pt !important;
-    border-radius: 4pt !important;
+    border-radius: 0 !important;
+    border: none !important;
+    border-bottom: 1px solid #d1d5db !important;
+    box-shadow: none !important;
+  }
+
+  /* Photo wrapper — keep its rounded box but with a dark thin
+     border so it reads as a passport-style photo on paper. */
+  .print-employee .preserve-color {
+    border-radius: 6pt !important;
+    border: 1px solid #999 !important;
+    overflow: hidden !important;
   }
 
   /* InfoRow rows — the default 12px padding adds up across 20 rows.
@@ -274,6 +290,41 @@ body {
      cards which is ~12pt on paper. Halve it. */
   .print-employee > * + * {
     margin-top: 4pt !important;
+  }
+
+  /* Hero photo — shrink from 144px (h-36) to a passport-photo
+     size for print; saves a third of the vertical real estate. */
+  .print-employee .preserve-color > div[class*="h-36"],
+  .print-employee div[class*="h-36 w-36"] {
+    height: 90pt !important;
+    width: 72pt !important;
+  }
+
+  /* Hero card font down-shift. The display-name heading defaults
+     to text-[2rem]+ which is still ~14pt at our compact base; cap
+     it tighter so the right-hand info column has room. */
+  .print-employee h1[class*="text-"],
+  .print-employee div[class*="text-3xl"],
+  .print-employee div[class*="text-2xl"] {
+    font-size: 13pt !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Tag badges (level / status / employment_type) — inline-flex
+     pill chips; print-flatten them to text so they don't draw
+     extra borders. */
+  .print-employee span[class*="rounded-full"],
+  .print-employee span[class*="rounded-md"][class*="bg-"] {
+    background: transparent !important;
+    border: 1px solid #999 !important;
+    border-radius: 2pt !important;
+    padding: 1pt 4pt !important;
+    font-size: 8.5pt !important;
+  }
+
+  /* Trim the text-2xl-and-up nickname/headline span if any. */
+  .print-employee [class*="leading-tight"] {
+    line-height: 1.2 !important;
   }
 }
 @layer base {

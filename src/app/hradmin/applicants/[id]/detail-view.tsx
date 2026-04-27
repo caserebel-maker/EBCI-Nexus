@@ -89,11 +89,15 @@ export function ApplicantDetailView({
                     </a>
                     <button
                         type="button"
-                        // Defer so the click handler returns instantly —
-                        // window.print() otherwise blocks the handler for
-                        // the full duration of the print dialog and
-                        // Brave/Chrome flag it as an INP regression.
-                        onClick={() => setTimeout(() => window.print(), 0)}
+                        // INP fix: double rAF so at least one paint cycle
+                        // completes between the click and the print
+                        // dialog opening — setTimeout(0) wasn't enough
+                        // because window.print() still blocks paints.
+                        onClick={() => {
+                            requestAnimationFrame(() => {
+                                requestAnimationFrame(() => window.print())
+                            })
+                        }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/75 hover:text-white text-xs font-semibold border border-white/10"
                     >
                         <Printer size={13} />
