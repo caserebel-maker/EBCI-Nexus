@@ -141,7 +141,10 @@ export function ApplicantsListView({
     }, [page, totalPages])
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6">
+        /* overflow-x-hidden is the final guard so a misbehaved native
+           control (iOS date picker, long Thai placeholder) can never make
+           the page scroll horizontally while the user scrolls vertically. */
+        <div className="max-w-6xl mx-auto space-y-6 overflow-x-hidden">
             {/* Header */}
             <div className="flex items-start sm:items-center justify-between gap-4 flex-wrap">
                 <div className="flex items-center gap-3">
@@ -191,11 +194,26 @@ export function ApplicantsListView({
                 })}
             </div>
 
-            {/* Filter row */}
-            <form onSubmit={onSubmitFilters} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-                <label className="sm:col-span-5 block">
-                    <span className="text-[11px] text-white/50 uppercase tracking-wider font-semibold flex items-center gap-1.5 mb-1.5">
-                        <Search size={11} /> ค้นหา
+            {/* Filter row.
+                Three things were wrong on mobile:
+                  1. Native <input type="date"> has an intrinsic min-width
+                     bigger than the viewport on iOS Safari, which made the
+                     whole form overflow horizontally and "wobble" while
+                     scrolling. `min-w-0` on the labels breaks that floor.
+                  2. Date inputs were on `sm:col-span-2` (1/6 width) but
+                     stacked full-width on mobile — visually fine, but the
+                     intrinsic min-width still pushed them past the screen.
+                     Now they share a row at `grid-cols-2` on mobile so each
+                     date sits at half width with `min-w-0`.
+                  3. Labels at text-[11px] were unreadable on mobile —
+                     bumped to text-sm with the icon scaling to match. */}
+            <form
+                onSubmit={onSubmitFilters}
+                className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end"
+            >
+                <label className="sm:col-span-5 block min-w-0">
+                    <span className="text-sm sm:text-[11px] text-white/65 sm:text-white/50 sm:uppercase sm:tracking-wider font-semibold flex items-center gap-1.5 mb-1.5">
+                        <Search size={14} className="sm:w-3 sm:h-3" /> ค้นหา
                     </span>
                     <input
                         type="search"
@@ -205,9 +223,9 @@ export function ApplicantsListView({
                         className="w-full h-10 px-3 rounded-lg bg-black/20 border border-white/15 text-white placeholder:text-white/30 text-sm focus:outline-none focus:border-[#ad5f6c] focus:ring-1 focus:ring-[#ad5f6c]/40"
                     />
                 </label>
-                <label className="sm:col-span-3 block">
-                    <span className="text-[11px] text-white/50 uppercase tracking-wider font-semibold flex items-center gap-1.5 mb-1.5">
-                        <Filter size={11} /> ตำแหน่ง
+                <label className="sm:col-span-3 block min-w-0">
+                    <span className="text-sm sm:text-[11px] text-white/65 sm:text-white/50 sm:uppercase sm:tracking-wider font-semibold flex items-center gap-1.5 mb-1.5">
+                        <Filter size={14} className="sm:w-3 sm:h-3" /> ตำแหน่ง
                     </span>
                     <input
                         type="text"
@@ -217,28 +235,34 @@ export function ApplicantsListView({
                         className="w-full h-10 px-3 rounded-lg bg-black/20 border border-white/15 text-white placeholder:text-white/30 text-sm focus:outline-none focus:border-[#ad5f6c] focus:ring-1 focus:ring-[#ad5f6c]/40"
                     />
                 </label>
-                <label className="sm:col-span-2 block">
-                    <span className="text-[11px] text-white/50 uppercase tracking-wider font-semibold flex items-center gap-1.5 mb-1.5">
-                        <Calendar size={11} /> ตั้งแต่
-                    </span>
-                    <input
-                        type="date"
-                        value={filters.from}
-                        onChange={e => updateParams({ from: e.target.value })}
-                        className="w-full h-10 px-3 rounded-lg bg-black/20 border border-white/15 text-white text-sm focus:outline-none focus:border-[#ad5f6c]"
-                    />
-                </label>
-                <label className="sm:col-span-2 block">
-                    <span className="text-[11px] text-white/50 uppercase tracking-wider font-semibold flex items-center gap-1.5 mb-1.5">
-                        <Calendar size={11} /> ถึง
-                    </span>
-                    <input
-                        type="date"
-                        value={filters.to}
-                        onChange={e => updateParams({ to: e.target.value })}
-                        className="w-full h-10 px-3 rounded-lg bg-black/20 border border-white/15 text-white text-sm focus:outline-none focus:border-[#ad5f6c]"
-                    />
-                </label>
+
+                {/* Date pair shares one row on mobile (grid-cols-2) so neither
+                    input can blow past the viewport, and matches the same row
+                    visual on desktop where each takes col-span-2. */}
+                <div className="grid grid-cols-2 gap-3 sm:contents min-w-0">
+                    <label className="sm:col-span-2 block min-w-0">
+                        <span className="text-sm sm:text-[11px] text-white/65 sm:text-white/50 sm:uppercase sm:tracking-wider font-semibold flex items-center gap-1.5 mb-1.5">
+                            <Calendar size={14} className="sm:w-3 sm:h-3" /> ตั้งแต่
+                        </span>
+                        <input
+                            type="date"
+                            value={filters.from}
+                            onChange={e => updateParams({ from: e.target.value })}
+                            className="w-full min-w-0 h-10 px-3 rounded-lg bg-black/20 border border-white/15 text-white text-sm focus:outline-none focus:border-[#ad5f6c]"
+                        />
+                    </label>
+                    <label className="sm:col-span-2 block min-w-0">
+                        <span className="text-sm sm:text-[11px] text-white/65 sm:text-white/50 sm:uppercase sm:tracking-wider font-semibold flex items-center gap-1.5 mb-1.5">
+                            <Calendar size={14} className="sm:w-3 sm:h-3" /> ถึง
+                        </span>
+                        <input
+                            type="date"
+                            value={filters.to}
+                            onChange={e => updateParams({ to: e.target.value })}
+                            className="w-full min-w-0 h-10 px-3 rounded-lg bg-black/20 border border-white/15 text-white text-sm focus:outline-none focus:border-[#ad5f6c]"
+                        />
+                    </label>
+                </div>
                 <div className="sm:col-span-12 flex items-center gap-2">
                     <button
                         type="submit"
@@ -272,7 +296,7 @@ export function ApplicantsListView({
                         <p className="text-sm">ยังไม่มีใบสมัครที่ตรงกับตัวกรอง</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
                         {items.map(a => (
                             <ApplicantCard key={a.id} a={a} />
                         ))}
