@@ -53,12 +53,41 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
     // Snapshot the employee row BEFORE the update so the audit can record
     // a real before/after diff. Single round-trip: pulls every column we
     // might touch in this action so the audit insert later doesn't need
-    // a second fetch.
+    // a second fetch. user_id is included so the email-sync logic below
+    // knows whether to push the new email into Supabase Auth too.
     const { data: before } = await supabaseAdmin
         .from('employees')
-        .select('employee_code, first_name_th, last_name_th, first_name_en, last_name_en, nickname, position, department, secondary_department, phone, email, employment_type, status, start_date, probation_end_date, date_of_birth, gender, quit_date, quit_reason, approval_level, manager_id, leave_approver_id, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, emergency_contact_address, home_latitude, home_longitude, home_location_label, home_location_note')
+        .select('employee_code, first_name_th, last_name_th, first_name_en, last_name_en, nickname, position, department, secondary_department, phone, email, employment_type, status, start_date, probation_end_date, date_of_birth, gender, quit_date, quit_reason, approval_level, manager_id, leave_approver_id, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, emergency_contact_address, home_latitude, home_longitude, home_location_label, home_location_note, user_id')
         .eq('id', employeeId)
         .maybeSingle()
+
+    // ── Email sync — keep auth.users.email in lock-step ─────────────────
+    // employees.email is what HR sees + edits; auth.users.email is what
+    // Supabase uses for login + password recovery. Without this, an HR
+    // admin "changing the email" only updates the display field, leaves
+    // login pinned to the old address, and orphans the user when the old
+    // mailbox goes away. Run this BEFORE the employees.update so a
+    // partial failure leaves auth untouched (login still works) instead
+    // of leaving auth diverged from a saved employees row.
+    const newEmail = (employeeFields.email ?? '').trim().toLowerCase()
+    const oldEmail = ((before?.email as string | null) ?? '').trim().toLowerCase()
+    const emailChanged = !!newEmail && newEmail !== oldEmail
+    if (emailChanged && before?.user_id) {
+        const userId = before.user_id as string
+        // email_confirm: true so the new address is treated as already
+        // verified — Mod is the source of truth here, the user shouldn't
+        // get a confirmation email asking them to verify their own change.
+        const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(
+            userId,
+            { email: newEmail, email_confirm: true },
+        )
+        if (authErr) {
+            console.error('[updateEmployee] auth email sync failed:', authErr)
+            return {
+                error: `เปลี่ยน email ไม่สำเร็จ: ${authErr.message} — ข้อมูลพนักงานยังไม่ถูกบันทึก`,
+            }
+        }
+    }
 
     // Pre-flight duplicate check on employee_code if it changed.
     // employee_code is display-only (not an FK target — `employees.id` is)

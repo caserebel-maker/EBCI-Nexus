@@ -433,6 +433,30 @@ export function EmployeeProfileView({
     }
 
     const handleSave = () => {
+        // Email change is special — it now propagates to auth.users.email
+        // (see updateEmployee server action). Confirm with HR before
+        // submitting so a typo doesn't lock the employee out of login.
+        // Only fire the prompt when the value really changed; comparison
+        // is case-insensitive + trimmed to match the server's normalisation.
+        const oldEmail = (employee.email ?? '').trim().toLowerCase()
+        const newEmail = form.email.trim().toLowerCase()
+        if (newEmail && newEmail !== oldEmail) {
+            const confirmed = window.confirm(
+                [
+                    `กำลังเปลี่ยนอีเมลของพนักงานคนนี้`,
+                    ``,
+                    `จากเดิม: ${oldEmail || '(ไม่มี)'}`,
+                    `เป็น:    ${newEmail}`,
+                    ``,
+                    `อีเมลนี้ใช้สำหรับ login + รับลิงก์รีเซ็ตรหัสผ่านด้วย —`,
+                    `พนักงานต้อง login ด้วยอีเมลใหม่ครั้งถัดไป.`,
+                    ``,
+                    `ยืนยันการเปลี่ยนแปลง?`,
+                ].join('\n'),
+            )
+            if (!confirmed) return
+        }
+
         startTransition(async () => {
             if (photoFile) {
                 const fd = new FormData()
@@ -909,7 +933,14 @@ export function EmployeeProfileView({
                         <InfoRow label="อีเมล" icon={Mail}
                             value={employee.email || '—'}
                             editing={isEditing}
-                            editNode={<input type="email" className={inp} value={form.email} onChange={set('email')} placeholder="อีเมล" />}
+                            editNode={
+                                <div className="flex flex-col gap-1">
+                                    <input type="email" className={inp} value={form.email} onChange={set('email')} placeholder="อีเมล" />
+                                    <p className="text-[10px] text-amber-200/75 leading-snug px-1">
+                                        ⚠ อีเมลนี้ใช้ login + รีเซ็ตรหัสผ่าน — แก้แล้วพนักงานต้อง login ด้วยอีเมลใหม่
+                                    </p>
+                                </div>
+                            }
                         />
                         <InfoRow label="โทรศัพท์" icon={Phone}
                             value={employee.phone || '—'}
