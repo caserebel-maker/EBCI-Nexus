@@ -5,7 +5,27 @@
 
 ---
 
-## 🎯 ประโยคเดียวที่ต้องพิมพ์
+## 🔁 ที่เครื่องถัดไป (กลับบ้าน → office → laptop ฯลฯ)
+
+> **อ่านเฉพาะตอนเปิด Claude Code ที่เครื่องใหม่**
+
+**Step 1 — Pull ก่อน** (สำคัญสุด):
+```bash
+cd <ที่เก็บ EBCI-Nexus> && git pull origin main --ff-only
+```
+
+**Step 2 — พิมพ์บอก Claude:**
+```
+อ่าน docs/NEXT.md แล้วทำต่อ — beta พรุ่งนี้ใช้ 7 testers (จิม/มด/ชาติ/ปุ๊/เบน/หนิง/ต่าย) → ยืนยัน checklist เช้า + เริ่ม security #9-10 (XSS audit + cookie hardening) ถ้ามีเวลา
+```
+
+**Step 3 — ตอบ Claude ว่าอยู่เครื่องไหน:** "อยู่ office" / "อยู่บ้าน" / "อยู่ laptop"
+
+ถ้า Claude บอก local behind origin → ให้รัน `git pull origin main --ff-only` อีกครั้งก่อนเริ่มงาน
+
+---
+
+## 🎯 ประโยคพื้นฐาน (ไม่มี context พิเศษ)
 
 ```
 อ่าน docs/NEXT.md แล้วทำต่อ

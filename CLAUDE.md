@@ -95,6 +95,49 @@ archive but new handoffs go through `NEXT.md` + `SESSION_HISTORY.md`.
 
 ---
 
+## MUST DO ON EVERY SESSION END (MANDATORY)
+
+This is the *bookend* of the session-start sync protocol. The same
+multi-machine setup that demands "pull before working" also demands
+"push before leaving" — otherwise the next machine's Claude Code
+inherits a stale `origin/main` and the work done at this machine is
+invisible.
+
+**Trigger phrases to watch for:**
+- `กลับบ้าน`, `ไปบ้าน`, `เลิกแล้ว`, `ปิดเครื่อง`
+- `พรุ่งนี้ทำต่อ`, `วันหลังเปิดมา`, `ทำต่อที่บ้าน`
+- `เปลี่ยนเครื่อง`, `ย้ายไปที่...`
+- Or any cue that the work session is wrapping up.
+
+**When triggered, do this without being asked:**
+
+**Step 1 — Verify clean tree:** `git status`. If anything is staged or
+modified, commit it. Don't leave uncommitted work behind.
+
+**Step 2 — Push to main:** `git push origin HEAD:main`.
+(`HEAD:main` because solo work on `main` happens via worktree
+branches; the user's other machines pull from `origin/main`.)
+
+**Step 3 — Refresh `docs/NEXT.md`:**
+- Update §0 TL;DR + §1 commits table to match what just shipped.
+- Pin a prominent "🔁 ที่เครื่องถัดไป" banner near the top with the
+  literal one-liner the user should type into Claude Code on arrival.
+- The next-machine prompt must be specific (point at §X.Y, not "ดูทุก
+  อย่าง"). Example: `อ่าน docs/NEXT.md แล้วทำต่อ — เริ่มที่ §3.4`.
+
+**Step 4 — Tell the user, in one short message:**
+- Confirm what was pushed (commit count + last hash).
+- Quote the exact Thai prompt to type at the next machine.
+- Remind them to `git pull origin main --ff-only` BEFORE typing it.
+
+**Do NOT:**
+- End a session with uncommitted work.
+- End a session with commits that aren't pushed.
+- Hand the user a vague "อ่าน NEXT.md" — give them the specific
+  section pointer.
+
+---
+
 ## ANTI-PATTERNS TO AVOID
 
 1. **Don't blindly trust user claims of "I pushed X"** — user works
