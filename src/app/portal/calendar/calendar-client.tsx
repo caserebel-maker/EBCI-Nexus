@@ -35,6 +35,18 @@ const LEAVE_LABEL: Record<string, string> = {
     ordination:   'ลาบวช',
 }
 
+// Friendly labels for the four `holidays.type` values HR can pick. Anything
+// outside this map falls through to "บริษัทกำหนด" so legacy/imported rows
+// still render with sensible copy.
+const HOLIDAY_TYPE_LABEL: Record<string, string> = {
+    public:    'นักขัตฤกษ์',
+    religious: 'วันสำคัญทางศาสนา',
+    company:   'บริษัทกำหนด',
+    wfh:       'WFH (ทำงานที่บ้าน)',
+}
+
+const isWfhEntry = (h?: { type?: string } | null) => h?.type === 'wfh'
+
 const glass: React.CSSProperties = {
     background: 'rgba(255,255,255,0.08)',
     backdropFilter: 'blur(12px)',
@@ -99,6 +111,18 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
         }
     })
 
+    // Detect whether the visible month has any holiday/WFH entry — drives
+    // which legend chips render. Walking holidayMap is fine; the dataset
+    // is small (one year of company calendar).
+    const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`
+    let hasOffDayInMonth = false
+    let hasWfhDayInMonth = false
+    holidays.forEach(h => {
+        if (!h.date.startsWith(monthPrefix)) return
+        if (isWfhEntry(h)) hasWfhDayInMonth = true
+        else hasOffDayInMonth = true
+    })
+
     return (
         <div className="max-w-lg mx-auto space-y-4 pb-4">
             {/* Calendar Card */}
@@ -140,6 +164,8 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
 
                         const dateStr = toDateStr(viewYear, viewMonth, day)
                         const holiday = holidayMap.get(dateStr)
+                        const isWfh = isWfhEntry(holiday)
+                        const isOffDay = !!holiday && !isWfh
                         const leaves = leaveDayMap.get(dateStr) ?? []
                         const isToday = dateStr === todayStr
                         const isSelected = dateStr === selected
@@ -155,20 +181,23 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                                 style={{
                                     background: isSelected
                                         ? 'rgba(255,255,255,0.15)'
-                                        : holiday
+                                        : isOffDay
                                             ? 'rgba(248,113,113,0.12)'
-                                            : hasEvent ? 'rgba(255,255,255,0.05)' : undefined,
+                                            : isWfh
+                                                ? 'rgba(52,211,153,0.14)'
+                                                : hasEvent ? 'rgba(255,255,255,0.05)' : undefined,
                                     minHeight: 44,
                                 }}
                             >
-                                {/* Day number */}
+                                {/* Day number — WFH days are still working days, so the
+                                    number stays neutral (only true off-days go red). */}
                                 <span
                                     className="w-7 h-7 flex items-center justify-center rounded-full font-medium text-sm"
                                     style={{
                                         background: isToday ? '#882136' : undefined,
                                         color: isToday
                                             ? '#fff'
-                                            : isSun || holiday
+                                            : isSun || isOffDay
                                                 ? '#FCA5A5'
                                                 : isSat ? '#93C5FD' : 'rgba(255,255,255,0.85)',
                                         fontWeight: isToday ? 700 : undefined,
@@ -177,11 +206,15 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                                     {day}
                                 </span>
 
-                                {/* Holiday name (tiny) */}
+                                {/* Holiday/WFH label (tiny) */}
                                 {holiday && (
-                                    <span className="text-red-300 leading-tight text-center px-0.5 truncate w-full"
-                                        style={{ fontSize: '8px', maxWidth: '100%' }}>
-                                        {holiday.name}
+                                    <span className="leading-tight text-center px-0.5 truncate w-full"
+                                        style={{
+                                            fontSize: '8px',
+                                            maxWidth: '100%',
+                                            color: isWfh ? '#6EE7B7' : '#FCA5A5',
+                                        }}>
+                                        {isWfh ? `🏠 ${holiday.name}` : holiday.name}
                                     </span>
                                 )}
 
@@ -217,18 +250,24 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                         </button>
                     </div>
 
-                    {selectedHoliday && (
-                        <div className="flex items-center gap-2 mb-2 p-2.5 rounded-xl"
-                            style={{ background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.2)' }}>
-                            <span className="text-red-300 text-lg">🎌</span>
-                            <div>
-                                <p className="text-red-300 font-semibold text-sm">{selectedHoliday.name}</p>
-                                <p className="text-red-400/60 text-xs">
-                                    {selectedHoliday.type === 'public' ? 'นักขัตฤกษ์' : 'บริษัทกำหนด'}
-                                </p>
+                    {selectedHoliday && (() => {
+                        const wfh = isWfhEntry(selectedHoliday)
+                        const tone = wfh
+                            ? { bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.25)', text: '#6EE7B7', sub: 'rgba(110,231,183,0.6)', icon: '🏠' }
+                            : { bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.2)', text: '#FCA5A5', sub: 'rgba(252,165,165,0.6)', icon: '🎌' }
+                        return (
+                            <div className="flex items-center gap-2 mb-2 p-2.5 rounded-xl"
+                                style={{ background: tone.bg, border: `1px solid ${tone.border}` }}>
+                                <span className="text-lg" style={{ color: tone.text }}>{tone.icon}</span>
+                                <div>
+                                    <p className="font-semibold text-sm" style={{ color: tone.text }}>{selectedHoliday.name}</p>
+                                    <p className="text-xs" style={{ color: tone.sub }}>
+                                        {HOLIDAY_TYPE_LABEL[selectedHoliday.type] ?? HOLIDAY_TYPE_LABEL.company}
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )
+                    })()}
 
                     {selectedLeaves.map((l, i) => (
                         <div key={i} className="flex items-center gap-2 mb-1.5 p-2.5 rounded-xl"
@@ -248,10 +287,18 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
             {/* Legend */}
             <div style={glass} className="p-3">
                 <div className="flex flex-wrap gap-x-4 gap-y-2">
-                    <div className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 rounded-sm" style={{ background: 'rgba(248,113,113,0.4)', border: '1px solid #F87171' }} />
-                        <span className="text-white/55" style={{ fontSize: '11px' }}>วันหยุด</span>
-                    </div>
+                    {hasOffDayInMonth && (
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-3 h-3 rounded-sm" style={{ background: 'rgba(248,113,113,0.4)', border: '1px solid #F87171' }} />
+                            <span className="text-white/55" style={{ fontSize: '11px' }}>วันหยุด</span>
+                        </div>
+                    )}
+                    {hasWfhDayInMonth && (
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-3 h-3 rounded-sm" style={{ background: 'rgba(52,211,153,0.4)', border: '1px solid #34D399' }} />
+                            <span className="text-white/55" style={{ fontSize: '11px' }}>WFH</span>
+                        </div>
+                    )}
                     <div className="flex items-center gap-1.5">
                         <span className="w-3 h-3 rounded-full" style={{ background: '#882136' }} />
                         <span className="text-white/55" style={{ fontSize: '11px' }}>วันนี้</span>
