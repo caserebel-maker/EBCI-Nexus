@@ -209,7 +209,15 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent lg:pl-64">
                 {/* Top Navbar */}
                 <header
-                    className="h-auto flex items-center justify-between border-b border-white/10 dark:bg-card/80 dark:border-border text-white dark:text-foreground px-3 lg:px-8 pb-1 lg:py-1 print:hidden"
+                    // Drop the dark-mode bg (`dark:bg-card/80`) — on machines
+                    // whose OS / browser is in dark mode the maroon gradient
+                    // body shines through but the header gets a darker
+                    // overlay, producing a horizontal "stripe" across the
+                    // top that didn't appear on light-mode machines. Now the
+                    // header is fully transparent in both modes; the body
+                    // gradient is the single source of truth for the page
+                    // background.
+                    className="h-auto flex items-center justify-between border-b border-white/10 text-white px-3 lg:px-8 pb-1 lg:py-1 print:hidden"
                     style={{ paddingTop: 'calc(env(safe-area-inset-top) + 8px)', paddingBottom: '8px' }}
                 >
                     {/* Mobile Logo — left-aligned */}
