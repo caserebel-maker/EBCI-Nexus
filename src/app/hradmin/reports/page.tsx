@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { FileText } from 'lucide-react'
@@ -35,7 +36,12 @@ export default async function ReportsPage() {
                 </p>
             </div>
 
-            <ReportsView departments={departments} />
+            {/* useSearchParams() inside ReportsView requires a Suspense
+                boundary so the page can stream during the initial param
+                read instead of failing the build. */}
+            <Suspense fallback={<div className="text-white/55 text-sm">กำลังโหลด...</div>}>
+                <ReportsView departments={departments} />
+            </Suspense>
         </div>
     )
 }

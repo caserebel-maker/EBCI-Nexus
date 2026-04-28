@@ -48,11 +48,12 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         {
             label: 'เวลาทำงาน',
             icon: Clock,
-            matchPrefix: ['/hradmin/attendance', '/hradmin/holidays'],
+            matchPrefix: ['/hradmin/attendance', '/hradmin/holidays', '/hradmin/reports'],
             children: [
-                { label: 'การเข้างาน',     href: '/hradmin/attendance',       icon: MapPin },
-                { label: 'เช็คอินภาคสนาม', href: '/hradmin/attendance/field', icon: Briefcase },
-                { label: 'ปฏิทินบริษัท',   href: '/hradmin/holidays',         icon: CalendarDays },
+                { label: 'การเข้างาน',          href: '/hradmin/attendance',                icon: MapPin },
+                { label: 'เช็คอินภาคสนาม',      href: '/hradmin/attendance/field',          icon: Briefcase },
+                { label: 'ปฏิทินบริษัท',        href: '/hradmin/holidays',                  icon: CalendarDays },
+                { label: 'ส่งออกข้อมูล (CSV)', href: '/hradmin/reports?tab=attendance',    icon: FileText },
             ],
         },
         {

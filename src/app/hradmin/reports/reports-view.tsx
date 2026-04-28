@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useEffect, useRef, type ComponentType, type SVGProps } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Calendar, Users, FileDown, Loader2, MapPin, Briefcase, ClipboardList } from 'lucide-react'
 
 type LucideIcon = ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>
@@ -41,7 +42,15 @@ interface Props {
 }
 
 export function ReportsView({ departments }: Props) {
-    const [tab, setTab] = useState<Tab>('attendance')
+    // Honour ?tab= so a sidebar shortcut can deep-link straight into a
+    // specific tab — Mod's "ส่งออกข้อมูลการเข้างาน" entry under เวลาทำงาน
+    // points at /hradmin/reports?tab=attendance for that reason.
+    const searchParams = useSearchParams()
+    const tabParam = searchParams.get('tab')
+    const initialTab: Tab = tabParam === 'leave' || tabParam === 'contracts'
+        ? tabParam
+        : 'attendance'
+    const [tab, setTab] = useState<Tab>(initialTab)
     const now = new Date()
     const [year, setYear] = useState(now.getFullYear())
     const [month, setMonth] = useState(now.getMonth() + 1)
