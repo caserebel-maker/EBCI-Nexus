@@ -162,7 +162,16 @@ export function PortalBottomNav() {
             >
                 <div
                     className="mx-3 mb-2 rounded-2xl overflow-hidden shadow-2xl border border-white/10"
-                    style={{ background: 'linear-gradient(160deg, #6b2228 0%, #8b3540 60%, #a04a55 100%)' }}
+                    style={{
+                        // Panel was a flat solid maroon gradient. Drop the
+                        // alpha to 0.70 + add backdrop-blur so the page
+                        // bleeds through ~30% — the panel reads as "above"
+                        // rather than "blocking" while text + dividers
+                        // stay fully opaque on top of it.
+                        background: 'linear-gradient(160deg, rgba(107,34,40,0.70) 0%, rgba(139,53,64,0.70) 60%, rgba(160,74,85,0.70) 100%)',
+                        backdropFilter: 'blur(12px)',
+                        WebkitBackdropFilter: 'blur(12px)',
+                    }}
                 >
                     <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
                         <span className="text-white font-bold text-sm">เพิ่มเติม</span>
