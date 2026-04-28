@@ -21,14 +21,18 @@ interface Props {
 /**
  * HR balance adjustment modal.
  *
- * Only `total_days` is editable per (employee, type). `used_days` and
- * `pending_days` come from the leave-request flow and must not be
- * touched here — changing them would lie about the real consumption
- * history. `remaining` is always derived.
+ * Both `total_days` AND `used_days` are editable per (employee, type) —
+ * `used_days` is normally derived from the leave-request flow, but HR
+ * needs to be able to override it for migration cases (employee
+ * transferred mid-year with already-taken leave that predates the
+ * system, or a row that drifted from the live count and needs
+ * realignment). `pending_days` stays read-only because it tracks
+ * not-yet-decided requests; touching it from here would orphan UI
+ * state in the request inbox. `remaining_days` is a generated column.
  *
  * Every save requires a ≥10-char reason. The API appends a one-line
- * audit entry to the balance row's `notes` column so every change is
- * recoverable from the database alone.
+ * audit entry to the balance row's `notes` column for both total + used
+ * changes so every override is recoverable from the database alone.
  */
 export function AdjustBalanceModal({
     open, onClose, onSaved, employee, leaveTypes, cells, year, focusTypeId,
@@ -36,6 +40,8 @@ export function AdjustBalanceModal({
     const [mounted, setMounted] = useState(false)
     const [reason, setReason] = useState('')
     const [drafts, setDrafts] = useState<Record<string, string>>({})
+    // Parallel draft state for the editable used_days column.
+    const [usedDrafts, setUsedDrafts] = useState<Record<string, string>>({})
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -48,11 +54,14 @@ export function AdjustBalanceModal({
         setReason('')
         setSubmitting(false)
         const next: Record<string, string> = {}
+        const nextUsed: Record<string, string> = {}
         for (const t of leaveTypes) {
             const c = cells[t.id]
             next[t.id] = String(c?.total_days ?? 0)
+            nextUsed[t.id] = String(c?.used_days ?? 0)
         }
         setDrafts(next)
+        setUsedDrafts(nextUsed)
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !submitting) onClose() }
         window.addEventListener('keydown', onKey)
         document.body.style.overflow = 'hidden'
@@ -64,30 +73,45 @@ export function AdjustBalanceModal({
     }, [open, employee?.id])
 
     // What changed vs. original cells? Only dirty rows are PATCHed.
+    // A row is "dirty" if EITHER total or used drifted from the original.
     const diffs = useMemo(() => {
         const list: Array<{
             leaveTypeId: string
             existingId: string | null
             oldTotal: number
             newTotal: number
+            oldUsed: number
+            newUsed: number
+            totalChanged: boolean
+            usedChanged: boolean
         }> = []
         for (const t of leaveTypes) {
-            const raw = drafts[t.id]
-            if (raw === undefined) continue
-            const parsed = parseFloat(raw)
-            if (!Number.isFinite(parsed) || parsed < 0) continue
+            const rawTotal = drafts[t.id]
+            const rawUsed = usedDrafts[t.id]
+            if (rawTotal === undefined || rawUsed === undefined) continue
+            const parsedTotal = parseFloat(rawTotal)
+            const parsedUsed = parseFloat(rawUsed)
+            if (!Number.isFinite(parsedTotal) || parsedTotal < 0) continue
+            if (!Number.isFinite(parsedUsed) || parsedUsed < 0) continue
             const c = cells[t.id]
             const oldTotal = Number(c?.total_days ?? 0)
-            if (Math.abs(parsed - oldTotal) < 0.001) continue
+            const oldUsed = Number(c?.used_days ?? 0)
+            const totalChanged = Math.abs(parsedTotal - oldTotal) >= 0.001
+            const usedChanged = Math.abs(parsedUsed - oldUsed) >= 0.001
+            if (!totalChanged && !usedChanged) continue
             list.push({
                 leaveTypeId: t.id,
                 existingId: c?.id ?? null,
                 oldTotal,
-                newTotal: parsed,
+                newTotal: parsedTotal,
+                oldUsed,
+                newUsed: parsedUsed,
+                totalChanged,
+                usedChanged,
             })
         }
         return list
-    }, [drafts, cells, leaveTypes])
+    }, [drafts, usedDrafts, cells, leaveTypes])
 
     const hasChange = diffs.length > 0
     const canSave = hasChange && reason.trim().length >= 10
@@ -96,7 +120,10 @@ export function AdjustBalanceModal({
         const list: string[] = []
         for (const d of diffs) {
             const c = cells[d.leaveTypeId]
-            const consumed = Number(c?.used_days ?? 0) + Number(c?.pending_days ?? 0)
+            // Use the EDITED used value (d.newUsed) when warning about
+            // total < consumed, since the user may be editing both at once.
+            const pending = Number(c?.pending_days ?? 0)
+            const consumed = d.newUsed + pending
             if (d.newTotal < consumed) {
                 const label = leaveTypes.find(t => t.id === d.leaveTypeId)?.name_th ?? d.leaveTypeId
                 list.push(`${label}: ยอดรวมใหม่ (${d.newTotal}) น้อยกว่าที่ใช้ไปแล้ว + pending (${consumed})`)
@@ -122,6 +149,10 @@ export function AdjustBalanceModal({
                         leave_type_id: d.leaveTypeId,
                         year,
                         total_days: d.newTotal,
+                        // Only send used_days when it actually changed — keeps
+                        // the audit log noise low for the common case (HR is
+                        // adjusting total only).
+                        ...(d.usedChanged ? { used_days: d.newUsed } : {}),
                         reason: reason.trim(),
                     }),
                 })
@@ -197,11 +228,16 @@ export function AdjustBalanceModal({
                             <tbody className="divide-y divide-white/5">
                                 {leaveTypes.map(t => {
                                     const cell = cells[t.id]
-                                    const used = Number(cell?.used_days ?? 0)
                                     const pending = Number(cell?.pending_days ?? 0)
                                     const draft = drafts[t.id] ?? '0'
+                                    const usedDraft = usedDrafts[t.id] ?? '0'
                                     const draftNum = parseFloat(draft)
+                                    const usedNum = parseFloat(usedDraft)
                                     const total = Number.isFinite(draftNum) && draftNum >= 0 ? draftNum : 0
+                                    // Use the EDITED used value so the Remain
+                                    // column updates live as HR types — same
+                                    // behaviour as the Total column.
+                                    const used = Number.isFinite(usedNum) && usedNum >= 0 ? usedNum : 0
                                     const remain = Math.max(0, total - used - pending)
                                     const disabled = focusTypeId ? focusTypeId !== t.id : false
                                     const color = t.color ?? '#f9c5cd'
@@ -233,7 +269,18 @@ export function AdjustBalanceModal({
                                                     className="w-20 h-9 px-2 text-center rounded-lg bg-white/5 border border-white/15 text-white text-sm focus:outline-none focus:ring-1 focus:ring-amber-300/40 tabular-nums disabled:opacity-50"
                                                 />
                                             </td>
-                                            <td className="px-2 py-2 text-center text-white/75 tabular-nums">{used}</td>
+                                            <td className="px-2 py-2">
+                                                <input
+                                                    type="number"
+                                                    step="0.5"
+                                                    min="0"
+                                                    disabled={disabled || submitting}
+                                                    value={usedDrafts[t.id] ?? '0'}
+                                                    onChange={e => setUsedDrafts(prev => ({ ...prev, [t.id]: e.target.value }))}
+                                                    className="w-20 h-9 px-2 text-center rounded-lg bg-white/5 border border-white/15 text-white text-sm focus:outline-none focus:ring-1 focus:ring-amber-300/40 tabular-nums disabled:opacity-50"
+                                                    title="HR override: ปรับยอดที่ใช้ไปแล้ว — ปกติระบบคำนวณจากใบลาที่อนุมัติ"
+                                                />
+                                            </td>
                                             <td className="px-2 py-2 text-center text-white/60 tabular-nums">{pending}</td>
                                             <td className="px-2 py-2 text-center font-semibold tabular-nums" style={{ color }}>
                                                 {remain}

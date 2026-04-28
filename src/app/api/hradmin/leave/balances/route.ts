@@ -14,12 +14,16 @@ export const dynamic = 'force-dynamic'
  *   leave_type_id:   string
  *   year:            number
  *   total_days:      number          // ≥ 0
+ *   used_days?:      number          // optional override, ≥ 0
  *   reason:          string          // ≥ 10 chars
  * }
  *
  * Updates (or creates) a leave_balances row and appends an audit line
- * to its `notes` column. Only `total_days` is editable — `used_days`
- * and `pending_days` are owned by the leave-request flow.
+ * to its `notes` column. `total_days` is the primary editable field;
+ * `used_days` is also editable as an HR override (migration cases where
+ * the leave-request flow can't reconstruct the historical used count).
+ * `pending_days` stays owned by the request flow — touching it from
+ * here would orphan the inbox state.
  */
 export async function PATCH(req: NextRequest) {
     const auth = await getAuth()
@@ -38,6 +42,10 @@ export async function PATCH(req: NextRequest) {
     const leaveTypeId = String(body?.leave_type_id ?? '').trim()
     const year = parseInt(String(body?.year ?? ''), 10)
     const totalDaysRaw = Number(body?.total_days)
+    // used_days is OPTIONAL — only validated when the client sent it.
+    // Distinguishes "didn't pass" from "passed 0" by checking key presence.
+    const usedProvided = body !== null && typeof body === 'object' && 'used_days' in body
+    const usedDaysRaw = usedProvided ? Number(body?.used_days) : null
     const reason = String(body?.reason ?? '').trim()
 
     if (!employeeId || !leaveTypeId) {
@@ -49,10 +57,16 @@ export async function PATCH(req: NextRequest) {
     if (!Number.isFinite(totalDaysRaw) || totalDaysRaw < 0) {
         return NextResponse.json({ error: 'total_days ต้องไม่ติดลบ' }, { status: 400 })
     }
+    if (usedProvided && (!Number.isFinite(usedDaysRaw) || (usedDaysRaw as number) < 0)) {
+        return NextResponse.json({ error: 'used_days ต้องไม่ติดลบ' }, { status: 400 })
+    }
     if (reason.length < 10) {
         return NextResponse.json({ error: 'ต้องระบุเหตุผล (อย่างน้อย 10 ตัวอักษร)' }, { status: 400 })
     }
     const newTotal = Math.round(totalDaysRaw * 2) / 2 // snap to 0.5 step
+    const newUsed = usedProvided
+        ? Math.round((usedDaysRaw as number) * 2) / 2
+        : null
 
     // Validate FKs
     const [empRes, typeRes] = await Promise.all([
@@ -86,7 +100,13 @@ export async function PATCH(req: NextRequest) {
     const actorLabel = await describeActor(actorId, session.name)
     const nowIso = new Date().toISOString()
     const oldTotal = Number(existing?.total_days ?? 0)
-    const auditLine = `[${nowIso}] ปรับโดย ${actorLabel}: ${oldTotal} → ${newTotal} — ${reason}`
+    const oldUsed = Number(existing?.used_days ?? 0)
+    // Audit line records both fields when used_days was overridden so the
+    // history shows the full delta in one entry. Total-only edits stay
+    // single-line so the existing format isn't disturbed.
+    const auditLine = newUsed !== null
+        ? `[${nowIso}] ปรับโดย ${actorLabel}: total ${oldTotal} → ${newTotal}, used ${oldUsed} → ${newUsed} — ${reason}`
+        : `[${nowIso}] ปรับโดย ${actorLabel}: ${oldTotal} → ${newTotal} — ${reason}`
 
     let resultRow: Record<string, unknown> | null = null
     if (existing) {
@@ -95,6 +115,7 @@ export async function PATCH(req: NextRequest) {
             .from('leave_balances')
             .update({
                 total_days: newTotal,
+                ...(newUsed !== null ? { used_days: newUsed } : {}),
                 is_manually_adjusted: true,
                 last_adjusted_by: actorId,
                 last_adjusted_at: nowIso,
@@ -117,7 +138,7 @@ export async function PATCH(req: NextRequest) {
                 leave_type_id: leaveTypeId,
                 year,
                 total_days: newTotal,
-                used_days: 0,
+                used_days: newUsed ?? 0,
                 pending_days: 0,
                 is_manually_adjusted: true,
                 last_adjusted_by: actorId,
