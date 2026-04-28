@@ -273,8 +273,17 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                     </div>
                 </header>
 
-                {/* Page Content */}
-                <div className="flex-1 overflow-auto pt-3 px-4 pb-4 lg:p-8">
+                {/* Page Content
+                    overflow-x-hidden locks horizontal scroll. Some pages
+                    (employee profile, especially profiles with long
+                    Thai address strings or absolute-positioned cards)
+                    were producing a sliver of horizontal scroll that
+                    made vertical scroll on iOS feel "wobbly" — the
+                    rubber-band effect would drift sideways instead of
+                    snapping. min-w-0 lets flex children shrink below
+                    their intrinsic width without forcing the parent
+                    to grow. */}
+                <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 pt-3 px-4 pb-4 lg:p-8">
                     {/* Priority alerts — top of content on every viewport.
                         Hidden on print so a one-off "ส้วมระเบิด..." banner
                         doesn't tag along with every PDF export. */}
