@@ -26,18 +26,26 @@
 
 ## 0. TL;DR ใน 30 วินาที
 
-**APR27→28 home overnight ปิด 9 commits + 1 DB seed:**
+**APR28 office (รอบใหม่ ต่อจาก APR27→28 overnight):**
 
-1. **§3.2 ✅ Permission editor** `/hradmin/settings/permissions`
-2. **§3.5 ✅ Print** — flat layout, hero card frame อยู่, ส่วนล่างเป็นบรรทัดข้อมูลล้วน (ตามที่ user ขอ)
-3. **§3.5b ✅ Audit pipeline** — viewer + updateEmployee เขียน audit อัตโนมัติ
-4. **§3.3 ✅ สร้าง user "ปุ๋ย"** — `wiyada/0000`, Payroll Manager preset, link ↔ employee 449-62 (วิยะดา)
-5. **🆕 Permission-driven sidebar menu** — ปุ๋ยเห็น "อัปโหลดสลิปเงินเดือน" เพิ่มในเมนูพนักงานปกติ ไม่ต้องสลับ admin
-6. **Pre-existing TS errors ✅** — `npm install` แก้หมด
+ปิดงาน UX + ระบบใหญ่หลายชิ้นก่อน beta 5 คน:
 
-**§3.1 ✅** — laptop session
+1. **Sidebar polish** — ซ่อน "อัปโหลดสลิปเงินเดือน" ใน /portal preview, gate "อนุมัติการลา" ด้วย `is_approver`, เพิ่ม "ปฏิทิน" + "ตั้งค่า" ใน portal sidebar
+2. **/portal/settings + เปลี่ยนรหัสผ่าน** — ลิงก์ "ลืมรหัสผ่าน?" ที่ /login ด้วย
+3. **WFH days** — `holidays.type='wfh'`, ปฏิทินบริษัท rename, banner บน dashboard
+4. **Permissions list** — กรองคนที่ไม่มี role/flag ออกจาก /hradmin/settings/permissions
+5. **Email noti audit** — สรุปทุก trigger ลงในแชต (ไม่มี code change)
+6. **Calendar contrast** — fix today pill จม + ตัวอักษรอ่านยาก
+7. **Checkin toast** — popup กลางจอ + ปุ่มปิด + auto-dismiss 5s
+8. **🆕 Backup feature** — `/hradmin/settings/backup` — ZIP ครบ data + storage + SYSTEM.md + MANIFEST.md
 
-**ที่เร่งด่วนที่สุดถัดไป:** **§3.4 Test bulk salary slip upload e2e** (login เป็น wiyada → upload PDF จริง 3-5 ไฟล์)
+**APR27→28 home overnight (รอบก่อน):**
+
+1. §3.2 ✅ Permission editor · 2. §3.5 ✅ Print flat layout
+3. §3.5b ✅ Audit pipeline · 4. §3.3 ✅ User ปุ๋ย
+5. 🆕 Permission-driven sidebar menu · 6. Pre-existing TS errors ✅
+
+**ที่เร่งด่วนที่สุดถัดไป:** **§3.4 Test bulk salary slip upload e2e** + แจกบัญชี 5 testers + ทดสอบ /portal/settings + iPhone smoke test
 
 ---
 
@@ -158,6 +166,28 @@ Gated: `can_view_audit_log || can_manage_system || legacy hr_admin role`
 
 ### 3.8 Tab 4 calendar mobile UX (opportunistic) — เก่าค้างจาก APR25
 iPhone จริงทดสอบ + flip vertical day list ถ้า cell เล็กเกินกด
+
+### 3.9 ✅ ~~Backup feature~~ — DONE APR28 office (`7f8fc86`)
+
+หน้า `/hradmin/settings/backup` (super-admin only).
+
+**Routine ที่แนะนำให้มด/ปอนด์ทำ:**
+- กดปุ่ม "ดาวน์โหลดข้อมูลทั้งระบบ" **ทุกศุกร์เย็น**
+- เก็บ ZIP ใน Google Drive ส่วนตัว (โฟลเดอร์ EBCI-Nexus-Backup/YYYY-MM/)
+- หน้าเตือนเป็นสีแดงเมื่อเกิน 7 วันยังไม่กด
+
+**ZIP ครอบคลุม:**
+- `data/*.csv` — 11 ตาราง (employees, User, leave_*, holidays, announcements, salary_slips, offices, check_ins, job_applications)
+- `files/<bucket>/...` — Storage ทั้ง 7 buckets (รูปพนักงาน, สลิป, สัญญา, รูปประกาศ ฯลฯ)
+- `SYSTEM.md` — เอกสารระบบทั้งระบบให้ AI อ่าน (stack, repo, auth, DB, flows, restore steps)
+- `MANIFEST.md` — เฉพาะ snapshot นี้ (วันที่ + ใครกด + row counts + bucket sizes)
+
+**ไม่ครอบคลุม:**
+- `auth.users` (passwords) — ต้องใช้ Supabase invite flow ตอน restore
+- audit logs — ตัดออกเพื่อขนาด
+- env vars — อยู่ที่ Vercel
+
+**Free tier strategy:** ใช้ Supabase Free 3 เดือนแรก + manual backup ทุกอาทิตย์ → ก่อน rollout เต็มบริษัทค่อย upgrade Pro $25/mo (daily backup + 7-day PITR)
 
 ### B. รอข้อมูลจาก HR
 - B5 มด review `EBCI-employees-review.xlsx`
