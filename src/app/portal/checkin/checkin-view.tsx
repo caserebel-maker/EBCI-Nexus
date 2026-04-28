@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 const CheckinMap = dynamic(() => import('@/components/checkin/checkin-map').then(m => m.CheckinMap), { ssr: false, loading: () => <div className="h-64 rounded-2xl bg-white/5 animate-pulse flex items-center justify-center text-white/40 text-sm">กำลังโหลดแผนที่...</div> })
 
 import { useState, useEffect } from 'react'
-import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut, X } from 'lucide-react'
+import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut, X, Briefcase } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { checkIn, checkOut } from './actions'
 import { haversineDistance } from '@/lib/geo'
@@ -43,6 +43,12 @@ export function CheckinView({ office, todayCheckin }: Props) {
     const [gpsError, setGpsError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
+    // Field check-in collects a destination note before submit. The whole
+    // affordance lives behind a "ออกพื้นที่" button so the default flow
+    // (office / WFH) stays one click.
+    const [fieldMode, setFieldMode] = useState(false)
+    const [fieldNote, setFieldNote] = useState('')
+    const FIELD_NOTE_MIN = 5
 
     const isCheckedIn = !!todayCheckin && !todayCheckin.checked_out_at
     const isFullyCheckedOut = !!todayCheckin && !!todayCheckin.checked_out_at
@@ -94,8 +100,8 @@ export function CheckinView({ office, todayCheckin }: Props) {
         setTimeout(() => setToast(null), 5000)
     }
 
-    const handleCheckin = async (type: 'office' | 'wfh') => {
-        if (type === 'office' && !gps) {
+    const handleCheckin = async (type: 'office' | 'wfh' | 'field', notes?: string) => {
+        if ((type === 'office' || type === 'field') && !gps) {
             showToast('error', 'กรุณารอระบบตรวจตำแหน่งก่อน')
             return
         }
@@ -105,14 +111,28 @@ export function CheckinView({ office, todayCheckin }: Props) {
             latitude: gps?.lat ?? null,
             longitude: gps?.lng ?? null,
             accuracy: gps?.accuracy ?? null,
+            notes,
         })
         setLoading(false)
         if (result.error) {
             showToast('error', result.error)
         } else {
-            showToast('success', type === 'office' ? 'เช็คอินออฟฟิศสำเร็จ' : 'เช็คอิน WFH สำเร็จ')
+            const successMsg =
+                type === 'office' ? 'เช็คอินออฟฟิศสำเร็จ'
+              : type === 'wfh'    ? 'เช็คอิน WFH สำเร็จ'
+              :                     'เช็คอินภาคสนามสำเร็จ'
+            showToast('success', successMsg)
             setTimeout(() => window.location.reload(), 1500)
         }
+    }
+
+    const handleFieldSubmit = () => {
+        const trimmed = fieldNote.trim()
+        if (trimmed.length < FIELD_NOTE_MIN) {
+            showToast('error', `กรุณาระบุปลายทาง/เหตุผลอย่างน้อย ${FIELD_NOTE_MIN} ตัวอักษร`)
+            return
+        }
+        handleCheckin('field', trimmed)
     }
 
     const handleCheckout = async () => {
@@ -194,13 +214,26 @@ export function CheckinView({ office, todayCheckin }: Props) {
                         <div>
                             <p className="text-sm text-emerald-200/70">เช็คอินแล้ว</p>
                             <p className="text-lg font-bold text-white">
-                                {todayCheckin!.type === 'office' ? '🏢 ออฟฟิศ' : '🏠 WFH'}
+                                {todayCheckin!.type === 'office' ? '🏢 ออฟฟิศ'
+                                  : todayCheckin!.type === 'field' ? '🚛 ภาคสนาม'
+                                  : '🏠 WFH'}
                             </p>
                             <p className="text-xs text-white/50 mt-0.5">
                                 {formatBangkokDateTime(todayCheckin!.checked_in_at)}
                             </p>
                         </div>
                     </div>
+                    {/* Show the field-checkin note back to the user so they
+                        remember what they declared this morning + give them
+                        a chance to spot a typo before checkout. */}
+                    {todayCheckin!.type === 'field' && todayCheckin!.notes && (
+                        <div className="mb-4 rounded-lg p-3 bg-amber-500/10 border border-amber-400/25 text-sm">
+                            <p className="text-amber-300/80 text-[11px] font-semibold uppercase tracking-wider mb-1">
+                                ปลายทาง
+                            </p>
+                            <p className="text-amber-100">{todayCheckin!.notes}</p>
+                        </div>
+                    )}
                     <button
                         onClick={handleCheckout}
                         disabled={loading}
@@ -222,7 +255,9 @@ export function CheckinView({ office, todayCheckin }: Props) {
                         <div>
                             <p className="text-sm text-slate-200/70">เสร็จสิ้นการทำงานวันนี้แล้ว</p>
                             <p className="text-lg font-bold text-white">
-                                {todayCheckin!.type === 'office' ? '🏢 ออฟฟิศ' : '🏠 WFH'}
+                                {todayCheckin!.type === 'office' ? '🏢 ออฟฟิศ'
+                                  : todayCheckin!.type === 'field' ? '🚛 ภาคสนาม'
+                                  : '🏠 WFH'}
                             </p>
                         </div>
                     </div>
@@ -310,41 +345,115 @@ export function CheckinView({ office, todayCheckin }: Props) {
                         )}
                     </div>
 
-                    {/* Office checkin button */}
-                    <button
-                        onClick={() => handleCheckin('office')}
-                        disabled={loading || gpsState !== 'success' || !isAtOffice}
-                        className={cn(
-                            "w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all border",
-                            isAtOffice
-                                ? "bg-emerald-600/80 hover:bg-emerald-600 text-white border-emerald-500/40"
-                                : "bg-white/5 text-white/40 border-white/10 cursor-not-allowed"
-                        )}
-                    >
-                        {loading ? <Loader2 className="animate-spin" size={18} /> : <Building size={18} />}
-                        เช็คอินที่ออฟฟิศ
-                    </button>
+                    {fieldMode ? (
+                        /* Field check-in expansion — replaces the three
+                           buttons with a focused note + confirm flow.
+                           Hides Office/WFH so the user can't multi-pick
+                           by mistake; cancel returns to the default. */
+                        <div className="space-y-3 rounded-xl p-4 border border-amber-400/30 bg-amber-500/10">
+                            <div className="flex items-center gap-2 text-amber-200">
+                                <Briefcase size={18} />
+                                <span className="font-semibold text-sm">เช็คอินภาคสนาม</span>
+                            </div>
+                            <p className="text-xs text-white/60 leading-relaxed">
+                                ระบุว่าวันนี้ออกไปทำอะไร / ที่ไหน — HR ใช้สำหรับตรวจสอบ
+                            </p>
+                            <textarea
+                                value={fieldNote}
+                                onChange={e => setFieldNote(e.target.value)}
+                                placeholder='เช่น "ประชุมลูกค้า ABC ที่บางนา" หรือ "ส่งสินค้าโรงงาน XYZ"'
+                                rows={3}
+                                autoFocus
+                                className="w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm px-3 py-2 focus:outline-none focus:border-amber-300/50 resize-none"
+                            />
+                            <div className="flex items-center justify-between text-[11px]">
+                                <span className={cn(
+                                    'transition-colors',
+                                    fieldNote.trim().length >= FIELD_NOTE_MIN ? 'text-emerald-300' : 'text-white/40',
+                                )}>
+                                    {fieldNote.trim().length >= FIELD_NOTE_MIN
+                                        ? '✓ ครบจำนวนตัวอักษรแล้ว'
+                                        : `อย่างน้อย ${FIELD_NOTE_MIN} ตัวอักษร (ตอนนี้ ${fieldNote.trim().length})`}
+                                </span>
+                                {gpsState === 'success' && gps && (
+                                    <span className="text-white/40">
+                                        GPS ±{Math.round(gps.accuracy)} ม.
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex gap-2 pt-1">
+                                <button
+                                    onClick={() => { setFieldMode(false); setFieldNote('') }}
+                                    disabled={loading}
+                                    className="flex-1 py-3 rounded-xl font-semibold text-sm bg-white/10 hover:bg-white/15 text-white/85 border border-white/15 transition-colors disabled:opacity-60"
+                                >
+                                    ยกเลิก
+                                </button>
+                                <button
+                                    onClick={handleFieldSubmit}
+                                    disabled={loading || gpsState !== 'success' || fieldNote.trim().length < FIELD_NOTE_MIN}
+                                    className="flex-[1.5] py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-amber-500/85 hover:bg-amber-500 text-[#1a0a0d] border border-amber-400/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {loading
+                                        ? <Loader2 className="animate-spin" size={16} />
+                                        : <Briefcase size={16} />}
+                                    ยืนยันเช็คอินภาคสนาม
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Office checkin button */}
+                            <button
+                                onClick={() => handleCheckin('office')}
+                                disabled={loading || gpsState !== 'success' || !isAtOffice}
+                                className={cn(
+                                    "w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all border",
+                                    isAtOffice
+                                        ? "bg-emerald-600/80 hover:bg-emerald-600 text-white border-emerald-500/40"
+                                        : "bg-white/5 text-white/40 border-white/10 cursor-not-allowed"
+                                )}
+                            >
+                                {loading ? <Loader2 className="animate-spin" size={18} /> : <Building size={18} />}
+                                เช็คอินที่ออฟฟิศ
+                            </button>
 
-                    {/* Divider */}
-                    <div className="flex items-center gap-3 text-white/30 text-xs">
-                        <div className="flex-1 h-px bg-white/10" />
-                        <span>หรือ</span>
-                        <div className="flex-1 h-px bg-white/10" />
-                    </div>
+                            {/* Divider */}
+                            <div className="flex items-center gap-3 text-white/30 text-xs">
+                                <div className="flex-1 h-px bg-white/10" />
+                                <span>หรือ</span>
+                                <div className="flex-1 h-px bg-white/10" />
+                            </div>
 
-                    {/* WFH button */}
-                    <button
-                        onClick={() => handleCheckin('wfh')}
-                        disabled={loading}
-                        className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all bg-blue-600/80 hover:bg-blue-600 text-white border border-blue-500/40 disabled:opacity-60"
-                    >
-                        {loading ? <Loader2 className="animate-spin" size={18} /> : <Home size={18} />}
-                        เช็คอิน Work From Home
-                    </button>
+                            {/* WFH button */}
+                            <button
+                                onClick={() => handleCheckin('wfh')}
+                                disabled={loading}
+                                className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all bg-blue-600/80 hover:bg-blue-600 text-white border border-blue-500/40 disabled:opacity-60"
+                            >
+                                {loading ? <Loader2 className="animate-spin" size={18} /> : <Home size={18} />}
+                                เช็คอิน Work From Home
+                            </button>
 
-                    <p className="text-xs text-white/40 text-center">
-                        ระบบจะบันทึกตำแหน่ง GPS เพื่อตรวจสอบการทำงาน
-                    </p>
+                            {/* Field button — same row size as the others, amber
+                                tone to match the HR Admin "preview" mode chip in
+                                the sidebar. Visible to every employee on every
+                                day (intentional: occasional office workers also
+                                have customer meetings). */}
+                            <button
+                                onClick={() => setFieldMode(true)}
+                                disabled={loading || gpsState !== 'success'}
+                                className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all bg-amber-500/85 hover:bg-amber-500 text-[#1a0a0d] border border-amber-400/50 disabled:opacity-60"
+                            >
+                                <Briefcase size={18} />
+                                เช็คอินภาคสนาม / ออกประชุม
+                            </button>
+
+                            <p className="text-xs text-white/40 text-center">
+                                ระบบจะบันทึกตำแหน่ง GPS เพื่อตรวจสอบการทำงาน
+                            </p>
+                        </>
+                    )}
                 </>
             )}
         </div>
