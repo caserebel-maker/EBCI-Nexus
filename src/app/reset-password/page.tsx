@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Eye, EyeOff, Lock, CheckCircle2, AlertCircle } from 'lucide-react'
+import { checkPasswordPolicy, PASSWORD_MIN_LENGTH } from '@/lib/password-policy'
 
 export default function ResetPasswordPage() {
     const router = useRouter()
@@ -35,8 +36,9 @@ export default function ResetPasswordPage() {
         e.preventDefault()
         setStatus(null)
 
-        if (password.length < 8) {
-            setStatus({ type: 'error', message: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร' })
+        const policyCheck = checkPasswordPolicy(password)
+        if (!policyCheck.ok) {
+            setStatus({ type: 'error', message: policyCheck.error ?? 'รหัสผ่านไม่ผ่านเกณฑ์' })
             return
         }
         if (password !== confirm) {
@@ -110,7 +112,7 @@ export default function ResetPasswordPage() {
                                     type={showPw ? 'text' : 'password'}
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
-                                    placeholder="อย่างน้อย 8 ตัวอักษร"
+                                    placeholder={`อย่างน้อย ${PASSWORD_MIN_LENGTH} ตัวอักษร · มีตัวอักษร + ตัวเลข`}
                                     required
                                     style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '10px', padding: '11px 40px 11px 36px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
                                 />

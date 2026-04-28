@@ -18,6 +18,7 @@ import {
     detectPreset,
     type PresetName,
 } from '@/lib/permission-presets'
+import { checkPasswordPolicy } from '@/lib/password-policy'
 import { updateUserPermissions, createUser } from './actions'
 
 export interface UserRow {
@@ -720,7 +721,12 @@ function CreateUserModal({
 
         if (!email.trim()) return setError('ใส่อีเมลก่อน')
         if (!password) return setError('ตั้งรหัสผ่านก่อน')
-        if (password.length < 4) return setError('รหัสผ่านต้องอย่างน้อย 4 ตัว')
+        // Password policy is enforced server-side — checkPasswordPolicy in
+        // src/lib/password-policy.ts is the single source of truth. The
+        // check below is just a client-side fast-fail so HR sees the
+        // error before paying the round-trip.
+        const pwCheck = checkPasswordPolicy(password)
+        if (!pwCheck.ok) return setError(pwCheck.error ?? 'รหัสผ่านไม่ผ่านเกณฑ์')
         if (!name.trim()) return setError('ใส่ชื่อก่อน')
 
         setSaving(true)

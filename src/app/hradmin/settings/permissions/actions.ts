@@ -7,6 +7,7 @@ import {
     type UserPermissions,
 } from '@/lib/permissions'
 import { detectPreset } from '@/lib/permission-presets'
+import { checkPasswordPolicy } from '@/lib/password-policy'
 import { revalidatePath } from 'next/cache'
 
 const FLAG_KEYS: Array<keyof UserPermissions> = [
@@ -218,8 +219,12 @@ export async function createUser(payload: CreateUserPayload): Promise<CreateUser
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return { success: false, error: 'อีเมลไม่ถูกต้อง' }
     }
-    if (!password || password.length < 4) {
-        return { success: false, error: 'รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร' }
+    // Same policy used everywhere passwords are picked — see
+    // src/lib/password-policy.ts. Centralised so the createUser modal
+    // can't sneak weak temps through while /portal/settings rejects them.
+    const policyCheck = checkPasswordPolicy(password)
+    if (!policyCheck.ok) {
+        return { success: false, error: policyCheck.error ?? 'รหัสผ่านไม่ผ่านเกณฑ์' }
     }
     if (!name) {
         return { success: false, error: 'ต้องระบุชื่อผู้ใช้' }

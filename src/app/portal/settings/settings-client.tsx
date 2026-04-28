@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Eye, EyeOff, Lock, CheckCircle2, AlertCircle, KeyRound, Settings as SettingsIcon } from 'lucide-react'
+import { checkPasswordPolicy, PASSWORD_MIN_LENGTH } from '@/lib/password-policy'
 
 const glass: React.CSSProperties = {
     background: 'rgba(255,255,255,0.16)',
@@ -40,8 +41,9 @@ export function SettingsClient() {
             setStatus({ type: 'error', message: 'ไม่พบอีเมลผู้ใช้ — ลองรีเฟรชหน้า' })
             return
         }
-        if (next.length < 8) {
-            setStatus({ type: 'error', message: 'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร' })
+        const policyCheck = checkPasswordPolicy(next)
+        if (!policyCheck.ok) {
+            setStatus({ type: 'error', message: policyCheck.error ?? 'รหัสผ่านใหม่ไม่ผ่านเกณฑ์' })
             return
         }
         if (next !== confirm) {
@@ -140,7 +142,7 @@ export function SettingsClient() {
                         onChange={setNext}
                         show={showNext}
                         toggleShow={() => setShowNext(v => !v)}
-                        placeholder="อย่างน้อย 8 ตัวอักษร"
+                        placeholder={`อย่างน้อย ${PASSWORD_MIN_LENGTH} ตัว · มีตัวอักษร + ตัวเลข`}
                     />
                     <PasswordField
                         label="ยืนยันรหัสผ่านใหม่"
