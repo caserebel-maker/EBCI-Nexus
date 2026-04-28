@@ -139,12 +139,19 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                     "which mode am I in" is unambiguous at a glance.
                     Single-role employees keep the original neutral ring. */}
                 {(() => {
+                    // Mode-indicator palette mirrors the chunky "สลับเป็น
+                    // พนักงาน" / "กลับเป็น HR Admin" toggle button below:
+                    //   /hradmin (HR Admin mode) → blue
+                    //   /portal  (employee preview) → amber
+                    // Single source of truth for "what colour means which
+                    // mode" across the desktop sidebar + the mobile topbar
+                    // user-menu trigger (see user-menu.tsx).
                     const isDualRole = role === 'hr_admin'
                     const inHradminMode = isDualRole && pathname?.startsWith('/hradmin')
                     const ringClass = isDualRole
-                        ? (inHradminMode ? 'ring-[3px] ring-amber-500' : 'ring-[3px] ring-emerald-500')
+                        ? (inHradminMode ? 'ring-[3px] ring-blue-500' : 'ring-[3px] ring-amber-500')
                         : 'ring-2 ring-white/25'
-                    const dotColor = inHradminMode ? '#f59e0b' : '#10b981'
+                    const dotColor = inHradminMode ? '#3b82f6' : '#f59e0b'
                     const modeLabel = !isDualRole
                         ? null
                         : inHradminMode ? 'โหมด HR Admin' : 'โหมดพนักงาน'

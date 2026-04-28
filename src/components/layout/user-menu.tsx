@@ -78,6 +78,23 @@ export function UserMenu({
         window.location.href = '/login'
     }
 
+    // Mode-indicator palette mirrors the desktop sidebar profile card +
+    // the chunky "สลับเป็นพนักงาน" / "กลับเป็น HR Admin" toggle button:
+    //   /hradmin → blue (HR Admin mode)
+    //   /portal  → amber (employee preview)
+    // Only dual-role accounts (HR Admin who can switch) get the ring +
+    // dot; single-role employees keep the original neutral ring-1 so
+    // adding the affordance everywhere doesn't suggest they can also
+    // toggle.
+    const isDualRole = role === 'hr_admin'
+    const avatarRingClass = isDualRole
+        ? (inHradmin ? 'ring-[2.5px] ring-blue-500' : 'ring-[2.5px] ring-amber-500')
+        : 'ring-1 ring-white/30'
+    const dotColor = inHradmin ? '#3b82f6' : '#f59e0b'
+    const modeLabel = !isDualRole
+        ? null
+        : inHradmin ? 'โหมด HR Admin' : 'โหมดพนักงาน'
+
     return (
         <div ref={containerRef} className="relative">
             <button
@@ -88,11 +105,33 @@ export function UserMenu({
                 aria-label="เมนูบัญชีผู้ใช้"
                 className="flex items-center gap-1 pl-0.5 pr-1.5 h-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 transition-all"
             >
-                <span className="h-8 w-8 rounded-full overflow-hidden ring-1 ring-white/30 bg-white/10 flex items-center justify-center shrink-0">
-                    {photoUrl ? (
-                        <img src={photoUrl} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                        <span className="text-xs font-bold text-white">{initial}</span>
+                <span className="relative shrink-0">
+                    <span className={cn(
+                        'h-8 w-8 rounded-full overflow-hidden bg-white/10 flex items-center justify-center',
+                        avatarRingClass,
+                    )}>
+                        {photoUrl ? (
+                            <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                            <span className="text-xs font-bold text-white">{initial}</span>
+                        )}
+                    </span>
+                    {/* Mode dot — bottom-right, only for dual-role accounts.
+                        2px maroon-tinted border so the dot reads as pinned
+                        to the avatar rather than floating against the
+                        topbar background; sits at z-index above the ring
+                        without needing explicit z-* because the parent
+                        relative wrapper places later children on top. */}
+                    {isDualRole && (
+                        <span
+                            aria-hidden="true"
+                            title={modeLabel ?? undefined}
+                            className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full"
+                            style={{
+                                background: dotColor,
+                                border: '2px solid rgb(86,30,35)',
+                            }}
+                        />
                     )}
                 </span>
                 <ChevronDown
