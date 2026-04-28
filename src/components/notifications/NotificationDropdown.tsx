@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { CheckCheck, Loader2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -29,6 +29,15 @@ interface Props {
  */
 export function NotificationDropdown({ open, onClose, state }: Props) {
     const router = useRouter()
+    const pathname = usePathname()
+    // Keep HR Admin in admin shell when they click "ดูทั้งหมด" — without
+    // this, the link routes to /portal/notifications which forces the
+    // layout into employee preview mode. Mirror page at /hradmin/
+    // notifications reuses the same NotificationsClient so it's the
+    // exact same full-history view, just inside the admin shell.
+    const seeAllHref = pathname?.startsWith('/hradmin')
+        ? '/hradmin/notifications'
+        : '/portal/notifications'
     const {
         items, isLoading, hasLoaded, refetch,
         markRead, markAllRead, remove,
@@ -64,7 +73,17 @@ export function NotificationDropdown({ open, onClose, state }: Props) {
     const handleItemClick = (n: NotificationRow) => {
         if (!n.is_read) void markRead(n.id)
         onClose()
-        if (n.action_url) router.push(n.action_url)
+        if (!n.action_url) return
+        // Same admin/portal awareness as the "ดูทั้งหมด" link: if the
+        // bell was opened from /hradmin and the stored action_url
+        // points at a /portal/* page that has an /hradmin/* mirror,
+        // rewrite so HR Admin doesn't get flipped into employee mode
+        // halfway through reviewing a notification. Fall back to the
+        // original URL for portal-only paths (announcements, profile).
+        const target = pathname?.startsWith('/hradmin')
+            ? rewriteForAdmin(n.action_url)
+            : n.action_url
+        router.push(target)
     }
 
     if (!open) return null
@@ -172,10 +191,13 @@ export function NotificationDropdown({ open, onClose, state }: Props) {
                         ))}
                     </div>
 
-                    {/* Footer — link to full history page */}
+                    {/* Footer — link to full history page. Route adapts
+                        to whether the bell was clicked from /hradmin or
+                        /portal so HR Admin doesn't get flipped into
+                        employee preview mode mid-flow. */}
                     <footer className="border-t border-white/10 px-4 py-3 text-center shrink-0">
                         <Link
-                            href="/portal/notifications"
+                            href={seeAllHref}
                             onClick={onClose}
                             className="text-xs text-white/70 hover:text-white font-semibold inline-flex items-center gap-1"
                         >
@@ -186,4 +208,30 @@ export function NotificationDropdown({ open, onClose, state }: Props) {
             </div>
         </>
     )
+}
+
+/**
+ * Rewrite a notification action URL when the bell was clicked from the
+ * /hradmin shell. Notifications are written with /portal/* paths
+ * (employees are the primary audience) but for paths that have an
+ * /hradmin/* mirror, an HR Admin who's reviewing them as part of
+ * their admin work shouldn't be yanked into the employee preview.
+ *
+ * Currently mirrored:
+ *   - /portal/leave/inbox      → /hradmin/leave/inbox
+ *   - /portal/notifications    → /hradmin/notifications
+ *
+ * Anything else (announcements, profile, payroll, calendar) stays on
+ * its /portal route — HR Admin lands in preview mode for those, which
+ * is fine since the page itself is the same and the toggle button
+ * is one click away to return.
+ */
+function rewriteForAdmin(url: string): string {
+    if (url.startsWith('/portal/leave/inbox')) {
+        return '/hradmin/leave/inbox' + url.slice('/portal/leave/inbox'.length)
+    }
+    if (url.startsWith('/portal/notifications')) {
+        return '/hradmin/notifications' + url.slice('/portal/notifications'.length)
+    }
+    return url
 }
