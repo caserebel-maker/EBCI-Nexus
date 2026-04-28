@@ -18,6 +18,8 @@ import { DEPARTMENTS } from "@/config/departments"
 import { ContractsCard } from "@/components/hradmin/employees/ContractsCard"
 import { LocationSection, LocationEmpty } from "@/components/hradmin/employees/LocationSection"
 import { SalarySlipsCard, type SalarySlip } from "@/components/hradmin/employees/SalarySlipsCard"
+import { AdjustBalanceModal } from "@/components/hradmin/leave/AdjustBalanceModal"
+import type { BalanceCell, LeaveTypeLite, EmployeeRowLite } from "@/components/hradmin/leave/types"
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList
 } from "recharts"
@@ -123,6 +125,15 @@ interface Props {
     supervisorName: string
     tenure: string
     leaveBalances: LeaveBalance[]
+    /** Cells for the AdjustBalanceModal — keyed by leave_type_id.
+     *  Same shape used by /hradmin/leave?tab=balances so the modal works
+     *  identically here. */
+    balanceCells: Record<string, BalanceCell>
+    /** Active leave types so the modal can render the full grid even
+     *  for types this employee hasn't been seeded with yet. */
+    leaveTypes: LeaveTypeLite[]
+    /** Year the balanceCells reflect — drives the modal title + audit log. */
+    balanceYear: number
     recentLeaves: LeaveRequest[]
     allEmployees: EmployeeOption[]
     id: string
@@ -332,10 +343,16 @@ function LeaveHistory({ leaves }: { leaves: LeaveRequest[] }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function EmployeeProfileView({
     employee, photoUrl, displayName, supervisorName, tenure,
-    leaveBalances, recentLeaves, allEmployees, id, isHrAdmin,
+    leaveBalances, balanceCells, leaveTypes, balanceYear,
+    recentLeaves, allEmployees, id, isHrAdmin,
     contracts, canViewPayroll, salarySlips,
 }: Props) {
     const router = useRouter()
+    const [balanceModalOpen, setBalanceModalOpen] = useState(false)
+    // After a successful balance save the cells in the page haven't been
+    // refetched yet — bumping a key forces a router.refresh() so the
+    // server fetches the updated row and re-renders the chart.
+    const [, setBalanceRefreshKey] = useState(0)
 
     const initForm = (): FormState => ({
         employee_code: employee.employee_code ?? '',
@@ -1232,7 +1249,22 @@ export function EmployeeProfileView({
                 eat ~30% of the page; the numeric balances are already
                 in the leave history snapshot below if needed. */}
             <div style={glass} className="p-4 shadow-xl print:hidden">
-                <SHead icon={FileText} label="สถิติการลา" />
+                <div className="flex items-center justify-between gap-3 mb-1">
+                    <SHead icon={FileText} label={`สถิติการลา (${balanceYear + 543})`} />
+                    {/* HR-only quick adjust. Same modal that lives in
+                        /hradmin/leave?tab=balances — fewer surprises
+                        for Mod when she hops between the two screens. */}
+                    {isHrAdmin && (
+                        <button
+                            type="button"
+                            onClick={() => setBalanceModalOpen(true)}
+                            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-100 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/35 transition-colors"
+                        >
+                            <Pencil size={12} />
+                            ปรับวันลา
+                        </button>
+                    )}
+                </div>
                 {chartData.length === 0 ? (
                     <p className="text-white/65 text-[0.95rem] text-center py-8">ยังไม่มีข้อมูลวันลา</p>
                 ) : (
@@ -1386,6 +1418,38 @@ export function EmployeeProfileView({
                     onClose={() => setCropSrc(null)}
                     onCropComplete={handleCropped}
                     aspectRatio={1}
+                />
+            )}
+
+            {/* Leave-balance adjust modal — same component as the one in
+                /hradmin/leave?tab=balances. Pre-loaded with this employee's
+                cells + the active leave-type catalog. After save, force a
+                router refresh so the chart picks up the new total. */}
+            {isHrAdmin && (
+                <AdjustBalanceModal
+                    open={balanceModalOpen}
+                    onClose={() => setBalanceModalOpen(false)}
+                    onSaved={() => {
+                        setBalanceModalOpen(false)
+                        setBalanceRefreshKey(k => k + 1)
+                        router.refresh()
+                    }}
+                    employee={
+                        {
+                            id: employee.id,
+                            employee_code: employee.employee_code ?? null,
+                            first_name_th: employee.first_name_th ?? null,
+                            last_name_th: employee.last_name_th ?? null,
+                            nickname: employee.nickname ?? null,
+                            department: employee.department ?? null,
+                            position: employee.position ?? null,
+                            photo_url: photoUrl,
+                            approval_level: employee.approval_level ?? null,
+                        } satisfies EmployeeRowLite
+                    }
+                    leaveTypes={leaveTypes}
+                    cells={balanceCells}
+                    year={balanceYear}
                 />
             )}
         </div>

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { cookies } from "next/headers"
 import { EmployeeProfileView } from "./employee-profile-view"
 import { getCurrentPermissions } from "@/lib/permissions-server"
+import type { BalanceCell } from "@/components/hradmin/leave/types"
 
 export const dynamic = 'force-dynamic'
 
@@ -93,14 +94,102 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
         if (sup) supervisorName = `${sup.first_name_th} ${sup.last_name_th}`
     }
 
-    // ── Leave balances ─────────────────────────────────────────────────────────
+    // ── Leave balances (current year) ──────────────────────────────────────────
+    // Pulls every leave-type row even when the employee hasn't taken any
+    // — the AdjustBalanceModal needs the full set so HR can grant a
+    // type that hasn't been seeded yet (e.g. ลาคลอด for someone newly
+    // assigned female after gender update). Numeric columns come back
+    // as strings from PG, so we coerce defensively before passing on.
+    const currentYear = new Date().getFullYear()
     const { data: leaveBalancesRaw } = await supabaseAdmin
         .from('leave_balances')
-        .select('leave_type, entitled_days, used_days, remaining_days')
+        .select('id, employee_id, leave_type_id, total_days, used_days, pending_days, remaining_days, is_manually_adjusted, last_adjusted_by, last_adjusted_at, notes')
         .eq('employee_id', employee.id)
+        .eq('year', currentYear)
 
-    const leaveBalances: { leave_type: string; entitled_days: number; used_days: number; remaining_days: number }[] =
-        leaveBalancesRaw ?? []
+    type RawBalance = {
+        id: string
+        employee_id: string
+        leave_type_id: string
+        total_days: number | string | null
+        used_days: number | string | null
+        pending_days: number | string | null
+        remaining_days: number | string | null
+        is_manually_adjusted: boolean | null
+        last_adjusted_by: string | null
+        last_adjusted_at: string | null
+        notes: string | null
+    }
+
+    const num = (v: number | string | null): number => {
+        if (v === null || v === undefined) return 0
+        const n = typeof v === 'string' ? parseFloat(v) : v
+        return Number.isFinite(n) ? n : 0
+    }
+
+    const balanceCells: Record<string, BalanceCell> = {}
+    for (const b of (leaveBalancesRaw ?? []) as RawBalance[]) {
+        balanceCells[b.leave_type_id] = {
+            id: b.id,
+            employee_id: b.employee_id,
+            leave_type_id: b.leave_type_id,
+            total_days: num(b.total_days),
+            used_days: num(b.used_days),
+            pending_days: num(b.pending_days),
+            remaining_days: b.remaining_days === null ? null : num(b.remaining_days),
+            is_manually_adjusted: b.is_manually_adjusted,
+            last_adjusted_by: b.last_adjusted_by,
+            last_adjusted_at: b.last_adjusted_at,
+            last_adjusted_by_name: null,
+            notes: b.notes,
+        }
+    }
+
+    // Resolve adjuster names so the modal's history footer shows who
+    // last touched each row (matches the balances tab affordance).
+    const adjusterIds = Array.from(new Set(
+        Object.values(balanceCells)
+            .map(c => c.last_adjusted_by)
+            .filter((v): v is string => !!v),
+    ))
+    if (adjusterIds.length > 0) {
+        const { data: adjusters } = await supabaseAdmin
+            .from('User')
+            .select('id, name, username')
+            .in('id', adjusterIds)
+        const nameById = new Map((adjusters ?? []).map(u => [u.id as string, (u.name as string | null) ?? (u.username as string | null) ?? null]))
+        for (const cell of Object.values(balanceCells)) {
+            if (cell.last_adjusted_by) {
+                cell.last_adjusted_by_name = nameById.get(cell.last_adjusted_by) ?? null
+            }
+        }
+    }
+
+    // Active leave types — needed to populate the modal's row list and
+    // surface types the employee hasn't taken yet but might be granted.
+    const { data: leaveTypesRaw } = await supabaseAdmin
+        .from('leave_types')
+        .select('id, name_th, color, icon, display_order')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true, nullsFirst: false })
+    const leaveTypes = (leaveTypesRaw ?? []) as Array<{
+        id: string
+        name_th: string
+        color: string | null
+        icon: string | null
+        display_order: number | null
+    }>
+
+    // Legacy chart shape — kept until the chart in employee-profile-view
+    // is migrated to read `total_days` directly. Maps the canonical cells
+    // back to the older `{leave_type, entitled_days, used_days, remaining_days}`
+    // structure the chart already understands.
+    const leaveBalances = Object.values(balanceCells).map(c => ({
+        leave_type: c.leave_type_id,
+        entitled_days: c.total_days,
+        used_days: c.used_days,
+        remaining_days: c.remaining_days ?? Math.max(0, c.total_days - c.used_days - c.pending_days),
+    }))
 
     // ── Payroll permission gate ────────────────────────────────────────────────
     // Only users with can_manage_payroll see the salary-slips card.
@@ -188,6 +277,9 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             supervisorName={supervisorName}
             tenure={tenure}
             leaveBalances={leaveBalances}
+            balanceCells={balanceCells}
+            leaveTypes={leaveTypes}
+            balanceYear={currentYear}
             recentLeaves={recentLeaves}
             allEmployees={allEmployees}
             id={id}
