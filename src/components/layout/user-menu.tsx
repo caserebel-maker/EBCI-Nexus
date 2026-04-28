@@ -123,7 +123,13 @@ export function UserMenu({
                         role="menu"
                         className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-24px)] z-[90] rounded-2xl shadow-2xl overflow-hidden border"
                         style={{
-                            background: 'rgba(20,5,8,0.97)',
+                            // Maroon-tinted at 77% — matches the rest of the
+                            // app brand (NotificationDropdown gradient base,
+                            // ImageCropModal) instead of looking like a black
+                            // floater. Lower opacity lets the page bleed
+                            // through so the panel reads as "above" rather
+                            // than "blocking", per the screenshot feedback.
+                            background: 'rgba(60,15,20,0.77)',
                             borderColor: 'rgba(255,255,255,0.18)',
                             backdropFilter: 'blur(14px)',
                             WebkitBackdropFilter: 'blur(14px)',
