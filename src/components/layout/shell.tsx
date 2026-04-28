@@ -133,29 +133,69 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                     </div>
                 </div>
 
-                {/* User Profile Card — compact horizontal */}
-                <div className="px-4 pb-3 pt-0 shrink-0 flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full overflow-hidden shadow-lg shadow-black/40 ring-2 ring-white/25 bg-white/10 shrink-0">
-                        {profile?.photoUrl ? (
-                            <img src={profile.photoUrl} alt={profile.fullName} className="h-full w-full object-cover" />
-                        ) : (
-                            <div className="h-full w-full flex items-center justify-center text-base font-bold text-white">
-                                {(profile?.fullName ?? userName ?? 'U').charAt(0).toUpperCase()}
+                {/* User Profile Card — compact horizontal.
+                    Dual-role users (HR Admin who can toggle into /portal
+                    preview) get a coloured ring + mode indicator dot so
+                    "which mode am I in" is unambiguous at a glance.
+                    Single-role employees keep the original neutral ring. */}
+                {(() => {
+                    const isDualRole = role === 'hr_admin'
+                    const inHradminMode = isDualRole && pathname?.startsWith('/hradmin')
+                    const ringClass = isDualRole
+                        ? (inHradminMode ? 'ring-[3px] ring-amber-500' : 'ring-[3px] ring-emerald-500')
+                        : 'ring-2 ring-white/25'
+                    const dotColor = inHradminMode ? '#f59e0b' : '#10b981'
+                    const modeLabel = !isDualRole
+                        ? null
+                        : inHradminMode ? 'โหมด HR Admin' : 'โหมดพนักงาน'
+                    return (
+                        <div className="px-4 pb-3 pt-0 shrink-0 flex items-center gap-3">
+                            <div className="relative shrink-0">
+                                <div className={cn(
+                                    'h-10 w-10 rounded-full overflow-hidden shadow-lg shadow-black/40 bg-white/10',
+                                    ringClass,
+                                )}>
+                                    {profile?.photoUrl ? (
+                                        <img src={profile.photoUrl} alt={profile.fullName} className="h-full w-full object-cover" />
+                                    ) : (
+                                        <div className="h-full w-full flex items-center justify-center text-base font-bold text-white">
+                                            {(profile?.fullName ?? userName ?? 'U').charAt(0).toUpperCase()}
+                                        </div>
+                                    )}
+                                </div>
+                                {/* Mode dot — only on dual-role accounts.
+                                    border-[3px] punches the dot away from the
+                                    avatar ring so the two coloured pieces
+                                    don't blur into one. Border colour comes
+                                    from the maroon sidebar gradient (closest
+                                    eyeballed match) so the dot reads as
+                                    "stuck on" rather than floating. */}
+                                {isDualRole && (
+                                    <span
+                                        aria-hidden="true"
+                                        title={modeLabel ?? undefined}
+                                        className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full"
+                                        style={{
+                                            background: dotColor,
+                                            border: '3px solid rgb(86,30,35)',
+                                        }}
+                                    />
+                                )}
                             </div>
-                        )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-white leading-tight truncate">
-                            {profile?.fullName ?? userName ?? 'User'}
-                        </p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/60"></span>
-                            <p className="text-[11px] text-white/70 truncate">
-                                {profile?.roleLabel ?? role} · Online
-                            </p>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-white leading-tight truncate">
+                                    {profile?.fullName ?? userName ?? 'User'}
+                                </p>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/60"></span>
+                                    <p className="text-[11px] text-white/70 truncate">
+                                        {profile?.roleLabel ?? role} · Online
+                                    </p>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    )
+                })()}
 
                 {/* Mode Switcher (HR Admin only) — below profile */}
                 {role === 'hr_admin' && (
