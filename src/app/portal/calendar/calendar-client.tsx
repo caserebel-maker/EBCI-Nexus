@@ -48,10 +48,10 @@ const HOLIDAY_TYPE_LABEL: Record<string, string> = {
 const isWfhEntry = (h?: { type?: string } | null) => h?.type === 'wfh'
 
 const glass: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.08)',
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255,255,255,0.15)',
+    background: 'rgba(255,255,255,0.14)',
+    backdropFilter: 'blur(14px)',
+    WebkitBackdropFilter: 'blur(14px)',
+    border: '1px solid rgba(255,255,255,0.22)',
     borderRadius: '16px',
     boxShadow: '0 8px 24px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.2)',
 }
@@ -131,19 +131,19 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                 {/* Month/Year header */}
                 <div className="flex items-center justify-between mb-4">
                     <button onClick={prevMonth}
-                        className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-90">
+                        className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/15 transition-all active:scale-90">
                         <ChevronLeft size={18} />
                     </button>
                     <div className="text-center">
-                        <p className="text-white font-bold" style={{ fontSize: '16px' }}>
+                        <p className="text-white font-bold" style={{ fontSize: '17px' }}>
                             {THAI_MONTHS[viewMonth]}
                         </p>
-                        <p className="text-white/50" style={{ fontSize: '13px' }}>
+                        <p className="text-white/75" style={{ fontSize: '13px' }}>
                             {viewYear + 543}
                         </p>
                     </div>
                     <button onClick={nextMonth}
-                        className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-all active:scale-90">
+                        className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/15 transition-all active:scale-90">
                         <ChevronRight size={18} />
                     </button>
                 </div>
@@ -151,7 +151,7 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                 {/* Day headers */}
                 <div className="grid grid-cols-7 mb-1">
                     {DAY_HEADERS.map((d, i) => (
-                        <div key={d} className={`text-center py-1 text-xs font-semibold ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-white/40'}`}>
+                        <div key={d} className={`text-center py-1 text-xs font-semibold ${i === 0 ? 'text-red-300' : i === 6 ? 'text-blue-300' : 'text-white/70'}`}>
                             {d}
                         </div>
                     ))}
@@ -180,39 +180,45 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                                 className="relative flex flex-col items-center py-1 rounded-xl transition-all active:scale-95"
                                 style={{
                                     background: isSelected
-                                        ? 'rgba(255,255,255,0.15)'
+                                        ? 'rgba(255,255,255,0.22)'
                                         : isOffDay
-                                            ? 'rgba(248,113,113,0.12)'
+                                            ? 'rgba(248,113,113,0.18)'
                                             : isWfh
-                                                ? 'rgba(52,211,153,0.14)'
-                                                : hasEvent ? 'rgba(255,255,255,0.05)' : undefined,
+                                                ? 'rgba(52,211,153,0.20)'
+                                                : hasEvent ? 'rgba(255,255,255,0.08)' : undefined,
+                                    border: isSelected ? '1px solid rgba(255,255,255,0.45)' : undefined,
                                     minHeight: 44,
                                 }}
                             >
                                 {/* Day number — WFH days are still working days, so the
-                                    number stays neutral (only true off-days go red). */}
+                                    number stays neutral (only true off-days go red). The
+                                    "today" pill uses a bright amber rim so it stays
+                                    legible against the maroon body gradient. */}
                                 <span
-                                    className="w-7 h-7 flex items-center justify-center rounded-full font-medium text-sm"
+                                    className="w-7 h-7 flex items-center justify-center rounded-full font-bold text-sm"
                                     style={{
-                                        background: isToday ? '#882136' : undefined,
+                                        background: isToday ? '#fbbf24' : undefined,
                                         color: isToday
-                                            ? '#fff'
+                                            ? '#1a0a0d'
                                             : isSun || isOffDay
                                                 ? '#FCA5A5'
-                                                : isSat ? '#93C5FD' : 'rgba(255,255,255,0.85)',
-                                        fontWeight: isToday ? 700 : undefined,
+                                                : isSat ? '#93C5FD' : '#ffffff',
+                                        boxShadow: isToday ? '0 0 0 2px rgba(251,191,36,0.4)' : undefined,
                                     }}
                                 >
                                     {day}
                                 </span>
 
-                                {/* Holiday/WFH label (tiny) */}
+                                {/* Holiday/WFH label (tiny). Bumped from 8 → 10px so the
+                                    truncated name is readable on a phone without zooming;
+                                    the cell footers were near-illegible before. */}
                                 {holiday && (
-                                    <span className="leading-tight text-center px-0.5 truncate w-full"
+                                    <span className="leading-tight text-center px-0.5 truncate w-full font-semibold"
                                         style={{
-                                            fontSize: '8px',
+                                            fontSize: '10px',
                                             maxWidth: '100%',
-                                            color: isWfh ? '#6EE7B7' : '#FCA5A5',
+                                            color: isWfh ? '#A7F3D0' : '#FECACA',
+                                            marginTop: 2,
                                         }}>
                                         {isWfh ? `🏠 ${holiday.name}` : holiday.name}
                                     </span>
@@ -239,13 +245,13 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
             {selected && (selectedHoliday || selectedLeaves.length > 0) && (
                 <div style={glass} className="p-4">
                     <div className="flex items-start justify-between mb-3">
-                        <p className="text-white font-bold" style={{ fontSize: '15px' }}>
+                        <p className="text-white font-bold" style={{ fontSize: '16px' }}>
                             {(() => {
                                 const [y, m, d] = selected.split('-')
                                 return `${parseInt(d)} ${THAI_MONTHS[parseInt(m) - 1]} ${parseInt(y) + 543}`
                             })()}
                         </p>
-                        <button onClick={() => setSelected(null)} className="text-white/40 hover:text-white transition-colors">
+                        <button onClick={() => setSelected(null)} className="text-white/65 hover:text-white transition-colors">
                             <X size={16} />
                         </button>
                     </div>
@@ -253,15 +259,15 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                     {selectedHoliday && (() => {
                         const wfh = isWfhEntry(selectedHoliday)
                         const tone = wfh
-                            ? { bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.25)', text: '#6EE7B7', sub: 'rgba(110,231,183,0.6)', icon: '🏠' }
-                            : { bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.2)', text: '#FCA5A5', sub: 'rgba(252,165,165,0.6)', icon: '🎌' }
+                            ? { bg: 'rgba(52,211,153,0.18)', border: 'rgba(52,211,153,0.4)', text: '#A7F3D0', sub: '#6EE7B7', icon: '🏠' }
+                            : { bg: 'rgba(248,113,113,0.18)', border: 'rgba(248,113,113,0.4)', text: '#FECACA', sub: '#FCA5A5', icon: '🎌' }
                         return (
-                            <div className="flex items-center gap-2 mb-2 p-2.5 rounded-xl"
+                            <div className="flex items-center gap-2 mb-2 p-3 rounded-xl"
                                 style={{ background: tone.bg, border: `1px solid ${tone.border}` }}>
-                                <span className="text-lg" style={{ color: tone.text }}>{tone.icon}</span>
+                                <span className="text-xl" style={{ color: tone.text }}>{tone.icon}</span>
                                 <div>
-                                    <p className="font-semibold text-sm" style={{ color: tone.text }}>{selectedHoliday.name}</p>
-                                    <p className="text-xs" style={{ color: tone.sub }}>
+                                    <p className="font-bold text-sm" style={{ color: tone.text }}>{selectedHoliday.name}</p>
+                                    <p className="text-xs font-medium" style={{ color: tone.sub }}>
                                         {HOLIDAY_TYPE_LABEL[selectedHoliday.type] ?? HOLIDAY_TYPE_LABEL.company}
                                     </p>
                                 </div>
@@ -270,13 +276,13 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                     })()}
 
                     {selectedLeaves.map((l, i) => (
-                        <div key={i} className="flex items-center gap-2 mb-1.5 p-2.5 rounded-xl"
-                            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <div key={i} className="flex items-center gap-2 mb-1.5 p-3 rounded-xl"
+                            style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.18)' }}>
                             <span className="w-3 h-3 rounded-full shrink-0"
                                 style={{ background: LEAVE_COLOR[l.leaveType] ?? '#fff', opacity: l.status === 'pending' ? 0.6 : 1 }} />
-                            <p className="text-white/80 text-sm">{LEAVE_LABEL[l.leaveType] ?? l.leaveType}</p>
-                            <span className="ml-auto text-xs"
-                                style={{ color: l.status === 'approved' ? '#34D399' : '#FBBF24' }}>
+                            <p className="text-white text-sm font-medium">{LEAVE_LABEL[l.leaveType] ?? l.leaveType}</p>
+                            <span className="ml-auto text-xs font-semibold"
+                                style={{ color: l.status === 'approved' ? '#6EE7B7' : '#FCD34D' }}>
                                 {l.status === 'approved' ? 'อนุมัติแล้ว' : 'รอการอนุมัติ'}
                             </span>
                         </div>
@@ -289,24 +295,24 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                 <div className="flex flex-wrap gap-x-4 gap-y-2">
                     {hasOffDayInMonth && (
                         <div className="flex items-center gap-1.5">
-                            <span className="w-3 h-3 rounded-sm" style={{ background: 'rgba(248,113,113,0.4)', border: '1px solid #F87171' }} />
-                            <span className="text-white/55" style={{ fontSize: '11px' }}>วันหยุด</span>
+                            <span className="w-3 h-3 rounded-sm" style={{ background: 'rgba(248,113,113,0.5)', border: '1px solid #F87171' }} />
+                            <span className="text-white/85 font-medium" style={{ fontSize: '12px' }}>วันหยุด</span>
                         </div>
                     )}
                     {hasWfhDayInMonth && (
                         <div className="flex items-center gap-1.5">
-                            <span className="w-3 h-3 rounded-sm" style={{ background: 'rgba(52,211,153,0.4)', border: '1px solid #34D399' }} />
-                            <span className="text-white/55" style={{ fontSize: '11px' }}>WFH</span>
+                            <span className="w-3 h-3 rounded-sm" style={{ background: 'rgba(52,211,153,0.5)', border: '1px solid #34D399' }} />
+                            <span className="text-white/85 font-medium" style={{ fontSize: '12px' }}>WFH</span>
                         </div>
                     )}
                     <div className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 rounded-full" style={{ background: '#882136' }} />
-                        <span className="text-white/55" style={{ fontSize: '11px' }}>วันนี้</span>
+                        <span className="w-3 h-3 rounded-full" style={{ background: '#fbbf24', boxShadow: '0 0 0 2px rgba(251,191,36,0.35)' }} />
+                        <span className="text-white/85 font-medium" style={{ fontSize: '12px' }}>วันนี้</span>
                     </div>
                     {Object.entries(LEAVE_LABEL).filter(([k]) => leaveTypesInMonth.has(k)).map(([k, label]) => (
                         <div key={k} className="flex items-center gap-1.5">
                             <span className="w-3 h-3 rounded-full" style={{ background: LEAVE_COLOR[k] }} />
-                            <span className="text-white/55" style={{ fontSize: '11px' }}>{label}</span>
+                            <span className="text-white/85 font-medium" style={{ fontSize: '12px' }}>{label}</span>
                         </div>
                     ))}
                 </div>
