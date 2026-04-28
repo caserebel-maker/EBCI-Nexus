@@ -125,32 +125,41 @@ branches; the user's other machines pull from `origin/main`.)
 - The next-machine prompt must be specific (point at §X.Y, not "ดูทุก
   อย่าง"). Example: `อ่าน docs/NEXT.md แล้วทำต่อ — เริ่มที่ §3.4`.
 
-**Step 4 — Create a scheduled-task reminder (MANDATORY):**
+**Step 4 — Create BOTH a Google Calendar event AND a Claude
+scheduled-task (MANDATORY — both, not either-or):**
 
-Use the `mcp__scheduled-tasks__create_scheduled_task` tool with a
-**fireAt** timestamp set for the next likely work-start time
-(typically 07:00 Bangkok the next morning, or sooner if the user
-indicated they're heading straight to another machine). The task's
-prompt MUST contain:
+The user lives out of Google Calendar; a Claude-internal scheduled
+task only buzzes inside the Claude Code app and is invisible
+otherwise. The GCal event is what shows up on the phone, the laptop
+notification, the email reminder. The Claude scheduled-task is what
+actually fires a pre-loaded session at the right moment so the
+prompt is one click away. Both, every time.
 
-- The literal `git pull origin main --ff-only` command + the path.
-- The exact Thai one-liner to type into Claude Code at the new
-  machine — same one pinned in `NEXT.md`.
-- A short context-of-the-moment summary so the morning reminder
-  doesn't feel disconnected from last night's work.
-- Today's last commit hash so the user can sanity-check the pull
-  landed.
+**4a. Google Calendar event** via
+`mcp__95d22b32-b8ea-4064-a0f0-af68ce632d11__create_event`:
+- summary: `🚀 EBCI Nexus — <session label>` (short, scannable)
+- startTime/endTime: ISO without offset, e.g.
+  `2026-04-29T07:00:00` to `2026-04-29T07:30:00`
+- timeZone: `Asia/Bangkok`
+- colorId: `11` (Tomato — pops on the calendar grid)
+- description: the full handoff (git pull command + literal Thai
+  one-liner + checklist + last commit hash + prod URL). This is
+  the canonical handoff the user reads in the morning.
 
-**Why this is mandatory, not optional:** The user has explicitly
-asked that the scheduled-task reminder be created *every time* they
-switch machines, not just on demand. Documenting the prompt in
-NEXT.md or CLAUDE.md is necessary but not sufficient — the active
-push notification at the next start time is what closes the loop.
+**4b. Claude scheduled-task** via
+`mcp__scheduled-tasks__create_scheduled_task` with a `fireAt` at the
+same moment. The prompt mirrors the GCal description so opening
+Claude Code at the reminder fires a session ready to go. Use a
+fresh `taskId` per session (e.g. `ebci-handoff-YYYY-MM-DD`).
 
-Use a fresh `taskId` per session (e.g. `ebci-handoff-YYYY-MM-DD`)
-so each evening's task doesn't collide with the previous one. If a
-prior unfired task exists from an earlier session that's already
-overtaken, list and skip it rather than overwriting.
+**Why mandatory, not optional:** The user explicitly pushed back on
+"NEXT.md is enough" and on "scheduled-task is enough" — they've
+asked for the GCal event specifically by name. Skipping either
+half of 4a/4b breaks the loop they designed.
+
+If a prior unfired task/event exists from an earlier session
+that's already past, ignore it; if one is still pending, decide
+whether to update or layer fresh.
 
 **Step 5 — Tell the user, in one short message:**
 - Confirm what was pushed (commit count + last hash).
