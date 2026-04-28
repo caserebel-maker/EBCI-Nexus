@@ -83,9 +83,10 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
             icon: Settings,
             matchPrefix: ['/hradmin/settings', '/hradmin/reports'],
             children: [
-                { label: 'ระบบและทรัพยากร', href: '/hradmin/settings/quota', icon: Database },
-                { label: 'รายงาน',           href: '/hradmin/reports',        icon: FileText },
-                { label: 'ตั้งค่าทั่วไป',      href: '/hradmin/settings',       icon: Settings },
+                { label: 'ระบบและทรัพยากร', href: '/hradmin/settings/quota',  icon: Database },
+                { label: 'รายงาน',           href: '/hradmin/reports',         icon: FileText },
+                { label: 'แบ็กอัพข้อมูล',    href: '/hradmin/settings/backup', icon: ShieldCheck },
+                { label: 'ตั้งค่าทั่วไป',      href: '/hradmin/settings',        icon: Settings },
             ],
         },
     ],
