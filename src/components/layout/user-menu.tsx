@@ -209,10 +209,10 @@ export function UserMenu({
                                     )
                                 })()}
                                 {tenure && (
-                                    <p className="text-white/55 text-[11px] mt-1">อายุงาน {tenure}</p>
+                                    <p className="text-white/65 text-[13px] mt-1">อายุงาน {tenure}</p>
                                 )}
                                 {email && (
-                                    <p className="text-white/55 text-[11px] mt-0.5 truncate">{email}</p>
+                                    <p className="text-white/65 text-[13px] mt-0.5 truncate">{email}</p>
                                 )}
                             </div>
                         </div>
@@ -252,24 +252,26 @@ export function UserMenu({
                             </button>
                         </div>
 
-                        {/* Mode toggle — HR Admin only. The accent colour
-                            mirrors the sidebar toggle (amber when in /portal
-                            preview, blue when in /hradmin) so HR admins read
-                            the two affordances as the same action. */}
+                        {/* Mode toggle — HR Admin only. The whole row is
+                            now a filled button matching the chunky sidebar
+                            mode-switcher: blue in /hradmin, amber in /portal
+                            preview. The previous text-only treatment with
+                            faint hover blended into the dropdown's other
+                            rows and was easy to miss. */}
                         {role === 'hr_admin' && (
-                            <div className="border-t border-white/10 py-1">
+                            <div className="border-t border-white/10 p-2">
                                 <Link
                                     href={togglePath}
                                     onClick={() => setOpen(false)}
-                                    className={cn(
-                                        'flex items-center gap-3 px-4 py-2.5 text-sm font-semibold transition-colors',
-                                        inHradmin
-                                            ? 'text-blue-200 hover:bg-blue-500/15'
-                                            : 'text-amber-200 hover:bg-amber-500/15',
-                                    )}
                                     role="menuitem"
+                                    className={cn(
+                                        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold text-white shadow-md transition-all active:scale-[0.98]',
+                                        inHradmin
+                                            ? 'bg-blue-500/90 hover:bg-blue-500 ring-1 ring-blue-400/50 shadow-blue-500/30'
+                                            : 'bg-amber-500/90 hover:bg-amber-500 ring-1 ring-amber-400/50 shadow-amber-500/30',
+                                    )}
                                 >
-                                    <RefreshCw size={16} className={inHradmin ? 'text-blue-300' : 'text-amber-300'} />
+                                    <RefreshCw size={16} className="text-white/95" />
                                     {toggleLabel}
                                 </Link>
                             </div>
