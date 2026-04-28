@@ -846,42 +846,51 @@ function CreateUserModal({
                         />
                     </Field>
 
-                    {error && (
-                        <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 p-2.5 text-[0.85rem] text-rose-200 inline-flex items-start gap-2 w-full">
-                            <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-                            <span>{error}</span>
-                        </div>
-                    )}
                 </div>
 
-                {/* Footer */}
-                <footer className="sticky bottom-0 z-10 flex items-center justify-end gap-2 px-5 py-3 border-t border-white/10 bg-[#15040a]">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        disabled={saving}
-                        className="px-4 h-10 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-sm font-semibold border border-white/15"
-                    >
-                        ยกเลิก
-                    </button>
-                    <button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={saving}
-                        className="px-5 h-10 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-bold inline-flex items-center gap-2 disabled:opacity-60 shadow-lg shadow-emerald-500/30"
-                    >
-                        {saving ? (
-                            <>
-                                <Loader2 size={13} className="animate-spin" />
-                                กำลังสร้าง…
-                            </>
-                        ) : (
-                            <>
-                                <Check size={13} />
-                                สร้างผู้ใช้
-                            </>
-                        )}
-                    </button>
+                {/* Footer + sticky error banner.
+                    Original error <div> was inside the scrollable body so
+                    a "ตั้งรหัสผ่านก่อน" warning sat above the form while
+                    the user was looking at the action buttons. Pull it
+                    into the same sticky container as the buttons so a
+                    failed validation can't be missed. */}
+                <footer className="sticky bottom-0 z-10 border-t border-white/10 bg-[#15040a]">
+                    {error && (
+                        <div className="px-5 pt-3 -mb-1">
+                            <div className="rounded-lg bg-rose-500/15 border border-rose-500/40 px-3 py-2 text-[0.85rem] text-rose-100 inline-flex items-start gap-2 w-full">
+                                <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                                <span className="font-semibold">{error}</span>
+                            </div>
+                        </div>
+                    )}
+                    <div className="flex items-center justify-end gap-2 px-5 py-3">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            disabled={saving}
+                            className="px-4 h-10 rounded-lg bg-white/5 hover:bg-white/10 text-white/80 text-sm font-semibold border border-white/15"
+                        >
+                            ยกเลิก
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleSubmit}
+                            disabled={saving}
+                            className="px-5 h-10 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-bold inline-flex items-center gap-2 disabled:opacity-60 shadow-lg shadow-emerald-500/30"
+                        >
+                            {saving ? (
+                                <>
+                                    <Loader2 size={13} className="animate-spin" />
+                                    กำลังสร้าง…
+                                </>
+                            ) : (
+                                <>
+                                    <Check size={13} />
+                                    สร้างผู้ใช้
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </footer>
             </div>
         </div>,
