@@ -73,7 +73,15 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
     // single /hradmin admin page. No mode toggle needed.
     const perms = permissions ?? EMPTY_PERMISSIONS
     const navItems: NavItem[] = [...baseItems]
-    if (perms.can_manage_payroll && !navItems.some(i => i.href === '/hradmin/payroll/bulk')) {
+    // Payroll bulk upload is an admin action — hide it when an HR admin is
+    // previewing /portal so the employee-mode sidebar stays clean. The link
+    // would jump them out to /hradmin anyway, which breaks the preview.
+    const inPortalPreview = role === 'hr_admin' && pathname?.startsWith('/portal')
+    if (
+        perms.can_manage_payroll
+        && !inPortalPreview
+        && !navItems.some(i => i.href === '/hradmin/payroll/bulk')
+    ) {
         navItems.push({
             label: 'อัปโหลดสลิปเงินเดือน',
             href: '/hradmin/payroll/bulk',
