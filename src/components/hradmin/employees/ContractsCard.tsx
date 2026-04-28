@@ -57,32 +57,41 @@ export function ContractsCard({ employeeId, contracts, canEdit }: Props) {
     const [deleteError, setDeleteError] = useState<string | null>(null)
 
     function handleDelete(contractId: string) {
-        const reason = window.prompt(
-            'เหตุผลที่ลบสัญญานี้ (เช่น "อัปโหลดผิดไฟล์", "เซ็นซ้ำ"):',
-            '',
-        )
-        if (reason === null) return  // user cancelled prompt
-
-        startDelete(async () => {
-            setDeleteError(null)
-            try {
-                const res = await fetch(
-                    `/api/hradmin/employees/${employeeId}/contracts/${contractId}`,
-                    {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ reason: reason.trim() || null }),
-                    },
+        // INP fix: window.prompt() blocks paint while the dialog is
+        // open. Without rAF the click handler "stays running" for as
+        // long as HR types a reason, and Brave/Chrome flag the click
+        // as a multi-second INP regression. Double rAF lets a paint
+        // cycle complete before the prompt opens.
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const reason = window.prompt(
+                    'เหตุผลที่ลบสัญญานี้ (เช่น "อัปโหลดผิดไฟล์", "เซ็นซ้ำ"):',
+                    '',
                 )
-                const json = await res.json().catch(() => ({}))
-                if (!res.ok) {
-                    setDeleteError(json.error ?? `Error ${res.status}`)
-                    return
-                }
-                router.refresh()
-            } catch (err) {
-                setDeleteError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด')
-            }
+                if (reason === null) return  // user cancelled prompt
+
+                startDelete(async () => {
+                    setDeleteError(null)
+                    try {
+                        const res = await fetch(
+                            `/api/hradmin/employees/${employeeId}/contracts/${contractId}`,
+                            {
+                                method: 'DELETE',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ reason: reason.trim() || null }),
+                            },
+                        )
+                        const json = await res.json().catch(() => ({}))
+                        if (!res.ok) {
+                            setDeleteError(json.error ?? `Error ${res.status}`)
+                            return
+                        }
+                        router.refresh()
+                    } catch (err) {
+                        setDeleteError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด')
+                    }
+                })
+            })
         })
     }
 

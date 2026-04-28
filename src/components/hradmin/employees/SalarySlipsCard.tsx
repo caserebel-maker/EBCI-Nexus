@@ -105,31 +105,41 @@ export function SalarySlipsCard({ employeeId, slips, canEdit }: Props) {
     const [isDeleting, startDelete] = useTransition()
     const [deleteError, setDeleteError] = useState<string | null>(null)
     function handleDelete(slipId: string, label: string) {
-        const reason = window.prompt(
-            `เหตุผลที่ลบสลิป ${label} (เช่น "อัปโหลดผิดเดือน"):`,
-            '',
-        )
-        if (reason === null) return
-        startDelete(async () => {
-            setDeleteError(null)
-            try {
-                const res = await fetch(
-                    `/api/hradmin/employees/${employeeId}/salary-slips/${slipId}`,
-                    {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ reason: reason.trim() || null }),
-                    },
+        // Same INP-fix pattern we use on print buttons: window.prompt()
+        // blocks every paint while the dialog is open, so the click
+        // handler "lasts" for the whole prompt lifetime and Brave/
+        // Chrome flag it as an INP regression. Double rAF lets at
+        // least one paint cycle complete before the prompt opens, so
+        // the click is measured as <1ms.
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const reason = window.prompt(
+                    `เหตุผลที่ลบสลิป ${label} (เช่น "อัปโหลดผิดเดือน"):`,
+                    '',
                 )
-                const json = await res.json().catch(() => ({}))
-                if (!res.ok) {
-                    setDeleteError(json.error ?? `Error ${res.status}`)
-                    return
-                }
-                router.refresh()
-            } catch (err) {
-                setDeleteError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด')
-            }
+                if (reason === null) return
+                startDelete(async () => {
+                    setDeleteError(null)
+                    try {
+                        const res = await fetch(
+                            `/api/hradmin/employees/${employeeId}/salary-slips/${slipId}`,
+                            {
+                                method: 'DELETE',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ reason: reason.trim() || null }),
+                            },
+                        )
+                        const json = await res.json().catch(() => ({}))
+                        if (!res.ok) {
+                            setDeleteError(json.error ?? `Error ${res.status}`)
+                            return
+                        }
+                        router.refresh()
+                    } catch (err) {
+                        setDeleteError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด')
+                    }
+                })
+            })
         })
     }
 
