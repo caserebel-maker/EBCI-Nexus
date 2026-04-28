@@ -29,6 +29,14 @@ export interface AnnouncementItem {
     creatorName: string | null
 }
 
+/** Today's row from the company calendar (`holidays` table), if any. The
+ *  banner on the dashboard reads this to surface either a holiday or a
+ *  company-wide WFH day so staff don't miss it. */
+export interface TodayCalendarEntry {
+    name: string
+    type: string  // public · religious · company · wfh
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 type EmpRow = {
@@ -227,6 +235,28 @@ export default async function PortalDashboardPage() {
 
     const lateCount = 0 // Future: query attendance table
 
+    // ── Today's company-calendar entry (holiday or WFH) ───────────────────────
+    // Bangkok-local YYYY-MM-DD — using the runtime locale would be wrong on
+    // Vercel where the function executes in UTC. We construct from the local
+    // numeric pieces directly so the date matches what the user sees.
+    const tzDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    let todayCalendarEntry: TodayCalendarEntry | null = null
+    try {
+        const { data } = await supabaseAdmin
+            .from('holidays')
+            .select('name, type')
+            .eq('date', tzDate)
+            .maybeSingle()
+        if (data) {
+            todayCalendarEntry = {
+                name: (data.name as string) ?? '',
+                type: (data.type as string) ?? 'company',
+            }
+        }
+    } catch (e) {
+        console.error('[dashboard] today calendar fetch failed:', e)
+    }
+
     return (
         <PortalDashboardClient
             sessionName={session.name}
@@ -234,6 +264,7 @@ export default async function PortalDashboardPage() {
             announcements={announcements}
             leaveBalances={leaveBalances}
             attendanceData={{ lateCount, workingDays }}
+            todayCalendarEntry={todayCalendarEntry}
         />
     )
 }

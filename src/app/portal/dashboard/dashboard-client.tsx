@@ -6,10 +6,10 @@ import useEmblaCarousel from 'embla-carousel-react'
 import Autoplay from 'embla-carousel-autoplay'
 import {
     FileText, Clock, Calendar, MapPin, User, Bell, X, ChevronLeft, ChevronRight,
-    AlertTriangle, AlertCircle, Info, Megaphone, UserCircle,
+    AlertTriangle, AlertCircle, Info, Megaphone, UserCircle, Home, CalendarOff,
 } from 'lucide-react'
 import { DailyGreeting } from '@/components/daily-greeting'
-import type { AnnouncementItem } from './page'
+import type { AnnouncementItem, TodayCalendarEntry } from './page'
 
 interface Employee {
     firstNameTH: string
@@ -41,6 +41,9 @@ interface Props {
     announcements: AnnouncementItem[]
     leaveBalances: LeaveBalance[]
     attendanceData: AttendanceData
+    /** Set when today's date matches a row in the company calendar
+     *  (`holidays` table). Used to render the WFH/holiday banner. */
+    todayCalendarEntry: TodayCalendarEntry | null
 }
 
 const SHORTCUTS = [
@@ -506,7 +509,44 @@ function PopupRow({ label, value, color }: { label: string; value: string; color
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-export function PortalDashboardClient({ sessionName, employee, announcements, leaveBalances, attendanceData }: Props) {
+// ─── Today calendar banner (WFH / Holiday) ───────────────────────────────────
+function TodayCalendarBanner({ entry }: { entry: TodayCalendarEntry }) {
+    const isWfh = entry.type === 'wfh'
+    const Icon = isWfh ? Home : CalendarOff
+    const headline = isWfh ? '🏠 วันนี้ทำงานที่บ้าน (WFH)' : '🎌 วันนี้เป็นวันหยุดบริษัท'
+    const bg = isWfh
+        ? 'linear-gradient(135deg, rgba(16,185,129,0.18), rgba(52,211,153,0.10))'
+        : 'linear-gradient(135deg, rgba(248,113,113,0.18), rgba(239,68,68,0.10))'
+    const border = isWfh ? 'rgba(52,211,153,0.35)' : 'rgba(248,113,113,0.35)'
+    const accent = isWfh ? '#34D399' : '#F87171'
+    return (
+        <div
+            className="flex items-center gap-3 p-3.5 rounded-2xl"
+            style={{ background: bg, border: `1px solid ${border}` }}
+            role="status"
+        >
+            <div
+                className="shrink-0 flex items-center justify-center rounded-full"
+                style={{ width: 40, height: 40, background: 'rgba(255,255,255,0.12)' }}
+            >
+                <Icon size={18} style={{ color: accent }} />
+            </div>
+            <div className="min-w-0 flex-1">
+                <p className="font-bold leading-tight" style={{ color: accent, fontSize: '14px' }}>
+                    {headline}
+                </p>
+                {entry.name && (
+                    <p className="text-white/75 truncate" style={{ fontSize: '12px', marginTop: 2 }}>
+                        {entry.name}
+                    </p>
+                )}
+            </div>
+        </div>
+    )
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+export function PortalDashboardClient({ sessionName, employee, announcements, leaveBalances, attendanceData, todayCalendarEntry }: Props) {
     const [openPopup, setOpenPopup] = useState<'late' | 'leave' | null>(null)
 
     // ── Attendance data ───────────────────────────────────────────────────────
@@ -540,6 +580,11 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
                     dateOfBirth={employee?.dateOfBirth}
                 />
             </div>
+
+            {/* 1b. Today calendar banner (WFH / holiday) — shown only when the
+                   `holidays` table has a row for today. Sits above announcements
+                   so a "today is WFH" notice is the first thing staff see. */}
+            {todayCalendarEntry && <TodayCalendarBanner entry={todayCalendarEntry} />}
 
             {/* 2. Announcement Carousel (top 5 active, hides when empty) */}
             {announcements.length > 0 && (
