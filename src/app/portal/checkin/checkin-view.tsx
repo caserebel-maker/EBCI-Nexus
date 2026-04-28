@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 const CheckinMap = dynamic(() => import('@/components/checkin/checkin-map').then(m => m.CheckinMap), { ssr: false, loading: () => <div className="h-64 rounded-2xl bg-white/5 animate-pulse flex items-center justify-center text-white/40 text-sm">กำลังโหลดแผนที่...</div> })
 
 import { useState, useEffect } from 'react'
-import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut } from 'lucide-react'
+import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { checkIn, checkOut } from './actions'
 import { haversineDistance } from '@/lib/geo'
@@ -87,9 +87,11 @@ export function CheckinView({ office, todayCheckin }: Props) {
         : null
     const isAtOffice = distance !== null && office && distance <= office.radius_meters
 
+    // Auto-dismiss after 5s. The dialog also gets a manual close button —
+    // older staff sometimes want the message to stay until they tap it.
     const showToast = (type: 'success' | 'error', msg: string) => {
         setToast({ type, msg })
-        setTimeout(() => setToast(null), 4000)
+        setTimeout(() => setToast(null), 5000)
     }
 
     const handleCheckin = async (type: 'office' | 'wfh') => {
@@ -127,14 +129,44 @@ export function CheckinView({ office, todayCheckin }: Props) {
 
     return (
         <div className="max-w-xl mx-auto space-y-6">
-            {/* Toast */}
+            {/* Toast — centered modal-style dialog with backdrop. Replaces the
+                old top-6 banner that overlapped the shell topbar (notification
+                bell + language toggle). Auto-dismisses after 5s; tap backdrop
+                or X to close earlier. */}
             {toast && (
-                <div className={cn(
-                    'fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-xl text-sm font-semibold',
-                    toast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
-                )}>
-                    {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-                    {toast.msg}
+                <div
+                    className="fixed inset-0 z-[80] flex items-center justify-center px-6 animate-in fade-in duration-150"
+                    style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)' }}
+                    onClick={() => setToast(null)}
+                    role="alertdialog"
+                    aria-live="assertive"
+                >
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        className={cn(
+                            'relative w-full max-w-sm rounded-2xl shadow-2xl px-6 py-7 flex flex-col items-center text-center text-white animate-in zoom-in-95 duration-200',
+                            toast.type === 'success'
+                                ? 'bg-gradient-to-br from-emerald-500 to-emerald-700'
+                                : 'bg-gradient-to-br from-red-500 to-red-700',
+                        )}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => setToast(null)}
+                            className="absolute top-2.5 right-2.5 p-1.5 rounded-full text-white/80 hover:text-white hover:bg-white/20 transition-colors"
+                            aria-label="ปิด"
+                        >
+                            <X size={18} />
+                        </button>
+                        <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center mb-3">
+                            {toast.type === 'success'
+                                ? <CheckCircle2 size={28} />
+                                : <AlertCircle size={28} />}
+                        </div>
+                        <p className="text-base font-bold leading-snug">
+                            {toast.msg}
+                        </p>
+                    </div>
                 </div>
             )}
 
