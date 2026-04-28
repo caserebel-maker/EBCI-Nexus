@@ -28,6 +28,7 @@ import { LanguageToggle } from '@/components/ui/language-toggle'
 import { useTranslation } from '@/contexts/language-context'
 import { PortalBottomNav } from '@/components/layout/portal-bottom-nav'
 import { SidebarNav } from '@/components/layout/sidebar-nav'
+import { UserMenu } from '@/components/layout/user-menu'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { EMPTY_PERMISSIONS, type UserPermissions } from '@/lib/permissions'
 
@@ -249,6 +250,13 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                         </button>
                         <NotificationBell />
                         <LanguageToggle />
+                        <UserMenu
+                            fullName={profile?.fullName ?? userName ?? 'User'}
+                            email={profile?.email ?? null}
+                            roleLabel={profile?.roleLabel ?? role}
+                            role={role}
+                            photoUrl={profile?.photoUrl ?? null}
+                        />
                     </div>
                 </header>
 
