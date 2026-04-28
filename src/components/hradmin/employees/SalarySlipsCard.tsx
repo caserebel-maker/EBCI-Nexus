@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
     Wallet, Upload, Download, Trash2, Loader2, AlertTriangle,
-    Check, X, LayoutGrid, List, FileText, AlertCircle,
+    Check, X, LayoutGrid, List, AlertCircle,
 } from 'lucide-react'
 
 /**
@@ -193,44 +193,49 @@ export function SalarySlipsCard({ employeeId, slips, canEdit }: Props) {
                 </div>
             )}
 
-            {/* Toolbar: view toggle + year selector */}
-            {slips.length > 0 && (
-                <div className="flex items-center justify-between gap-3 mb-3">
-                    {/* View toggle */}
-                    <div className="inline-flex rounded-lg border border-white/10 bg-white/[0.04] p-0.5">
-                        <ViewToggleButton
-                            active={viewMode === 'grid'}
-                            onClick={() => setViewMode('grid')}
-                            icon={<LayoutGrid size={13} />}
-                            label="ปฏิทิน"
-                        />
-                        <ViewToggleButton
-                            active={viewMode === 'list'}
-                            onClick={() => setViewMode('list')}
-                            icon={<List size={13} />}
-                            label="รายการ"
-                        />
-                    </div>
+            {/* Toolbar: view toggle + year selector. Always renders even
+                with zero slips so HR sees the calendar skeleton from
+                day one — empty grid is more useful than an empty-state
+                text card. */}
+            <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="inline-flex rounded-lg border border-white/10 bg-white/[0.04] p-0.5">
+                    <ViewToggleButton
+                        active={viewMode === 'grid'}
+                        onClick={() => setViewMode('grid')}
+                        icon={<LayoutGrid size={13} />}
+                        label="ปฏิทิน"
+                    />
+                    <ViewToggleButton
+                        active={viewMode === 'list'}
+                        onClick={() => setViewMode('list')}
+                        icon={<List size={13} />}
+                        label="รายการ"
+                    />
+                </div>
 
-                    {/* Year selector */}
-                    <select
-                        value={selectedYear}
-                        onChange={(e) => setSelectedYear(Number(e.target.value))}
-                        className="h-9 px-3 rounded-lg bg-black/25 border border-white/15 text-white text-sm font-semibold focus:outline-none focus:border-emerald-300/50"
-                    >
-                        {yearsWithSlips.map((y) => (
-                            <option key={y} value={y} className="bg-[#15040a]">
-                                ปี {y + 543} ({slips.filter(s => s.year === y).length} ฉบับ)
-                            </option>
-                        ))}
-                    </select>
+                <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className="h-9 px-3 rounded-lg bg-black/25 border border-white/15 text-white text-sm font-semibold focus:outline-none focus:border-emerald-300/50"
+                >
+                    {yearsWithSlips.map((y) => (
+                        <option key={y} value={y} className="bg-[#15040a]">
+                            ปี {y + 543} ({slips.filter(s => s.year === y).length} ฉบับ)
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Body — grid (default) or list. Both handle the
+                "year has no slip" case internally; the upper-level
+                "no slips at all" hint sits as a banner above the grid. */}
+            {slips.length === 0 && (
+                <div className="mb-3 rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2 text-[0.78rem] text-white/60 leading-relaxed">
+                    ยังไม่มีสลิปในระบบ — {canEdit ? <>กดเซลล์เดือนใดก็ได้ในปฏิทินด้านล่างเพื่ออัปโหลดทีละเดือน · หรือใช้ <a href="/hradmin/payroll/bulk" className="text-emerald-200/85 underline-offset-2 hover:underline">หน้า Bulk Upload</a> สำหรับทั้งบริษัทพร้อมกัน</> : 'ฝ่ายบัญชีจะอัปโหลดและส่ง notification + email ให้พนักงานเมื่อสลิปพร้อม'}
                 </div>
             )}
 
-            {/* Body — empty / grid / list */}
-            {slips.length === 0 ? (
-                <EmptyState canUpload={canEdit} onUpload={openBlankUpload} />
-            ) : viewMode === 'grid' ? (
+            {viewMode === 'grid' ? (
                 <CalendarGridView
                     year={selectedYear}
                     slipMap={slipMap}
@@ -508,30 +513,6 @@ function SlipRow({
                 </button>
             )}
         </li>
-    )
-}
-
-// ── Empty state ─────────────────────────────────────────────────────────
-
-function EmptyState({ canUpload, onUpload }: { canUpload: boolean; onUpload: () => void }) {
-    return (
-        <div className="text-center py-10">
-            <FileText size={32} className="mx-auto text-white/30 mb-2" />
-            <p className="text-white/65 text-[0.95rem] mb-1">ยังไม่มีสลิปในระบบ</p>
-            <p className="text-white/45 text-[0.78rem] mb-3">
-                ใช้ <a href="/hradmin/payroll/bulk" className="text-emerald-200/85 underline-offset-2 hover:underline">หน้า Bulk Upload</a> ถ้าจะอัปโหลดทั้งบริษัทพร้อมกัน
-            </p>
-            {canUpload && (
-                <button
-                    type="button"
-                    onClick={onUpload}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/8 hover:bg-white/14 text-white/80 text-xs font-semibold border border-white/15"
-                >
-                    <Upload size={12} />
-                    อัปโหลดสลิปแรก
-                </button>
-            )}
-        </div>
     )
 }
 

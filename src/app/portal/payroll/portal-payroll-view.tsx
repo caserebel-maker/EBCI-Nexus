@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import {
-    Wallet, Download, FileText, AlertCircle, LayoutGrid, List, Check,
+    Wallet, Download, AlertCircle, LayoutGrid, List, Check,
 } from 'lucide-react'
 
 const THAI_MONTHS_FULL = [
@@ -101,11 +101,13 @@ export function PortalPayrollView({ slips, hasEmployeeRow }: Props) {
                 </div>
             )}
 
-            {slips.length === 0 && hasEmployeeRow && <EmptyState />}
-
-            {slips.length > 0 && (
+            {/* Toolbar + grid render even at 0 slips so the employee
+                sees a calendar skeleton (all amber "waiting for
+                accounting" cells) instead of a stark empty card —
+                conveys "this is where slips will land" much more
+                clearly than text alone. */}
+            {hasEmployeeRow && (
                 <>
-                    {/* Toolbar — view toggle + year selector */}
                     <div className="flex items-center justify-between gap-3">
                         <div className="inline-flex rounded-lg border border-white/10 bg-white/[0.04] p-0.5">
                             <ToggleButton
@@ -134,6 +136,12 @@ export function PortalPayrollView({ slips, hasEmployeeRow }: Props) {
                         </select>
                     </div>
 
+                    {slips.length === 0 && (
+                        <div className="rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2.5 text-[0.85rem] text-white/65 leading-relaxed">
+                            <span className="text-white/85 font-semibold">ยังไม่มีสลิปในระบบ</span> — ฝ่ายบัญชีจะอัปโหลดและส่ง email + แจ้งเตือนให้ทราบเมื่อสลิปแต่ละเดือนพร้อม
+                        </div>
+                    )}
+
                     {viewMode === 'grid' ? (
                         <CalendarGridView
                             year={selectedYear}
@@ -145,10 +153,12 @@ export function PortalPayrollView({ slips, hasEmployeeRow }: Props) {
                         <ListView slips={slipsForYear} />
                     )}
 
-                    <p className="text-white/40 text-[0.78rem] leading-relaxed text-center pt-2">
-                        หากพบความผิดพลาดในรายการเงินเดือน หรือมีคำถามเกี่ยวกับสลิป
-                        กรุณาติดต่อฝ่ายบัญชีเพื่อขอแก้ไข
-                    </p>
+                    {slips.length > 0 && (
+                        <p className="text-white/40 text-[0.78rem] leading-relaxed text-center pt-2">
+                            หากพบความผิดพลาดในรายการเงินเดือน หรือมีคำถามเกี่ยวกับสลิป
+                            กรุณาติดต่อฝ่ายบัญชีเพื่อขอแก้ไข
+                        </p>
+                    )}
                 </>
             )}
         </div>
@@ -322,20 +332,6 @@ function SlipRow({ slip }: { slip: PortalSlip }) {
                 <Download size={14} />
             </div>
         </a>
-    )
-}
-
-function EmptyState() {
-    return (
-        <div className="text-center py-16">
-            <FileText size={40} className="mx-auto text-white/25 mb-3" />
-            <p className="text-white/60 text-[0.95rem] mb-1">
-                ยังไม่มีสลิปเงินเดือนในระบบ
-            </p>
-            <p className="text-white/40 text-[0.85rem]">
-                ฝ่ายบัญชีจะอัปโหลดและแจ้งให้ทราบเมื่อสลิปพร้อม
-            </p>
-        </div>
     )
 }
 
