@@ -5,23 +5,32 @@
 
 ---
 
-## 🔁 ที่เครื่องถัดไป (กลับบ้าน → office → laptop ฯลฯ)
+## 🔁 ที่เครื่องถัดไป — **OFFICE Mac mini · พรุ่งนี้เช้า 30 เม.ย.**
 
 > **อ่านเฉพาะตอนเปิด Claude Code ที่เครื่องใหม่**
 
 **Step 1 — Pull ก่อน** (สำคัญสุด):
 ```bash
-cd <ที่เก็บ EBCI-Nexus> && git pull origin main --ff-only
+cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff-only
 ```
 
-**Step 2 — พิมพ์บอก Claude:**
+**Step 2 — พิมพ์บอก Claude (เลือก 1 ใน 2):**
+
+**A. ถ้า beta launch แล้วและอยากลุย security ต่อ:**
 ```
-อ่าน docs/NEXT.md แล้วทำต่อ — beta พรุ่งนี้ใช้ 7 testers (จิม/มด/ชาติ/ปุ๊/เบน/หนิง/ต่าย) → ยืนยัน checklist เช้า + เริ่ม security #9-10 (XSS audit + cookie hardening) ถ้ามีเวลา
+อ่าน docs/NEXT.md แล้วทำต่อ — เริ่ม §3.14 XSS audit (sweep dangerouslySetInnerHTML + email templates + URL whitelisting). ถ้าเร็วเสร็จ ลุย §3.15 cookie hardening ต่อ.
 ```
 
-**Step 3 — ตอบ Claude ว่าอยู่เครื่องไหน:** "อยู่ office" / "อยู่บ้าน" / "อยู่ laptop"
+**B. ถ้ายังไม่ได้ส่ง credentials/run e2e:**
+```
+อ่าน docs/NEXT.md แล้วทำต่อ — ทำ §3.4 e2e bulk slip upload เป็นอันดับแรก (login suchat / EbciTest2026! → /hradmin/payroll/bulk → drop PDF dummy).
+```
+
+**Step 3 — ตอบ Claude ว่าอยู่เครื่องไหน:** "อยู่ office"
 
 ถ้า Claude บอก local behind origin → ให้รัน `git pull origin main --ff-only` อีกครั้งก่อนเริ่มงาน
+
+**📅 Reminder ตอน 7 โมงเช้า:** มี GCal event + Claude scheduled-task รออยู่
 
 ---
 
@@ -48,11 +57,25 @@ cd <ที่เก็บ EBCI-Nexus> && git pull origin main --ff-only
 
 ## 0. TL;DR ใน 30 วินาที
 
-**🔥 APR29 laptop morning — pre-beta sweep พบ 1 bug (fixed) + payroll-owner clarification:**
+**🔥 APR29 laptop morning + evening — 6 commits shipped:**
 
-1. **มด's `User.id` divergent** จาก `auth.users.id` (`23a770e5…` ≠ `48d4b74a…`) → `getCurrentPermissions()` คืน `EMPTY_PERMISSIONS` ทุกครั้งเธอ login → audit/permission editor/payroll page ทั้งหมดเข้าไม่ได้. **Pattern เดียวกับปอนด์ Apr 27 (commit `336f211`).** Fixed via realign + 2 FK refs updated. Migration `20260429_realign_arthit_user_id_to_auth_uuid.sql`.
+1. **มด's `User.id` divergent** จาก `auth.users.id` (`23a770e5…` ≠ `48d4b74a…`) → `getCurrentPermissions()` คืน `EMPTY_PERMISSIONS` ทุกครั้งเธอ login. **Pattern เดียวกับปอนด์ Apr 27 (commit `336f211`).** Fixed via realign + 2 FK refs updated. Migration `20260429_realign_arthit_user_id_to_auth_uuid.sql`. Commit `2d49dbe`.
 
-2. **Payroll manager คือ ชาติ ไม่ใช่ ปุ๋ย** — Claude ตอนเช้า assume จาก NEXT.md §3.3 (outdated) ว่า ปุ๋ย เป็น payroll manager แล้ว auto-grant flag ให้ ปุ๋ย. User revoke ผ่าน permission editor ทันที (audit row 28 เม.ย. 11:29). The "auto-grant migration" `20260429_grant_wiyada_payroll_manager_preset.sql` was **deleted** so future re-runs don't re-undo this. Authoritative state: ชาติ has the flag, ปุ๋ย doesn't.
+2. **Payroll manager คือ ชาติ ไม่ใช่ ปุ๋ย** — auto-grant migration deleted, audit log clean. Authoritative: ชาติ has the flag, ปุ๋ย doesn't. Commits `2d49dbe` → `136863e`.
+
+3. **User-menu maroon panel** ที่ 77% opacity (เคยดำเข้มเกินไป). Commit `b357a86`.
+
+4. **Middleware whitelist** `/hradmin/payroll/bulk` สำหรับ employee+manager role ที่ถือ `can_manage_payroll` flag — ไม่งั้น sidebar แสดง link แต่คลิกแล้ว redirect /portal. Commit `37cffab`.
+
+5. **Profile leave balances** อ่านจาก Supabase แทน legacy Prisma (ทำให้ ชาติ เห็น 12 / 1 ตรง HR modal). Commit `13d566d`.
+
+6. **Mobile More menu** เรียงตาม desktop sidebar order ครบ 3 roles + เพิ่ม ประกาศข่าวสาร/สลิปของฉัน + ลบ duplicate. Commit `206b405`.
+
+7. **Org chart** — ผู้บริหารระดับสูง section ขึ้นบน + เพิ่ม "ที่ปรึกษาแผนก" section ใหม่ (ชาติ จะโผล่พร้อมรูป). Commit `1048759`.
+
+8. **Shell horizontal-overflow lock** ป้องกัน iOS rubber-band ลื่นซ้ายขวา. Commit `206b405`.
+
+📌 **Beta credentials ส่งให้ 7 testers พร้อม** — รหัสครบ + password policy block `EbciTest2026!`.
 
 **APR28 office (รอบก่อน ต่อจาก APR27→28 overnight):**
 
