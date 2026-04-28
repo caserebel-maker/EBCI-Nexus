@@ -654,9 +654,9 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
                 )}
             </div>
 
-            {/* 4. เมนูด่วน */}
+            {/* 4. เมนูลัด */}
             <div style={glass} className="p-4">
-                <p className="text-white font-bold mb-3" style={{ fontSize: '15px' }}>เมนูด่วน</p>
+                <p className="text-white font-bold mb-3" style={{ fontSize: '15px' }}>เมนูลัด</p>
                 <div className="grid grid-cols-3 gap-3">
                     {SHORTCUTS.map(({ label, icon: Icon, href }) => (
                         <Link
