@@ -46,7 +46,14 @@ cd <ที่เก็บ EBCI-Nexus> && git pull origin main --ff-only
 
 ## 0. TL;DR ใน 30 วินาที
 
-**APR28 office (รอบใหม่ ต่อจาก APR27→28 overnight):**
+**🔥 APR29 laptop morning — pre-beta sweep พบ 2 bugs (fixed):**
+
+1. **มด's `User.id` divergent** จาก `auth.users.id` (`23a770e5…` ≠ `48d4b74a…`) → `getCurrentPermissions()` คืน `EMPTY_PERMISSIONS` ทุกครั้งเธอ login → audit/permission editor/payroll page ทั้งหมดเข้าไม่ได้. **Pattern เดียวกับปอนด์ Apr 27 (commit `336f211`).** Fixed via realign + 2 FK refs updated. Migration `20260429_realign_arthit_user_id_to_auth_uuid.sql`.
+2. **wiyada (ปุ๋ย/บัญชี) `can_manage_payroll: false`** ทั้งที่ NEXT.md §3.3 บอกว่าเป็น Payroll Manager → ถ้า login ตอนนี้จะไม่เห็น "อัปโหลดสลิปเงินเดือน" sidebar → §3.4 e2e test fail ทันที. Granted preset payroll_manager + audit row credited to ปอนด์. Migration `20260429_grant_wiyada_payroll_manager_preset.sql`.
+
+⚠️ **ชาติ มี `can_manage_payroll: true`** อยู่ — ไม่แน่ใจว่าตั้งใจหรือไม่ (เธอเป็น beta tester ไม่ใช่ payroll role). User ยืนยันก่อน beta launch.
+
+**APR28 office (รอบก่อน ต่อจาก APR27→28 overnight):**
 
 ปิดงาน UX + ระบบใหญ่หลายชิ้นก่อน beta 5 คน:
 
@@ -271,6 +278,40 @@ iPhone จริงทดสอบ + flip vertical day list ถ้า cell เ�
 Default deny (no policies). Service role bypass ทำให้ supabaseAdmin ในแอปยังทำงานได้ แต่ anon key ในเบราว์เซอร์โดน block — ปกป้องการ scrape ข้อมูลทั้งระบบผ่าน supabase-js โดยตรง.
 
 ถ้าจะให้ browser อ่าน table ตรงๆ (เช่น holidays public) → เพิ่ม policy `USING (true)` แยก, อย่าปิด RLS อีก.
+
+### 3.14 🔐 Security #9 — XSS audit (sweep `dangerouslySetInnerHTML`, untrusted-input render paths)
+
+**Why:** beta jammed in 7 real users + future rollout to ~54. ก่อนเปิดให้ใช้ครบบริษัท ควรตรวจ:
+- ทุก `dangerouslySetInnerHTML` usage — ใช้ที่ไหนบ้าง, ข้อมูลมาจาก trusted source หรือไม่
+- User-generated content (announcement content, leave reason, review notes, contract notes, applicant cover letter) — render เป็น text-only ได้ทุกที่หรือเปล่า
+- Email HTML templates — มี user-input ฝัง raw หรือไม่
+- Markdown rendering (ถ้ามี) — ใช้ DOMPurify / sanitize-html ก่อน
+- URL ที่ render จาก DB (action_url ใน notifications, attachment URLs) — มี protocol whitelist หรือไม่ (block `javascript:`, `data:` ที่ไม่ปลอดภัย)
+
+**Action items:**
+- `grep -rn "dangerouslySetInnerHTML" src/` → list every site
+- `grep -rn "innerHTML\s*=" src/` → ดู client-side direct assignments
+- ตรวจ Resend HTML templates ว่ามี `${userInput}` ที่ไม่ผ่าน escape
+
+Estimate: 1-2 hr (audit + fix obvious holes; DOMPurify ถ้าจำเป็น)
+
+### 3.15 🔐 Security #10 — Cookie hardening (`nexus_session` config sweep)
+
+**Why:** `nexus_session` cookie คุ้มสิทธิ์ทั้งระบบ. ตอนนี้ตั้ง:
+- `httpOnly: true` ✅
+- `secure: process.env.NODE_ENV === 'production'` ✅
+- `maxAge: 60*60*24*7` (7 วัน) — หมดอายุพอเหมาะ
+- **`sameSite` ไม่ได้ตั้ง** ⚠️ — default ของ Next.js คือ `lax` แต่ explicit ดีกว่า
+- **`path: '/'`** — ปกติ
+- **ไม่มี cookie rotation** — token เดิมยาว 7 วันไม่ rotate. ถ้า leak ใช้ได้ครบ 7 วัน
+
+**Action items:**
+1. Audit `cookieStore.set('nexus_session', ...)` ทุก call site
+2. เพิ่ม `sameSite: 'lax'` (block CSRF จาก cross-site forms ส่วนใหญ่) — explicit ทุกที่
+3. พิจารณา rotate session token ทุก login (invalidate old) → block "stolen cookie still works after user re-login"
+4. CSP header — `Content-Security-Policy` middleware ที่ block inline scripts (ตอนนี้ Next.js dev mode มี hot-reload ใช้ inline; production ต้อง config nonce)
+
+Estimate: 30-60 min (low-risk config changes + 1 middleware addition)
 
 ### B. รอข้อมูลจาก HR
 - B5 มด review `EBCI-employees-review.xlsx`
