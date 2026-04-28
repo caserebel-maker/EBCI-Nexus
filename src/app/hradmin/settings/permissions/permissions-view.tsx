@@ -80,10 +80,21 @@ export function PermissionsView({ users, audits, currentUserId, unlinkedEmployee
     // Search filter — case-insensitive match across name, username, role,
     // and the resolved preset label so HR can type either "ปุ๋ย",
     // "wiyada", "payroll", or "บัญชี" and find the right person fast.
+    //
+    // When the search box is empty we additionally hide users whose preset
+    // resolves to plain "employee" — i.e. role=employee/user with zero
+    // permission flags set. The page is for managing privileges; rows with
+    // nothing to manage just clutter the list (e.g. mock test users L1/L2,
+    // or staff who got their flags revoked). HR can still find them by
+    // typing their name — search overrides the default hide.
     const [query, setQuery] = useState('')
+    const hiddenPlainEmployeeCount = useMemo(
+        () => users.filter(u => u.preset === 'employee').length,
+        [users],
+    )
     const filteredUsers = useMemo(() => {
         const q = query.trim().toLowerCase()
-        if (!q) return users
+        if (!q) return users.filter(u => u.preset !== 'employee')
         return users.filter(u => {
             const presetLabel = u.preset === 'custom'
                 ? CUSTOM_LABEL
@@ -142,6 +153,15 @@ export function PermissionsView({ users, audits, currentUserId, unlinkedEmployee
                     </button>
                 )}
             </div>
+
+            {/* Hidden-rows hint — shown only when no search query is active.
+                Tells HR that plain-employee accounts (no flags) are filtered
+                out by default, and that typing a name will surface them. */}
+            {!query && hiddenPlainEmployeeCount > 0 && (
+                <p className="text-xs text-white/45 -mt-2 px-1">
+                    ซ่อนผู้ใช้ที่ไม่มีสิทธิ์พิเศษ {hiddenPlainEmployeeCount} คน · พิมพ์ชื่อเพื่อค้นหา
+                </p>
+            )}
 
             {filteredUsers.length === 0 ? (
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center text-white/55 text-sm">
