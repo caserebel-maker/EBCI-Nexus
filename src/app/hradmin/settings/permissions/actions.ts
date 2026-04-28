@@ -23,6 +23,13 @@ const FLAG_KEYS: Array<keyof UserPermissions> = [
 interface UpdatePayload {
     targetUserId: string
     permissions: UserPermissions
+    /**
+     * Optional new role. When set, we also patch
+     * auth.users.user_metadata.role so login resolution picks it up
+     * on the next session. Pass undefined to leave the role
+     * untouched (most flag-only edits do this).
+     */
+    role?: 'employee' | 'manager' | 'hr_admin'
     note?: string | null
 }
 
@@ -83,24 +90,55 @@ export async function updateUserPermissions(
         can_view_audit_log:       Boolean(before.can_view_audit_log),
     }
 
-    // No-op detection — same flag set means nothing to write. Skip the
-    // UPDATE + audit row entirely so re-saves don't pollute history.
-    const noChange = FLAG_KEYS.every(k => beforePerms[k] === after[k])
-    if (noChange) {
+    // Role validation. Only accept the three known values; null/undefined
+    // means "don't touch the role" (flag-only edit).
+    const roleBefore = (before.role as string | null) ?? null
+    let roleAfter: string | null = roleBefore
+    if (payload.role !== undefined) {
+        if (!['employee', 'manager', 'hr_admin'].includes(payload.role)) {
+            return { success: false, error: 'role ไม่ถูกต้อง' }
+        }
+        roleAfter = payload.role
+    }
+
+    // No-op detection — same flags AND same role means nothing to write.
+    const flagsUnchanged = FLAG_KEYS.every(k => beforePerms[k] === after[k])
+    const roleUnchanged = roleBefore === roleAfter
+    if (flagsUnchanged && roleUnchanged) {
         return { success: true }
     }
 
-    // Apply the edit.
+    // Apply to public."User" — flags + role (only when changed).
+    const updateBody: Record<string, unknown> = {
+        ...after,
+        updatedAt: new Date().toISOString(),
+    }
+    if (!roleUnchanged) updateBody.role = roleAfter
+
     const { error: updateErr } = await supabaseAdmin
         .from('User')
-        .update({
-            ...after,
-            updatedAt: new Date().toISOString(),
-        })
+        .update(updateBody)
         .eq('id', targetUserId)
     if (updateErr) {
         console.error('[permissions/update] apply error:', updateErr)
         return { success: false, error: updateErr.message }
+    }
+
+    // If role changed, mirror it into auth.users.user_metadata.role so
+    // the next login resolves to the new role (login.ts checks
+    // user_metadata first; without this update the cached metadata
+    // would keep the old role even after our public.User row changed).
+    // Best-effort — log on failure but don't roll back the User row.
+    if (!roleUnchanged) {
+        try {
+            const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(targetUserId)
+            const existingMeta = authUser?.user?.user_metadata ?? {}
+            await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
+                user_metadata: { ...existingMeta, role: roleAfter },
+            })
+        } catch (err) {
+            console.error('[permissions/update] auth metadata role sync failed:', err)
+        }
     }
 
     // Audit log — best-effort. Any failure here logs but does not roll
@@ -116,8 +154,8 @@ export async function updateUserPermissions(
                 permissions_after:  after,
                 preset_before:      detectPreset(beforePerms),
                 preset_after:       detectPreset(after),
-                role_before:        (before.role as string | null) ?? null,
-                role_after:         (before.role as string | null) ?? null,
+                role_before:        roleBefore,
+                role_after:         roleAfter,
                 note:               payload.note?.trim() || null,
             })
     } catch (err) {

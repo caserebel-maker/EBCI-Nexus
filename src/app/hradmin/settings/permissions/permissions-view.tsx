@@ -327,6 +327,16 @@ function EditPermissionsModal({
     const router = useRouter()
     const [, startTransition] = useTransition()
     const [permissions, setPermissions] = useState<UserPermissions>(user.permissions)
+    // Role lives outside the permission-flag set but moves through the
+    // same edit modal — switching from "employee" to "hr_admin" gives
+    // the user the role-toggle button + admin sidebar, switching back
+    // takes them away.
+    const initialRole = (user.role as 'employee' | 'manager' | 'hr_admin' | string) || 'employee'
+    const [role, setRole] = useState<'employee' | 'manager' | 'hr_admin'>(
+        (['employee', 'manager', 'hr_admin'] as const).includes(initialRole as never)
+            ? (initialRole as 'employee' | 'manager' | 'hr_admin')
+            : 'employee',
+    )
     const [note, setNote] = useState('')
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -353,10 +363,12 @@ function EditPermissionsModal({
         setPermissions(prev => ({ ...prev, [key]: !prev[key] }))
     }
 
-    const dirty = useMemo(
+    const flagsDirty = useMemo(
         () => PERMISSION_FLAGS.some(f => permissions[f.key] !== user.permissions[f.key]),
         [permissions, user.permissions],
     )
+    const roleDirty = role !== initialRole
+    const dirty = flagsDirty || roleDirty
 
     const save = async () => {
         setError(null)
@@ -364,6 +376,7 @@ function EditPermissionsModal({
         const res = await updateUserPermissions({
             targetUserId: user.id,
             permissions,
+            role: roleDirty ? role : undefined,
             note: note.trim() || null,
         })
         setSaving(false)
@@ -422,6 +435,48 @@ function EditPermissionsModal({
                             </div>
                         </div>
                     )}
+
+                    {/* Role — controls which app shell + sidebar this user
+                        sees + the legacy hr_admin gates. Editing this also
+                        updates auth.users.user_metadata.role so the next
+                        login picks up the new role without manual refresh. */}
+                    <section>
+                        <p className="text-[11px] uppercase tracking-wider text-white/45 mb-1.5 font-semibold">
+                            Role (หน้าจอที่เห็น + ปุ่มสลับ)
+                        </p>
+                        <div className="grid grid-cols-3 gap-1.5">
+                            {([
+                                { value: 'employee', label: '👤 employee', desc: 'เข้า /portal · เมนูพนักงาน' },
+                                { value: 'manager',  label: '👔 manager',  desc: 'เข้า /hradmin · เมนู manager' },
+                                { value: 'hr_admin', label: '🔑 hr_admin', desc: 'เข้า /hradmin + ปุ่มสลับ portal' },
+                            ] as const).map(({ value, label, desc }) => {
+                                const active = role === value
+                                return (
+                                    <button
+                                        key={value}
+                                        type="button"
+                                        onClick={() => setRole(value)}
+                                        title={desc}
+                                        className={`text-left p-2 rounded-lg border text-xs font-semibold transition-all ${
+                                            active
+                                                ? 'bg-amber-400 text-[#561e23] border-amber-300 shadow'
+                                                : 'bg-white/[0.04] text-white/85 border-white/10 hover:bg-white/[0.08]'
+                                        }`}
+                                    >
+                                        <div>{label}</div>
+                                        <p className={`mt-0.5 text-[10px] font-normal leading-snug ${active ? 'text-[#561e23]/70' : 'text-white/55'}`}>
+                                            {desc}
+                                        </p>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                        {roleDirty && (
+                            <p className="mt-1.5 text-[11px] text-amber-200">
+                                ⚠ จะเปลี่ยน role จาก <span className="font-mono">{initialRole}</span> → <span className="font-mono">{role}</span> · user ต้อง logout แล้ว login ใหม่ถึงจะเห็นเมนูใหม่
+                            </p>
+                        )}
+                    </section>
 
                     {/* Preset selector */}
                     <section>
