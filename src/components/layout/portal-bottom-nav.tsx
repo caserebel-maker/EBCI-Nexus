@@ -7,7 +7,7 @@ import {
     Home, Users, Megaphone, MoreHorizontal, Clock, CalendarDays, Umbrella,
     ClipboardCheck, LogOut, FileText,
     Settings, ChevronRight, X, UserRound, Network,
-    UserPlus, Upload, Activity,
+    UserPlus, Activity,
     MapPin, Briefcase, BarChart3, Wallet, ScrollText, ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -29,17 +29,6 @@ interface MoreItem {
     danger?: boolean
     groupLabel?: string // render a small section header above this item
 }
-
-// HR-admin shortcut block surfaced inside the /portal-mode More menu so
-// admins previewing as employees can still reach admin pages without
-// switching shells. Order mirrors the desktop sidebar's admin section.
-const HR_ADMIN_QUICK_ACTIONS: MoreItem[] = [
-    { groupLabel: 'HR Admin', label: 'จัดการประกาศ',  href: '/hradmin/announcements',         icon: Megaphone },
-    {                          label: 'รับสมัครงาน',   href: '/hradmin/applicants',            icon: UserPlus },
-    {                          label: 'การเข้างาน',    href: '/hradmin/attendance/reconcile',  icon: Clock },
-    {                          label: 'นำเข้าข้อมูลบัตร', href: '/hradmin/attendance/import',    icon: Upload },
-    {                          label: 'ระบบและทรัพยากร', href: '/hradmin/settings/quota',     icon: Activity },
-]
 
 // hr_admin has two variants depending on whether they're in /hradmin or /portal.
 // The "แจ้งเตือน" bell tab was removed — it duplicated the topbar bell. Replaced
@@ -73,21 +62,6 @@ const NAV_CONFIG: Record<Role, NavItem[]> = {
         { label: 'โปรไฟล์', href: '/portal/profile',   icon: UserRound },
     ],
 }
-
-// HR-admin variant of the More menu when viewing the /portal experience.
-// Mirrors the EMPLOYEE desktop sidebar order (since portal mode = preview
-// as employee), then appends the HR Admin quick-actions block so admins
-// can jump back to admin pages without first switching modes via the
-// topbar user-menu.
-const HR_ADMIN_PORTAL_MORE: MoreItem[] = [
-    { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',  icon: Network },
-    { label: 'ปฏิทิน',         desc: 'วันหยุด + WFH',             href: '/portal/calendar',     icon: CalendarDays },
-    { label: 'ประกาศข่าวสาร', desc: 'ฟีดประกาศจาก HR',           href: '/portal/announcements', icon: Megaphone },
-    { label: 'สลิปของฉัน',     desc: 'ดูสลิปเงินเดือนของตน',      href: '/portal/payroll',      icon: FileText },
-    { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี',  href: '/portal/settings',     icon: Settings },
-    ...HR_ADMIN_QUICK_ACTIONS,
-    { label: 'ออกจากระบบ', icon: LogOut, danger: true },
-]
 
 // Each role's More-panel order is intentionally aligned with the
 // desktop sidebar order in src/config/navigation.tsx, minus the items
@@ -154,9 +128,14 @@ export function PortalBottomNav() {
     const navItems = pathname?.startsWith('/hradmin')
         ? HR_ADMIN_NAV_HRADMIN
         : NAV_CONFIG.employee
+    // HR Admin in /portal mode = preview-as-employee. The More menu
+    // there should match a regular employee's so the experience reads
+    // consistently; the admin shortcuts live in the topbar user-menu
+    // dropdown and one-click toggle "กลับเป็น HR Admin" gets them back
+    // to /hradmin where the full admin More menu lives.
     const moreItems = pathname?.startsWith('/hradmin')
         ? MORE_CONFIG.hr_admin
-        : (role === 'hr_admin' ? HR_ADMIN_PORTAL_MORE : MORE_CONFIG.employee)
+        : MORE_CONFIG.employee
 
     const isNavActive = (item: NavItem) =>
         item.exact ? pathname === item.href : pathname?.startsWith(item.href)
