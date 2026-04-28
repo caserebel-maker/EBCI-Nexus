@@ -27,9 +27,10 @@ export function DepartmentOnlyView({
     viewerSecondaryDepartment,
 }: Props) {
     const [execOpen, setExecOpen] = useState(false)
+    const [advisorOpen, setAdvisorOpen] = useState(true) // default open — small group, valuable context
     const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
-    const { deptPeers, rootGroups, topExecutives } = useMemo(() => {
+    const { deptPeers, rootGroups, topExecutives, deptAdvisors } = useMemo(() => {
         const myDepts = new Set<string>()
         if (viewerDepartment) myDepts.add(viewerDepartment)
         if (viewerSecondaryDepartment) myDepts.add(viewerSecondaryDepartment)
@@ -67,10 +68,17 @@ export function DepartmentOnlyView({
             e => !e.isAdvisor && (e.approvalLevel ?? 0) >= 4,
         )
 
+        // Advisors attached to the viewer's department(s). They sit OUTSIDE
+        // the reports_to tree (parallel role) but conceptually rank above
+        // the dept's operational leadership — promote them to a top-of-page
+        // section so they aren't hidden by the isAdvisor filter on the tree.
+        const advisors = employees.filter(e => e.isAdvisor && inMyDept(e))
+
         return {
             deptPeers: peers,
             rootGroups,
             topExecutives: execs,
+            deptAdvisors: advisors,
         }
     }, [employees, viewerDepartment, viewerSecondaryDepartment])
 
@@ -93,40 +101,13 @@ export function DepartmentOnlyView({
                 <Building2 size={14} className="mt-0.5 flex-shrink-0 text-white/50" />
                 <div>
                     <p className="text-white/90 font-semibold mb-0.5">มุมมองของคุณ — {deptLabel}</p>
-                    <p>แสดงเฉพาะพนักงานในแผนกของคุณ · ดูผู้บริหารระดับสูงแยกที่ปุ่มด้านล่าง</p>
+                    <p>แสดงเฉพาะพนักงานในแผนกของคุณ · ที่ปรึกษาและผู้บริหารระดับสูงแสดงแยกด้านบน</p>
                 </div>
             </div>
 
-            {/* Dept trees — each root group optionally crowned by its outside
-                manager so the reporting line is visible even in tiny depts */}
-            <section>
-                <h3 className="text-xs text-white/60 uppercase tracking-wider mb-3">
-                    พนักงานในแผนก · {deptPeers.length} คน
-                </h3>
-                {deptPeers.length === 0 ? (
-                    <p className="text-white/50 text-sm py-4">ยังไม่มีข้อมูลพนักงานในแผนกของคุณ</p>
-                ) : rootGroups.length === 0 ? (
-                    <p className="text-white/50 text-sm py-4">ไม่สามารถสร้างผังของแผนกได้</p>
-                ) : (
-                    <div className="flex flex-col gap-8">
-                        {rootGroups.map((group, gi) => (
-                            <RootGroup
-                                key={group.outsideManager?.id ?? `ng-${gi}`}
-                                outsideManager={group.outsideManager}
-                                roots={group.roots}
-                                collapsed={collapsed}
-                                toggle={toggle}
-                                currentEmployeeId={currentEmployeeId}
-                            />
-                        ))}
-                    </div>
-                )}
-                <p className="text-white/40 text-[11px] italic mt-4 text-center">
-                    💡 แตะปุ่ม ▼ บนการ์ดเพื่อย่อ/ขยายกลุ่ม
-                </p>
-            </section>
-
-            {/* Top executives — collapsible */}
+            {/* Top executives — at top because they sit *above* the org
+                visually and conceptually. Collapsible so they don't push
+                the dept tree off-screen on small viewports. */}
             {topExecutives.length > 0 && (
                 <section>
                     <button
@@ -164,6 +145,79 @@ export function DepartmentOnlyView({
                     )}
                 </section>
             )}
+
+            {/* Department advisors — parallel to the operational tree but
+                conceptually rank above dept leadership (e.g. ที่ปรึกษา
+                ของแผนกบัญชี has senior-advisor authority over dept heads).
+                The reports_to chain doesn't capture that, so a dedicated
+                section makes the standing visible. Default-open: small
+                group, high-signal context. */}
+            {deptAdvisors.length > 0 && (
+                <section>
+                    <button
+                        onClick={() => setAdvisorOpen(o => !o)}
+                        aria-expanded={advisorOpen}
+                        className="w-full flex items-center justify-between p-3 rounded-xl border border-rose-300/25 bg-rose-400/10 hover:bg-rose-400/15 transition-colors"
+                    >
+                        <span className="flex items-center gap-2 text-white text-sm font-semibold">
+                            <Crown size={16} className="text-rose-200" />
+                            ที่ปรึกษาแผนก
+                            <span className="text-white/60 text-xs font-normal">
+                                · {deptAdvisors.length} คน
+                            </span>
+                        </span>
+                        {advisorOpen ? (
+                            <ChevronUp size={16} className="text-white/70" />
+                        ) : (
+                            <ChevronDown size={16} className="text-white/70" />
+                        )}
+                    </button>
+                    {advisorOpen && (
+                        <div className="mt-3 flex flex-wrap justify-center gap-3">
+                            {deptAdvisors.map(a => (
+                                <PersonCard
+                                    key={a.id}
+                                    node={a}
+                                    isMe={a.id === currentEmployeeId}
+                                    tone="rose"
+                                    hasChildren={false}
+                                    isCollapsed={false}
+                                    onToggle={() => {}}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </section>
+            )}
+
+            {/* Dept trees — each root group optionally crowned by its outside
+                manager so the reporting line is visible even in tiny depts */}
+            <section>
+                <h3 className="text-xs text-white/60 uppercase tracking-wider mb-3">
+                    พนักงานในแผนก · {deptPeers.length} คน
+                </h3>
+                {deptPeers.length === 0 ? (
+                    <p className="text-white/50 text-sm py-4">ยังไม่มีข้อมูลพนักงานในแผนกของคุณ</p>
+                ) : rootGroups.length === 0 ? (
+                    <p className="text-white/50 text-sm py-4">ไม่สามารถสร้างผังของแผนกได้</p>
+                ) : (
+                    <div className="flex flex-col gap-8">
+                        {rootGroups.map((group, gi) => (
+                            <RootGroup
+                                key={group.outsideManager?.id ?? `ng-${gi}`}
+                                outsideManager={group.outsideManager}
+                                roots={group.roots}
+                                collapsed={collapsed}
+                                toggle={toggle}
+                                currentEmployeeId={currentEmployeeId}
+                            />
+                        ))}
+                    </div>
+                )}
+                <p className="text-white/40 text-[11px] italic mt-4 text-center">
+                    💡 แตะปุ่ม ▼ บนการ์ดเพื่อย่อ/ขยายกลุ่ม
+                </p>
+            </section>
         </div>
     )
 }
