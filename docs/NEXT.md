@@ -214,6 +214,44 @@ iPhone จริงทดสอบ + flip vertical day list ถ้า cell เ�
 
 **Scope:** ~10 คน max → ไม่ต้องคิด scale อะไรพิเศษ. Migration + UI + 1 modal เพิ่ม. Estimate ~3-4 ชม.
 
+### 3.11 Late + absent counters — DEFERRED post-beta
+
+**สถานะปัจจุบัน:**
+- `/portal/dashboard` → DonutCard "มาสาย" แสดง `lateCount = 0` (hardcoded ที่ [page.tsx:236](src/app/portal/dashboard/page.tsx))
+- `/portal/profile` → StatCard "มาสาย" + "ขาด" ทั้งคู่ value=0 hardcoded
+- `/hradmin/attendance/reconcile` มี logic `status='absent'` รายวัน แต่ไม่ aggregate ต่อพนักงาน
+- `/hradmin/reports?tab=attendance` ไม่มี column late/absent
+
+**สิ่งที่ขาด:**
+1. ยังไม่มีนิยาม "cutoff time" (เช่น 8:30) → ไม่รู้ว่าใคร "สาย"
+2. Aggregator ที่นับวันสาย+ขาดต่อพนักงานต่อปี
+
+**Plan post-beta (~2-3 ชม.):**
+- เพิ่ม column `check_in_locations.cutoff_time` (text "08:30")
+- Server action `getAttendanceStats(employeeId, year)`:
+  - lateCount = checkins ที่ Bangkok-local time > cutoff (เฉพาะ type='office' เท่านั้น — wfh/field ไม่นับ)
+  - absentCount = workdays − (office + wfh + field + leave + holiday)
+- Wire เข้า dashboard donut + profile stats + reports CSV column
+
+### 3.12 ✅ ~~Strong password policy~~ — DONE APR28 (`31b01f0`)
+
+[src/lib/password-policy.ts](src/lib/password-policy.ts) เป็น single source of truth. Rules:
+- ≥ 8 ตัว
+- มีทั้งตัวอักษร + ตัวเลข
+- ห้าม "0000", "password", "qwerty", "EbciTest2026!" + รายการอื่นๆ
+- ห้ามตัวอักษรเดียวซ้ำกันทั้งหมด
+
+ใช้ที่: `/reset-password` · `/portal/settings` · `/hradmin/settings/permissions` (createUser modal) — server-side enforce ใน actions.ts ด้วย
+
+### 3.13 ✅ ~~Supabase RLS hardening~~ — DONE APR28
+
+[20260428_enable_rls_on_remaining_tables.sql](supabase/migrations/20260428_enable_rls_on_remaining_tables.sql) เปิด RLS บน 14 tables ที่ยังเปิดให้ anon read:
+- `User`, `checkins`, `leave_balances`, `leave_requests`, `leave_records`, `leave_policies`, `leave_types`, `holidays`, `job_applications`, `attendance_logs`, `card_scans`, `check_in_locations`, `notifications`, `user_permission_audit_log`
+
+Default deny (no policies). Service role bypass ทำให้ supabaseAdmin ในแอปยังทำงานได้ แต่ anon key ในเบราว์เซอร์โดน block — ปกป้องการ scrape ข้อมูลทั้งระบบผ่าน supabase-js โดยตรง.
+
+ถ้าจะให้ browser อ่าน table ตรงๆ (เช่น holidays public) → เพิ่ม policy `USING (true)` แยก, อย่าปิด RLS อีก.
+
 ### B. รอข้อมูลจาก HR
 - B5 มด review `EBCI-employees-review.xlsx`
 - ตี๋ president's driver — เพิ่ม + leave_approver_id = ดำ (decision pending)
