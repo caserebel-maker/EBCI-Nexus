@@ -95,6 +95,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         { label: 'leave.myLeave', href: '/portal/leave', icon: CalendarDays },
         { label: 'อนุมัติการลา', href: '/portal/leave/inbox', icon: ClipboardCheck },
         { label: 'ผังองค์กร', href: '/portal/organization', icon: Network },
+        { label: 'ปฏิทิน', href: '/portal/calendar', icon: Calendar },
         { label: 'dashboard.announcements', href: '/portal/announcements', icon: Megaphone },
         { label: 'ตั้งค่า', href: '/portal/settings', icon: Settings },
     ],
@@ -108,6 +109,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         // Pure-employee accounts who never approve anyone don't see an empty
         // inbox menu item.
         { label: 'ผังองค์กร', href: '/portal/organization', icon: Network },
+        { label: 'ปฏิทิน', href: '/portal/calendar', icon: Calendar },
         { label: 'dashboard.announcements', href: '/portal/announcements', icon: Megaphone },
         // Was '/portal/payslips' which doesn't exist as a route — the actual
         // page is at '/portal/payroll'. Fixed Apr 28.
