@@ -182,16 +182,36 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                                     />
                                 )}
                             </div>
+                            {/* Meta lines — name + position + tenure·role + email.
+                                Bumped from text-[11px] up to text-xs (12px) and
+                                allowed to wrap instead of truncating; profile
+                                cards on narrow sidebars used to clip "หัวหน้าฝ่าย…"
+                                with no way for the user to read past the
+                                ellipsis. The role + Online status share a row
+                                with a green presence dot so the line still
+                                reads at a glance. */}
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-white leading-tight truncate">
+                                <p className="text-sm font-semibold text-white leading-snug break-words">
                                     {profile?.fullName ?? userName ?? 'User'}
                                 </p>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/60"></span>
-                                    <p className="text-[11px] text-white/70 truncate">
-                                        {profile?.roleLabel ?? role} · Online
+                                {profile?.position && (
+                                    <p className="text-xs text-white/85 leading-snug break-words mt-0.5">
+                                        {profile.position}
+                                    </p>
+                                )}
+                                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/60 shrink-0"></span>
+                                    <p className="text-xs text-white/75 leading-snug">
+                                        {profile?.startDate
+                                            ? `อายุงาน ${calcTenure(profile.startDate)} · ${profile?.roleLabel ?? role}`
+                                            : `${profile?.roleLabel ?? role} · Online`}
                                     </p>
                                 </div>
+                                {profile?.email && (
+                                    <p className="text-xs text-white/55 leading-snug break-words mt-0.5">
+                                        {profile.email}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     )
