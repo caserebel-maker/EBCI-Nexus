@@ -36,22 +36,23 @@ cd <ที่เก็บ EBCI-Nexus> && git pull origin main --ff-only
 **ตอบเครื่อง:** "อยู่ office"
 
 **ทำก่อนทุกอย่าง (3 นาที verify):**
-1. Logout → login `wiyada / 0000` (ปุ๋ย, บัญชี) — ใหม่!
-2. ดู sidebar — ควรเห็น **9 เมนู** = 8 employee เดิม + **"💰 อัปโหลดสลิปเงินเดือน"** (Wallet icon) ที่เป็นลิ้งก์ไป /hradmin/payroll/bulk
+1. Logout → login **`suchat@ebcitrade.com / EbciTest2026!`** (ชาติ — บัญชี/payroll manager)
+2. ดู sidebar — ควรเห็นเมนูพนักงานปกติ + **"💰 อัปโหลดสลิปเงินเดือน"** (Wallet icon) ที่เป็นลิ้งก์ไป /hradmin/payroll/bulk
 3. Click → ต้อง land หน้า bulk upload โดยไม่โดน redirect
-4. ลองพิมพ์ `/hradmin/employees` ตรงๆ → ควรโดน redirect (ปุ๋ยไม่มีสิทธิ์ HR ปกติ)
+4. ลองพิมพ์ `/hradmin/employees` ตรงๆ → ควรโดน redirect (ชาติไม่มีสิทธิ์ HR ปกติ)
 5. กลับ login เป็น admin (ปอนด์/ม๊อด) — sidebar ของ admin ก็จะมี "อัปโหลดสลิปเงินเดือน" เพิ่มขึ้น (เพราะ flag = true)
+
+⚠️ **ปุ๋ย (wiyada) ถูก revoke `can_manage_payroll` แล้วเมื่อ 28 เม.ย. 11:29** — เธอ login ได้แต่ **จะไม่เห็น** เมนูสลิปเงินเดือน. ผู้ใช้คนเดียวที่เห็น/อัปโหลดสลิปได้คือ **ชาติ**.
 
 ---
 
 ## 0. TL;DR ใน 30 วินาที
 
-**🔥 APR29 laptop morning — pre-beta sweep พบ 2 bugs (fixed):**
+**🔥 APR29 laptop morning — pre-beta sweep พบ 1 bug (fixed) + payroll-owner clarification:**
 
 1. **มด's `User.id` divergent** จาก `auth.users.id` (`23a770e5…` ≠ `48d4b74a…`) → `getCurrentPermissions()` คืน `EMPTY_PERMISSIONS` ทุกครั้งเธอ login → audit/permission editor/payroll page ทั้งหมดเข้าไม่ได้. **Pattern เดียวกับปอนด์ Apr 27 (commit `336f211`).** Fixed via realign + 2 FK refs updated. Migration `20260429_realign_arthit_user_id_to_auth_uuid.sql`.
-2. **wiyada (ปุ๋ย/บัญชี) `can_manage_payroll: false`** ทั้งที่ NEXT.md §3.3 บอกว่าเป็น Payroll Manager → ถ้า login ตอนนี้จะไม่เห็น "อัปโหลดสลิปเงินเดือน" sidebar → §3.4 e2e test fail ทันที. Granted preset payroll_manager + audit row credited to ปอนด์. Migration `20260429_grant_wiyada_payroll_manager_preset.sql`.
 
-⚠️ **ชาติ มี `can_manage_payroll: true`** อยู่ — ไม่แน่ใจว่าตั้งใจหรือไม่ (เธอเป็น beta tester ไม่ใช่ payroll role). User ยืนยันก่อน beta launch.
+2. **Payroll manager คือ ชาติ ไม่ใช่ ปุ๋ย** — Claude ตอนเช้า assume จาก NEXT.md §3.3 (outdated) ว่า ปุ๋ย เป็น payroll manager แล้ว auto-grant flag ให้ ปุ๋ย. User revoke ผ่าน permission editor ทันที (audit row 28 เม.ย. 11:29). The "auto-grant migration" `20260429_grant_wiyada_payroll_manager_preset.sql` was **deleted** so future re-runs don't re-undo this. Authoritative state: ชาติ has the flag, ปุ๋ย doesn't.
 
 **APR28 office (รอบก่อน ต่อจาก APR27→28 overnight):**
 
@@ -131,26 +132,22 @@ Verify อีกที: `/hradmin/employees/[id]` → ควรเห็นก�
 
 ### 3.2 ✅ ~~Permission editor UI~~ — DONE คืนนี้ (commits 1-3)
 
-### 3.3 ✅ ~~สร้าง user account ให้บัญชี~~ — DONE (DB seed Apr 28)
+### 3.3 ✅ ~~Payroll manager assignment~~ — DONE (Apr 28 → corrected Apr 29 morning)
 
-User created via Supabase MCP:
-- `username: wiyada` / `password: 0000`
-- Linked to employee `449-62` (วิยะดา เหง้าเทพ, แผนกบัญชี)
-- `role: employee` · `can_manage_payroll: true` · ทุก flag อื่น false (Payroll Manager preset)
+**Final state:** **ชาติ (suchat@ebcitrade.com)** is the sole payroll manager.
 
-ส่ง credentials ให้ปุ๋ย:
-```
-URL:      https://nexus.ebcitrade.com
-Username: wiyada
-Password: 0000  (ขอให้เปลี่ยนเอง — แต่ระบบยังไม่มี UI เปลี่ยนรหัส, gap)
-```
+- ชาติ: `role=employee` · `can_manage_payroll=true` · created Apr 28 01:32 with payroll_manager preset
+- ปุ๋ย (wiyada): `role=employee` · `can_manage_payroll=false` · revoked Apr 28 11:29 via permission editor
+  - User row + auth still exist (she's a regular employee — แผนกบัญชี · หัวหน้าแผนก) just without the payroll flag.
+
+**History gotcha:** an earlier assumption baked into prior NEXT.md versions had ปุ๋ย as the payroll manager. A migration `20260429_grant_wiyada_payroll_manager_preset.sql` auto-applied that assumption during the Apr 29 morning sweep — the user reverted via the in-app editor and that migration file was deleted so future replays don't undo the revoke. Audit log on `/hradmin/settings/audit` shows the full back-and-forth.
 
 🎯 **ทำต่อ §3.4** เพื่อ verify upload e2e
 
 ### 3.4 ⭐ **Test bulk salary slip upload e2e** — 20 นาที (เร่งด่วนสุดแล้ว)
 
 ทดสอบ flow จริง:
-1. Login `wiyada / 0000` → sidebar เห็น "อัปโหลดสลิปเงินเดือน"
+1. Login `suchat@ebcitrade.com / EbciTest2026!` → sidebar เห็น "อัปโหลดสลิปเงินเดือน"
 2. คลิก → /hradmin/payroll/bulk
 3. ออกสลิป test 3-5 ไฟล์ (PDF dummy ก็ได้)
 4. ตั้งชื่อตาม pattern: `Slip_060-01_2026-04.pdf` ฯลฯ
