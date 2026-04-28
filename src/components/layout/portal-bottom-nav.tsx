@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-    Home, Users, Megaphone, MoreHorizontal, Clock, CalendarDays,
+    Home, Users, Megaphone, MoreHorizontal, Clock, CalendarDays, CalendarCheck,
     ClipboardCheck, LogOut, FileText,
     Settings, ChevronRight, X, UserRound, Network,
     UserPlus, Upload, Activity,
@@ -54,7 +54,7 @@ const HR_ADMIN_NAV_PORTAL: NavItem[] = [
     { label: 'หน้าแรก',  href: '/portal/dashboard',         icon: Home,      exact: true },
     { label: 'พนักงาน',  href: '/hradmin/employees',        icon: Users },
     { label: 'ประกาศ',   href: '/hradmin/hr/announcements', icon: Megaphone },
-    { label: 'การลา',    href: '/portal/leave',             icon: CalendarDays },
+    { label: 'การลา',    href: '/portal/leave',             icon: CalendarCheck },
 ]
 
 const NAV_CONFIG: Record<Role, NavItem[]> = {
@@ -63,13 +63,13 @@ const NAV_CONFIG: Record<Role, NavItem[]> = {
     manager: [
         { label: 'หน้าแรก', href: '/portal/dashboard', icon: Home,        exact: true },
         { label: 'เช็คอิน', href: '/portal/checkin',   icon: Clock },
-        { label: 'การลา',   href: '/portal/leave',     icon: CalendarDays },
+        { label: 'การลา',   href: '/portal/leave',     icon: CalendarCheck },
         { label: 'โปรไฟล์', href: '/portal/profile',   icon: UserRound },
     ],
     employee: [
         { label: 'หน้าแรก', href: '/portal/dashboard', icon: Home,        exact: true },
         { label: 'เช็คอิน', href: '/portal/checkin',   icon: Clock },
-        { label: 'การลา',   href: '/portal/leave',     icon: CalendarDays },
+        { label: 'การลา',   href: '/portal/leave',     icon: CalendarCheck },
         { label: 'โปรไฟล์', href: '/portal/profile',   icon: UserRound },
     ],
 }
