@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Pencil, Trash2, X, CalendarOff, Loader2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, CalendarDays, Loader2 } from 'lucide-react'
 
 interface Holiday {
     id: string
@@ -14,10 +14,23 @@ interface Holiday {
 const CURRENT_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - 1 + i)
 
+// Calendar entry types — these are the four `holidays.type` values the UI
+// renders today. Display label + chip color per type. Anything outside this
+// map falls through to the "company" preset so legacy/imported data still
+// shows up gracefully (e.g. early 2026 seed inserted `religious` rows that
+// were not in the old 2-type map).
 const TYPE_CONFIG: Record<string, { label: string; color: string }> = {
-    public:  { label: 'นักขัตฤกษ์',      color: '#F87171' },
-    company: { label: 'บริษัทกำหนด',    color: '#60A5FA' },
+    public:    { label: 'นักขัตฤกษ์',     color: '#F87171' },
+    religious: { label: 'วันสำคัญทางศาสนา', color: '#F472B6' },
+    company:   { label: 'บริษัทกำหนด',    color: '#60A5FA' },
+    wfh:       { label: 'WFH',            color: '#34D399' },
 }
+const TYPE_OPTIONS: Array<{ value: string; label: string }> = [
+    { value: 'public',    label: 'นักขัตฤกษ์ (วันหยุด)' },
+    { value: 'religious', label: 'วันสำคัญทางศาสนา (วันหยุด)' },
+    { value: 'company',   label: 'บริษัทกำหนด (วันหยุด)' },
+    { value: 'wfh',       label: 'WFH (ทำงานที่บ้าน)' },
+]
 
 const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
     'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม']
@@ -103,11 +116,11 @@ export default function HolidaysPage() {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20">
-                        <CalendarOff size={20} className="text-white" />
+                        <CalendarDays size={20} className="text-white" />
                     </div>
                     <div>
-                        <h1 className="text-white font-bold text-xl">จัดการวันหยุด</h1>
-                        <p className="text-white/50 text-sm">{holidays.length} รายการ</p>
+                        <h1 className="text-white font-bold text-xl">ปฏิทินบริษัท</h1>
+                        <p className="text-white/50 text-sm">วันหยุด · วันสำคัญ · WFH · {holidays.length} รายการ</p>
                     </div>
                 </div>
                 <button
@@ -115,7 +128,7 @@ export default function HolidaysPage() {
                     className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm text-white transition-all active:scale-95"
                     style={{ background: 'linear-gradient(135deg, #882136, #c0392b)' }}
                 >
-                    <Plus size={16} /> เพิ่มวันหยุด
+                    <Plus size={16} /> เพิ่มรายการ
                 </button>
             </div>
 
@@ -147,8 +160,8 @@ export default function HolidaysPage() {
                     </div>
                 ) : holidays.length === 0 ? (
                     <div className="text-center py-16 text-white/40">
-                        <CalendarOff size={32} className="mx-auto mb-2 opacity-40" />
-                        <p className="text-sm">ไม่มีวันหยุดสำหรับปี {year + 543}</p>
+                        <CalendarDays size={32} className="mx-auto mb-2 opacity-40" />
+                        <p className="text-sm">ยังไม่มีรายการในปฏิทินสำหรับปี {year + 543}</p>
                     </div>
                 ) : (
                     <table className="w-full">
@@ -213,7 +226,7 @@ export default function HolidaysPage() {
 
                         <div className="flex items-center justify-between">
                             <h2 className="text-white font-bold text-lg">
-                                {editTarget ? 'แก้ไขวันหยุด' : 'เพิ่มวันหยุด'}
+                                {editTarget ? 'แก้ไขรายการ' : 'เพิ่มรายการในปฏิทิน'}
                             </h2>
                             <button onClick={() => setModalOpen(false)} className="text-white/40 hover:text-white transition-colors">
                                 <X size={20} />
@@ -232,12 +245,12 @@ export default function HolidaysPage() {
                                 />
                             </div>
                             <div>
-                                <label className="text-white/60 text-xs font-semibold uppercase tracking-wider block mb-1.5">ชื่อวันหยุด</label>
+                                <label className="text-white/60 text-xs font-semibold uppercase tracking-wider block mb-1.5">ชื่อรายการ</label>
                                 <input
                                     type="text"
                                     value={form.name}
                                     onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                                    placeholder="เช่น วันสงกรานต์"
+                                    placeholder="เช่น วันสงกรานต์ · WFH ทุกศุกร์"
                                     className="w-full rounded-xl px-3 py-2.5 text-white text-sm placeholder-white/25"
                                     style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
                                 />
@@ -250,8 +263,11 @@ export default function HolidaysPage() {
                                     className="w-full rounded-xl px-3 py-2.5 text-white text-sm"
                                     style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
                                 >
-                                    <option value="public" style={{ background: '#1a0a0d' }}>นักขัตฤกษ์</option>
-                                    <option value="company" style={{ background: '#1a0a0d' }}>บริษัทกำหนด</option>
+                                    {TYPE_OPTIONS.map(opt => (
+                                        <option key={opt.value} value={opt.value} style={{ background: '#1a0a0d' }}>
+                                            {opt.label}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
                         </div>
@@ -269,7 +285,7 @@ export default function HolidaysPage() {
                                 style={{ background: 'linear-gradient(135deg, #882136, #c0392b)' }}
                             >
                                 {saving && <Loader2 size={14} className="animate-spin" />}
-                                {editTarget ? 'บันทึกการแก้ไข' : 'เพิ่มวันหยุด'}
+                                {editTarget ? 'บันทึกการแก้ไข' : 'เพิ่มรายการ'}
                             </button>
                         </div>
                     </div>
