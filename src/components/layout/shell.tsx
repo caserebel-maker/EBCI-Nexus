@@ -24,7 +24,6 @@ import { usePathname } from 'next/navigation'
 import { LogOut, RefreshCw, Wallet, ClipboardCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAVIGATION_CONFIG, type NavItem } from '@/config/navigation'
-import { LanguageToggle } from '@/components/ui/language-toggle'
 import { useTranslation } from '@/contexts/language-context'
 import { PortalBottomNav } from '@/components/layout/portal-bottom-nav'
 import { SidebarNav } from '@/components/layout/sidebar-nav'
@@ -237,19 +236,22 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                         cover the nav when open, but BELOW portaled
                         drawers/modals (z-[80]+) so a leave detail sheet
                         doesn't leave these chips floating over it. */}
-                    <div className="flex items-center gap-1.5 relative z-[60] ml-auto">
+                    {/* Topbar right cluster — slimmed down to refresh + bell
+                        + user menu. The previous language toggle moved into
+                        the user menu's preferences section, freeing up ~40px
+                        of horizontal real estate that was crowding iPhones. */}
+                    <div className="flex items-center gap-1 relative z-[60] ml-auto">
                         <button
                             onClick={() => window.location.reload()}
-                            className="lg:hidden h-10 w-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white active:scale-95 transition-all"
+                            className="lg:hidden h-9 w-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white active:scale-95 transition-all"
                             aria-label="Refresh"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                                 <path d="M3 3v5h5" />
                             </svg>
                         </button>
                         <NotificationBell />
-                        <LanguageToggle />
                         <UserMenu
                             fullName={profile?.fullName ?? userName ?? 'User'}
                             email={profile?.email ?? null}

@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
     Home, Users, Megaphone, MoreHorizontal, Clock, CalendarDays,
     ClipboardCheck, CheckSquare, LogOut, FileText,
-    Settings, ChevronRight, X, UserRound, RefreshCw, Network,
+    Settings, ChevronRight, X, UserRound, Network,
     UserPlus, Upload, Activity,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -81,7 +81,8 @@ const NAV_CONFIG: Record<Role, NavItem[]> = {
 // HR-admin variant of the More menu when viewing the /portal experience.
 // Personal actions come first, then the same HR-admin quick actions
 // surfaced in /hradmin mode — admins needed them reachable without
-// switching modes on mobile. Switch-back + logout sit at the bottom.
+// switching modes on mobile. Mode switching now lives in the topbar
+// user menu (avatar dropdown) so it's no longer duplicated here.
 const HR_ADMIN_PORTAL_MORE: MoreItem[] = [
     { label: 'ยื่นใบลา',     desc: 'สร้างคำขอลาของตนเอง',   href: '/portal/leave',           icon: CalendarDays },
     { label: 'ผังองค์กร',    desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',   icon: Network },
@@ -89,7 +90,6 @@ const HR_ADMIN_PORTAL_MORE: MoreItem[] = [
     { label: 'ตั้งค่า',       desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',       icon: Settings },
     ...HR_ADMIN_QUICK_ACTIONS,
     ...HR_ADMIN_SYSTEM_ACTIONS,
-    { label: 'กลับเป็น HR Admin', desc: 'สลับกลับโหมดแอดมิน', href: '/hradmin/dashboard', icon: RefreshCw, accent: 'amber', groupLabel: 'สลับโหมด' },
     { label: 'ออกจากระบบ', icon: LogOut, danger: true },
 ]
 
@@ -101,7 +101,8 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'รายงาน',       desc: 'ดูรายงานต่าง ๆ',          href: '/hradmin/reports',    icon: FileText },
         ...HR_ADMIN_QUICK_ACTIONS,
         ...HR_ADMIN_SYSTEM_ACTIONS,
-        { label: 'ดูในฐานะพนักงาน', desc: 'สลับไปโหมดพนักงาน', href: '/portal/dashboard', icon: RefreshCw, accent: 'blue' },
+        // Mode switching moved to the topbar user-menu dropdown — same
+        // action, single home, less duplication on mobile.
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     manager: [

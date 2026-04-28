@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronDown, KeyRound, LogOut, RefreshCw, UserCircle } from 'lucide-react'
+import { ChevronDown, Globe, KeyRound, LogOut, RefreshCw, UserCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useLanguage } from '@/contexts/language-context'
 
 /**
  * Topbar profile dropdown — the future home of every "my account" action
@@ -34,6 +35,7 @@ export function UserMenu({ fullName, email, roleLabel, role, photoUrl }: UserMen
     const [open, setOpen] = useState(false)
     const pathname = usePathname()
     const containerRef = useRef<HTMLDivElement>(null)
+    const { language, toggleLanguage } = useLanguage()
 
     // HR admins toggle between /hradmin and /portal. The dropdown surfaces
     // the same affordance the sidebar already has so the action is
@@ -74,7 +76,7 @@ export function UserMenu({ fullName, email, roleLabel, role, photoUrl }: UserMen
                 aria-haspopup="menu"
                 aria-expanded={open}
                 aria-label="เมนูบัญชีผู้ใช้"
-                className="flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 transition-all"
+                className="flex items-center gap-1 pl-0.5 pr-1.5 h-9 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 transition-all"
             >
                 <span className="h-8 w-8 rounded-full overflow-hidden ring-1 ring-white/30 bg-white/10 flex items-center justify-center shrink-0">
                     {photoUrl ? (
@@ -84,7 +86,7 @@ export function UserMenu({ fullName, email, roleLabel, role, photoUrl }: UserMen
                     )}
                 </span>
                 <ChevronDown
-                    size={14}
+                    size={13}
                     className={cn('text-white/75 transition-transform', open && 'rotate-180')}
                 />
             </button>
@@ -146,6 +148,25 @@ export function UserMenu({ fullName, email, roleLabel, role, photoUrl }: UserMen
                                 label="เปลี่ยนรหัสผ่าน"
                                 onSelect={() => setOpen(false)}
                             />
+                        </div>
+
+                        {/* Preferences — language live here so the topbar
+                            stays cluttered-free. Future user prefs (theme,
+                            notification opt-ins) come into this same group. */}
+                        <div className="border-t border-white/10 py-1">
+                            <button
+                                type="button"
+                                onClick={toggleLanguage}
+                                role="menuitem"
+                                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-white/10 transition-colors"
+                            >
+                                <Globe size={16} className="text-white/75" />
+                                <span>{language === 'th' ? 'ภาษา' : 'Language'}</span>
+                                <span className="ml-auto inline-flex items-center gap-1 text-xs font-bold tracking-widest text-white/85">
+                                    <span className={cn('px-1.5 py-0.5 rounded', language === 'th' ? 'bg-amber-500/85 text-[#1a0a0d]' : 'text-white/50')}>TH</span>
+                                    <span className={cn('px-1.5 py-0.5 rounded', language === 'en' ? 'bg-amber-500/85 text-[#1a0a0d]' : 'text-white/50')}>EN</span>
+                                </span>
+                            </button>
                         </div>
 
                         {/* Mode toggle — HR Admin only. The accent colour
