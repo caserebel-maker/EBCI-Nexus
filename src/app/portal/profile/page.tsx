@@ -119,24 +119,36 @@ export default async function ProfilePage() {
     }
 
     // ── Leave balances ────────────────────────────────────────────────────────
+    // Pull from the Supabase leave_balances (the table the HR adjust modal
+    // and the leave submit/approve flows write to). The legacy Prisma
+    // `leaveBalance` query was reading a now-empty cohort, falling through
+    // to the DEFAULT_ENTITLED hardcode (annual=6) — which is why ชาติ's
+    // profile showed 6/0 instead of the real 12/1.
+    const LEAVE_TYPES = ['annual', 'sick', 'personal'] // shown on profile card
     const DEFAULT_ENTITLED: Record<string, number> = {
-        annual: 6, sick: 30, personal: 3, maternity: 90, ordination: 15,
+        annual: 6, sick: 30, personal: 3,
     }
-    const LEAVE_TYPES = ['annual', 'sick', 'personal']
 
     let leaveBalances: { leaveType: string; entitledDays: number; usedDays: number }[] = []
     if (emp) {
         const year = new Date().getFullYear()
-        const stored = await prisma.leaveBalance.findMany({
-            where: { employeeId: emp.id, year },
-        }).catch(() => [])
+        const { data: storedRaw } = await supabaseAdmin
+            .from('leave_balances')
+            .select('leave_type_id, total_days, used_days')
+            .eq('employee_id', emp.id)
+            .eq('year', year)
+        const stored = (storedRaw ?? []) as Array<{
+            leave_type_id: string
+            total_days: number | string | null
+            used_days: number | string | null
+        }>
 
         leaveBalances = LEAVE_TYPES.map(lt => {
-            const found = stored.find(b => b.leaveType === lt)
+            const found = stored.find(b => b.leave_type_id === lt)
             return {
                 leaveType: lt,
-                entitledDays: Number(found?.entitledDays ?? DEFAULT_ENTITLED[lt] ?? 0),
-                usedDays: Number(found?.usedDays ?? 0),
+                entitledDays: Number(found?.total_days ?? DEFAULT_ENTITLED[lt] ?? 0),
+                usedDays:     Number(found?.used_days ?? 0),
             }
         })
     }
