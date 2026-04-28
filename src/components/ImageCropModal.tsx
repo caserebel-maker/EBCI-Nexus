@@ -56,8 +56,8 @@ export function ImageCropModal({
 
     return (
         <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/70"
-            style={{ backdropFilter: 'blur(6px)' }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6"
+            style={{ background: 'rgba(47,0,0,0.5)', backdropFilter: 'blur(6px)' }}
             role="dialog"
             aria-modal="true"
             aria-label="ปรับรูปโปรไฟล์"
