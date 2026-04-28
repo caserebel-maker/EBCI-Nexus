@@ -51,7 +51,7 @@ const SHORTCUTS = [
     { label: 'ยื่นใบลา',   icon: FileText,  href: '/portal/leave' },
     { label: 'ดูสถานะลา', icon: Clock,     href: '/portal/leave' },
     { label: 'ปฏิทิน',    icon: Calendar,  href: '/portal/calendar' },
-    { label: 'ลงเวลา',    icon: MapPin,    href: '/portal/checkin' },
+    { label: 'เช็คอิน',    icon: MapPin,    href: '/portal/checkin' },
     { label: 'แจ้งเตือน', icon: Bell,      href: '/portal/notifications' },
 ]
 

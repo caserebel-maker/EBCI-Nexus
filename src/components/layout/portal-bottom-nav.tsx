@@ -62,13 +62,13 @@ const NAV_CONFIG: Record<Role, NavItem[]> = {
 
     manager: [
         { label: 'หน้าแรก', href: '/portal/dashboard', icon: Home,        exact: true },
-        { label: 'เช็คอิน', href: '/portal/checkin',   icon: Clock },
+        { label: 'เช็คอิน', href: '/portal/checkin',   icon: MapPin },
         { label: 'การลา',   href: '/portal/leave',     icon: Umbrella },
         { label: 'โปรไฟล์', href: '/portal/profile',   icon: UserRound },
     ],
     employee: [
         { label: 'หน้าแรก', href: '/portal/dashboard', icon: Home,        exact: true },
-        { label: 'เช็คอิน', href: '/portal/checkin',   icon: Clock },
+        { label: 'เช็คอิน', href: '/portal/checkin',   icon: MapPin },
         { label: 'การลา',   href: '/portal/leave',     icon: Umbrella },
         { label: 'โปรไฟล์', href: '/portal/profile',   icon: UserRound },
     ],
