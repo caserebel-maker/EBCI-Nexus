@@ -125,16 +125,50 @@ branches; the user's other machines pull from `origin/main`.)
 - The next-machine prompt must be specific (point at §X.Y, not "ดูทุก
   อย่าง"). Example: `อ่าน docs/NEXT.md แล้วทำต่อ — เริ่มที่ §3.4`.
 
-**Step 4 — Tell the user, in one short message:**
+**Step 4 — Create a scheduled-task reminder (MANDATORY):**
+
+Use the `mcp__scheduled-tasks__create_scheduled_task` tool with a
+**fireAt** timestamp set for the next likely work-start time
+(typically 07:00 Bangkok the next morning, or sooner if the user
+indicated they're heading straight to another machine). The task's
+prompt MUST contain:
+
+- The literal `git pull origin main --ff-only` command + the path.
+- The exact Thai one-liner to type into Claude Code at the new
+  machine — same one pinned in `NEXT.md`.
+- A short context-of-the-moment summary so the morning reminder
+  doesn't feel disconnected from last night's work.
+- Today's last commit hash so the user can sanity-check the pull
+  landed.
+
+**Why this is mandatory, not optional:** The user has explicitly
+asked that the scheduled-task reminder be created *every time* they
+switch machines, not just on demand. Documenting the prompt in
+NEXT.md or CLAUDE.md is necessary but not sufficient — the active
+push notification at the next start time is what closes the loop.
+
+Use a fresh `taskId` per session (e.g. `ebci-handoff-YYYY-MM-DD`)
+so each evening's task doesn't collide with the previous one. If a
+prior unfired task exists from an earlier session that's already
+overtaken, list and skip it rather than overwriting.
+
+**Step 5 — Tell the user, in one short message:**
 - Confirm what was pushed (commit count + last hash).
 - Quote the exact Thai prompt to type at the next machine.
 - Remind them to `git pull origin main --ff-only` BEFORE typing it.
+- Confirm the scheduled task ID + fire time so they know a reminder
+  will land in the morning.
 
 **Do NOT:**
 - End a session with uncommitted work.
 - End a session with commits that aren't pushed.
 - Hand the user a vague "อ่าน NEXT.md" — give them the specific
   section pointer.
+- Skip the scheduled-task creation just because NEXT.md is updated.
+  The MD is for the assistant + the user reading by hand; the
+  scheduled task is for "actively buzzing the user's screen at the
+  right moment so the prompt doesn't get lost in the next day's
+  context."
 
 ---
 
