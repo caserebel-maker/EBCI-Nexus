@@ -189,6 +189,31 @@ iPhone จริงทดสอบ + flip vertical day list ถ้า cell เ�
 
 **Free tier strategy:** ใช้ Supabase Free 3 เดือนแรก + manual backup ทุกอาทิตย์ → ก่อน rollout เต็มบริษัทค่อย upgrade Pro $25/mo (daily backup + 7-day PITR)
 
+### 3.10 Field check-in สำหรับพนักงานออกพื้นที่ — DEFERRED post-beta
+
+**Why deferred:** beta 5 คนไม่มีใครเป็นสาย field → ทำตอน 5-คน beta ผ่านแล้วค่อยเปิดให้ทั้ง ~10 คน outside-office.
+
+**Use case:** บริษัทโลจิสติกส์ — drivers, sales, ผู้บริหารที่ออกประชุมต่างที่. ปัจจุบัน /portal/checkin มี 2 type (Office + WFH) ซึ่ง "Office" บังคับ geofence เลยใช้ไม่ได้ตอนไม่อยู่ออฟฟิศ.
+
+**Design decision (locked APR28):** ใช้ approach **A + B รวมกัน**:
+
+- **A. Field type ใหม่** — ปุ่มที่ 3 "เช็คอินภาคสนาม" 🚛
+  - Flow: เก็บ GPS (เพื่อ audit) แต่ **ไม่ validate geofence**
+  - Note + photo = **optional** (user confirmation: ไม่บังคับ)
+  - ถ้ากรอก note → คน HR ดูได้ภายหลัง
+
+- **B. Per-employee `work_mode_default`** — HR กำหนดให้แต่ละคน
+  - Enum: `office` (default, current behavior) / `field` / `flexible`
+  - `field` → ปุ่มภาคสนามเด่นที่สุดบนหน้า checkin
+  - `flexible` → 3 ปุ่มเท่ากัน (เหมาะกับ sales/manager ที่สลับ)
+
+**Schema delta:**
+- `employees.work_mode_default` enum default `office`
+- `check_ins.note` text nullable
+- `check_ins.photo_url` text nullable (เผื่อ option upload ทีหลัง)
+
+**Scope:** ~10 คน max → ไม่ต้องคิด scale อะไรพิเศษ. Migration + UI + 1 modal เพิ่ม. Estimate ~3-4 ชม.
+
 ### B. รอข้อมูลจาก HR
 - B5 มด review `EBCI-employees-review.xlsx`
 - ตี๋ president's driver — เพิ่ม + leave_approver_id = ดำ (decision pending)
