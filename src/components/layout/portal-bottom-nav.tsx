@@ -86,6 +86,7 @@ const HR_ADMIN_PORTAL_MORE: MoreItem[] = [
     { label: 'ยื่นใบลา',     desc: 'สร้างคำขอลาของตนเอง',   href: '/portal/leave',           icon: CalendarDays },
     { label: 'ผังองค์กร',    desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',   icon: Network },
     { label: 'ปฏิทิน',       desc: 'ดูตารางงาน',             href: '/portal/calendar',       icon: CalendarDays },
+    { label: 'ตั้งค่า',       desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',       icon: Settings },
     ...HR_ADMIN_QUICK_ACTIONS,
     ...HR_ADMIN_SYSTEM_ACTIONS,
     { label: 'กลับเป็น HR Admin', desc: 'สลับกลับโหมดแอดมิน', href: '/hradmin/dashboard', icon: RefreshCw, accent: 'amber', groupLabel: 'สลับโหมด' },
@@ -108,12 +109,14 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'ยื่นใบลา',     desc: 'สร้างคำขอลาของตนเอง', href: '/portal/leave',     icon: CalendarDays },
         { label: 'ผังองค์กร',    desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization', icon: Network },
         { label: 'ปฏิทิน',       desc: 'ดูตารางงาน',           href: '/portal/calendar',  icon: CalendarDays },
+        { label: 'ตั้งค่า',       desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings', icon: Settings },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     employee: [
         { label: 'ยื่นใบลา',     desc: 'สร้างคำขอลาของตนเอง', href: '/portal/leave',           icon: CalendarDays },
         { label: 'ผังองค์กร',    desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization', icon: Network },
         { label: 'ปฏิทิน',       desc: 'ดูตารางงาน',           href: '/portal/calendar',       icon: CalendarDays },
+        { label: 'ตั้งค่า',       desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',     icon: Settings },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
 }
