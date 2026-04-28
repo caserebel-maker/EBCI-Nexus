@@ -102,7 +102,10 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         { label: 'เช็คอิน', href: '/portal/checkin', icon: MapPin },
         { label: 'recruitment.personalInfo', href: '/portal/profile', icon: UserCircle },
         { label: 'leave.myLeave', href: '/portal/leave', icon: CalendarDays },
-        { label: 'อนุมัติการลา', href: '/portal/leave/inbox', icon: ClipboardCheck },
+        // "อนุมัติการลา" intentionally NOT in the default — it's appended
+        // dynamically in shell.tsx for users with employees.is_approver = true.
+        // Pure-employee accounts who never approve anyone don't see an empty
+        // inbox menu item.
         { label: 'ผังองค์กร', href: '/portal/organization', icon: Network },
         { label: 'dashboard.announcements', href: '/portal/announcements', icon: Megaphone },
         // Was '/portal/payslips' which doesn't exist as a route — the actual

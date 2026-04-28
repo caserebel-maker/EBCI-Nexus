@@ -11,6 +11,13 @@ export interface EmployeeProfile {
     department: string | null
     startDate: string | null   // ISO date
     dateOfBirth: string | null // ISO date
+    /**
+     * Mirrors employees.is_approver. Used by the shell to decide
+     * whether an `employee`-role user (no team-management role) should
+     * still see the "อนุมัติการลา" sidebar entry — true when the user
+     * has been designated as someone's leave approver.
+     */
+    isApprover: boolean
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -34,7 +41,7 @@ export async function getEmployeeProfile(
         //   2. employees.user_id = session.id (auth user id) — covers legacy
         //      users whose user_metadata never got employeeId seeded
         //   3. employees.email = fallbackEmail (final safety net)
-        const cols = 'id, first_name_th, last_name_th, nickname, email, photo_url, position, department, start_date, date_of_birth'
+        const cols = 'id, first_name_th, last_name_th, nickname, email, photo_url, position, department, start_date, date_of_birth, is_approver'
 
         type EmployeeRow = {
             id: string
@@ -47,6 +54,7 @@ export async function getEmployeeProfile(
             department: string | null
             start_date: string | null
             date_of_birth: string | null
+            is_approver: boolean | null
         }
         let data: EmployeeRow | null = null
 
@@ -89,6 +97,7 @@ export async function getEmployeeProfile(
                 department: null,
                 startDate: null,
                 dateOfBirth: null,
+                isApprover: false,
             }
         }
 
@@ -109,6 +118,7 @@ export async function getEmployeeProfile(
             department: data.department ?? null,
             startDate: data.start_date ?? null,
             dateOfBirth: data.date_of_birth ?? null,
+            isApprover: Boolean(data.is_approver),
         }
     } catch (err) {
         console.error('[getEmployeeProfile] error:', err)
@@ -123,6 +133,7 @@ export async function getEmployeeProfile(
             department: null,
             startDate: null,
             dateOfBirth: null,
+            isApprover: false,
         }
     }
 }

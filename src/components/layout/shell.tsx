@@ -21,7 +21,7 @@ function calcTenure(startDate: string): string {
 import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LogOut, RefreshCw, Wallet } from 'lucide-react'
+import { LogOut, RefreshCw, Wallet, ClipboardCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAVIGATION_CONFIG, type NavItem } from '@/config/navigation'
 import { LanguageToggle } from '@/components/ui/language-toggle'
@@ -55,6 +55,7 @@ interface DashboardShellProps {
         department: string | null
         startDate: string | null
         dateOfBirth: string | null
+        isApprover: boolean
     }
 }
 
@@ -86,6 +87,23 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
             label: 'อัปโหลดสลิปเงินเดือน',
             href: '/hradmin/payroll/bulk',
             icon: Wallet,
+        })
+    }
+    // "อนุมัติการลา" was removed from the EMPLOYEE default — append it back
+    // only when the employee has been designated an approver via
+    // employees.is_approver. HR admins are excluded from this branch
+    // because they already get /hradmin/leave/inbox in their main nav,
+    // and the /portal preview should mirror a regular-employee experience.
+    if (
+        effectiveRole === 'employee'
+        && role !== 'hr_admin'
+        && profile?.isApprover
+        && !navItems.some(i => i.href === '/portal/leave/inbox')
+    ) {
+        navItems.push({
+            label: 'อนุมัติการลา',
+            href: '/portal/leave/inbox',
+            icon: ClipboardCheck,
         })
     }
 
