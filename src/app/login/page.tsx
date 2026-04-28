@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, Suspense } from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Loader2, Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import { LanguageToggle } from '@/components/ui/language-toggle'
@@ -103,6 +104,11 @@ function LoginForm() {
                                 ✓ ตั้งรหัสผ่านเรียบร้อยแล้ว กรุณาเข้าสู่ระบบ
                             </div>
                         )}
+                        {messageParam === 'password-changed' && !error && (
+                            <div className="bg-emerald-500/20 text-emerald-100 text-sm p-3 rounded-lg border border-emerald-500/40 text-center backdrop-blur-sm">
+                                ✓ เปลี่ยนรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบใหม่
+                            </div>
+                        )}
 
                         {error && (
                             <div className="bg-red-500/20 text-red-100 text-sm p-3 rounded-lg border border-red-500/50 text-center backdrop-blur-sm">
@@ -151,7 +157,14 @@ function LoginForm() {
                                 {loading ? <Loader2 className="animate-spin h-4 w-4" /> : t('auth.signIn')}
                             </button>
 
-
+                            <div className="text-center mt-3">
+                                <Link
+                                    href="/forgot-password"
+                                    className="text-white/60 hover:text-white text-[13px] transition-colors"
+                                >
+                                    ลืมรหัสผ่าน?
+                                </Link>
+                            </div>
                         </div>
                     </form>
                 </div>
