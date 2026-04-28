@@ -74,9 +74,19 @@ export function NotificationDropdown({ open, onClose, state }: Props) {
 
     return (
         <>
-            {/* Mobile backdrop — desktop uses outside-click handler on the bell */}
+            {/* Mobile backdrop — full 50% scrim because the panel takes
+                most of the screen.
+                Desktop scrim — softer 20% so the page reads as "behind"
+                the dropdown without going dark. The desktop outside-click
+                handler on the bell still closes the panel; this just adds
+                the visual layering. */}
             <div
                 className="fixed inset-0 z-[60] bg-black/50 sm:hidden"
+                onClick={onClose}
+                aria-hidden="true"
+            />
+            <div
+                className="hidden sm:block fixed inset-0 z-[60] bg-black/20"
                 onClick={onClose}
                 aria-hidden="true"
             />

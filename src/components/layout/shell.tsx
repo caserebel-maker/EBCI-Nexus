@@ -258,6 +258,9 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                             roleLabel={profile?.roleLabel ?? role}
                             role={role}
                             photoUrl={profile?.photoUrl ?? null}
+                            position={profile?.position}
+                            department={profile?.department}
+                            tenure={profile?.startDate ? calcTenure(profile.startDate) : null}
                         />
                     </div>
                 </header>
@@ -269,75 +272,23 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                         doesn't tag along with every PDF export. */}
                     {emergencyBanner && <div className="mb-4 print:hidden">{emergencyBanner}</div>}
 
-                    {/* Mobile Identity Header — shown on every page.
-                        `lg:hidden` only kicks in at the desktop breakpoint;
-                        the print engine emulates a narrower viewport so
-                        without `print:hidden` this whole identity card —
-                        the daily greeting, the photo, the role line —
-                        leaks into PDF exports of unrelated pages
-                        (e.g. an HR printing someone else's profile would
-                        see their own name + email at the top). */}
+                    {/* Mobile daily greeting — birthday / payday / dated
+                        salutations. The full identity card (photo + name +
+                        position + tenure + email) lived here too; that
+                        content moved into the topbar user-menu dropdown so
+                        it only appears when explicitly requested rather than
+                        eating space at the top of every page.
+
+                        `lg:hidden` because desktop has the sidebar profile
+                        card; `print:hidden` because the print engine fakes
+                        a narrow viewport which would otherwise leak the
+                        greeting into every PDF export. */}
                     <div className="lg:hidden mb-3 pb-3 border-b border-white/10 print:hidden">
-                        {/* Greeting — daily/payday/birthday */}
                         <DailyGreeting
                             variant="mobile"
                             nickname={profile?.nickname}
                             dateOfBirth={profile?.dateOfBirth}
-                            className="mb-2 pb-2 border-b border-white/10"
                         />
-                        <div className="flex items-center gap-3">
-                            <div className="h-14 w-14 rounded-full overflow-hidden shadow-md shadow-black/30 ring-2 ring-white/20 bg-white/10 shrink-0">
-                                {profile?.photoUrl ? (
-                                    <img src={profile.photoUrl} alt={profile.fullName} className="h-full w-full object-cover" />
-                                ) : (
-                                    <div className="h-full w-full flex items-center justify-center text-lg font-bold text-white">
-                                        {(profile?.fullName ?? userName ?? 'U').charAt(0).toUpperCase()}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <p className="text-sm font-bold text-white truncate leading-tight">
-                                    {profile?.fullName ?? userName ?? 'User'}
-                                </p>
-                                {(profile?.position || profile?.department) && (() => {
-                                    // Department often repeats inside the position string
-                                    // ("หัวหน้าฝ่าย<dept> · ฝ่าย<dept>"). Strip the
-                                    // prefix + trim, then hide the second line when
-                                    // the position already carries the same name.
-                                    const position = profile?.position ?? ''
-                                    const department = profile?.department ?? ''
-                                    const normalizedDept = department.replace(/^ฝ่าย|^แผนก/, '').trim()
-                                    const isDeptInPosition =
-                                        !!normalizedDept && position.includes(normalizedDept)
-                                    const showDepartment = !!department && !isDeptInPosition
-                                    return (
-                                        <div className="mt-1 text-xs text-white/70 leading-tight">
-                                            {position && (
-                                                <span className="block sm:inline break-words">
-                                                    {position}
-                                                </span>
-                                            )}
-                                            {showDepartment && (
-                                                <>
-                                                    <span className="hidden sm:inline text-white/30 mx-1.5">·</span>
-                                                    <span className="block sm:inline text-white/60 break-words">
-                                                        {department}
-                                                    </span>
-                                                </>
-                                            )}
-                                        </div>
-                                    )
-                                })()}
-                                {profile?.startDate && (
-                                    <p className="text-xs text-white/55 truncate mt-0.5">
-                                        อายุงาน {calcTenure(profile.startDate)}
-                                    </p>
-                                )}
-                                <p className="text-xs text-white/55 truncate mt-0.5">
-                                    {profile?.email ?? ''} &middot; {profile?.roleLabel ?? role}
-                                </p>
-                            </div>
-                        </div>
                     </div>
 
                     {children}

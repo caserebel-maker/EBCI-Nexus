@@ -29,9 +29,19 @@ interface UserMenuProps {
     roleLabel: string
     role: 'hr_admin' | 'manager' | 'employee'
     photoUrl: string | null
+    /** Job title — surfaced in the dropdown header so the mobile identity
+     *  card on every page can go away without losing the info. */
+    position?: string | null
+    department?: string | null
+    /** Pre-formatted tenure string (e.g. "2 ปี 3 เดือน"). Computed
+     *  server-side; we don't want to redo the math here. */
+    tenure?: string | null
 }
 
-export function UserMenu({ fullName, email, roleLabel, role, photoUrl }: UserMenuProps) {
+export function UserMenu({
+    fullName, email, roleLabel, role, photoUrl,
+    position, department, tenure,
+}: UserMenuProps) {
     const [open, setOpen] = useState(false)
     const pathname = usePathname()
     const containerRef = useRef<HTMLDivElement>(null)
@@ -96,9 +106,12 @@ export function UserMenu({ fullName, email, roleLabel, role, photoUrl }: UserMen
                     {/* Click-outside backdrop. Sits below the panel but above
                         the rest of the page so any click anywhere else closes
                         the menu cleanly without needing an event listener on
-                        the document. */}
+                        the document. The 20% scrim makes the dropdown read as
+                        "above" the page rather than floating in the same plane
+                        as the topbar — without it the panel competes visually
+                        with the maroon body gradient. */}
                     <div
-                        className="fixed inset-0 z-[80]"
+                        className="fixed inset-0 z-[80] bg-black/20"
                         aria-hidden
                         onClick={() => setOpen(false)}
                     />
@@ -116,18 +129,43 @@ export function UserMenu({ fullName, email, roleLabel, role, photoUrl }: UserMen
                             WebkitBackdropFilter: 'blur(14px)',
                         }}
                     >
-                        {/* Identity header */}
-                        <div className="px-4 py-3 border-b border-white/10 flex items-center gap-3">
-                            <span className="h-10 w-10 rounded-full overflow-hidden ring-1 ring-white/25 bg-white/10 flex items-center justify-center shrink-0">
+                        {/* Identity header — full HR identity (photo, name,
+                            role, position/department, tenure, email) lives
+                            here so the per-page mobile identity card can
+                            be retired. Email + tenure stay subdued; the role
+                            + name carry the primary weight. */}
+                        <div className="px-4 py-3 border-b border-white/10 flex items-start gap-3">
+                            <span className="h-12 w-12 rounded-full overflow-hidden ring-1 ring-white/25 bg-white/10 flex items-center justify-center shrink-0 mt-0.5">
                                 {photoUrl ? (
                                     <img src={photoUrl} alt="" className="h-full w-full object-cover" />
                                 ) : (
-                                    <span className="text-sm font-bold text-white">{initial}</span>
+                                    <span className="text-base font-bold text-white">{initial}</span>
                                 )}
                             </span>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                                 <p className="text-white font-bold text-sm leading-tight truncate">{fullName}</p>
                                 <p className="text-amber-300/85 text-xs mt-0.5 font-medium">{roleLabel}</p>
+                                {(position || department) && (() => {
+                                    // Department often duplicates the position
+                                    // string ("หัวหน้าฝ่าย<dept>"), so strip
+                                    // the prefix and skip the second line if
+                                    // the dept name is already in the title.
+                                    const pos = position ?? ''
+                                    const dept = department ?? ''
+                                    const normalizedDept = dept.replace(/^ฝ่าย|^แผนก/, '').trim()
+                                    const deptInPos = !!normalizedDept && pos.includes(normalizedDept)
+                                    const showDept = !!dept && !deptInPos
+                                    return (
+                                        <p className="text-white/75 text-[12px] mt-1 leading-snug break-words">
+                                            {pos}
+                                            {showDept && <span className="text-white/40 mx-1.5">·</span>}
+                                            {showDept && <span className="text-white/65">{dept}</span>}
+                                        </p>
+                                    )
+                                })()}
+                                {tenure && (
+                                    <p className="text-white/55 text-[11px] mt-1">อายุงาน {tenure}</p>
+                                )}
                                 {email && (
                                     <p className="text-white/55 text-[11px] mt-0.5 truncate">{email}</p>
                                 )}
