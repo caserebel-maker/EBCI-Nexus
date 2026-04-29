@@ -5,8 +5,9 @@ import Link from 'next/link'
 import useEmblaCarousel from 'embla-carousel-react'
 import Autoplay from 'embla-carousel-autoplay'
 import {
-    FileText, Clock, Calendar, MapPin, User, Bell, X, ChevronLeft, ChevronRight,
+    Calendar, MapPin, User, Bell, X, ChevronLeft, ChevronRight,
     AlertTriangle, AlertCircle, Info, Megaphone, UserCircle, Home, CalendarOff,
+    Palmtree, DoorOpen,
 } from 'lucide-react'
 import { DailyGreeting } from '@/components/daily-greeting'
 import type { AnnouncementItem, TodayCalendarEntry } from './page'
@@ -46,13 +47,17 @@ interface Props {
     todayCalendarEntry: TodayCalendarEntry | null
 }
 
+// "ยื่นใบลา" + "ดูสถานะลา" used to be two tiles that pointed at the same
+// /portal/leave page — confusing duplicate. Merged into one "การลา" tile
+// that's the single entry point for everything leave-related, freeing a
+// slot for "จองห้องประชุม" so the new feature is reachable in one tap.
 const SHORTCUTS = [
-    { label: 'โปรไฟล์',   icon: User,     href: '/portal/profile' },
-    { label: 'ยื่นใบลา',   icon: FileText,  href: '/portal/leave' },
-    { label: 'ดูสถานะลา', icon: Clock,     href: '/portal/leave' },
-    { label: 'ปฏิทิน',    icon: Calendar,  href: '/portal/calendar' },
-    { label: 'เช็คอิน',    icon: MapPin,    href: '/portal/checkin' },
-    { label: 'แจ้งเตือน', icon: Bell,      href: '/portal/notifications' },
+    { label: 'โปรไฟล์',       icon: User,     href: '/portal/profile' },
+    { label: 'การลา',          icon: Palmtree,  href: '/portal/leave' },
+    { label: 'ปฏิทิน',         icon: Calendar,  href: '/portal/calendar' },
+    { label: 'เช็คอิน',        icon: MapPin,    href: '/portal/checkin' },
+    { label: 'จองห้องประชุม', icon: DoorOpen,  href: '/portal/meeting-room' },
+    { label: 'แจ้งเตือน',     icon: Bell,      href: '/portal/notifications' },
 ]
 
 const GENDER_LEAVE_LABEL: Record<string, string> = {
