@@ -51,6 +51,12 @@ cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff
 
 ## 0. TL;DR ใน 30 วินาที
 
+**🔥 APR30 office morning — 2 commits (validation UX fix):**
+
+1. **ValidationToast component** (`61d8d80`) — reusable centred toast for client-side form errors. Maroon gradient + red border, 3s auto-dismiss with progress bar, hover pauses, X close, no backdrop close, fade+scale animation. `src/components/ui/validation-toast.tsx`.
+
+2. **Leave form validation UX** (`93fc519`) — fixes the bug ปุ๊ reported (clicked "ส่งใบลา" → "Error" with no detail). Vercel runtime logs were empty — root cause was client-side: next/submit buttons silently disabled when fields missing. Replaced silent-disable with validate-on-click + ValidationToast + per-input red-border highlight + scroll/focus to first errored field. errorFields cleared as soon as user types. Same form serves พักร้อน (single modal, type picked at step 1) so this single fix covers both flows.
+
 **🔥 APR29 office afternoon — 8 commits + 4-tester DB recovery:**
 
 1. **Supabase RLS advisor critical fix** — drop 9 policies ที่ใช้ `auth.jwt() -> user_metadata` (user-editable → bypass-able), retarget เหลือ 13 policies เป็น `TO anon, authenticated`. 0 public-role policies, 0 user_metadata refs เหลือใน pg_policies. Commit `f217337`.
@@ -87,10 +93,20 @@ Sidebar polish · password change UI · WFH days · permissions list · email au
 
 ---
 
-## 1. Commits ของ session นี้ (APR29 office afternoon)
+## 1. Commits ของ session นี้ (APR30 office morning)
 
 | # | Commit | Track | สรุป |
 |---|---|---|---|
+| 2 | `93fc519` | 🐛 Leave UX | validate-on-click + red borders + ValidationToast wired into leave form |
+| 1 | `61d8d80` | 🆕 UI | ValidationToast component (centred, 3s, hover-pause, X close) |
+
+## 1b. Commits ของ session ก่อน (APR29 office afternoon + Codex catch-up)
+
+| # | Commit | Track | สรุป |
+|---|---|---|---|
+| 13 | `9c735f4` | 📚 Docs | add `docs/BETA_FEEDBACK.md` (270 บรรทัด · §1 P0 ทั้ง 5 ข้อ) *(Codex)* |
+| 12 | `b1b3329` | 📚 Docs | update office handoff for payroll menu follow-up *(Codex)* |
+| 11 | `4da85a6` | 🔧 Payroll | nav fix — สุชาติเห็นเมนูสลิปไม่มีปุ่มสลับ HR + mobile nav ไม่หลุด *(Codex)* |
 | 10 | `64e4c4e` | 👤 Profile | gender required ตอนสร้างพนักงาน + แสดงบน /portal/profile |
 | 9 | `40f42ac` | 🩺 Audit | `/hradmin/leave/approval-audit` (§3.16 priority 1) |
 | 8 | `558c98b` | 🔐 Security | harden leave attachment uploads *(Codex)* |
@@ -428,7 +444,7 @@ EMAIL_FROM_CAREERS · EMAIL_FROM_HR · EMAIL_FROM_SYSTEM
 ## 5. Git + deploy state
 
 - **Repo:** `caserebel-maker/EBCI-Nexus`
-- **Last commit:** `64e4c4e` (gender required ตอนสร้าง + portal profile แสดง)
+- **Last commit:** `93fc519` (leave form validation UX — silent-disable → validate-on-click + ValidationToast)
 - **Vercel deploy:** auto — `https://ebci-nexus.vercel.app`
 - **Build:** ✓ TS clean (`tsc --noEmit` exit 0 ก่อน push); Vercel turbopack production build เคย fail รอบกลางวันเพราะ `'use server'` rule แต่ fix แล้ว (`522c313`)
 
