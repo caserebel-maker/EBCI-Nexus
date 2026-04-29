@@ -215,7 +215,7 @@ whether to update or layer fresh.
 | Key | Value |
 |---|---|
 | Repo | `github.com/caserebel-maker/EBCI-Nexus` |
-| Prod URL | `https://ebci-nexus.vercel.app` (alias: `https://nexus.ebcitrade.com`) |
+| Prod URL | `https://ebci-nexus.vercel.app` |
 | Dev URL | `localhost:3001` |
 | Supabase project | `cluirxjykhchthcpgosz` |
 | Vercel project | `prj_buArBae3HxOjH0wstTxZfZszCZT9` |

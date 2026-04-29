@@ -428,7 +428,7 @@ EMAIL_FROM_CAREERS · EMAIL_FROM_HR · EMAIL_FROM_SYSTEM
 
 - **Repo:** `caserebel-maker/EBCI-Nexus`
 - **Last commit:** `64e4c4e` (gender required ตอนสร้าง + portal profile แสดง)
-- **Vercel deploy:** auto — `https://nexus.ebcitrade.com`
+- **Vercel deploy:** auto — `https://ebci-nexus.vercel.app`
 - **Build:** ✓ TS clean (`tsc --noEmit` exit 0 ก่อน push); Vercel turbopack production build เคย fail รอบกลางวันเพราะ `'use server'` rule แต่ fix แล้ว (`522c313`)
 
 **Push pattern:** `git push origin HEAD:main`
