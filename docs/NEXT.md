@@ -5,32 +5,26 @@
 
 ---
 
-## 🔁 ที่เครื่องถัดไป — **OFFICE Mac mini · พรุ่งนี้เช้า 30 เม.ย.**
+## 🔁 ที่เครื่องถัดไป — **Laptop / Home · คืนนี้หรือพรุ่งนี้เช้า 30 เม.ย.**
 
 > **อ่านเฉพาะตอนเปิด Claude Code ที่เครื่องใหม่**
 
 **Step 1 — Pull ก่อน** (สำคัญสุด):
 ```bash
-cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff-only
+cd ~/C1TB/EB-CI/EBCI-Nexus && git pull origin main --ff-only
+```
+*(หรือถ้าใช้ laptop path อื่น แทน path ตามจริง)*
+
+**Step 2 — พิมพ์บอก Claude:**
+```
+อ่าน docs/NEXT.md แล้วทำต่อ — เริ่ม §3.16 priority 2: half-day + hourly leave rules. §3.16 priority 1 (approval chain audit) ทำเสร็จแล้วใน commit 40f42ac.
 ```
 
-**Step 2 — พิมพ์บอก Claude (เลือก 1 ใน 2):**
+**Step 3 — ตอบ Claude ว่าอยู่เครื่องไหน:** "อยู่ laptop" หรือ "อยู่ home"
 
-**A. ถ้า beta feedback เรื่องใบลาผ่านแล้วและอยากลุยต่อ:**
-```
-อ่าน docs/NEXT.md แล้วทำต่อ — เริ่ม §3.16 beta leave/attendance policy backlog ทีละเรื่อง: approval chain audit ก่อน แล้วค่อย half-day/hourly leave rules.
-```
+ถ้า Claude บอก local behind origin → รัน `git pull origin main --ff-only` อีกครั้งก่อนเริ่มงาน
 
-**B. ถ้ายังไม่ได้ส่ง credentials/run e2e:**
-```
-อ่าน docs/NEXT.md แล้วทำต่อ — ทำ §3.4 e2e bulk slip upload เป็นอันดับแรก (login suchat / EbciTest2026! → /hradmin/payroll/bulk → drop PDF dummy).
-```
-
-**Step 3 — ตอบ Claude ว่าอยู่เครื่องไหน:** "อยู่ office"
-
-ถ้า Claude บอก local behind origin → ให้รัน `git pull origin main --ff-only` อีกครั้งก่อนเริ่มงาน
-
-**📅 Reminder ตอน 7 โมงเช้า:** มี GCal event + Claude scheduled-task รออยู่
+**📅 Reminder ตอน 7 โมงเช้า 30 เม.ย.:** มี GCal event + Claude scheduled-task รออยู่
 
 ---
 
@@ -57,66 +51,60 @@ cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff
 
 ## 0. TL;DR ใน 30 วินาที
 
-**🔥 APR29 laptop morning + evening — 6 commits shipped:**
+**🔥 APR29 office afternoon — 8 commits + 4-tester DB recovery:**
 
-1. **มด's `User.id` divergent** จาก `auth.users.id` (`23a770e5…` ≠ `48d4b74a…`) → `getCurrentPermissions()` คืน `EMPTY_PERMISSIONS` ทุกครั้งเธอ login. **Pattern เดียวกับปอนด์ Apr 27 (commit `336f211`).** Fixed via realign + 2 FK refs updated. Migration `20260429_realign_arthit_user_id_to_auth_uuid.sql`. Commit `2d49dbe`.
+1. **Supabase RLS advisor critical fix** — drop 9 policies ที่ใช้ `auth.jwt() -> user_metadata` (user-editable → bypass-able), retarget เหลือ 13 policies เป็น `TO anon, authenticated`. 0 public-role policies, 0 user_metadata refs เหลือใน pg_policies. Commit `f217337`.
 
-2. **Payroll manager คือ ชาติ ไม่ใช่ ปุ๋ย** — auto-grant migration deleted, audit log clean. Authoritative: ชาติ has the flag, ปุ๋ย doesn't. Commits `2d49dbe` → `136863e`.
+2. **Meeting room booking system** — `/portal/meeting-room` Phase 1 (DB table + GiST exclusion + form) + Phase 2 (calendar badge + HR mirror). Phase 1 `ec701ee`, Phase 2 `9931003`. Build fix `522c313` (constants ออกจาก `'use server'` module). Mobile More entry `2b212fc`.
 
-3. **User-menu maroon panel** ที่ 77% opacity (เคยดำเข้มเกินไป). Commit `b357a86`.
+3. **Dashboard quick menu refactor** — รวม "ยื่นใบลา" + "ดูสถานะลา" → "การลา" และเพิ่ม "จองห้องประชุม". Commit `c553249`.
 
-4. **Middleware whitelist** `/hradmin/payroll/bulk` สำหรับ employee+manager role ที่ถือ `can_manage_payroll` flag — ไม่งั้น sidebar แสดง link แต่คลิกแล้ว redirect /portal. Commit `37cffab`.
+4. **§3.16 priority 1 done — Approval chain audit** — `/hradmin/leave/approval-audit` แสดง resolved approver chain ทุก active employee + flag 8 issue codes (NO_APPROVER, OVERRIDE_NOT_APPROVER, MANAGER_REPORTS_MISMATCH, ฯลฯ). Spot check: 9 NO_LINK_AT_ALL + 3 mismatch ใน 45 active. Commit `40f42ac`.
 
-5. **Profile leave balances** อ่านจาก Supabase แทน legacy Prisma (ทำให้ ชาติ เห็น 12 / 1 ตรง HR modal). Commit `13d566d`.
+5. **Gender on hire + portal profile** — new-employee form มีช่องเพศ (auto-sync จากคำนำหน้า) + portal profile แสดง คำนำหน้า/เพศ/วันเกิด. Commit `64e4c4e`.
 
-6. **Mobile More menu** เรียงตาม desktop sidebar order ครบ 3 roles + เพิ่ม ประกาศข่าวสาร/สลิปของฉัน + ลบ duplicate. Commit `206b405`.
+6. **🚨 Beta meeting incident — 4 testers login ไม่ได้** — ต่าย/ปุ๋ย/เบน/หนิง มี `employees.user_id` ชี้ไป auth.users.id ที่ไม่มีอยู่ (orphaned same pattern as ปอนด์ Apr 27 / มด Apr 29). แก้: cleanup auth.identities + auth.users (ผ่าน Supabase SQL Editor) → create auth ใหม่ → relink employees → UPDATE User.id. ตอนนี้ทั้ง 8 tester พร้อม login `EbciBeta2026!`.
 
-7. **Org chart** — ผู้บริหารระดับสูง section ขึ้นบน + เพิ่ม "ที่ปรึกษาแผนก" section ใหม่ (ชาติ จะโผล่พร้อมรูป). Commit `1048759`.
+**Plus จาก Codex (รวม push เดียว):**
+- `a70f303` — sign nexus session cookie (HMAC SHA-256, 7-day exp, signed signature verify ใน middleware + getSession)
+- `558c98b` — harden leave attachment uploads
 
-8. **Shell horizontal-overflow lock** ป้องกัน iOS rubber-band ลื่นซ้ายขวา. Commit `206b405`.
+**APR29 laptop morning + evening (รอบก่อน):**
+มด's User.id realign · payroll manager = ชาติ · user-menu opacity · middleware whitelist · profile leave balances · mobile More menu · org chart · shell overflow lock.
 
-📌 **Beta credentials ส่งให้ 7 testers พร้อม** — รหัสครบ + password policy block `EbciTest2026!`.
-
-**APR28 office (รอบก่อน ต่อจาก APR27→28 overnight):**
-
-ปิดงาน UX + ระบบใหญ่หลายชิ้นก่อน beta 5 คน:
-
-1. **Sidebar polish** — ซ่อน "อัปโหลดสลิปเงินเดือน" ใน /portal preview, gate "อนุมัติการลา" ด้วย `is_approver`, เพิ่ม "ปฏิทิน" + "ตั้งค่า" ใน portal sidebar
-2. **/portal/settings + เปลี่ยนรหัสผ่าน** — ลิงก์ "ลืมรหัสผ่าน?" ที่ /login ด้วย
-3. **WFH days** — `holidays.type='wfh'`, ปฏิทินบริษัท rename, banner บน dashboard
-4. **Permissions list** — กรองคนที่ไม่มี role/flag ออกจาก /hradmin/settings/permissions
-5. **Email noti audit** — สรุปทุก trigger ลงในแชต (ไม่มี code change)
-6. **Calendar contrast** — fix today pill จม + ตัวอักษรอ่านยาก
-7. **Checkin toast** — popup กลางจอ + ปุ่มปิด + auto-dismiss 5s
-8. **🆕 Backup feature** — `/hradmin/settings/backup` — ZIP ครบ data + storage + SYSTEM.md + MANIFEST.md
+**APR28 office (รอบก่อน):**
+Sidebar polish · password change UI · WFH days · permissions list · email audit · calendar contrast · checkin toast · 🆕 backup ZIP.
 
 **APR27→28 home overnight (รอบก่อน):**
+§3.2 ✅ Permission editor · §3.5 ✅ Print flat · §3.5b ✅ Audit · §3.3 ✅ ปุ๋ย · permission-driven menu.
 
-1. §3.2 ✅ Permission editor · 2. §3.5 ✅ Print flat layout
-3. §3.5b ✅ Audit pipeline · 4. §3.3 ✅ User ปุ๋ย
-5. 🆕 Permission-driven sidebar menu · 6. Pre-existing TS errors ✅
+**ที่เร่งด่วนที่สุดถัดไป:** **§3.16 priority 2 — Half-day + hourly leave rules** + ตามให้มดดู `/hradmin/leave/approval-audit` แล้วเซต approver ของพนักงานที่ flag เป็น critical.
 
-**ที่เร่งด่วนที่สุดถัดไป:** **§3.16 beta leave/attendance policy backlog** — approval chain audit + half-day/hourly leave rules. §3.4 payroll e2e ยังต้องทำ แต่ beta feedback ชี้ว่า leave flow สำคัญกว่าในตอนนี้.
+**⚠️ Lessons learned วันนี้:**
+- **MUST verify login ก่อนส่ง credentials list** — เคย credentials list ใน NEXT.md เก่าแต่ 4 testers จริงๆ login ไม่ได้ (orphaned auth) → user เสียหน้าในที่ประชุม. health-check SQL ใน §11 ของ NEXT.md ใหม่นี้ — รันก่อนทุกครั้งที่จะส่ง credentials.
+- **`'use server'` module ห้าม export non-async** (consts/types) — Next.js 16 strip ทั้ง module → "no exports at all" error. ต้องแยกไป `constants.ts`. แก้ใน commit `522c313`.
 
 ---
 
-## 1. Commits ของ session นี้
+## 1. Commits ของ session นี้ (APR29 office afternoon)
 
 | # | Commit | Track | สรุป |
 |---|---|---|---|
-| 9 | `a0a8347` | 🆕 Nav | permission-driven extra menu — payroll uploaders see one extra link |
-| 8 | `ba46170` | 🖨️ Print | strip card frames, hero stays framed (flat data layout) |
-| 7 | `b830ffa` | 📜 Audit | viewer ที่ /hradmin/settings/audit + nav link + 2 tabs |
-| 6 | `449a8f7` | 📜 Audit | wire updateEmployee → employee_audit_log + canViewAuditLog AuthCheck |
-| 5 | `3796dd1` | 📚 Docs | refresh NEXT + §16 SESSION_HISTORY |
-| 4 | `57c2893` | 🖨️ Print | 2-col grids บน print → personal+address ไม่ตก page 2 |
-| 3 | `9eccbd0` | ⚙️ Settings | link to permissions editor from /hradmin/settings |
-| 2 | `170d60f` | 🔐 Permissions | editor ที่ /hradmin/settings/permissions (page + view + actions) |
-| 1 | `123c290` | 🔐 Permissions | foundation — can_view_audit_log flag + user_permission_audit_log table |
+| 10 | `64e4c4e` | 👤 Profile | gender required ตอนสร้างพนักงาน + แสดงบน /portal/profile |
+| 9 | `40f42ac` | 🩺 Audit | `/hradmin/leave/approval-audit` (§3.16 priority 1) |
+| 8 | `558c98b` | 🔐 Security | harden leave attachment uploads *(Codex)* |
+| 7 | `a70f303` | 🔐 Security | sign nexus session cookie (HMAC SHA-256, 7-day) *(Codex)* |
+| 6 | `2b212fc` | 📱 Nav | จองห้องประชุม ใน mobile More panel (3 roles) |
+| 5 | `522c313` | 🔧 Fix | constants ออกจาก `'use server'` module — Vercel build pass |
+| 4 | `c553249` | 🏠 Dashboard | quick menu: รวม ยื่นใบลา+ดูสถานะลา + เพิ่ม จองห้องประชุม |
+| 3 | `9931003` | 🚪 Meeting room | Phase 2 — calendar badge + HR mirror page |
+| 2 | `ec701ee` | 🚪 Meeting room | Phase 1 — DB table + GiST exclusion + form |
+| 1 | `f217337` | 🔐 RLS | drop user_metadata-based policies, retarget public→authenticated |
 
-**+ DB-only:** ปุ๋ย User row + linkage (no commit, recorded in §18 SESSION_HISTORY)
-
-(9 ต่อจาก `336f211` admin User.id realign)
+**+ DB-only (ไม่ commit, อยู่ใน §19 SESSION_HISTORY ที่จะ append คืนนี้/พรุ่งนี้):**
+- Cleanup orphaned `auth.identities` + `auth.users` ของ ต่าย/ปุ๋ย/เบน/หนิง
+- Create auth.users ใหม่ + relink `employees.user_id` + UPDATE `User.id` ให้ตรงกับ auth_id ใหม่
+- Reset password ทั้ง 8 testers เป็น `EbciBeta2026!`
 
 ---
 
@@ -381,7 +369,7 @@ Verify this session:
 Feedback captured Apr 29 after beta:
 
 **Priority order recommended:**
-1. **Approval chain audit** — หลายคนยังไม่ผ่านผู้บังคับบัญชา. Build a page/report listing every active employee → `manager_id`, `leave_approver_id`, resolved approver chain, missing/odd routing. This is the next best task because wrong approvals break trust fastest.
+1. ✅ **DONE Apr 29 office afternoon** (`40f42ac`) — `/hradmin/leave/approval-audit`. Spot check: 9 NO_LINK_AT_ALL (1 ประธาน + 6 ที่ปรึกษา ที่ถูกต้อง + ชาติ + วสันต์ ที่ต้องเซต) + 3 mismatch ใน 45 active. **มดเปิดดู → ตามแก้คนที่ critical.**
 2. **Half-day + hourly leave rules** — clarify behavior:
    - ครึ่งวันเช้า: counts 0.5 day, should not require morning check-in; afternoon work/check-in logic needs policy
    - ครึ่งวันบ่าย: counts 0.5 day, morning check-in can still count
@@ -439,9 +427,9 @@ EMAIL_FROM_CAREERS · EMAIL_FROM_HR · EMAIL_FROM_SYSTEM
 ## 5. Git + deploy state
 
 - **Repo:** `caserebel-maker/EBCI-Nexus`
-- **Last commit:** `a0a8347` (permission-driven sidebar menu)
+- **Last commit:** `64e4c4e` (gender required ตอนสร้าง + portal profile แสดง)
 - **Vercel deploy:** auto — `https://nexus.ebcitrade.com`
-- **Build:** ✓ TS clean (0 errors after npm install · 8 "pre-existing" turned out to be stale node_modules)
+- **Build:** ✓ TS clean (`tsc --noEmit` exit 0 ก่อน push); Vercel turbopack production build เคย fail รอบกลางวันเพราะ `'use server'` rule แต่ fix แล้ว (`522c313`)
 
 **Push pattern:** `git push origin HEAD:main`
 
@@ -479,9 +467,52 @@ EMAIL_FROM_CAREERS · EMAIL_FROM_HR · EMAIL_FROM_SYSTEM
 
 ## 9. SESSION_HISTORY.md
 
-→ Append §16 entry (ดูใน `docs/SESSION_HISTORY.md`)
+→ §19 ของ APR28 office จะ append หลัง · §20 APR29 morning จะ append หลัง · §21 APR29 office afternoon จะ append คืนนี้/พรุ่งนี้
 
 ---
 
-*Generated APR28 dawn (overnight session ตามมาจาก APR27 night) · 9 commits + 1 DB seed · §3.1 + §3.2 + §3.3 + §3.5 ✅ · Last commit `a0a8347` · routes ~112*
-*Next session at ออฟฟิศ 7 โมง: §3.4 — login `wiyada/0000` แล้ว test bulk upload e2e.*
+## 10. Quirks ของ APR29 office afternoon
+
+1. **`'use server'` strict export rule** — Next.js 16 ห้าม export อะไรนอกจาก async function. Export const/interface แม้แต่ตัวเดียว → strip module ทั้งก้อน → "no exports at all" build error. แยกไป `constants.ts` คู่กัน. ดู commit `522c313`.
+2. **Supabase MCP transient outage** — `net::ERR_FAILED` ทุก execute_sql ประมาณ 30 นาทีระหว่างพยายาม fix 4-tester orphaned auth. แก้ workaround ด้วย Supabase SQL Editor ผ่าน dashboard.
+3. **Auth.users orphaned vs `users` filter** — `GET /auth/v1/admin/users?filter=email.eq.X` คืน `users:[]` เงียบๆ แต่ `POST /admin/users` กลับ "Database error checking email" 500 — เพราะ `auth.identities` ยังมี row ค้าง provider_id เดิม. fix: DELETE จาก auth.identities ก่อน auth.users (FK บังคับ order).
+4. **GiST exclusion + tstzrange** — `EXCLUDE USING gist (room_id WITH =, tstzrange(starts_at, ends_at, '[)') WITH &&) WHERE (cancelled_at IS NULL)` ต้อง `CREATE EXTENSION btree_gist` ก่อน เพราะ `=` operator on text ต้องการ index opclass ที่รวม btree + gist.
+5. **Approval audit reuses `resolveLeaveApprover` logic exactly** — ไม่ใช่ปรับ logic แต่ port มาเป็น in-memory walk เพื่อ avoid N+1 (45 employees × ~3 hops = ~135 DB calls → 1 call). ผลลัพธ์ตรงกับ submit-time ที่ใช้ `src/lib/leave-approval.ts`.
+
+---
+
+## 11. 🩺 Health-check SQL — รัน **ก่อน** ส่ง credentials list ทุกครั้ง
+
+**Lessons learned APR29 (เสียหน้าในที่ประชุม):** 4 testers ที่อยู่ใน credentials list login ไม่ได้เพราะ `employees.user_id` orphaned จาก auth.users. ก่อนส่ง list **ต้องรัน:**
+
+```sql
+-- รันใน Supabase SQL Editor (project cluirxjykhchthcpgosz)
+-- แทน [emails] ด้วยรายการ tester emails ที่จะส่ง credentials
+SELECT
+    e.email,
+    e.first_name_th || ' ' || e.last_name_th AS name,
+    CASE WHEN au.id IS NULL THEN '❌ NO AUTH' ELSE '✅' END as auth,
+    CASE WHEN u.id IS NULL THEN '❌ NO USER ROW' ELSE '✅' END as user_row,
+    u.role
+FROM employees e
+LEFT JOIN auth.users au ON au.id::text = e.user_id
+LEFT JOIN "User" u ON u.id = e.user_id
+WHERE e.email IN (
+    'thanawatana@ebcitrade.com',  -- จิม
+    'c.arthit@ebcitrade.com',     -- มด
+    'suchat@ebcitrade.com',       -- ชาติ
+    'kultmin1@gmail.com',         -- จอย
+    'siriwan@ebcitrade.com',      -- ต่าย
+    'ebci2006@ebcitrade.com',     -- ปุ๋ย (IT)
+    'theben2536@gmail.com',       -- เบน
+    'chanaporn@ebcitrade.com'     -- หนิง
+)
+ORDER BY e.email;
+```
+
+ถ้ามี ❌ ปุ่มไหน — **อย่าส่ง credentials** จนกว่าจะ fix ให้ครบ (recovery procedure ใน §11 ของ SESSION_HISTORY §21).
+
+---
+
+*Generated APR29 office afternoon · 8 source commits + 4-tester DB recovery · §3.16.1 ✅ · Last commit `64e4c4e` · routes +3 (`/portal/meeting-room`, `/hradmin/meeting-room`, `/hradmin/leave/approval-audit`)*
+*Next session ที่ laptop/home: §3.16 priority 2 — half-day + hourly leave rules.*

@@ -3012,3 +3012,126 @@ User reported beta feedback after testing. The immediate blocker was leave attac
 ## Recommended next task
 
 Approval chain audit. Beta feedback says several leave requests are not routing through the correct supervisor. Build a report/page that lists each active employee, their `manager_id`, `leave_approver_id`, resolved approval chain, and missing/odd routing.
+
+---
+
+# §21. APR29 (Office afternoon) — RLS hardening + Meeting room + Approval audit + Beta credentials incident
+
+## Commits shipped (10 total — 8 mine + 2 Codex)
+
+| # | Commit | Track | สรุป |
+|---|---|---|---|
+| 1 | `f217337` | 🔐 RLS | drop 9 user_metadata-based policies, retarget 13 to anon/authenticated. 0 public-role + 0 user_metadata refs verified. |
+| 2 | `ec701ee` | 🚪 Meeting room P1 | new `room_bookings` table (GiST exclusion gating overlap) + `/portal/meeting-room` page + 7-day horizon + sidebar entry |
+| 3 | `9931003` | 🚪 Meeting room P2 | calendar badge + day-detail popup listing + HR mirror at `/hradmin/meeting-room` |
+| 4 | `c553249` | 🏠 Dashboard | quick menu refactor — merge ยื่นใบลา+ดูสถานะลา → "การลา" + add "จองห้องประชุม" |
+| 5 | `522c313` | 🔧 Build fix | move ROOM_NAME / BOOKING_HORIZON_DAYS / RoomBooking type out of `'use server'` actions.ts → constants.ts; Vercel build started passing |
+| 6 | `2b212fc` | 📱 Nav | add จองห้องประชุม entry in mobile More panel for all 3 roles |
+| 7 | `a70f303` | 🔐 Codex | sign nexus session cookie (HMAC SHA-256, 7-day exp), middleware verify |
+| 8 | `558c98b` | 🔐 Codex | harden leave attachment uploads |
+| 9 | `40f42ac` | 🩺 Audit | `/hradmin/leave/approval-audit` (§3.16 priority 1) — 8 issue codes, in-memory chain walk |
+| 10 | `64e4c4e` | 👤 Profile | gender required ตอนสร้างพนักงาน + แสดง คำนำหน้า/เพศ/วันเกิด บน /portal/profile |
+
+## 1. RLS advisor critical fix (`f217337`)
+
+Supabase advisor sent email 27 Apr saying "Table publicly accessible" / "Sensitive data publicly accessible". Investigation found those alerts came from before APR28's RLS-on-14-tables migration and were actually resolved. **But the current advisor showed 8 ERROR-level findings** about policies referencing `auth.jwt() -> 'user_metadata' ->> 'role'`, which is end-user editable via `supabase.auth.updateUser({ data: { role: 'hr_admin' } })` — bypassable.
+
+Dropped 9 such policies (employees: 6, announcements: 2, leave_approvals: 1) and retargeted the remaining 13 from `TO public` to explicit `TO anon, authenticated` (or just `authenticated`). `applicants` INSERT keeps `anon, authenticated` for the careers form. App writes already go through `supabaseAdmin` (service_role bypass) so dropping policies didn't break any feature.
+
+Verified post-migration: `pg_policies` count of `'public' = ANY(roles)` = 0; count of `qual ILIKE '%user_metadata%'` = 0.
+
+## 2. Meeting room booking system (`ec701ee` + `9931003`)
+
+Mod was the single bottleneck for booking ห้องประชุมชั้น 2 — staff had to phone her to check availability. Built a service-role-only single-room booking system:
+
+**Schema** — `room_bookings(id, room_id default 'main', title, notes, attendees, starts_at, ends_at, booked_by_employee_id, booked_by_name, soft cancellation cols, created_at, updated_at)`. The double-booking guard is a Postgres `EXCLUDE USING gist` constraint — `room_id WITH =, tstzrange(starts_at, ends_at, '[)') WITH &&` — gated by `WHERE (cancelled_at IS NULL)`. Required `CREATE EXTENSION btree_gist` because the `=` operator on text needs the btree+gist combo.
+
+**Limits** server-side: 7-day horizon, 15 min minimum, 8 hr max, 200/500/1000 char caps for title/attendees/notes. Same-day only (no midnight crossing).
+
+**Pages:**
+- `/portal/meeting-room` — list 7-day queue + my bookings + booking modal. Cancel-own enabled; HR can cancel any (server-side check, not just UI).
+- `/hradmin/meeting-room` — mirror page in HR audit mode: 30 days back + 7 days forward, includes cancelled rows, hides "my bookings" section. Sidebar entry points here so click doesn't flip shell into employee preview mode (same pattern as /hradmin/notifications mirror).
+- `/portal/calendar` — gains a tiny cyan `⊞N` badge on day cells with bookings, popup lists each booking with time range + booker.
+
+## 3. Build fix — `'use server'` strict export (`522c313`)
+
+Vercel build failed for commits 2-4 with "The export listUpcomingBookings was not found in module" + "The module has no exports at all". Root cause: Next.js 16 enforces that every export from a `'use server'` module must be an async function. I had `export const ROOM_NAME`, `export const BOOKING_HORIZON_DAYS`, and `export interface RoomBooking` alongside the server actions. Next strips ALL exports when this rule is violated, not just the offending ones.
+
+Fix: created `src/app/portal/meeting-room/constants.ts` with the consts + types, kept actions.ts as async-only.
+
+**Lesson:** any helper file under `'use server'` must contain only async functions. Constants and types live in a sibling file, imported into the server module.
+
+## 4. §3.16 priority 1 — Approval chain audit (`40f42ac`)
+
+Per beta feedback: several leave requests routed to wrong approvers. Built `/hradmin/leave/approval-audit` page that runs the same `resolveLeaveApprover()` logic as `src/lib/leave-approval.ts` but in-memory across every active employee — single batched fetch (no N+1).
+
+**Issue codes flagged:**
+- `NO_APPROVER` (critical) — chain returns null
+- `NO_LINK_AT_ALL` (critical) — no manager_id, reports_to_id, or override
+- `OVERRIDE_NOT_APPROVER` (critical) — `leave_approver_id` points at non-approver
+- `OVERRIDE_BROKEN` (critical) — override target missing or inactive
+- `SELF_APPROVAL` (critical) — chain loops to self
+- `INACTIVE_APPROVER` (critical) — resolved approver is not active
+- `CYCLE` (critical) — chain hits a cycle
+- `MANAGER_REPORTS_MISMATCH` (warning) — `manager_id ≠ reports_to_id`
+
+**Spot check on 45 active:** 9 NO_LINK_AT_ALL (1 ประธาน + 6 ที่ปรึกษา = legitimately don't need an approver, plus ชาติ + วสันต์ = real gaps to fix) + 3 mismatches.
+
+## 5. Gender on hire + portal profile (`64e4c4e`)
+
+User flagged that ประวัติพนักงาน must include gender because dashboard surfaces ลาคลอด vs ลาบวช based on it. HR edit form had a gender select but new-employee form was missing it entirely → all new hires have NULL gender.
+
+Fix: added gender select (required) to new-employee form with auto-sync from title (นาย→male, นาง/นางสาว→female). Also added gender + date_of_birth + title to portal profile display so employees can sanity-check their own data.
+
+DB has 5 different values currently: `'หญิง'` (20), `'ชาย'` (16), `'male'` (5), `'female'` (3), NULL (1). Did NOT normalize because dashboard's `isFemale()` already handles all five forms via lowercase matching of multiple aliases. HR can decide later whether to migrate to a single canonical pair.
+
+## 6. 🚨 Beta meeting incident — 4 testers couldn't log in
+
+User started beta testing meeting and 4 of 8 testers got login failures. Root cause matched the same orphaned-auth pattern that hit ปอนด์ on Apr 27 and มด on Apr 29 morning: `employees.user_id` pointed at UUIDs that had no corresponding `auth.users` row. They had `User` table rows (so the permissions editor showed them) and `employees` rows (so HR list showed them) — but Supabase Auth had nothing.
+
+Specifically: ต่าย, ปุ๋ย (IT), เบน, หนิง.
+
+**Recovery procedure** (~5 min once Supabase MCP came back from a 30-min outage):
+1. **Cleanup orphaned shells** via Supabase SQL Editor:
+   ```sql
+   DELETE FROM auth.identities WHERE provider_id IN (<emails>);
+   DELETE FROM auth.users WHERE email IN (<emails>);
+   DELETE FROM auth.identities WHERE user_id IN (<orphan_ids>);
+   DELETE FROM auth.users WHERE id IN (<orphan_ids>);
+   ```
+   (FK between identities and users requires identities-first delete; the email-based pass catches identities with provider_id = email; the id-based pass catches identities with user_id = orphan parent id.)
+
+2. **Create fresh auth.users** via curl to `${SUPABASE_URL}/auth/v1/admin/users` with email + password + email_confirm:true.
+
+3. **Relink employees**: `PATCH /rest/v1/employees?email=eq.X { user_id: <new_auth_id> }`.
+
+4. **UPDATE User.id** to match new auth_id (User.id has unique constraint on username = email, so we update id rather than insert):
+   ```sql
+   UPDATE "User" SET id = '<new_auth_id>' WHERE username = '<email>';
+   ```
+
+After this, all 8 testers (จิม, มด, ชาติ, จอย, ต่าย, ปุ๋ย, เบน, หนิง) can log in with `EbciBeta2026!` and see their permissions.
+
+**🔴 Lesson — added health-check SQL to NEXT.md §11.** Before sending any credentials list, run the JOIN query that flags `❌ NO AUTH` and `❌ NO USER ROW`. The current divergence pattern keeps recurring (3 occurrences in 3 days now: ปอนด์ Apr 27, มด Apr 29 morning, 4 testers Apr 29 afternoon) — needs a code-side fix in the hire flow eventually so this stops happening organically.
+
+## 7. Codex contributions in this push (`a70f303` + `558c98b`)
+
+While I was working, Codex pushed two security commits I pulled before §3.16:
+- **Sign nexus session cookie** — HMAC SHA-256, 7-day exp, payload + sig in `v1.<base64url-payload>.<base64url-hmac>` shape; `getSession()` and middleware verify before trusting role. Secret resolution: `NEXUS_SESSION_SECRET` → `SESSION_COOKIE_SECRET` → fallback `SUPABASE_SERVICE_ROLE_KEY`. Tampered/invalid cookie → redirect /login + delete cookie.
+- **Harden leave attachment uploads** — added validation/limits in `src/api/leave/submit/route.ts` and `src/lib/leave-validations.ts`; sick-leave-3+-days requires medical certificate.
+
+## 8. Quirks worth carrying forward
+
+1. **Supabase MCP transient outage** — `net::ERR_FAILED` on every execute_sql for ~30 min mid-session. Recovered on its own. While down, raw curl to PostgREST + Supabase Auth Admin API kept working — a useful escape hatch.
+2. **`auth.users` filter vs create** — `GET /admin/users?filter=email.eq.X` returned `users:[]` cleanly, but `POST /admin/users` with the same email returned 500 "Database error checking email" because `auth.identities` had a row with that provider_id. Filter is happy, create is not. Always cleanup identities before create.
+3. **Approval audit logic must mirror submit logic byte-for-byte** — moved over to in-memory walk but kept the exact rules from `resolveLeaveApprover()` (override only wins when target is_approver=true; else fall through to chain; cap 10 hops; cycle-safe). Any drift would make the audit say "OK" while submit fails.
+
+## Recommended next task
+
+§3.16 priority 2 — **Half-day + hourly leave rules**. Beta feedback confirms ครึ่งวันเช้า / ครึ่งวันบ่าย / hourly need clearer behavior, especially the interaction with morning check-in. Affects leave submit form + balance accounting + attendance integration.
+
+---
+
+## Older sections deferred (will append later if needed)
+
+§19 (APR28 office) and §20 (APR29 morning + evening) entries are summarised in NEXT.md §0 TL;DR. The dedicated §19/§20 detail blocks were skipped to keep this archive append moving — if a future bug investigation needs the Apr 28-29 morning detail, the relevant context is in NEXT.md and the commits themselves (`b357a86`, `2d49dbe`, `136863e`, `37cffab`, `13d566d`, `206b405`, `1048759`).
