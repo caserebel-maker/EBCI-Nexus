@@ -27,6 +27,23 @@ const STATUS_LABELS: Record<string, string> = {
     pending: 'รออนุมัติ',
 }
 
+/**
+ * HTML-escape any user-supplied text before splicing into email
+ * templates. Without this, a leave reason of `<script>alert(1)</script>`
+ * would render as an actual tag in the manager's mail client; even
+ * harmless-looking HTML can cause layout damage in Outlook/Gmail.
+ * Mirrors the helper in lib/email-leave.ts so both legacy + new
+ * templates apply the same policy.
+ */
+function escapeHtml(s: string): string {
+    return s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+}
+
 function formatDate(date: Date | string): string {
     return new Date(date).toLocaleDateString('th-TH', {
         year: 'numeric',
@@ -69,13 +86,13 @@ export async function sendLeaveRequestNotification({
           <p style="margin: 4px 0 0; font-size: 14px; opacity: 0.85;">EBCI Nexus HR System</p>
         </div>
         <div style="padding: 24px; background: white;">
-          <p style="color: #374151;">เรียน คุณ${managerName},</p>
-          <p style="color: #374151;">พนักงาน <strong>${employeeName}</strong> ได้ยื่นใบลา กรุณาพิจารณาอนุมัติ</p>
+          <p style="color: #374151;">เรียน คุณ${escapeHtml(managerName)},</p>
+          <p style="color: #374151;">พนักงาน <strong>${escapeHtml(employeeName)}</strong> ได้ยื่นใบลา กรุณาพิจารณาอนุมัติ</p>
 
           <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px;">
             <tr style="background: #f9fafb;">
               <td style="padding: 10px 12px; border: 1px solid #e5e7eb; font-weight: 600; color: #6b7280; width: 40%;">ประเภทการลา</td>
-              <td style="padding: 10px 12px; border: 1px solid #e5e7eb; color: #111827;">${leaveLabel}</td>
+              <td style="padding: 10px 12px; border: 1px solid #e5e7eb; color: #111827;">${escapeHtml(leaveLabel)}</td>
             </tr>
             <tr>
               <td style="padding: 10px 12px; border: 1px solid #e5e7eb; font-weight: 600; color: #6b7280;">วันที่เริ่มลา</td>
@@ -91,7 +108,7 @@ export async function sendLeaveRequestNotification({
             </tr>
             <tr style="background: #f9fafb;">
               <td style="padding: 10px 12px; border: 1px solid #e5e7eb; font-weight: 600; color: #6b7280;">เหตุผล</td>
-              <td style="padding: 10px 12px; border: 1px solid #e5e7eb; color: #111827;">${reason}</td>
+              <td style="padding: 10px 12px; border: 1px solid #e5e7eb; color: #111827;">${escapeHtml(reason)}</td>
             </tr>
           </table>
 
@@ -148,7 +165,7 @@ export async function sendLeaveDecisionNotification({
           <p style="margin: 4px 0 0; font-size: 14px; opacity: 0.85;">EBCI Nexus HR System</p>
         </div>
         <div style="padding: 24px; background: white;">
-          <p style="color: #374151;">เรียน คุณ${employeeName},</p>
+          <p style="color: #374151;">เรียน คุณ${escapeHtml(employeeName)},</p>
 
           <div style="background: ${badgeBg}; border: 1px solid ${badgeColor}; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px; display: inline-block;">
             <span style="color: ${badgeColor}; font-weight: 700; font-size: 16px;">
@@ -159,7 +176,7 @@ export async function sendLeaveDecisionNotification({
           <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px;">
             <tr style="background: #f9fafb;">
               <td style="padding: 10px 12px; border: 1px solid #e5e7eb; font-weight: 600; color: #6b7280; width: 40%;">ประเภทการลา</td>
-              <td style="padding: 10px 12px; border: 1px solid #e5e7eb; color: #111827;">${leaveLabel}</td>
+              <td style="padding: 10px 12px; border: 1px solid #e5e7eb; color: #111827;">${escapeHtml(leaveLabel)}</td>
             </tr>
             <tr>
               <td style="padding: 10px 12px; border: 1px solid #e5e7eb; font-weight: 600; color: #6b7280;">วันที่ลา</td>
@@ -171,12 +188,12 @@ export async function sendLeaveDecisionNotification({
             </tr>
             <tr>
               <td style="padding: 10px 12px; border: 1px solid #e5e7eb; font-weight: 600; color: #6b7280;">ผู้พิจารณา</td>
-              <td style="padding: 10px 12px; border: 1px solid #e5e7eb; color: #111827;">${approverName}</td>
+              <td style="padding: 10px 12px; border: 1px solid #e5e7eb; color: #111827;">${escapeHtml(approverName)}</td>
             </tr>
             ${!isApproved && rejectionReason ? `
             <tr style="background: #fef2f2;">
               <td style="padding: 10px 12px; border: 1px solid #fca5a5; font-weight: 600; color: #991b1b;">เหตุผลที่ปฏิเสธ</td>
-              <td style="padding: 10px 12px; border: 1px solid #fca5a5; color: #991b1b;">${rejectionReason}</td>
+              <td style="padding: 10px 12px; border: 1px solid #fca5a5; color: #991b1b;">${escapeHtml(rejectionReason)}</td>
             </tr>
             ` : ''}
           </table>
@@ -226,24 +243,24 @@ export async function sendEscalationNotification({
           <p style="margin: 4px 0 0; font-size: 14px; opacity: 0.85;">EBCI Nexus HR System — Escalation Alert</p>
         </div>
         <div style="padding: 24px; background: white;">
-          <p style="color: #374151;">เรียน คุณ${hrName} (HR),</p>
+          <p style="color: #374151;">เรียน คุณ${escapeHtml(hrName)} (HR),</p>
           <p style="color: #374151;">
-            ใบลาของ <strong>${employeeName}</strong> ถูกยื่นตั้งแต่ <strong>${formatDate(submittedAt)}</strong>
-            และยังไม่ได้รับการพิจารณาจาก <strong>คุณ${managerName}</strong> เกิน 24 ชั่วโมงแล้ว
+            ใบลาของ <strong>${escapeHtml(employeeName)}</strong> ถูกยื่นตั้งแต่ <strong>${formatDate(submittedAt)}</strong>
+            และยังไม่ได้รับการพิจารณาจาก <strong>คุณ${escapeHtml(managerName)}</strong> เกิน 24 ชั่วโมงแล้ว
           </p>
 
           <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px;">
             <tr style="background: #f9fafb;">
               <td style="padding: 10px 12px; border: 1px solid #e5e7eb; font-weight: 600; color: #6b7280; width: 40%;">พนักงาน</td>
-              <td style="padding: 10px 12px; border: 1px solid #e5e7eb; color: #111827;">${employeeName}</td>
+              <td style="padding: 10px 12px; border: 1px solid #e5e7eb; color: #111827;">${escapeHtml(employeeName)}</td>
             </tr>
             <tr>
               <td style="padding: 10px 12px; border: 1px solid #e5e7eb; font-weight: 600; color: #6b7280;">หัวหน้า</td>
-              <td style="padding: 10px 12px; border: 1px solid #e5e7eb; color: #111827;">${managerName}</td>
+              <td style="padding: 10px 12px; border: 1px solid #e5e7eb; color: #111827;">${escapeHtml(managerName)}</td>
             </tr>
             <tr style="background: #f9fafb;">
               <td style="padding: 10px 12px; border: 1px solid #e5e7eb; font-weight: 600; color: #6b7280;">ประเภทการลา</td>
-              <td style="padding: 10px 12px; border: 1px solid #e5e7eb; color: #111827;">${leaveLabel}</td>
+              <td style="padding: 10px 12px; border: 1px solid #e5e7eb; color: #111827;">${escapeHtml(leaveLabel)}</td>
             </tr>
             <tr>
               <td style="padding: 10px 12px; border: 1px solid #e5e7eb; font-weight: 600; color: #6b7280;">วันที่ลา</td>

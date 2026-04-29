@@ -98,6 +98,20 @@ export async function sendEmail({ to, subject, html, sender = 'system', from }: 
     }
 }
 
+/**
+ * HTML-escape free-text fields before splicing into email templates.
+ * Same shape as the helpers in lib/leave-email.ts + lib/email-leave.ts;
+ * keeping a copy here avoids a circular import.
+ */
+function escapeHtml(s: string): string {
+    return s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+}
+
 // ─── Announcement email HTML builder ──────────────────────────────────────────
 export function buildAnnouncementEmail({
     priority,
@@ -117,14 +131,23 @@ export function buildAnnouncementEmail({
     const badgeLabel = isEmergency ? '🚨 ฉุกเฉิน' : '⚠️ ด่วน'
     const bannerBg = isEmergency ? '#7f1d1d' : '#78350f'
 
+    // Both headline + each content line are HR-supplied free text and
+    // get spliced into HTML; without escaping, an announcement body
+    // containing `</p><script>...` would inject markup straight into
+    // every recipient's mailbox. imageUrl is constructed server-side
+    // from a Supabase Storage object key so we don't escape the URL
+    // itself, but the alt= attribute reuses the headline so it has to
+    // be HTML-attribute-safe (escapeHtml covers that since " is in
+    // the replacement set).
+    const safeHeadline = escapeHtml(headline)
     const contentHtml = content
         .split('\n')
-        .map(line => `<p style="margin:0 0 8px 0;line-height:1.7;color:#374151;">${line}</p>`)
+        .map(line => `<p style="margin:0 0 8px 0;line-height:1.7;color:#374151;">${escapeHtml(line)}</p>`)
         .join('')
 
     const imageBlock = imageUrl
         ? `<div style="margin:24px 0;">
-               <img src="${imageUrl}" alt="${headline}"
+               <img src="${imageUrl}" alt="${safeHeadline}"
                     style="width:100%;max-height:360px;object-fit:cover;border-radius:8px;display:block;" />
            </div>`
         : ''
@@ -158,7 +181,7 @@ export function buildAnnouncementEmail({
           <td style="padding:32px;">
 
             <!-- Headline -->
-            <h1 style="margin:0 0 20px;font-size:24px;font-weight:800;color:${accentColor};line-height:1.3;">${headline}</h1>
+            <h1 style="margin:0 0 20px;font-size:24px;font-weight:800;color:${accentColor};line-height:1.3;">${safeHeadline}</h1>
 
             <!-- Alert badge -->
             <div style="display:inline-block;background:${accentLight};border:1px solid ${accentColor}33;border-radius:6px;padding:6px 14px;margin-bottom:20px;">
