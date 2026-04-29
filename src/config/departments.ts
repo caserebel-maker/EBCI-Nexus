@@ -32,7 +32,9 @@ export const DEPARTMENTS = [
     'โครงการJOHNSON',
     'โครงการเฉพาะกิจ',
     'แผนกการตลาดและการขาย',
-    'แผนกโครงการเฉพาะกิจ',
+    // 'แผนกโครงการเฉพาะกิจ' removed 2026-04-29 — duplicate of
+    // 'โครงการเฉพาะกิจ' above; the "แผนก" prefixed variant had zero
+    // active employees and was a leftover from an earlier import.
     'แผนกตรวจปล่อย - ส่งออก',
     'แผนกทำฟอร์ม',
     'แผนกธุรการ - แม่บ้าน',
