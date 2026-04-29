@@ -476,9 +476,11 @@ function DonutCard({
                         className="fixed inset-0 z-40"
                         onClick={onClose}
                     />
-                    {/* Panel — positioned above the donut */}
+                    {/* Panel — positioned above the donut. Bumped width
+                        52 → 64 so the larger text inside doesn't wrap
+                        (เลขานุการบริหาร / มาสายในปีนี้ are tight at 52). */}
                     <div
-                        className="absolute z-50 bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-52 p-4"
+                        className="absolute z-50 bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-64 p-4"
                         style={popupGlass}
                     >
                         {popupContent}
@@ -500,10 +502,14 @@ function DonutCard({
 }
 
 function PopupRow({ label, value, color }: { label: string; value: string; color?: string }) {
+    // Bumped 12/13 → 15/16 for older staff (Mod's note: บริษัทนี้คนแก่
+    // เยอะ). text-white/55 also pushed up to /75 so the label isn't
+    // washed out at the larger size. py-1 between rows so the popup
+    // doesn't feel cramped after the size bump.
     return (
-        <div className="flex items-center justify-between gap-2">
-            <span className="text-white/55" style={{ fontSize: '12px' }}>{label}</span>
-            <span className="font-bold" style={{ fontSize: '13px', color: color ?? 'white' }}>{value}</span>
+        <div className="flex items-center justify-between gap-3 py-1">
+            <span className="text-white/75" style={{ fontSize: '15px' }}>{label}</span>
+            <span className="font-bold" style={{ fontSize: '16px', color: color ?? 'white' }}>{value}</span>
         </div>
     )
 }
@@ -606,7 +612,7 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
                         onClose={() => setOpenPopup(null)}
                         popupContent={
                             <div className="space-y-2">
-                                <p className="text-white font-bold mb-2" style={{ fontSize: '13px' }}>การมาสาย</p>
+                                <p className="text-white font-bold mb-3" style={{ fontSize: '17px' }}>การมาสาย</p>
                                 <PopupRow label="มาสายในปีนี้"     value={`${lateCount} ครั้ง`}  color="#F87171" />
                                 <PopupRow label="วันทำงานทั้งหมด"  value={`${workingDays} วัน`} />
                                 <PopupRow label="มาตรงเวลา"       value={`${onTimeDays} วัน`}   color="#34D399" />
@@ -628,7 +634,7 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
                         onClose={() => setOpenPopup(null)}
                         popupContent={
                             <div className="space-y-2">
-                                <p className="text-white font-bold mb-2" style={{ fontSize: '13px' }}>วันลาคงเหลือ</p>
+                                <p className="text-white font-bold mb-3" style={{ fontSize: '17px' }}>วันลาคงเหลือ</p>
                                 <PopupRow label="พักร้อน" value={`${annualRem} วัน`}   color="#34D399" />
                                 <PopupRow label="ป่วย"    value={`${sickRem} วัน`}     color="#60A5FA" />
                                 <PopupRow label="กิจ"     value={`${personalRem} วัน`} color="#FBBF24" />
