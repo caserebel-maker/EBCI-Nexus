@@ -231,7 +231,13 @@ export async function POST(request: Request) {
         const name: string = meta.name ?? meta.full_name ?? data.user.email ?? 'User'
         const employeeId: string | undefined = meta.employeeId ?? undefined
 
-        const sessionData = await createSessionCookie({ id: data.user.id, role, name, employeeId })
+        const sessionData = await createSessionCookie({
+            id: data.user.id,
+            role,
+            name,
+            email: data.user.email ?? emailLower,
+            employeeId,
+        })
         const cookieStore = await cookies()
         // sameSite='lax' is the modern default in major browsers, but
         // an explicit value is the safer call: it locks CSRF protection

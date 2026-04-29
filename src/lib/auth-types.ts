@@ -5,5 +5,6 @@ export interface SessionUser {
     id: string
     role: 'hr_admin' | 'manager' | 'employee'
     name: string
+    email?: string
     employeeId?: string // linked employee record id
 }

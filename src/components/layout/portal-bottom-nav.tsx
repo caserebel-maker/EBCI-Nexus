@@ -123,22 +123,37 @@ async function handleLogout() {
     window.location.href = '/login'
 }
 
-export function PortalBottomNav() {
+export function PortalBottomNav({ canManagePayroll = false }: { canManagePayroll?: boolean }) {
     const role = useRole()
     const pathname = usePathname()
     const [moreOpen, setMoreOpen] = useState(false)
 
-    const navItems = pathname?.startsWith('/hradmin')
-        ? HR_ADMIN_NAV_HRADMIN
-        : NAV_CONFIG.employee
-    // HR Admin in /portal mode = preview-as-employee. The More menu
-    // there should match a regular employee's so the experience reads
-    // consistently; the admin shortcuts live in the topbar user-menu
-    // dropdown and one-click toggle "กลับเป็น HR Admin" gets them back
-    // to /hradmin where the full admin More menu lives.
-    const moreItems = pathname?.startsWith('/hradmin')
-        ? MORE_CONFIG.hr_admin
+    const isHrAdminMode = role === 'hr_admin' && pathname?.startsWith('/hradmin')
+    const baseMoreItems = role === 'manager'
+        ? MORE_CONFIG.manager
         : MORE_CONFIG.employee
+    const payrollMoreItems: MoreItem[] = canManagePayroll
+        ? [
+            {
+                label: 'อัปโหลดสลิปเงินเดือน',
+                desc: 'สำหรับผู้ดูแลเงินเดือน',
+                href: '/hradmin/payroll/bulk',
+                icon: Wallet,
+                accent: 'blue',
+                groupLabel: 'เงินเดือน',
+            },
+        ]
+        : []
+
+    const navItems = isHrAdminMode
+        ? HR_ADMIN_NAV_HRADMIN
+        : (role === 'manager' ? NAV_CONFIG.manager : NAV_CONFIG.employee)
+    // Only true HR admins get the admin mobile menu. Payroll-manager
+    // employees like สุชาติ may visit /hradmin/payroll/bulk, but their
+    // nav should remain a normal employee nav with one extra payroll item.
+    const moreItems = isHrAdminMode
+        ? MORE_CONFIG.hr_admin
+        : [...payrollMoreItems, ...baseMoreItems]
 
     const isNavActive = (item: NavItem) =>
         item.exact ? pathname === item.href : pathname?.startsWith(item.href)

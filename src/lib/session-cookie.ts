@@ -63,6 +63,10 @@ function isSessionUser(value: unknown): value is SessionUser {
             || candidate.role === 'employee'
         )
         && (
+            candidate.email === undefined
+            || typeof candidate.email === 'string'
+        )
+        && (
             candidate.employeeId === undefined
             || typeof candidate.employeeId === 'string'
         )
@@ -117,6 +121,7 @@ export async function verifySessionCookie(cookieValue: string | undefined | null
             id: payload.id,
             role: payload.role,
             name: payload.name,
+            ...(payload.email ? { email: payload.email } : {}),
             ...(payload.employeeId ? { employeeId: payload.employeeId } : {}),
         }
     } catch {
