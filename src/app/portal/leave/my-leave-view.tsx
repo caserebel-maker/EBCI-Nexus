@@ -7,6 +7,30 @@ import {
     Palmtree, User, Heart, GraduationCap, Cross, Send,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ValidationToast } from '@/components/ui/validation-toast'
+
+// ── Validation field IDs + Thai labels ────────────────────────────────────────
+// Used by both validate() and the per-input red-border styling so the toast
+// list and the highlighted inputs stay consistent without duplicating labels.
+type FieldId = 'leaveType' | 'startDate' | 'endDate' | 'reason' | 'approver' | 'attachment'
+
+const FIELD_LABEL: Record<FieldId, string> = {
+    leaveType: 'ประเภทการลา',
+    startDate: 'วันที่เริ่มลา',
+    endDate: 'วันที่สิ้นสุดลา',
+    reason: 'เหตุผลการลา',
+    approver: 'ผู้บังคับบัญชา',
+    attachment: 'เอกสารใบรับรองแพทย์',
+}
+
+const FIELD_STEP: Record<FieldId, 1 | 2 | 3> = {
+    leaveType: 1,
+    startDate: 2,
+    endDate: 2,
+    reason: 2,
+    approver: 2,
+    attachment: 3,
+}
 
 // ── Types (mirror API responses) ──────────────────────────────────────────────
 interface BalanceEntry {
@@ -674,6 +698,22 @@ function NewLeaveModal({
     const [submitting, startSubmitTransition] = useTransition()
     const [err, setErr] = useState<string | null>(null)
 
+    // Client-side validation state. errorFields drives the red border on
+    // individual inputs; missingFields + validationOpen drive the centred
+    // toast. Both stay in sync via validate() + clearFieldError().
+    const [validationOpen, setValidationOpen] = useState(false)
+    const [missingFields, setMissingFields] = useState<string[]>([])
+    const [errorFields, setErrorFields] = useState<Set<FieldId>>(new Set())
+
+    const clearFieldError = useCallback((id: FieldId) => {
+        setErrorFields((prev) => {
+            if (!prev.has(id)) return prev
+            const next = new Set(prev)
+            next.delete(id)
+            return next
+        })
+    }, [])
+
     // Fetch the approval chain once when the modal opens. This is
     // read-only — the form just shows the user where the request will
     // route. The actual chain that fires at submit time is computed
@@ -712,7 +752,117 @@ function NewLeaveModal({
     const attachmentRequired = requiresAttachmentForSelection(selectedType, totalDays)
     const canSubmit = canGoStep3 && (!attachmentRequired || !!attachment)
 
+    /**
+     * Run validation across the fields owned by `scope`.
+     *  - 'submit'  → all fields, every step
+     *  - step 1/2/3 → only fields owned by that step
+     *
+     * Returns a triple: {missing, errorIds, customMessages}. customMessages
+     * are non-field errors (date order, balance overflow) that get pushed
+     * into the toast list so they display alongside the missing fields,
+     * still flagging the relevant input via errorIds.
+     */
+    const validate = useCallback((scope: 'submit' | 1 | 2 | 3): {
+        ok: boolean
+        missing: string[]
+        errorIds: Set<FieldId>
+    } => {
+        const inScope = (id: FieldId) => scope === 'submit' || FIELD_STEP[id] === scope
+        const missing: string[] = []
+        const errorIds = new Set<FieldId>()
+
+        const need = (id: FieldId, condition: boolean, label?: string) => {
+            if (!inScope(id)) return
+            if (condition) {
+                errorIds.add(id)
+                missing.push(label ?? FIELD_LABEL[id])
+            }
+        }
+
+        need('leaveType', !selectedTypeId)
+        need('startDate', !startDate)
+        need('endDate', !endDate)
+        need('reason', !reason.trim())
+
+        // approverChain === null means "still loading" — don't block on it
+        // (otherwise users on slow networks see a phantom error). Empty
+        // array means HR genuinely hasn't wired the chain.
+        if (inScope('approver') && approverChain !== null && approverChain.length === 0) {
+            errorIds.add('approver')
+            missing.push('ผู้บังคับบัญชา (กรุณาแจ้ง HR ตั้งผู้บังคับบัญชาก่อน)')
+        }
+
+        // End < start: surface as a custom message so it doesn't read as
+        // "missing" in the toast (the field IS filled, just wrong order).
+        if (inScope('endDate') && startDate && endDate && new Date(endDate) < new Date(startDate)) {
+            errorIds.add('endDate')
+            errorIds.add('startDate')
+            missing.push('วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่ม')
+        }
+
+        // Days exceed remaining balance.
+        if (inScope('endDate') && selectedType && !selectedType.is_unlimited && totalDays > selectedType.remaining_days && totalDays > 0) {
+            errorIds.add('startDate')
+            errorIds.add('endDate')
+            missing.push(`วันลาที่ขอเกินจำนวนที่เหลือ (เหลือ ${selectedType.remaining_days} วัน)`)
+        }
+
+        // Sick leave 3+ days requires attachment. Use scope===submit OR
+        // step===3 so step-2 transition doesn't yell about a step-3 field.
+        if ((scope === 'submit' || scope === 3) && attachmentRequired && !attachment) {
+            errorIds.add('attachment')
+            if (selectedType?.leave_type_id === 'sick' && totalDays >= 3) {
+                missing.push('ลาป่วย 3 วันขึ้นไป ต้องแนบใบรับรองแพทย์')
+            } else {
+                missing.push(FIELD_LABEL.attachment)
+            }
+        }
+
+        return { ok: missing.length === 0, missing, errorIds }
+    }, [selectedTypeId, startDate, endDate, reason, approverChain, selectedType, totalDays, attachmentRequired, attachment])
+
+    /** After a failed validate(): apply the red borders, open the toast,
+     *  and scroll/focus the first errored field after a tick (so the
+     *  step-jump renders before we look up its DOM). */
+    const showValidationFailure = useCallback((missing: string[], errorIds: Set<FieldId>) => {
+        setErrorFields(errorIds)
+        setMissingFields(missing)
+        setValidationOpen(true)
+        // Find the first field by step order so we jump to the lowest-step
+        // missing field — same heuristic the user expects when reading the
+        // toast top-to-bottom.
+        const order: FieldId[] = ['leaveType', 'startDate', 'endDate', 'reason', 'approver', 'attachment']
+        const first = order.find(id => errorIds.has(id))
+        if (!first) return
+        const targetStep = FIELD_STEP[first]
+        setStep(targetStep as NewLeaveStep)
+        // Wait two frames: one for the step swap, one for the input mount.
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            const el = document.querySelector<HTMLElement>(`[data-field="${first}"]`)
+            if (!el) return
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            const focusable = el.matches('input,textarea,select,button')
+                ? el
+                : el.querySelector<HTMLElement>('input,textarea,select,button')
+            focusable?.focus({ preventScroll: true })
+        }))
+    }, [])
+
+    const handleNext = () => {
+        const result = validate(step as 1 | 2 | 3)
+        if (!result.ok) {
+            showValidationFailure(result.missing, result.errorIds)
+            return
+        }
+        setStep((s) => (s < 4 ? ((s + 1) as NewLeaveStep) : s))
+    }
+
     const handleSubmit = () => {
+        const result = validate('submit')
+        if (!result.ok) {
+            showValidationFailure(result.missing, result.errorIds)
+            return
+        }
         if (!selectedType) return
         setErr(null)
         const form = new FormData()
@@ -770,18 +920,29 @@ function NewLeaveModal({
                 </div>
 
                 <div className="p-5 sm:p-6 space-y-5">
-                    {step === 1 && <Step1TypePicker balances={balances} selectedId={selectedTypeId} onSelect={setSelectedTypeId} />}
+                    {step === 1 && (
+                        <Step1TypePicker
+                            balances={balances}
+                            selectedId={selectedTypeId}
+                            onSelect={(id) => { setSelectedTypeId(id); clearFieldError('leaveType') }}
+                            errored={errorFields.has('leaveType')}
+                        />
+                    )}
                     {step === 2 && selectedType && (
                         <Step2Dates
                             type={selectedType}
-                            startDate={startDate} setStartDate={setStartDate}
-                            endDate={endDate} setEndDate={setEndDate}
+                            startDate={startDate}
+                            setStartDate={(v) => { setStartDate(v); clearFieldError('startDate'); clearFieldError('endDate') }}
+                            endDate={endDate}
+                            setEndDate={(v) => { setEndDate(v); clearFieldError('endDate') }}
                             isHalfDay={isHalfDay} setIsHalfDay={setIsHalfDay}
                             halfDayPeriod={halfDayPeriod} setHalfDayPeriod={setHalfDayPeriod}
-                            reason={reason} setReason={setReason}
+                            reason={reason}
+                            setReason={(v) => { setReason(v); clearFieldError('reason') }}
                             contact={contact} setContact={setContact}
                             totalDays={totalDays}
                             approverChain={approverChain}
+                            errorFields={errorFields}
                         />
                     )}
                     {step === 3 && selectedType && (
@@ -789,7 +950,8 @@ function NewLeaveModal({
                             type={selectedType}
                             totalDays={totalDays}
                             file={attachment}
-                            onFile={setAttachment}
+                            onFile={(f) => { setAttachment(f); if (f) clearFieldError('attachment') }}
+                            errored={errorFields.has('attachment')}
                         />
                     )}
                     {step === 4 && selectedType && (
@@ -824,16 +986,12 @@ function NewLeaveModal({
                     {step < 4 ? (
                         <button
                             type="button"
-                            onClick={() => {
-                                if (step === 1 && !canGoStep2) return
-                                if (step === 2 && !canGoStep3) return
-                                setStep(((step + 1) as NewLeaveStep))
-                            }}
-                            disabled={
-                                submitting
-                                || (step === 1 && !canGoStep2)
-                                || (step === 2 && !canGoStep3)
-                            }
+                            // No `disabled` here — the validate-on-click flow
+                            // surfaces a toast with the missing fields, which
+                            // is far clearer than a silently disabled button
+                            // (the original ปุ๊ bug).
+                            onClick={handleNext}
+                            disabled={submitting}
                             className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-black text-sm font-bold active:scale-95"
                         >
                             ถัดไป
@@ -843,7 +1001,10 @@ function NewLeaveModal({
                         <button
                             type="button"
                             onClick={handleSubmit}
-                            disabled={!canSubmit || submitting}
+                            // Same reasoning as the ถัดไป button: keep the
+                            // submit clickable so validate() can run and tell
+                            // the user exactly what's missing.
+                            disabled={submitting}
                             className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-black text-sm font-bold active:scale-95"
                         >
                             {submitting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
@@ -852,20 +1013,39 @@ function NewLeaveModal({
                     )}
                 </div>
             </div>
+
+            <ValidationToast
+                open={validationOpen}
+                onClose={() => setValidationOpen(false)}
+                title="กรอกข้อมูลยังไม่ครบ"
+                missingFields={missingFields}
+            />
         </div>
     )
 }
 
 // ── Step 1: type picker ──────────────────────────────────────────────────────
 function Step1TypePicker({
-    balances, selectedId, onSelect,
+    balances, selectedId, onSelect, errored,
 }: {
     balances: BalanceEntry[]
     selectedId: string | null
     onSelect: (id: string) => void
+    /** When true, the grid gets a red ring so the user sees they need
+     *  to pick a type before continuing. Cleared as soon as one is picked. */
+    errored?: boolean
 }) {
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div
+            data-field="leaveType"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-xl"
+            style={errored ? {
+                padding: 8,
+                margin: -8,
+                border: '2px solid #ef4444',
+                boxShadow: '0 0 0 3px rgba(239,68,68,0.2)',
+            } : undefined}
+        >
             {balances.map(b => {
                 const Icon = LEAVE_ICON[b.leave_type_id] ?? CalendarDays
                 const disabled = !b.is_unlimited && b.remaining_days <= 0
@@ -924,7 +1104,7 @@ function Step2Dates({
     type, startDate, setStartDate, endDate, setEndDate,
     isHalfDay, setIsHalfDay, halfDayPeriod, setHalfDayPeriod,
     reason, setReason, contact, setContact, totalDays,
-    approverChain,
+    approverChain, errorFields,
 }: {
     type: BalanceEntry
     startDate: string
@@ -941,6 +1121,9 @@ function Step2Dates({
     setContact: (v: string) => void
     totalDays: number
     approverChain: ApproverChainStep[] | null
+    /** Per-field validation errors. Drives the red border on each input
+     *  and lets the parent's scroll target [data-field] queries hit. */
+    errorFields: Set<FieldId>
 }) {
     const today = todayBangkokIso()
     const minDate = type.leave_type_id === 'sick'
@@ -964,12 +1147,27 @@ function Step2Dates({
                 where the request will go before submitting. The actual
                 chain is computed again server-side at submit time, so
                 this is a read-only preview. */}
-            <ApproverChainBox chain={approverChain} />
+            <ApproverChainBox chain={approverChain} errored={errorFields.has('approver')} />
 
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <DateField label="วันที่เริ่ม" value={startDate} onChange={(v) => { setStartDate(v); if (isHalfDay) setEndDate(v) }} min={minDate} max={maxDate} />
-                <DateField label="วันที่สิ้นสุด" value={endDate} onChange={setEndDate} min={startDate || minDate} max={maxDate} disabled={isHalfDay} />
+                <DateField
+                    label="วันที่เริ่ม"
+                    fieldId="startDate"
+                    value={startDate}
+                    onChange={(v) => { setStartDate(v); if (isHalfDay) setEndDate(v) }}
+                    min={minDate} max={maxDate}
+                    errored={errorFields.has('startDate')}
+                />
+                <DateField
+                    label="วันที่สิ้นสุด"
+                    fieldId="endDate"
+                    value={endDate}
+                    onChange={setEndDate}
+                    min={startDate || minDate} max={maxDate}
+                    disabled={isHalfDay}
+                    errored={errorFields.has('endDate')}
+                />
             </div>
 
             {startDate && endDate && (
@@ -1015,11 +1213,18 @@ function Step2Dates({
                     เหตุผลในการลา <span className="text-red-300">*</span>
                 </span>
                 <textarea
+                    data-field="reason"
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     rows={3}
                     placeholder="ระบุเหตุผลประกอบการขอลา"
-                    className="mt-1.5 w-full rounded-lg bg-black/25 border border-white/15 text-white text-sm px-3 py-2 focus:outline-none focus:border-amber-300/50"
+                    className={cn(
+                        'mt-1.5 w-full rounded-lg bg-black/25 text-white text-sm px-3 py-2 focus:outline-none transition-colors',
+                        errorFields.has('reason')
+                            ? 'border-2 border-red-500 focus:border-red-400'
+                            : 'border border-white/15 focus:border-amber-300/50',
+                    )}
+                    style={errorFields.has('reason') ? { boxShadow: '0 0 0 3px rgba(239,68,68,0.2)' } : undefined}
                 />
             </label>
 
@@ -1039,7 +1244,7 @@ function Step2Dates({
     )
 }
 
-function ApproverChainBox({ chain }: { chain: ApproverChainStep[] | null }) {
+function ApproverChainBox({ chain, errored }: { chain: ApproverChainStep[] | null; errored?: boolean }) {
     // Loading: show a quiet placeholder so the form doesn't jump as
     // soon as the modal opens. We never block the user on this fetch.
     if (chain === null) {
@@ -1055,7 +1260,16 @@ function ApproverChainBox({ chain }: { chain: ApproverChainStep[] | null }) {
     // submitting (otherwise the request will route to no one).
     if (chain.length === 0) {
         return (
-            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-100 text-xs inline-flex items-start gap-2 w-full">
+            <div
+                data-field="approver"
+                className={cn(
+                    'p-3 rounded-lg text-xs inline-flex items-start gap-2 w-full',
+                    errored
+                        ? 'bg-red-500/15 border-2 border-red-500 text-red-100'
+                        : 'bg-amber-500/10 border border-amber-500/30 text-amber-100',
+                )}
+                style={errored ? { boxShadow: '0 0 0 3px rgba(239,68,68,0.2)' } : undefined}
+            >
                 <AlertCircle size={13} className="mt-0.5 shrink-0" />
                 <span>
                     <strong>ยังไม่มีผู้อนุมัติในระบบ</strong> — กรุณาแจ้งฝ่ายบุคคล (HR) ตั้งผู้บังคับบัญชาให้ก่อนยื่นใบลา ไม่เช่นนั้นระบบจะไม่รู้ว่าจะส่งใบลาไปหาใคร
@@ -1095,26 +1309,35 @@ function ApproverChainBox({ chain }: { chain: ApproverChainStep[] | null }) {
 }
 
 function DateField({
-    label, value, onChange, min, max, disabled,
+    label, fieldId, value, onChange, min, max, disabled, errored,
 }: {
     label: string
+    fieldId?: string
     value: string
     onChange: (v: string) => void
     min?: string
     max?: string
     disabled?: boolean
+    errored?: boolean
 }) {
     return (
         <label className="block">
             <span className="text-[11px] uppercase tracking-wider text-white/55 font-bold">{label}</span>
             <input
                 type="date"
+                data-field={fieldId}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 min={min}
                 max={max}
                 disabled={disabled}
-                className="mt-1.5 w-full h-11 px-3 rounded-lg bg-black/25 border border-white/15 text-white text-sm focus:outline-none focus:border-amber-300/50 disabled:opacity-60"
+                className={cn(
+                    'mt-1.5 w-full h-11 px-3 rounded-lg bg-black/25 text-white text-sm focus:outline-none disabled:opacity-60 transition-colors',
+                    errored
+                        ? 'border-2 border-red-500 focus:border-red-400'
+                        : 'border border-white/15 focus:border-amber-300/50',
+                )}
+                style={errored ? { boxShadow: '0 0 0 3px rgba(239,68,68,0.2)' } : undefined}
             />
         </label>
     )
@@ -1122,12 +1345,13 @@ function DateField({
 
 // ── Step 3: attachment ───────────────────────────────────────────────────────
 function Step3Attachment({
-    type, totalDays, file, onFile,
+    type, totalDays, file, onFile, errored,
 }: {
     type: BalanceEntry
     totalDays: number
     file: File | null
     onFile: (f: File | null) => void
+    errored?: boolean
 }) {
     const ref = useRef<HTMLInputElement>(null)
     const required = requiresAttachmentForSelection(type, totalDays)
@@ -1185,8 +1409,15 @@ function Step3Attachment({
             ) : (
                 <button
                     type="button"
+                    data-field="attachment"
                     onClick={() => ref.current?.click()}
-                    className="w-full p-6 rounded-lg border-2 border-dashed border-white/20 hover:border-amber-300/40 bg-white/5 text-white/70 text-sm flex flex-col items-center gap-2 transition-all"
+                    className={cn(
+                        'w-full p-6 rounded-lg border-2 border-dashed bg-white/5 text-white/70 text-sm flex flex-col items-center gap-2 transition-all',
+                        errored
+                            ? 'border-red-500 hover:border-red-400'
+                            : 'border-white/20 hover:border-amber-300/40',
+                    )}
+                    style={errored ? { boxShadow: '0 0 0 3px rgba(239,68,68,0.2)' } : undefined}
                 >
                     <UploadCloud size={24} />
                     คลิกเพื่อเลือกไฟล์
