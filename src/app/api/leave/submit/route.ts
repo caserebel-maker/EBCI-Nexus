@@ -4,7 +4,6 @@ import { getSession } from '@/lib/auth'
 import { resolveSessionEmployeeId } from '@/lib/session-employee'
 import {
     bangkokTodayIso,
-    calculateLeaveDays,
     validateLeaveRequest,
 } from '@/lib/leave-validations'
 import {
@@ -23,8 +22,52 @@ export const dynamic = 'force-dynamic'
 const BUCKET = 'leave-attachments'
 const MAX_ATTACHMENT = 5 * 1024 * 1024 // 5MB per spec
 const ALLOWED_MIME = new Set([
-    'application/pdf', 'image/jpeg', 'image/png', 'image/webp',
+    'application/pdf',
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+    'image/heic',
+    'image/heif',
+    'application/octet-stream',
 ])
+const ALLOWED_EXT = new Set(['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'])
+const CONTENT_TYPE_BY_EXT: Record<string, string> = {
+    pdf: 'application/pdf',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    heic: 'image/heic',
+    heif: 'image/heif',
+}
+
+function getSafeAttachmentMeta(file: File): { ext: string; contentType: string } | { error: string } {
+    const ext = (file.name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+    if (!ext || !ALLOWED_EXT.has(ext)) {
+        return { error: 'รองรับเฉพาะ PDF, JPG, PNG, WEBP, HEIC หรือ HEIF' }
+    }
+    if (file.type && !ALLOWED_MIME.has(file.type)) {
+        return { error: `ประเภทไฟล์ไม่รองรับ (${file.type})` }
+    }
+    return {
+        ext,
+        contentType: CONTENT_TYPE_BY_EXT[ext] ?? (file.type || 'application/octet-stream'),
+    }
+}
+
+async function cleanupFailedRequest(args: {
+    leaveRequestId: string
+    uploadedPath?: string | null
+}) {
+    const jobs: Array<Promise<unknown>> = [
+        Promise.resolve(supabaseAdmin.from('leave_requests').delete().eq('id', args.leaveRequestId)),
+    ]
+    if (args.uploadedPath) {
+        jobs.push(supabaseAdmin.storage.from(BUCKET).remove([args.uploadedPath]))
+    }
+    await Promise.allSettled(jobs)
+}
 
 /**
  * POST /api/leave/submit — multipart/form-data
@@ -80,13 +123,16 @@ export async function POST(req: NextRequest) {
     if (!leaveType) return NextResponse.json({ error: 'ประเภทลาไม่ถูกต้อง' }, { status: 400 })
 
     // Attachment pre-check (we don't upload yet — validate first to avoid orphaned files)
+    let attachmentMeta: { ext: string; contentType: string } | null = null
     if (attachment && attachment.size > 0) {
         if (attachment.size > MAX_ATTACHMENT) {
             return NextResponse.json({ error: 'ไฟล์ใหญ่เกิน 5 MB' }, { status: 413 })
         }
-        if (attachment.type && !ALLOWED_MIME.has(attachment.type)) {
-            return NextResponse.json({ error: `ประเภทไฟล์ไม่รองรับ (${attachment.type})` }, { status: 415 })
+        const meta = getSafeAttachmentMeta(attachment)
+        if ('error' in meta) {
+            return NextResponse.json({ error: meta.error }, { status: 415 })
         }
+        attachmentMeta = meta
     }
 
     // Validate business rules
@@ -162,25 +208,47 @@ export async function POST(req: NextRequest) {
     let attachmentUrl: string | null = null
     let attachmentName: string | null = null
     if (attachment && attachment.size > 0) {
-        const ext = (attachment.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '')
-        const safe = `attachment-${Date.now()}.${ext}`
+        const meta = attachmentMeta ?? getSafeAttachmentMeta(attachment)
+        if ('error' in meta) {
+            await cleanupFailedRequest({ leaveRequestId })
+            return NextResponse.json({ error: meta.error }, { status: 415 })
+        }
+        const safe = `attachment-${Date.now()}.${meta.ext}`
         const path = `${employeeId}/${leaveRequestId}/${safe}`
+        const fileBytes = await attachment.arrayBuffer()
         const { error: upErr } = await supabaseAdmin.storage
             .from(BUCKET)
-            .upload(path, attachment, { upsert: true, contentType: attachment.type || undefined })
+            .upload(path, fileBytes, { upsert: true, contentType: meta.contentType })
         if (upErr) {
             console.error('[leave/submit] attachment upload failed:', upErr)
-            // Still persist the request — user can re-upload later
+            await cleanupFailedRequest({ leaveRequestId })
+            return NextResponse.json({
+                error: `อัปโหลดไฟล์แนบไม่สำเร็จ — ${upErr.message}`,
+            }, { status: 500 })
         } else {
-            const { data: signed } = await supabaseAdmin.storage
+            const { data: signed, error: signErr } = await supabaseAdmin.storage
                 .from(BUCKET)
                 .createSignedUrl(path, 60 * 60 * 24 * 30)
+            if (signErr || !signed?.signedUrl) {
+                console.error('[leave/submit] attachment signed-url failed:', signErr)
+                await cleanupFailedRequest({ leaveRequestId, uploadedPath: path })
+                return NextResponse.json({
+                    error: `สร้างลิงก์ไฟล์แนบไม่สำเร็จ — ${signErr?.message ?? 'no signed URL'}`,
+                }, { status: 500 })
+            }
             attachmentUrl = signed?.signedUrl ?? null
             attachmentName = attachment.name
-            await supabaseAdmin
+            const { error: attachUpdateErr } = await supabaseAdmin
                 .from('leave_requests')
                 .update({ attachment_url: attachmentUrl, attachment_name: attachmentName })
                 .eq('id', leaveRequestId)
+            if (attachUpdateErr) {
+                console.error('[leave/submit] attachment metadata update failed:', attachUpdateErr)
+                await cleanupFailedRequest({ leaveRequestId, uploadedPath: path })
+                return NextResponse.json({
+                    error: `บันทึกข้อมูลไฟล์แนบไม่สำเร็จ — ${attachUpdateErr.message}`,
+                }, { status: 500 })
+            }
         }
     }
 

@@ -2963,3 +2963,52 @@ User asked Codex to continue from the same repo/folder after Claude Code work, t
 ## Follow-up
 
 Set `NEXUS_SESSION_SECRET` in Vercel as a random 32+ byte value. Current code falls back to `SUPABASE_SERVICE_ROLE_KEY` so production should keep working, but a dedicated secret is cleaner and safer long-term.
+
+---
+
+# §20 — APR29 Codex Session: beta leave attachment fix + policy capture
+
+## Summary
+
+User reported beta feedback after testing. The immediate blocker was leave attachment upload: ปุ๊ tried attaching a medical certificate and got an error; annual leave attachment also failed. User also clarified sick-leave policy: **medical certificate required only for sick leave of 3+ days**.
+
+## What changed
+
+1. **Backend leave attachment handling** (`src/app/api/leave/submit/route.ts`)
+   - Accepts PDF/JPG/JPEG/PNG/WEBP/HEIC/HEIF.
+   - Allows `application/octet-stream` when filename extension is allowed, covering some mobile/browser uploads.
+   - Uploads via `attachment.arrayBuffer()` instead of passing the `File` object directly.
+   - If upload, signed-url creation, or metadata update fails, it now rolls back the inserted `leave_requests` row and any uploaded blob, then returns a clear error. This avoids a pending leave request with a missing attachment.
+
+2. **Sick certificate policy** (`src/lib/leave-validations.ts`)
+   - Added `requiresLeaveAttachment()` and `leaveAttachmentDescription()`.
+   - Sick leave requires attachment only when `totalDays >= 3`.
+   - Other leave types still use `leave_types.requires_attachment`.
+
+3. **Employee leave UI** (`src/app/portal/leave/my-leave-view.tsx`)
+   - Step 1/3 copy now explains: sick leave needs a certificate only at 3+ days.
+   - Submit button requires a file only when the selected leave + duration requires it.
+   - File picker accepts HEIC/HEIF and validates extension + 5MB size client-side.
+
+4. **Handoff docs**
+   - `docs/NEXT.md` now has §3.5c for this fix.
+   - Added §3.16 beta leave/attendance policy backlog in recommended priority order.
+
+## Verification
+
+- Checked Supabase `leave-attachments` bucket exists.
+- Smoke-tested direct upload/sign/remove to `leave-attachments` via service role: OK.
+- `npx eslint src/app/api/leave/submit/route.ts src/lib/leave-validations.ts src/app/portal/leave/my-leave-view.tsx` ✅
+- `npx tsc --noEmit` ✅
+- `npm run build` ✅
+
+## Beta retest checklist
+
+1. Sick leave 1-2 days without attachment should submit if other rules pass.
+2. Sick leave 3+ days without attachment should block with medical-certificate message.
+3. Sick leave 3+ days with PDF/JPG/HEIC should submit and show file link in detail/inbox.
+4. Annual leave with optional PDF/JPG/HEIC should submit; if upload fails, no orphan pending leave should remain.
+
+## Recommended next task
+
+Approval chain audit. Beta feedback says several leave requests are not routing through the correct supervisor. Build a report/page that lists each active employee, their `manager_id`, `leave_approver_id`, resolved approval chain, and missing/odd routing.

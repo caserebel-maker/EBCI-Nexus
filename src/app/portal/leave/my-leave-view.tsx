@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import {
     CalendarDays, Plus, CheckCircle2, XCircle, Clock, Ban, Loader2, AlertCircle,
-    X, ChevronRight, ChevronLeft, UploadCloud, Paperclip, Eye, Info,
+    X, ChevronRight, ChevronLeft, UploadCloud, Paperclip, Info,
     Palmtree, User, Heart, GraduationCap, Cross, Send,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -62,6 +62,26 @@ const LEAVE_ICON: Record<string, typeof Palmtree> = {
     marriage: Heart,
     bereavement: Cross,
     training: GraduationCap,
+}
+
+function requiresAttachmentForSelection(type: BalanceEntry | null, totalDays: number): boolean {
+    if (!type) return false
+    if (type.leave_type_id === 'sick') return totalDays >= 3
+    return !!type.requires_attachment
+}
+
+function attachmentHint(type: BalanceEntry, totalDays: number): string {
+    if (type.leave_type_id === 'sick') {
+        return totalDays >= 3
+            ? 'ลาป่วยตั้งแต่ 3 วันขึ้นไป ต้องแนบใบรับรองแพทย์'
+            : 'ลาป่วยไม่เกิน 2 วัน แนบใบรับรองแพทย์ได้ถ้ามี แต่ไม่บังคับ'
+    }
+    if (type.requires_attachment) {
+        return type.attachment_description
+            ? `ต้องแนบเอกสาร — ${type.attachment_description}`
+            : 'ประเภทนี้ต้องแนบเอกสารประกอบ'
+    }
+    return 'เอกสารแนบเป็น optional — ข้ามไปยังขั้นตอนถัดไปได้'
 }
 
 // ── Small style tokens ────────────────────────────────────────────────────────
@@ -689,7 +709,8 @@ function NewLeaveModal({
 
     const canGoStep2 = !!selectedType && (selectedType.is_unlimited || selectedType.remaining_days > 0)
     const canGoStep3 = !!startDate && !!endDate && !!reason.trim() && totalDays > 0
-    const canSubmit = canGoStep3 && (!selectedType?.requires_attachment || !!attachment)
+    const attachmentRequired = requiresAttachmentForSelection(selectedType, totalDays)
+    const canSubmit = canGoStep3 && (!attachmentRequired || !!attachment)
 
     const handleSubmit = () => {
         if (!selectedType) return
@@ -766,6 +787,7 @@ function NewLeaveModal({
                     {step === 3 && selectedType && (
                         <Step3Attachment
                             type={selectedType}
+                            totalDays={totalDays}
                             file={attachment}
                             onFile={setAttachment}
                         />
@@ -872,7 +894,11 @@ function Step1TypePicker({
                                 {!b.same_day_allowed && b.leave_type_id === 'sick' && (
                                     <p className="text-[11px] text-rose-200">ต้องเป็นวันที่ผ่านไปแล้ว</p>
                                 )}
-                                {b.requires_attachment && (
+                                {b.leave_type_id === 'sick' ? (
+                                    <p className="text-[11px] text-sky-200 inline-flex items-center gap-1 mt-0.5">
+                                        <Paperclip size={10} /> ใบรับรองแพทย์เมื่อป่วย ≥ 3 วัน
+                                    </p>
+                                ) : b.requires_attachment && (
                                     <p className="text-[11px] text-sky-200 inline-flex items-center gap-1 mt-0.5">
                                         <Paperclip size={10} /> ต้องแนบเอกสาร
                                     </p>
@@ -1096,23 +1122,24 @@ function DateField({
 
 // ── Step 3: attachment ───────────────────────────────────────────────────────
 function Step3Attachment({
-    type, file, onFile,
+    type, totalDays, file, onFile,
 }: {
     type: BalanceEntry
+    totalDays: number
     file: File | null
     onFile: (f: File | null) => void
 }) {
     const ref = useRef<HTMLInputElement>(null)
-    const required = !!type.requires_attachment
+    const required = requiresAttachmentForSelection(type, totalDays)
     return (
         <div className="space-y-3">
             <div className="p-3 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-100 text-xs inline-flex items-start gap-2 w-full">
                 <Paperclip size={13} className="mt-0.5 shrink-0" />
                 <span>
                     {required ? (
-                        <>ประเภทนี้ <strong>ต้องแนบเอกสาร</strong>{type.attachment_description ? ` — ${type.attachment_description}` : ''}</>
+                        <>ประเภทนี้ <strong>ต้องแนบเอกสาร</strong> — {attachmentHint(type, totalDays)}</>
                     ) : (
-                        <>เอกสารแนบเป็น optional — ข้ามไปยังขั้นตอนถัดไปได้</>
+                        <>{attachmentHint(type, totalDays)}</>
                     )}
                 </span>
             </div>
@@ -1120,11 +1147,23 @@ function Step3Attachment({
             <input
                 ref={ref}
                 type="file"
-                accept=".pdf,image/png,image/jpeg,image/webp"
+                accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf"
                 className="hidden"
                 onChange={(e) => {
                     const f = e.target.files?.[0]
-                    if (f) onFile(f)
+                    if (!f) return
+                    const ext = (f.name.split('.').pop() ?? '').toLowerCase()
+                    if (!['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'].includes(ext)) {
+                        alert('รองรับเฉพาะ PDF, JPG, PNG, WEBP, HEIC หรือ HEIF')
+                        e.currentTarget.value = ''
+                        return
+                    }
+                    if (f.size > 5 * 1024 * 1024) {
+                        alert('ไฟล์ใหญ่เกิน 5 MB')
+                        e.currentTarget.value = ''
+                        return
+                    }
+                    onFile(f)
                 }}
             />
             {file ? (
@@ -1151,7 +1190,7 @@ function Step3Attachment({
                 >
                     <UploadCloud size={24} />
                     คลิกเพื่อเลือกไฟล์
-                    <span className="text-[11px] text-white/45">PDF / JPG / PNG · ไม่เกิน 5 MB</span>
+                    <span className="text-[11px] text-white/45">PDF / JPG / PNG / WEBP / HEIC · ไม่เกิน 5 MB</span>
                 </button>
             )}
         </div>

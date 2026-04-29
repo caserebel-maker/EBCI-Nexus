@@ -16,9 +16,9 @@ cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff
 
 **Step 2 — พิมพ์บอก Claude (เลือก 1 ใน 2):**
 
-**A. ถ้า beta launch แล้วและอยากลุย security ต่อ:**
+**A. ถ้า beta feedback เรื่องใบลาผ่านแล้วและอยากลุยต่อ:**
 ```
-อ่าน docs/NEXT.md แล้วทำต่อ — เริ่ม §3.14 XSS audit (sweep dangerouslySetInnerHTML + email templates + URL whitelisting). ถ้าเร็วเสร็จ ลุย §3.15 cookie hardening ต่อ.
+อ่าน docs/NEXT.md แล้วทำต่อ — เริ่ม §3.16 beta leave/attendance policy backlog ทีละเรื่อง: approval chain audit ก่อน แล้วค่อย half-day/hourly leave rules.
 ```
 
 **B. ถ้ายังไม่ได้ส่ง credentials/run e2e:**
@@ -96,7 +96,7 @@ cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff
 3. §3.5b ✅ Audit pipeline · 4. §3.3 ✅ User ปุ๋ย
 5. 🆕 Permission-driven sidebar menu · 6. Pre-existing TS errors ✅
 
-**ที่เร่งด่วนที่สุดถัดไป:** **§3.4 Test bulk salary slip upload e2e** + แจกบัญชี 5 testers + ทดสอบ /portal/settings + iPhone smoke test
+**ที่เร่งด่วนที่สุดถัดไป:** **§3.16 beta leave/attendance policy backlog** — approval chain audit + half-day/hourly leave rules. §3.4 payroll e2e ยังต้องทำ แต่ beta feedback ชี้ว่า leave flow สำคัญกว่าในตอนนี้.
 
 ---
 
@@ -197,6 +197,36 @@ Verify อีกที: `/hradmin/employees/[id]` → ควรเห็นก�
 แต่ละแถว expandable → ดู diff per field/flag · note + reason แสดงด้วย
 
 Gated: `can_view_audit_log || can_manage_system || legacy hr_admin role`
+
+### 3.5c ✅ Beta fix: leave attachment upload + sick certificate rule — DONE Apr 29 Codex
+
+User beta feedback: ปุ๊แนบใบรับรองแพทย์แล้ว error; พักร้อนแนบไฟล์ก็ error. Also clarified company policy: **ลาป่วยตั้งแต่ 3 วันขึ้นไปต้องแนบใบรับรองแพทย์; ไม่เกิน 2 วันไม่ต้องแนบ**.
+
+Code changes:
+- `src/lib/leave-validations.ts`
+  - added `requiresLeaveAttachment()` and `leaveAttachmentDescription()`
+  - sick leave requires attachment only when `totalDays >= 3`
+  - other leave types still follow `leave_types.requires_attachment`
+- `src/app/portal/leave/my-leave-view.tsx`
+  - Step 1/3 copy now explains sick certificate threshold
+  - submit button only requires file when the selected leave + day count requires it
+  - accepts PDF/JPG/PNG/WEBP/HEIC/HEIF and client-checks 5MB limit before submit
+- `src/app/api/leave/submit/route.ts`
+  - accepts iPhone/phone-ish uploads: HEIC/HEIF + `application/octet-stream` when extension is allowed
+  - uploads via `attachment.arrayBuffer()` for server-side Supabase reliability
+  - if upload/sign-url/metadata update fails, rolls back the inserted leave request + uploaded blob and returns a clear error instead of leaving a pending leave with missing attachment
+
+Verified:
+- Supabase bucket `leave-attachments` exists and smoke upload/sign/remove works
+- `npx eslint src/app/api/leave/submit/route.ts src/lib/leave-validations.ts src/app/portal/leave/my-leave-view.tsx` ✅
+- `npx tsc --noEmit` ✅
+- `npm run build` ✅
+
+Need beta retest:
+1. ลาป่วย 1-2 วัน without attachment → should submit if other rules pass
+2. ลาป่วย 3+ วัน without attachment → blocked with medical certificate message
+3. ลาป่วย 3+ วัน with PDF/JPG/HEIC → should submit + file link visible in detail/inbox
+4. พักร้อน with optional PDF/JPG/HEIC → should submit, and if upload fails user gets explicit error and no orphan pending leave
 
 ### 3.6 **Phase 2 Profile** (deferred) — 2-3 ชม.
 
@@ -345,6 +375,29 @@ Estimate: 1-2 hr (audit + fix obvious holes; DOMPurify ถ้าจำเป็�
 Verify this session:
 - `npx tsc --noEmit` ✅
 - `npm run build` ✅ (ยังมี warning เดิม: Next 16 ไม่รองรับ `eslint` key ใน `next.config.ts`, และ `middleware` convention deprecated → proxy)
+
+### 3.16 ⭐ Beta leave/attendance policy backlog — do one at a time
+
+Feedback captured Apr 29 after beta:
+
+**Priority order recommended:**
+1. **Approval chain audit** — หลายคนยังไม่ผ่านผู้บังคับบัญชา. Build a page/report listing every active employee → `manager_id`, `leave_approver_id`, resolved approver chain, missing/odd routing. This is the next best task because wrong approvals break trust fastest.
+2. **Half-day + hourly leave rules** — clarify behavior:
+   - ครึ่งวันเช้า: counts 0.5 day, should not require morning check-in; afternoon work/check-in logic needs policy
+   - ครึ่งวันบ่าย: counts 0.5 day, morning check-in can still count
+   - ลาไม่เต็มวัน/hourly: decide minimum increment, especially personal leave
+3. **Attendance integration** — approved leave should exempt check-in/absent marking. Pending leave should not.
+4. **Comp day / holiday swap** — people working on holidays should get compensatory day-off balance, not file a normal leave request.
+5. **Policy center** — readable policy pages in-app (`/portal/policies` + HR editor later), plus contextual snippets in leave form.
+6. **Benefit wallet** — welfare balances for employee + children: used/remaining, claims history. New module; do after leave/attendance stabilizes.
+7. **Attendance reward streak** — 3/6/9/12 month no leave/no absent/no late progress bar on profile. Good idea, but only after late/absent logic is trusted.
+8. **Draft leave form** — autosave draft, resume later.
+9. **Cancel approved leave** — pending can cancel directly; approved should become a cancellation request/HR-approved reversal.
+10. **Password memory** — don't store/remember passwords in-app. Improve forgot-password, consider OTP/passkey/Telegram later.
+11. **Office check-in direction** — don't remove office check-in yet. Consider simplifying later after WFH/Telegram workflow is proven.
+
+Email notification note from beta:
+- User prefers: **approve first, then notify** to avoid spam. Review submit/approval email policy before rollout. Current submit route still sends email to employee + approver on submission; consider moving some notices to in-app only until final approval.
 
 ### B. รอข้อมูลจาก HR
 - B5 มด review `EBCI-employees-review.xlsx`

@@ -18,6 +18,17 @@ export type ValidationResult =
     | { ok: true; totalDays: number }
     | { ok: false; field?: string; error: string }
 
+export function requiresLeaveAttachment(leaveType: LeaveType, totalDays: number): boolean {
+    if (leaveType.id === 'sick') return totalDays >= 3
+    return leaveType.requires_attachment === true
+}
+
+export function leaveAttachmentDescription(leaveType: LeaveType, totalDays: number): string | null {
+    if (!requiresLeaveAttachment(leaveType, totalDays)) return null
+    if (leaveType.id === 'sick') return 'ใบรับรองแพทย์สำหรับการลาป่วยตั้งแต่ 3 วันขึ้นไป'
+    return leaveType.attachment_description ?? null
+}
+
 // ── Date helpers ───────────────────────────────────────────────────────────
 /** parses YYYY-MM-DD as an arithmetic epoch-day to avoid timezone surprises */
 function toEpochDay(d: string): number {
@@ -147,10 +158,15 @@ export async function validateLeaveRequest(
         }
     }
 
-    // Rule 5 — required attachment
-    if (leaveType.requires_attachment && !hasAttachment) {
-        const note = leaveType.attachment_description
-            ? ` — ${leaveType.attachment_description}`
+    const totalDays = calculateLeaveDays(startDate, endDate, isHalfDay)
+
+    // Rule 5 — required attachment. Sick leave is a special company
+    // policy: medical certificate is required only when total leave is
+    // 3 days or more. Other leave types follow leave_types.requires_attachment.
+    if (requiresLeaveAttachment(leaveType, totalDays) && !hasAttachment) {
+        const description = leaveAttachmentDescription(leaveType, totalDays)
+        const note = description
+            ? ` — ${description}`
             : ''
         return {
             ok: false,
@@ -158,8 +174,6 @@ export async function validateLeaveRequest(
             error: `ประเภทนี้ต้องแนบเอกสารประกอบ${note}`,
         }
     }
-
-    const totalDays = calculateLeaveDays(startDate, endDate, isHalfDay)
 
     // Rule 6 — balance (skip for unlimited types)
     if (!leaveType.is_unlimited) {
