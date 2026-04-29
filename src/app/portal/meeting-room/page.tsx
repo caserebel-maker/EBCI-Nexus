@@ -1,0 +1,31 @@
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { getSession } from '@/lib/auth'
+import { listUpcomingBookings, listMyBookings, ROOM_NAME, BOOKING_HORIZON_DAYS } from './actions'
+import { MeetingRoomView } from './meeting-room-view'
+
+export const dynamic = 'force-dynamic'
+
+export default async function MeetingRoomPage() {
+    const cookieStore = await cookies()
+    if (!cookieStore.get('nexus_session')?.value) redirect('/login')
+
+    const session = await getSession()
+    if (!session) redirect('/login')
+
+    const [upcoming, mine] = await Promise.all([
+        listUpcomingBookings(),
+        listMyBookings(),
+    ])
+
+    return (
+        <MeetingRoomView
+            roomName={ROOM_NAME}
+            horizonDays={BOOKING_HORIZON_DAYS}
+            upcoming={upcoming}
+            mine={mine}
+            currentEmployeeId={session.employeeId ?? null}
+            isHrAdmin={session.role === 'hr_admin'}
+        />
+    )
+}

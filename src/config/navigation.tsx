@@ -2,7 +2,7 @@ import {
     LayoutDashboard, Users, UserCircle, FileText, Settings, Megaphone,
     CalendarDays, ClipboardCheck, ShieldCheck, CalendarOff, MapPin, Network, Palmtree,
     Activity, ScrollText, BarChart3, Clock, Calendar, Briefcase, User,
-    Gift, Wallet, CheckCircle, Database,
+    Gift, Wallet, CheckCircle, Database, DoorOpen,
 } from 'lucide-react'
 import { ROLES, type UserRole } from './roles'
 
@@ -99,6 +99,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         { label: 'อนุมัติการลา', href: '/portal/leave/inbox', icon: ClipboardCheck },
         { label: 'ผังองค์กร', href: '/portal/organization', icon: Network },
         { label: 'ปฏิทิน', href: '/portal/calendar', icon: Calendar },
+        { label: 'จองห้องประชุม', href: '/portal/meeting-room', icon: DoorOpen },
         { label: 'dashboard.announcements', href: '/portal/announcements', icon: Megaphone },
         { label: 'ตั้งค่า', href: '/portal/settings', icon: Settings },
     ],
@@ -113,6 +114,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         // inbox menu item.
         { label: 'ผังองค์กร', href: '/portal/organization', icon: Network },
         { label: 'ปฏิทิน', href: '/portal/calendar', icon: Calendar },
+        { label: 'จองห้องประชุม', href: '/portal/meeting-room', icon: DoorOpen },
         { label: 'dashboard.announcements', href: '/portal/announcements', icon: Megaphone },
         // Was '/portal/payslips' which doesn't exist as a route — the actual
         // page is at '/portal/payroll'. Fixed Apr 28.
