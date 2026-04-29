@@ -108,9 +108,18 @@ export async function POST(request: Request) {
 
         const sessionData = JSON.stringify({ id: data.user.id, role, name, employeeId })
         const cookieStore = await cookies()
+        // sameSite='lax' is the modern default in major browsers, but
+        // an explicit value is the safer call: it locks CSRF protection
+        // against future browser-default changes and matches what the
+        // logout route already sets when clearing the cookie. Lax is the
+        // right level here — Strict would break top-level GET-from-link
+        // navigation (an HR admin opening /hradmin from a Slack link
+        // would lose their session); we don't accept POSTs without an
+        // existing same-origin context.
         cookieStore.set('nexus_session', sessionData, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
             maxAge: 60 * 60 * 24 * 7,
             path: '/',
         })
