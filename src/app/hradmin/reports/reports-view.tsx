@@ -89,6 +89,43 @@ function downloadCsv(filename: string, rows: string[][]) {
     URL.revokeObjectURL(url)
 }
 
+/**
+ * Build the attendance CSV from a loaded report and trigger download.
+ * Hoisted out of <AttendanceTab> so the export button can live next to
+ * the date-range filter at the top of the page (Mod's preferred layout
+ * — clicking it should be a one-step "set filter → export" flow rather
+ * than scrolling past stats + chart to reach the table heading).
+ */
+function exportAttendanceCsv(data: AttendanceReport) {
+    const header = [
+        'รหัส', 'ชื่อ-นามสกุล', 'แผนก',
+        'เข้าออฟฟิศ', 'WFH', 'Off-site', 'รวม',
+        'มาสาย', 'ลา', 'ขาดงาน', 'วันทำงาน', 'ช่วงเวลา',
+    ]
+    const rangeLabel = `${data.fromDate} ถึง ${data.toDate}`
+    const rows = [
+        header,
+        ...data.rows.map(r => [
+            r.employeeCode,
+            r.employeeName,
+            r.department ?? '',
+            String(r.officeDays),
+            String(r.wfhDays),
+            String(r.offsiteDays),
+            String(r.totalDays),
+            String(r.lateDays),
+            String(r.leaveDays),
+            String(r.absentDays),
+            String(data.workdays),
+            rangeLabel,
+        ]),
+    ]
+    const filename = data.month && data.year
+        ? `attendance_${data.year}_${String(data.month).padStart(2, '0')}.csv`
+        : `attendance_${data.fromDate}_to_${data.toDate}.csv`
+    downloadCsv(filename, rows)
+}
+
 interface Props {
     departments: string[]
 }
@@ -299,6 +336,25 @@ export function ReportsView({ departments }: Props) {
                         กำลังโหลด…
                     </span>
                 )}
+
+                {/* Export button — sits inside the filter row so the
+                    "set range → download" flow is one step instead of
+                    scrolling past stats + chart. ml-auto pushes it to
+                    the right edge regardless of how many filter
+                    controls render before it (the granularity selector
+                    adds two extra inputs in week + range modes). Only
+                    shown on the attendance tab while data is loaded;
+                    hides during transitions to avoid exporting stale
+                    rows mid-fetch. */}
+                {tab === 'attendance' && attData && !isPending && (
+                    <button
+                        onClick={() => exportAttendanceCsv(attData)}
+                        className="sm:ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 rounded-lg text-xs font-semibold whitespace-nowrap"
+                    >
+                        <FileDown size={12} />
+                        ดาวน์โหลด CSV
+                    </button>
+                )}
             </div>
 
             {error && (
@@ -334,45 +390,6 @@ function TabButton({ active, onClick, icon: Icon, children }: { active: boolean;
 // ─── Attendance Tab ──────────────────────────────────────────────────────────
 
 function AttendanceTab({ data }: { data: AttendanceReport }) {
-    const handleExport = () => {
-        // Two extra columns vs the legacy header: "มาสาย" (count of
-        // late office check-ins per employee) + "ขาดงาน" (workdays
-        // not covered by check-in or approved leave) + "ลา"
-        // (approved leave days inside the window). Order keeps the
-        // existing first-six columns intact so anyone with a saved
-        // template + macro doesn't break.
-        const header = [
-            'รหัส', 'ชื่อ-นามสกุล', 'แผนก',
-            'เข้าออฟฟิศ', 'WFH', 'Off-site', 'รวม',
-            'มาสาย', 'ลา', 'ขาดงาน', 'วันทำงาน', 'ช่วงเวลา',
-        ]
-        const rangeLabel = `${data.fromDate} ถึง ${data.toDate}`
-        const rows = [
-            header,
-            ...data.rows.map(r => [
-                r.employeeCode,
-                r.employeeName,
-                r.department ?? '',
-                String(r.officeDays),
-                String(r.wfhDays),
-                String(r.offsiteDays),
-                String(r.totalDays),
-                String(r.lateDays),
-                String(r.leaveDays),
-                String(r.absentDays),
-                String(data.workdays),
-                rangeLabel,
-            ]),
-        ]
-        // Filename embeds the range so multiple exports don't collide.
-        // Preserves the legacy month-only filename when the window is
-        // exactly one calendar month.
-        const filename = data.month && data.year
-            ? `attendance_${data.year}_${String(data.month).padStart(2, '0')}.csv`
-            : `attendance_${data.fromDate}_to_${data.toDate}.csv`
-        downloadCsv(filename, rows)
-    }
-
     // Banner copy adapts to whether the window is a calendar month
     // (legacy phrasing) or a custom range / week.
     const monthBanner = data.month && data.year
@@ -421,15 +438,11 @@ function AttendanceTab({ data }: { data: AttendanceReport }) {
             )}
 
             <div className="p-4 lg:p-6" style={glassCard}>
-                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                {/* Download button moved up to the filter row so the
+                    "set range → export" flow is one step. The table
+                    heading stays just for context. */}
+                <div className="flex items-center mb-3">
                     <h3 className="text-white font-semibold">รายละเอียดรายบุคคล</h3>
-                    <button
-                        onClick={handleExport}
-                        className="text-xs px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 rounded-lg inline-flex items-center gap-1.5"
-                    >
-                        <FileDown size={12} />
-                        ดาวน์โหลด CSV
-                    </button>
                 </div>
                 <div className="overflow-x-auto -mx-4 lg:mx-0">
                     <table className="w-full text-sm min-w-[760px]">
