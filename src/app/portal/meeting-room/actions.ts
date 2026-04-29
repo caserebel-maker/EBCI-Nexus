@@ -72,6 +72,27 @@ export async function listUpcomingBookings(): Promise<RoomBooking[]> {
     return data ?? []
 }
 
+export async function listAllBookingsForHr(): Promise<RoomBooking[]> {
+    const session = await getSession()
+    if (!session || session.role !== 'hr_admin') return []
+
+    const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    const to = new Date(Date.now() + BOOKING_HORIZON_DAYS * 24 * 60 * 60 * 1000).toISOString()
+
+    const { data, error } = await supabaseAdmin
+        .from('room_bookings')
+        .select('id, title, notes, attendees, starts_at, ends_at, booked_by_employee_id, booked_by_name, cancelled_at, cancelled_by_name, cancellation_reason, created_at')
+        .gte('starts_at', from)
+        .lte('starts_at', to)
+        .order('starts_at', { ascending: false })
+
+    if (error) {
+        console.error('listAllBookingsForHr error:', error)
+        return []
+    }
+    return data ?? []
+}
+
 export async function listMyBookings(): Promise<RoomBooking[]> {
     const session = await getSession()
     if (!session?.employeeId) return []

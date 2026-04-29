@@ -52,9 +52,13 @@ interface Props {
     mine: RoomBooking[]
     currentEmployeeId: string | null
     isHrAdmin: boolean
+    /** When true the page renders as an HR audit view: hides "my bookings",
+        relabels the main list as "ทุกการจอง", and surfaces cancelled rows
+        too (employee mode only renders active upcoming bookings). */
+    hrAuditMode?: boolean
 }
 
-export function MeetingRoomView({ roomName, horizonDays, upcoming, mine, currentEmployeeId, isHrAdmin }: Props) {
+export function MeetingRoomView({ roomName, horizonDays, upcoming, mine, currentEmployeeId, isHrAdmin, hrAuditMode = false }: Props) {
     const [showForm, setShowForm] = useState(false)
     const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
 
@@ -84,8 +88,8 @@ export function MeetingRoomView({ roomName, horizonDays, upcoming, mine, current
                 </button>
             </div>
 
-            {/* My bookings (if any) */}
-            {mine.length > 0 && (
+            {/* My bookings (if any) — hidden in HR audit view */}
+            {!hrAuditMode && mine.length > 0 && (
                 <section className="space-y-2">
                     <h2 className="text-white/85 font-semibold text-sm">การจองของฉัน</h2>
                     <div className="space-y-2">
@@ -110,11 +114,13 @@ export function MeetingRoomView({ roomName, horizonDays, upcoming, mine, current
             {/* Upcoming (everyone's) */}
             <section className="space-y-2">
                 <h2 className="text-white/85 font-semibold text-sm">
-                    คิวห้องประชุม {horizonDays} วันข้างหน้า
+                    {hrAuditMode
+                        ? `ทุกการจอง (30 วันที่ผ่านมา + ${horizonDays} วันข้างหน้า)`
+                        : `คิวห้องประชุม ${horizonDays} วันข้างหน้า`}
                 </h2>
                 {upcoming.length === 0 ? (
                     <div className="p-6 text-center text-white/55 text-sm" style={glass}>
-                        ยังไม่มีใครจอง — ห้องว่างทั้งสัปดาห์
+                        {hrAuditMode ? 'ยังไม่มีรายการจองในช่วงนี้' : 'ยังไม่มีใครจอง — ห้องว่างทั้งสัปดาห์'}
                     </div>
                 ) : (
                     <div className="space-y-2">

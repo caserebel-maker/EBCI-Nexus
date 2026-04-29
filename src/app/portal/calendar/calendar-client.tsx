@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
-import type { Holiday, LeaveDay } from './page'
+import { ChevronLeft, ChevronRight, X, DoorOpen } from 'lucide-react'
+import type { Holiday, LeaveDay, CalendarBooking } from './page'
+import { formatBangkokTime } from '@/lib/datetime'
 
 interface Props {
     holidays: Holiday[]
     leaveDays: LeaveDay[]
+    bookings: CalendarBooking[]
 }
 
 const DAY_HEADERS = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
@@ -60,7 +62,7 @@ function toDateStr(y: number, m: number, d: number): string {
     return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 }
 
-export function CalendarClient({ holidays, leaveDays }: Props) {
+export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
     const today = new Date()
     const [viewYear, setViewYear] = useState(today.getFullYear())
     const [viewMonth, setViewMonth] = useState(today.getMonth())
@@ -75,6 +77,13 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
         const arr = leaveDayMap.get(l.date) ?? []
         arr.push(l)
         leaveDayMap.set(l.date, arr)
+    })
+
+    const bookingMap = new Map<string, CalendarBooking[]>()
+    bookings.forEach(b => {
+        const arr = bookingMap.get(b.date) ?? []
+        arr.push(b)
+        bookingMap.set(b.date, arr)
     })
 
     // Month navigation
@@ -102,6 +111,7 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
     // Selected day data
     const selectedHoliday = selected ? holidayMap.get(selected) : null
     const selectedLeaves = selected ? (leaveDayMap.get(selected) ?? []) : []
+    const selectedBookings = selected ? (bookingMap.get(selected) ?? []) : []
 
     // Leave types present this month (for legend)
     const leaveTypesInMonth = new Set<string>()
@@ -122,6 +132,8 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
         if (isWfhEntry(h)) hasWfhDayInMonth = true
         else hasOffDayInMonth = true
     })
+
+    const hasBookingInMonth = bookings.some(b => b.date.startsWith(monthPrefix))
 
     return (
         <div className="max-w-lg mx-auto space-y-4 pb-4">
@@ -167,11 +179,12 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                         const isWfh = isWfhEntry(holiday)
                         const isOffDay = !!holiday && !isWfh
                         const leaves = leaveDayMap.get(dateStr) ?? []
+                        const dayBookings = bookingMap.get(dateStr) ?? []
                         const isToday = dateStr === todayStr
                         const isSelected = dateStr === selected
                         const isSun = idx % 7 === 0
                         const isSat = idx % 7 === 6
-                        const hasEvent = !!holiday || leaves.length > 0
+                        const hasEvent = !!holiday || leaves.length > 0 || dayBookings.length > 0
 
                         return (
                             <button
@@ -264,6 +277,27 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                                         ))}
                                     </div>
                                 )}
+
+                                {/* Room booking badge — distinct cyan/teal hue
+                                    so it doesn't collide with the leave dot
+                                    palette or the off-day amber. Number tells
+                                    you at a glance how many meetings are
+                                    queued for the room that day. */}
+                                {dayBookings.length > 0 && (
+                                    <span
+                                        className="absolute top-0.5 right-0.5 inline-flex items-center gap-0.5 rounded-full px-1 py-px font-bold"
+                                        style={{
+                                            background: 'rgba(34,211,238,0.22)',
+                                            border: '1px solid rgba(34,211,238,0.55)',
+                                            color: '#a5f3fc',
+                                            fontSize: '9px',
+                                            lineHeight: 1,
+                                        }}
+                                    >
+                                        <DoorOpen size={9} />
+                                        {dayBookings.length}
+                                    </span>
+                                )}
                             </button>
                         )
                     })}
@@ -271,7 +305,7 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
             </div>
 
             {/* Day detail popup */}
-            {selected && (selectedHoliday || selectedLeaves.length > 0) && (
+            {selected && (selectedHoliday || selectedLeaves.length > 0 || selectedBookings.length > 0) && (
                 <div style={glass} className="p-4">
                     <div className="flex items-start justify-between mb-3">
                         <p className="text-white font-bold" style={{ fontSize: '16px' }}>
@@ -316,6 +350,26 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                             </span>
                         </div>
                     ))}
+
+                    {selectedBookings.length > 0 && (
+                        <div className="mt-2 space-y-1.5">
+                            <p className="text-cyan-200/85 font-semibold flex items-center gap-1.5" style={{ fontSize: '12px' }}>
+                                <DoorOpen size={12} /> ห้องประชุมชั้น 2
+                            </p>
+                            {selectedBookings.map((b) => (
+                                <div key={b.id} className="flex items-start gap-2 p-3 rounded-xl"
+                                    style={{ background: 'rgba(34,211,238,0.14)', border: '1px solid rgba(34,211,238,0.35)' }}>
+                                    <div className="shrink-0 text-xs font-bold text-cyan-100 w-[78px]">
+                                        {formatBangkokTime(b.startsAt)}–{formatBangkokTime(b.endsAt)}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-white text-sm font-medium truncate">{b.title}</p>
+                                        <p className="text-white/65 text-xs truncate">โดย {b.bookedByName}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -338,6 +392,12 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                         <span className="w-3 h-3 rounded-full" style={{ background: '#ffffff', boxShadow: '0 0 0 2px rgba(255,255,255,0.35)' }} />
                         <span className="text-white/85 font-medium" style={{ fontSize: '12px' }}>วันนี้</span>
                     </div>
+                    {hasBookingInMonth && (
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-3 h-3 rounded-sm" style={{ background: 'rgba(34,211,238,0.35)', border: '1px solid rgba(34,211,238,0.7)' }} />
+                            <span className="text-white/85 font-medium" style={{ fontSize: '12px' }}>ห้องประชุม</span>
+                        </div>
+                    )}
                     {Object.entries(LEAVE_LABEL).filter(([k]) => leaveTypesInMonth.has(k)).map(([k, label]) => (
                         <div key={k} className="flex items-center gap-1.5">
                             <span className="w-3 h-3 rounded-full" style={{ background: LEAVE_COLOR[k] }} />

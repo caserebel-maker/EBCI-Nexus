@@ -76,6 +76,11 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
             ],
         },
         {
+            label: 'จองห้องประชุม',
+            href: '/hradmin/meeting-room',
+            icon: DoorOpen,
+        },
+        {
             label: 'รับสมัครงาน',
             href: '/hradmin/applicants',
             icon: Briefcase,

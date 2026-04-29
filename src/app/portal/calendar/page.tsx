@@ -19,6 +19,15 @@ export interface LeaveDay {
     status: string
 }
 
+export interface CalendarBooking {
+    id: string
+    date: string   // 'YYYY-MM-DD' (in Bangkok local of starts_at)
+    startsAt: string
+    endsAt: string
+    title: string
+    bookedByName: string
+}
+
 export default async function CalendarPage() {
     const session = await getSession()
     if (!session) redirect('/login')
@@ -26,6 +35,7 @@ export default async function CalendarPage() {
     const year = new Date().getFullYear()
     let holidays: Holiday[] = []
     let leaveDays: LeaveDay[] = []
+    let bookings: CalendarBooking[] = []
 
     // Fetch holidays for this year
     try {
@@ -67,5 +77,35 @@ export default async function CalendarPage() {
         console.error('[calendar] leave requests fetch failed:', e)
     }
 
-    return <CalendarClient holidays={holidays} leaveDays={leaveDays} />
+    // Active room bookings within ±30 days of today. Booking horizon is 7
+    // days so this window comfortably covers any active booking the user
+    // could navigate to from the calendar.
+    try {
+        const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+        const to = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        const { data } = await supabaseAdmin
+            .from('room_bookings')
+            .select('id, starts_at, ends_at, title, booked_by_name')
+            .is('cancelled_at', null)
+            .gte('starts_at', from)
+            .lte('starts_at', to)
+            .order('starts_at', { ascending: true })
+        bookings = (data ?? []).map(b => {
+            // Bangkok-local YYYY-MM-DD without depending on process timezone.
+            const bkk = new Date(new Date(b.starts_at).getTime() + 7 * 60 * 60 * 1000)
+            const date = `${bkk.getUTCFullYear()}-${String(bkk.getUTCMonth() + 1).padStart(2, '0')}-${String(bkk.getUTCDate()).padStart(2, '0')}`
+            return {
+                id: b.id,
+                date,
+                startsAt: b.starts_at,
+                endsAt: b.ends_at,
+                title: b.title,
+                bookedByName: b.booked_by_name,
+            }
+        })
+    } catch (e) {
+        console.error('[calendar] room bookings fetch failed:', e)
+    }
+
+    return <CalendarClient holidays={holidays} leaveDays={leaveDays} bookings={bookings} />
 }
