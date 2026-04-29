@@ -246,18 +246,28 @@ body {
     margin: 0 !important;
   }
 
-  /* Cards in print → flat. User feedback (Apr 27 night): "กรอบมันแปลก
-     อยากให้เป็นข้อมูลอย่างเดียว เรียงเป็นบรรทัดๆ". So every glass /
-     silverCard / rounded card under .print-employee strips its inline
-     `border` + `padding` + `background` and renders as bare content
-     stacked vertically. Section headings (SHead) carry the visual
-     separation instead.
+  /* Cards in print → flat. User feedback (Apr 27 night, restated
+     Apr 29): "กรอบมันแปลก อยากให้เป็นข้อมูลอย่างเดียว เรียงเป็น
+     บรรทัดๆ". So every glass / silverCard / rounded card under
+     .print-employee strips its inline `border` + `padding` +
+     `background` and renders as bare content stacked vertically.
+     Section headings (SHead) carry the visual separation instead.
 
      The hero card (top, with photo) is marked `data-print-hero` and
-     opts BACK IN to a frame because the photo needs an anchor. */
+     opts BACK IN to a frame because the photo needs an anchor.
+
+     Selector covers three target shapes:
+       - Tailwind rounded-*xl classes (the older convention)
+       - <section> elements
+       - Any direct child of a data-print-section grid (Contact +
+         Work, Personal + Address) — these only have `style={glass}`
+         and no rounded-class, so they slipped past the older
+         selectors and rendered with the inline 16px frame still
+         attached. The new direct-child selector pins them flat. */
   .print-employee [class*="rounded-2xl"]:not([data-print-hero]),
   .print-employee [class*="rounded-xl"]:not([data-print-hero]),
-  .print-employee section:not([data-print-hero]) {
+  .print-employee section:not([data-print-hero]),
+  .print-employee [data-print-section] > div:not([data-print-hero]) {
     padding: 0 !important;
     margin: 0 0 6pt !important;
     border: 0 !important;
