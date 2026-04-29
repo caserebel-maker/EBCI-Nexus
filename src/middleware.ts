@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { ROLE_CONFIG, type UserRole } from '@/config/roles'
+import { SESSION_COOKIE_NAME, verifySessionCookie } from '@/lib/session-cookie'
 
 const PROTECTED_PREFIXES = ['/hradmin', '/portal', '/employees', '/recruitment', '/leave']
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
-    const sessionCookie = request.cookies.get('nexus_session')?.value
+    const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value
 
     // ── 0. Root redirect ─────────────────────────────────────────────────────
     if (pathname === '/') {
@@ -30,17 +31,13 @@ export function middleware(request: NextRequest) {
     }
 
     // ── 2. Parse session ──────────────────────────────────────────────────────
-    let role: UserRole | null = null
-    try {
-        const parsed = JSON.parse(sessionCookie)
-        role = parsed.role
-    } catch {
-        return NextResponse.redirect(new URL('/login', request.url))
-    }
+    const session = await verifySessionCookie(sessionCookie)
+    const role: UserRole | null = session?.role ?? null
 
     if (!role || !ROLE_CONFIG[role]) {
-        console.log(`[middleware] unknown role="${role}", redirecting to /login`)
-        return NextResponse.redirect(new URL('/login', request.url))
+        const response = NextResponse.redirect(new URL('/login', request.url))
+        response.cookies.delete(SESSION_COOKIE_NAME)
+        return response
     }
 
     // ── 3. Already logged in, trying to visit /login → go home ───────────────

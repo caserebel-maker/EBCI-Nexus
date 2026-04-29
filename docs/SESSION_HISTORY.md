@@ -2919,3 +2919,47 @@ User picked B explicitly: "เพราะระบบมันเกือบ�
 
 *End of §18 · 2 source commits + 1 DB seed. Total this evening §16+§17+§18: 8 source commits + 3 docs commits + 1 DB-only.*
 *Next session: §3.3 verification (login as wiyada/0000 + verify menu + bulk upload e2e).*
+
+---
+
+# §19 — APR29 Codex Session: signed session cookie hardening
+
+## Summary
+
+User asked Codex to continue from the same repo/folder after Claude Code work, then approved the P0 security fix. Local `main` was already synced to `origin/main`; `.claude/` and `sample-card-import.csv` stayed untracked and untouched.
+
+## What changed
+
+1. Added `src/lib/session-cookie.ts`:
+   - `createSessionCookie()` signs the session with HMAC-SHA256
+   - `verifySessionCookie()` verifies signature + `exp`
+   - cookie format is `v1.<base64url-json-payload>.<base64url-hmac-sha256>`
+   - secret resolution: `NEXUS_SESSION_SECRET` → `SESSION_COOKIE_SECRET` → `SUPABASE_SERVICE_ROLE_KEY`
+
+2. Replaced plain JSON cookie trust:
+   - `getSession()` now verifies the signed cookie
+   - middleware now verifies before trusting `role`
+   - invalid/tampered cookie redirects to `/login` and is deleted by middleware
+   - pages that parsed or checked `nexus_session` directly now use `getSession()`
+
+3. Login/logout cleanup:
+   - `/api/auth/login` writes signed cookie via shared helper
+   - redirect target is sanitized server-side: internal paths only, no `//`
+   - client login now trusts only server-returned `redirectTo`
+   - `/api/auth/logout` uses the shared cookie name constant
+   - rate-limit window constant is now actually used (`RL_WINDOW_MIN`)
+
+4. Documentation:
+   - `docs/NEXT.md` §3.15 marked done
+   - `src/lib/backup.ts` generated SYSTEM doc now describes signed cookie instead of JSON blob
+
+## Verification
+
+- `npx tsc --noEmit` ✅
+- `npm run build` ✅
+- Targeted eslint on touched auth/login/middleware files ✅ with one existing warning for `<img>` in `src/app/login/page.tsx`
+- `git diff --check` ✅
+
+## Follow-up
+
+Set `NEXUS_SESSION_SECRET` in Vercel as a random 32+ byte value. Current code falls back to `SUPABASE_SERVICE_ROLE_KEY` so production should keep working, but a dedicated secret is cleaner and safer long-term.

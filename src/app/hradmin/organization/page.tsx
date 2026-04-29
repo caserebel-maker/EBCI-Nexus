@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { Network } from 'lucide-react'
 import { supabaseAdmin } from '@/lib/supabase-admin'
@@ -10,18 +9,10 @@ import { TabsShell } from '@/app/portal/organization/tabs-shell'
 export const dynamic = 'force-dynamic'
 
 export default async function HrOrganizationPage() {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('nexus_session')
-    if (!sessionCookie?.value) redirect('/login')
-
-    try {
-        const session = JSON.parse(sessionCookie.value)
-        if (session.role !== 'hr_admin') redirect('/portal/organization')
-    } catch {
-        redirect('/login')
-    }
-
     const session = await getSession()
+    if (!session) redirect('/login')
+    if (session.role !== 'hr_admin') redirect('/portal/organization')
+
     let currentEmployeeId: string | null = session?.employeeId ?? null
     if (!currentEmployeeId && session?.name?.includes('@')) {
         const { data } = await supabaseAdmin

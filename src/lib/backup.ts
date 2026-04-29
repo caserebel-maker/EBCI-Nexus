@@ -293,9 +293,9 @@ The app runs **two parallel session systems** stitched together:
 1. **Supabase Auth** — owns the password / email of record.
    \`signInWithPassword\` etc. is called server-side via
    \`supabaseAdmin\` from \`/api/auth/login\`.
-2. **\`nexus_session\` cookie** — JSON blob set after successful login,
-   read by every server component via \`getSession()\` in
-   \`src/lib/auth.ts\`. Shape:
+2. **\`nexus_session\` cookie** — signed HMAC payload set after
+   successful login, read by every server component via \`getSession()\`
+   in \`src/lib/auth.ts\`. The unsigned payload shape is:
    \`\`\`ts
    interface SessionUser {
      id: string                       // auth.users.id (UUID)
@@ -305,7 +305,8 @@ The app runs **two parallel session systems** stitched together:
    }
    \`\`\`
 
-The cookie is **the source of truth in-app** because it's read
+The cookie signature is verified before any role is trusted. The cookie is
+**the source of truth in-app** because it's read
 synchronously without a Supabase round-trip. The Supabase session
 cookies (\`sb-*\`) sit alongside it — used by the browser-side
 \`supabase\` client (e.g. password change in \`/portal/settings\`).

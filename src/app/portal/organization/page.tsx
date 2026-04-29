@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { Network } from 'lucide-react'
 import { supabaseAdmin } from '@/lib/supabase-admin'
@@ -10,11 +9,8 @@ import { TabsShell } from './tabs-shell'
 export const dynamic = 'force-dynamic'
 
 export default async function OrganizationPage() {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('nexus_session')
-    if (!sessionCookie?.value) redirect('/login')
-
     const session = await getSession()
+    if (!session) redirect('/login')
 
     let currentEmployeeId: string | null = session?.employeeId ?? null
     if (!currentEmployeeId && session?.name?.includes('@')) {

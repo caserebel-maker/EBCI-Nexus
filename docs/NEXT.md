@@ -315,23 +315,36 @@ Default deny (no policies). Service role bypass ทำให้ supabaseAdmin �
 
 Estimate: 1-2 hr (audit + fix obvious holes; DOMPurify ถ้าจำเป็น)
 
-### 3.15 🔐 Security #10 — Cookie hardening (`nexus_session` config sweep)
+### 3.15 ✅ 🔐 Security #10 — Cookie hardening (`nexus_session` signed cookie)
 
-**Why:** `nexus_session` cookie คุ้มสิทธิ์ทั้งระบบ. ตอนนี้ตั้ง:
+**DONE Apr 29 Codex session.** `nexus_session` เดิมเป็น JSON ธรรมดาและ `getSession()`/middleware เชื่อ `role` จาก cookie โดยตรง. ตอนนี้เปลี่ยนเป็น signed HMAC cookie แล้ว:
+
+- เพิ่ม `src/lib/session-cookie.ts` เป็น single helper: `createSessionCookie()` + `verifySessionCookie()`
+- Cookie format: `v1.<base64url-json-payload>.<base64url-hmac-sha256>`
+- Payload มี `exp` 7 วัน และ verify หมดอายุทุกครั้ง
+- Secret resolution: `NEXUS_SESSION_SECRET` → `SESSION_COOKIE_SECRET` → fallback `SUPABASE_SERVICE_ROLE_KEY`
+- `getSession()` และ middleware verify signature ก่อนคืน session/role
+- Invalid/tampered cookie จะ redirect `/login` และ middleware delete cookie
+- Login redirect ถูก sanitize ให้รับเฉพาะ internal path ที่ขึ้นต้น `/` และไม่ใช่ `//`
+- หน้าที่เคย `JSON.parse(sessionCookie.value)` ถูกเปลี่ยนมาใช้ `getSession()` แล้ว
+- Logout ใช้ `SESSION_COOKIE_NAME` constant ร่วมกัน
+
+**ควรทำต่อ:** set `NEXUS_SESSION_SECRET` ใน Vercel เป็น random 32+ bytes เพื่อไม่ต้อง fallback ไปใช้ service role key ระยะยาว.
+
+**Current cookie config:**
 - `httpOnly: true` ✅
 - `secure: process.env.NODE_ENV === 'production'` ✅
 - `maxAge: 60*60*24*7` (7 วัน) — หมดอายุพอเหมาะ
-- **`sameSite` ไม่ได้ตั้ง** ⚠️ — default ของ Next.js คือ `lax` แต่ explicit ดีกว่า
-- **`path: '/'`** — ปกติ
-- **ไม่มี cookie rotation** — token เดิมยาว 7 วันไม่ rotate. ถ้า leak ใช้ได้ครบ 7 วัน
+- `sameSite: 'lax'` ✅
+- `path: '/'` ✅
 
-**Action items:**
-1. Audit `cookieStore.set('nexus_session', ...)` ทุก call site
-2. เพิ่ม `sameSite: 'lax'` (block CSRF จาก cross-site forms ส่วนใหญ่) — explicit ทุกที่
-3. พิจารณา rotate session token ทุก login (invalidate old) → block "stolen cookie still works after user re-login"
-4. CSP header — `Content-Security-Policy` middleware ที่ block inline scripts (ตอนนี้ Next.js dev mode มี hot-reload ใช้ inline; production ต้อง config nonce)
+**Remaining hardening ideas:**
+1. Session revocation table / token version — invalidate old signed cookie after password change or manual admin revoke
+2. CSP header — `Content-Security-Policy` middleware ที่ block inline scripts (ต้องถอด debug script ใน `src/app/layout.tsx` ก่อน)
 
-Estimate: 30-60 min (low-risk config changes + 1 middleware addition)
+Verify this session:
+- `npx tsc --noEmit` ✅
+- `npm run build` ✅ (ยังมี warning เดิม: Next 16 ไม่รองรับ `eslint` key ใน `next.config.ts`, และ `middleware` convention deprecated → proxy)
 
 ### B. รอข้อมูลจาก HR
 - B5 มด review `EBCI-employees-review.xlsx`

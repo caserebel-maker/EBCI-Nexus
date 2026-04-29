@@ -1,15 +1,14 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getSession } from '@/lib/auth'
 import { CheckinView } from './checkin-view'
 import { getTodayCheckin } from './actions'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CheckinPage() {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('nexus_session')
-    if (!sessionCookie?.value) redirect('/login')
+    const session = await getSession()
+    if (!session) redirect('/login')
 
     // Get office location
     const { data: location } = await supabaseAdmin

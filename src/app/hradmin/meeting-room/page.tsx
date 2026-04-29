@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
 import { listAllBookingsForHr } from '@/app/portal/meeting-room/actions'
@@ -13,9 +12,6 @@ export const dynamic = 'force-dynamic'
 // shows the full window (past + future, including cancelled rows) and hides
 // the "my bookings" section that doesn't matter to HR.
 export default async function HrMeetingRoomPage() {
-    const cookieStore = await cookies()
-    if (!cookieStore.get('nexus_session')?.value) redirect('/login')
-
     const session = await getSession()
     if (!session || session.role !== 'hr_admin') redirect('/portal/meeting-room')
 

@@ -1,8 +1,8 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Megaphone, ArrowLeft } from 'lucide-react'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getSession } from '@/lib/auth'
 import { resolveCreators, displayCreator } from '@/lib/creators'
 import { AnnouncementsView } from './announcements-view'
 
@@ -20,9 +20,8 @@ export default async function AnnouncementsListPage({
 }: {
     searchParams: Promise<SearchParams>
 }) {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('nexus_session')
-    if (!sessionCookie?.value) redirect('/login')
+    const session = await getSession()
+    if (!session) redirect('/login')
 
     const sp = await searchParams
     const initialTab: 'active' | 'archive' = sp.tab === 'archive' ? 'archive' : 'active'

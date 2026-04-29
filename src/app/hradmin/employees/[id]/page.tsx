@@ -1,8 +1,8 @@
 import { supabaseAdmin } from "@/lib/supabase-admin"
 import { notFound } from "next/navigation"
-import { cookies } from "next/headers"
 import { EmployeeProfileView } from "./employee-profile-view"
 import { getCurrentPermissions } from "@/lib/permissions-server"
+import { getSession } from "@/lib/auth"
 import type { BalanceCell } from "@/components/hradmin/leave/types"
 
 export const dynamic = 'force-dynamic'
@@ -15,16 +15,8 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
     const { id } = await params
     console.log(`[employee-detail] requested id="${id}"`)
 
-    // Resolve role from session cookie
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('nexus_session')
-    let isHrAdmin = false
-    if (sessionCookie?.value) {
-        try {
-            const session = JSON.parse(sessionCookie.value)
-            isHrAdmin = session.role === 'hr_admin'
-        } catch { /* ignore */ }
-    }
+    const session = await getSession()
+    const isHrAdmin = session?.role === 'hr_admin'
 
     // ── Fetch employee — try employee_code first, fallback to UUID ─────────────
     // employee_code: text ID used in URLs (e.g. EMP001)

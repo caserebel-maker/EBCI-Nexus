@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { SESSION_COOKIE_NAME } from '@/lib/session-cookie'
 
 export async function POST() {
     const cookieStore = await cookies()
 
     // Delete our custom session cookie
-    cookieStore.delete('nexus_session')
+    cookieStore.delete(SESSION_COOKIE_NAME)
 
     // Also delete Supabase auth cookies (sb-*-auth-token pattern)
     const allCookies = cookieStore.getAll()
@@ -19,7 +20,7 @@ export async function POST() {
     const res = NextResponse.json({ success: true })
 
     // Explicitly expire nexus_session via response header
-    res.cookies.set('nexus_session', '', {
+    res.cookies.set(SESSION_COOKIE_NAME, '', {
         maxAge: 0,
         path: '/',
         httpOnly: true,

@@ -2,24 +2,14 @@ import { EmployeesTable, Employee } from "./employees-table"
 import { EmployeesHeader } from "./header"
 import { ContractsCoverageBanner } from "@/components/hradmin/employees/ContractsCoverageBanner"
 import { supabaseAdmin } from "@/lib/supabase-admin"
-import { cookies } from "next/headers"
+import { getSession } from "@/lib/auth"
 
 export const dynamic = 'force-dynamic'
 
 export default async function EmployeesPage() {
     // 1. Get Session Info (for Audit/Role purposes)
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('nexus_session')
-    let userRole = 'employee'
-
-    if (sessionCookie?.value) {
-        try {
-            const session = JSON.parse(sessionCookie.value)
-            userRole = session.role
-        } catch (e) {
-            console.error("Session parse error", e)
-        }
-    }
+    const session = await getSession()
+    const userRole = session?.role ?? 'employee'
 
     // 2. Fetch Employees from Supabase
     // We join with applicants to get the photo_path and other original details

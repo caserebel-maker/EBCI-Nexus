@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server'
 import { cookies, headers } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { ROLE_CONFIG, type UserRole } from '@/config/roles'
+import {
+    createSessionCookie,
+    SESSION_COOKIE_MAX_AGE_SECONDS,
+    SESSION_COOKIE_NAME,
+} from '@/lib/session-cookie'
 
 // Rate-limit thresholds. Tuned to block credential-stuffing without
 // frustrating legitimate users who fat-finger a password a few times.
@@ -21,6 +26,24 @@ interface RateLimitDecision {
     retryAfterSec?: number
 }
 
+function sanitizeRedirectPath(value: unknown, role: UserRole): string | null {
+    if (typeof value !== 'string') return null
+    if (!value.startsWith('/') || value.startsWith('//')) return null
+
+    try {
+        const parsed = new URL(value, 'https://nexus.local')
+        const path = `${parsed.pathname}${parsed.search}${parsed.hash}`
+        if (path.startsWith('/hradmin') && role !== 'hr_admin') {
+            const isPayrollBulk = parsed.pathname === '/hradmin/payroll/bulk'
+                || parsed.pathname.startsWith('/hradmin/payroll/bulk/')
+            return isPayrollBulk ? path : null
+        }
+        return path
+    } catch {
+        return null
+    }
+}
+
 /** Pull the client IP out of the proxy headers Vercel sets. Falls back
  *  to null if neither header is set (local dev usually) so the IP
  *  bucket simply doesn't fire. */
@@ -33,7 +56,7 @@ async function clientIp(): Promise<string | null> {
 
 /** Return whether to block this attempt + which counter tripped. */
 async function checkRateLimit(emailLower: string, ip: string | null): Promise<RateLimitDecision> {
-    const sinceIso = new Date(Date.now() - RL_BLOCK_MIN * 60 * 1000).toISOString()
+    const sinceIso = new Date(Date.now() - RL_WINDOW_MIN * 60 * 1000).toISOString()
 
     // Email bucket — narrowest signal, check first.
     const { count: emailFails } = await supabaseAdmin
@@ -208,7 +231,7 @@ export async function POST(request: Request) {
         const name: string = meta.name ?? meta.full_name ?? data.user.email ?? 'User'
         const employeeId: string | undefined = meta.employeeId ?? undefined
 
-        const sessionData = JSON.stringify({ id: data.user.id, role, name, employeeId })
+        const sessionData = await createSessionCookie({ id: data.user.id, role, name, employeeId })
         const cookieStore = await cookies()
         // sameSite='lax' is the modern default in major browsers, but
         // an explicit value is the safer call: it locks CSRF protection
@@ -218,19 +241,16 @@ export async function POST(request: Request) {
         // navigation (an HR admin opening /hradmin from a Slack link
         // would lose their session); we don't accept POSTs without an
         // existing same-origin context.
-        cookieStore.set('nexus_session', sessionData, {
+        cookieStore.set(SESSION_COOKIE_NAME, sessionData, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 60 * 60 * 24 * 7,
+            maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
             path: '/',
         })
 
         const homePath = ROLE_CONFIG[role]?.homePath ?? '/portal'
-        // Use requested redirect if present, but block non-hr_admin from /hradmin paths
-        const redirectTo = (requestedRedirect && !(requestedRedirect.startsWith('/hradmin') && role !== 'hr_admin'))
-            ? requestedRedirect
-            : homePath
+        const redirectTo = sanitizeRedirectPath(requestedRedirect, role) ?? homePath
         console.log(`[Auth] OK: ${email} role=${role} → ${redirectTo} (requested=${requestedRedirect ?? 'none'})`)
 
         return NextResponse.json({ success: true, role, redirectTo })

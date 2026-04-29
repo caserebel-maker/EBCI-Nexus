@@ -1,6 +1,6 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getSession } from '@/lib/auth'
 import { NewEmployeeForm } from './new-employee-form'
 import { DEPARTMENTS } from '@/config/departments'
 
@@ -8,16 +8,8 @@ export const dynamic = 'force-dynamic'
 
 export default async function NewEmployeePage() {
     // Guard: hr_admin only
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('nexus_session')
-    let isHrAdmin = false
-    if (sessionCookie?.value) {
-        try {
-            const session = JSON.parse(sessionCookie.value)
-            isHrAdmin = session.role === 'hr_admin'
-        } catch { /* ignore */ }
-    }
-    if (!isHrAdmin) redirect('/hradmin/employees')
+    const session = await getSession()
+    if (session?.role !== 'hr_admin') redirect('/hradmin/employees')
 
     // Fetch distinct departments
     const { data: empData } = await supabaseAdmin

@@ -14,9 +14,6 @@ function LoginForm() {
     const searchParams = useSearchParams()
     const redirectAfterLogin = searchParams.get('redirect') ?? null
     const messageParam = searchParams.get('message')
-    // Show HR Admin badge when entering from /hradmin (no redirect param, or redirect=/hradmin)
-    const fromParam = searchParams.get('from')
-    const isAdminEntry = redirectAfterLogin?.startsWith('/hradmin') || fromParam === 'hradmin'
 
     const { t } = useTranslation()
 
@@ -86,12 +83,7 @@ function LoginForm() {
                                 throw new Error(result.error || t('auth.errorCredentials'))
                             }
 
-                            // Success → HR Admin always goes to their homePath (ignore redirect param)
-                            // Other roles: use redirect param if present, otherwise role-based home
-                            const target = result.role === 'hr_admin'
-                                ? result.redirectTo
-                                : (redirectAfterLogin ?? result.redirectTo)
-                            window.location.href = target
+                            window.location.href = result.redirectTo
                         } catch (err) {
                             console.error("Login Error:", err)
                             setError((err as Error).message)
