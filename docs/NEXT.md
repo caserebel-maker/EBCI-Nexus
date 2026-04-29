@@ -5,26 +5,26 @@
 
 ---
 
-## 🔁 ที่เครื่องถัดไป — **Laptop / Home · คืนนี้หรือพรุ่งนี้เช้า 30 เม.ย.**
+## 🔁 ที่เครื่องถัดไป — **Office · พรุ่งนี้ 30 เม.ย.**
 
 > **อ่านเฉพาะตอนเปิด Claude Code ที่เครื่องใหม่**
 
 **Step 1 — Pull ก่อน** (สำคัญสุด):
 ```bash
-cd ~/C1TB/EB-CI/EBCI-Nexus && git pull origin main --ff-only
+cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff-only
 ```
-*(หรือถ้าใช้ laptop path อื่น แทน path ตามจริง)*
+*(ถ้า path ออฟฟิศเปลี่ยน ให้ `cd` ไป repo `EBCI-Nexus` ตัวจริงก่อน pull)*
 
 **Step 2 — พิมพ์บอก Claude:**
 ```
-อ่าน docs/NEXT.md แล้วทำต่อ — เริ่ม §3.16 priority 2: half-day + hourly leave rules. §3.16 priority 1 (approval chain audit) ทำเสร็จแล้วใน commit 40f42ac.
+อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ office. ก่อนลุยให้ verify commit 4da85a6 เรื่องเมนูอัปโหลดสลิปของสุชาติ: login suchat@ebcitrade.com แล้วต้องเห็นเมนูพนักงานปกติ + อัปโหลดสลิปเงินเดือน โดยไม่มีปุ่มสลับ HR Admin. จากนั้นอ่าน docs/BETA_FEEDBACK.md ถ้ามี แล้วทำ §1 P0 ทั้ง 5 ข้อ commit แยกตาม subsection; ถ้าไฟล์ยังไม่มี ให้ถามปอนด์ก่อนเริ่ม.
 ```
 
-**Step 3 — ตอบ Claude ว่าอยู่เครื่องไหน:** "อยู่ laptop" หรือ "อยู่ home"
+**Step 3 — ตอบ Claude ว่าอยู่เครื่องไหน:** "อยู่ office"
 
 ถ้า Claude บอก local behind origin → รัน `git pull origin main --ff-only` อีกครั้งก่อนเริ่มงาน
 
-**📅 Reminder ตอน 7 โมงเช้า 30 เม.ย.:** มี GCal event + Claude scheduled-task รออยู่
+**📅 Reminder ตอน 9 โมงเช้า 30 เม.ย.:** มี Codex task รออยู่ พร้อม prompt ด้านบน
 
 ---
 
@@ -68,6 +68,7 @@ cd ~/C1TB/EB-CI/EBCI-Nexus && git pull origin main --ff-only
 **Plus จาก Codex (รวม push เดียว):**
 - `a70f303` — sign nexus session cookie (HMAC SHA-256, 7-day exp, signed signature verify ใน middleware + getSession)
 - `558c98b` — harden leave attachment uploads
+- `4da85a6` — fix payroll manager nav: สุชาติยังเป็น employee ปกติ แต่เห็นเมนู "อัปโหลดสลิปเงินเดือน" เพิ่มเฉพาะคนมี `can_manage_payroll`; ไม่มีปุ่มสลับ HR Admin และ mobile nav ไม่หลุดเป็นเมนู HR
 
 **APR29 laptop morning + evening (รอบก่อน):**
 มด's User.id realign · payroll manager = ชาติ · user-menu opacity · middleware whitelist · profile leave balances · mobile More menu · org chart · shell overflow lock.
