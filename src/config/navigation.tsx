@@ -2,7 +2,7 @@ import {
     LayoutDashboard, Users, UserCircle, FileText, Settings, Megaphone,
     CalendarDays, ClipboardCheck, ShieldCheck, CalendarOff, MapPin, Network, Palmtree,
     Activity, ScrollText, BarChart3, Clock, Calendar, Briefcase, User,
-    Gift, Wallet, CheckCircle, Database, DoorOpen,
+    Gift, Wallet, CheckCircle, Database, DoorOpen, GitBranch,
 } from 'lucide-react'
 import { ROLES, type UserRole } from './roles'
 
@@ -72,6 +72,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
                 // a request doesn't flip the shell into employee mode. Manager
                 // + employee nav entries (below) still use /portal.
                 { label: 'อนุมัติการลา',   href: '/hradmin/leave/inbox',        icon: CheckCircle },
+                { label: 'ตรวจสายอนุมัติ', href: '/hradmin/leave/approval-audit', icon: GitBranch },
                 { label: 'นโยบายการลา',  href: '/hradmin/leave/policies',     icon: ScrollText },
             ],
         },
