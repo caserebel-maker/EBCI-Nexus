@@ -1,6 +1,6 @@
 import {
     LayoutDashboard, Users, UserCircle, FileText, Settings, Megaphone,
-    CalendarDays, ClipboardCheck, ShieldCheck, CalendarOff, MapPin, Network, Umbrella,
+    CalendarDays, ClipboardCheck, ShieldCheck, CalendarOff, MapPin, Network, Palmtree,
     Activity, ScrollText, BarChart3, Clock, Calendar, Briefcase, User,
     Gift, Wallet, CheckCircle, Database,
 } from 'lucide-react'
@@ -95,7 +95,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
     [ROLES.MANAGER]: [
         { label: 'dashboard.title', href: '/hradmin/dashboard', icon: LayoutDashboard },
         { label: 'เช็คอิน', href: '/portal/checkin', icon: MapPin },
-        { label: 'leave.myLeave', href: '/portal/leave', icon: Umbrella },
+        { label: 'leave.myLeave', href: '/portal/leave', icon: Palmtree },
         { label: 'อนุมัติการลา', href: '/portal/leave/inbox', icon: ClipboardCheck },
         { label: 'ผังองค์กร', href: '/portal/organization', icon: Network },
         { label: 'ปฏิทิน', href: '/portal/calendar', icon: Calendar },
@@ -106,7 +106,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         { label: 'dashboard.portal', href: '/portal', icon: LayoutDashboard },
         { label: 'เช็คอิน', href: '/portal/checkin', icon: MapPin },
         { label: 'recruitment.personalInfo', href: '/portal/profile', icon: UserCircle },
-        { label: 'leave.myLeave', href: '/portal/leave', icon: Umbrella },
+        { label: 'leave.myLeave', href: '/portal/leave', icon: Palmtree },
         // "อนุมัติการลา" intentionally NOT in the default — it's appended
         // dynamically in shell.tsx for users with employees.is_approver = true.
         // Pure-employee accounts who never approve anyone don't see an empty
