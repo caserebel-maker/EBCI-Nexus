@@ -7,7 +7,7 @@ import {
     Home, Users, Megaphone, MoreHorizontal, Clock, CalendarDays, Palmtree,
     ClipboardCheck, LogOut, FileText,
     Settings, ChevronRight, X, UserRound, Network,
-    UserPlus, Activity,
+    UserPlus, Activity, DoorOpen,
     MapPin, Briefcase, BarChart3, Wallet, ScrollText, ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -83,7 +83,8 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'วันลาพนักงาน',   desc: 'Balance ของพนักงาน',     href: '/hradmin/leave?tab=balances',    icon: Wallet },
         { label: 'นโยบายการลา',    desc: 'จัดการสิทธิ์การลา',      href: '/hradmin/leave/policies',        icon: ScrollText },
         // 4. รับสมัครงาน + 5. ตั้งค่าระบบ group
-        { label: 'รับสมัครงาน',   desc: 'จัดการผู้สมัคร',           href: '/hradmin/applicants',            icon: UserPlus, groupLabel: 'อื่น ๆ' },
+        { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/hradmin/meeting-room',          icon: DoorOpen, groupLabel: 'อื่น ๆ' },
+        { label: 'รับสมัครงาน',   desc: 'จัดการผู้สมัคร',           href: '/hradmin/applicants',            icon: UserPlus },
         { label: 'ระบบและทรัพยากร', desc: 'Quota + storage',      href: '/hradmin/settings/quota',        icon: Activity },
         { label: 'รายงาน',         desc: 'CSV exports',           href: '/hradmin/reports',               icon: FileText },
         { label: 'แบ็กอัพข้อมูล',  desc: 'Download ZIP สำรอง',    href: '/hradmin/settings/backup',       icon: ShieldCheck },
@@ -95,22 +96,24 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         // Manager desktop order: Home, เช็คอิน, การลา, อนุมัติการลา,
         // ผังองค์กร, ปฏิทิน, ประกาศ, ตั้งค่า. First three live in the
         // bottom tabs; the rest go here.
-        { label: 'อนุมัติการลา',   desc: 'พิจารณาคำขอลาลูกทีม',   href: '/portal/leave/inbox',  icon: ClipboardCheck },
-        { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization', icon: Network },
-        { label: 'ปฏิทิน',         desc: 'วันหยุด + WFH',           href: '/portal/calendar',     icon: CalendarDays },
-        { label: 'ประกาศข่าวสาร', desc: 'ฟีดประกาศจาก HR',         href: '/portal/announcements', icon: Megaphone },
-        { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',     icon: Settings },
+        { label: 'อนุมัติการลา',   desc: 'พิจารณาคำขอลาลูกทีม',   href: '/portal/leave/inbox',     icon: ClipboardCheck },
+        { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',    icon: Network },
+        { label: 'ปฏิทิน',         desc: 'วันหยุด + WFH',           href: '/portal/calendar',        icon: CalendarDays },
+        { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/portal/meeting-room',    icon: DoorOpen },
+        { label: 'ประกาศข่าวสาร', desc: 'ฟีดประกาศจาก HR',         href: '/portal/announcements',   icon: Megaphone },
+        { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',        icon: Settings },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     employee: [
         // Employee desktop order: Home, เช็คอิน, ข้อมูลส่วนตัว, การลา,
         // ผังองค์กร, ปฏิทิน, ประกาศ, สลิป, ตั้งค่า. The bottom tabs hold
         // Home/เช็คอิน/การลา/โปรไฟล์ — the rest belong in More.
-        { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',  icon: Network },
-        { label: 'ปฏิทิน',         desc: 'วันหยุด + WFH',           href: '/portal/calendar',     icon: CalendarDays },
-        { label: 'ประกาศข่าวสาร', desc: 'ฟีดประกาศจาก HR',         href: '/portal/announcements', icon: Megaphone },
-        { label: 'สลิปของฉัน',     desc: 'ดูสลิปเงินเดือน',         href: '/portal/payroll',      icon: FileText },
-        { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',     icon: Settings },
+        { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',   icon: Network },
+        { label: 'ปฏิทิน',         desc: 'วันหยุด + WFH',           href: '/portal/calendar',       icon: CalendarDays },
+        { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/portal/meeting-room',   icon: DoorOpen },
+        { label: 'ประกาศข่าวสาร', desc: 'ฟีดประกาศจาก HR',         href: '/portal/announcements',  icon: Megaphone },
+        { label: 'สลิปของฉัน',     desc: 'ดูสลิปเงินเดือน',         href: '/portal/payroll',        icon: FileText },
+        { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',       icon: Settings },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
 }
