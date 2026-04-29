@@ -139,6 +139,14 @@ interface Props {
     displayName: string
     initials: string
     avatarUrl: string | null
+    /** Thai prefix (นาย/นาง/นางสาว) — used to render the title chip. */
+    title: string | null
+    /** 'male' | 'female' (or legacy Thai 'ชาย' / 'หญิง'). Drives which
+     *  gender-specific leave (ลาคลอด / ลาบวช) the dashboard surfaces.
+     *  Displayed here so the employee can sanity-check what HR set for
+     *  them and report a fix back if wrong. */
+    gender: string | null
+    dateOfBirth: string | null
     position: string | null
     department: string | null
     secondaryDepartment: string | null
@@ -156,17 +164,34 @@ interface Props {
     recentLeaves: { id: string; leaveType: string; startDate: string; endDate: string; totalDays: number; status: string }[]
 }
 
+/** Map any gender value (English code or legacy Thai literal) to the
+ *  Thai display label. Falls back to the raw value so HR-set custom
+ *  values don't get hidden. */
+function genderLabel(g: string | null): string | null {
+    if (!g) return null
+    const s = g.trim().toLowerCase()
+    if (s === 'male' || s === 'm' || s === 'ชาย') return 'ชาย'
+    if (s === 'female' || s === 'f' || s === 'หญิง') return 'หญิง'
+    return g
+}
+
 function fmtDate(iso: string): string {
     return new Date(iso).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function ProfileClient({
-    displayName, initials, avatarUrl, position, department, secondaryDepartment,
+    displayName, initials, avatarUrl, title, gender, dateOfBirth,
+    position, department, secondaryDepartment,
     emergencyContactName, emergencyContactPhone, emergencyContactRelation,
     employeeCode, employmentType, tenure, startDate, email, phone,
     managerName, leaveBalances, recentLeaves,
 }: Props) {
+    const genderText = genderLabel(gender)
+    // Concatenate title + gender into a single line so the meta block
+    // doesn't grow noisier — both are short and complement each other
+    // (e.g. "นาย · ชาย"). When only one is present we just show that.
+    const titleGenderLine = [title, genderText].filter(Boolean).join(' · ')
     return (
         <div className="max-w-lg mx-auto space-y-4 pb-24" style={{ fontSize: '1.2em' }}>
 
@@ -226,9 +251,15 @@ export function ProfileClient({
                 <div className="pt-1">
                     {email     && <InfoRow icon={Mail}      label="อีเมล"           value={email} />}
                     {phone     && <InfoRow icon={Phone}     label="เบอร์โทร"         value={phone} />}
+                    {titleGenderLine && (
+                        <InfoRow icon={User} label="คำนำหน้า / เพศ" value={titleGenderLine} />
+                    )}
+                    {dateOfBirth && (
+                        <InfoRow icon={Calendar} label="วันเกิด" value={fmtDate(dateOfBirth)} />
+                    )}
                     {startDate && <InfoRow icon={Calendar}  label="วันเริ่มงาน"      value={fmtDate(startDate)} />}
                     {managerName && <InfoRow icon={User}    label="ผู้บังคับบัญชา"   value={managerName} />}
-                    {!email && !phone && !startDate && !managerName && (
+                    {!email && !phone && !titleGenderLine && !dateOfBirth && !startDate && !managerName && (
                         <p className="text-center py-3" style={{ fontSize: '17px', color: 'rgba(255,255,255,0.90)' }}>
                             ไม่มีข้อมูลติดต่อ
                         </p>

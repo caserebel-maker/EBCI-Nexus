@@ -72,6 +72,11 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
         nickname: '',
         title: 'นาย',
         date_of_birth: '',
+        // เพศ drives gender-specific leave gating (ลาคลอด vs ลาบวช).
+        // Default 'male' matches the 'นาย' default for title — when HR
+        // changes the title we also auto-flip this so the dashboard's
+        // maternity/ordination card stays consistent.
+        gender: 'male',
         position: '',
         department: departments[0] ?? '',
         employment_type: 'full-time',
@@ -123,6 +128,7 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
                 nickname: form.nickname,
                 title: form.title,
                 date_of_birth: form.date_of_birth,
+                gender: form.gender,
                 position: form.position,
                 department: form.department,
                 employment_type: form.employment_type,
@@ -269,7 +275,19 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
                         <label className={labelClass}>คำนำหน้า</label>
-                        <select className={selectClass} value={form.title} onChange={set('title')}>
+                        <select
+                            className={selectClass}
+                            value={form.title}
+                            onChange={(e) => {
+                                // Title and gender stay in sync: นาย → male, อื่นๆ → female.
+                                // HR can override gender afterwards if needed (e.g. legacy
+                                // staff with non-standard title) — the gender field stays
+                                // editable below.
+                                const newTitle = e.target.value
+                                const inferredGender = newTitle === 'นาย' ? 'male' : 'female'
+                                setForm(prev => ({ ...prev, title: newTitle, gender: inferredGender }))
+                            }}
+                        >
                             <option value="นาย">นาย</option>
                             <option value="นาง">นาง</option>
                             <option value="นางสาว">นางสาว</option>
@@ -290,6 +308,16 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
                     <div>
                         <label className={labelClass}>วันเกิด</label>
                         <input type="date" className={inputClass} value={form.date_of_birth} onChange={set('date_of_birth')} />
+                    </div>
+                    <div>
+                        <label className={labelClass}>เพศ {requiredMark}</label>
+                        <select className={selectClass} value={form.gender} onChange={set('gender')} required>
+                            <option value="male">ชาย</option>
+                            <option value="female">หญิง</option>
+                        </select>
+                        <p className="text-white/55 text-[11px] mt-1">
+                            ใช้สำหรับแสดงสิทธิลาคลอด/ลาบวชบนหน้าหลักให้ตรงกับพนักงาน
+                        </p>
                     </div>
                 </div>
             </div>

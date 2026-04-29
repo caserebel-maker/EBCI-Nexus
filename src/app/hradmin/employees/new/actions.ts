@@ -12,6 +12,10 @@ export interface CreateEmployeePayload {
     nickname?: string
     title: string
     date_of_birth: string
+    /** 'male' | 'female' — drives gender-specific leave gating
+     *  (ลาคลอด vs ลาบวช). Stored as text so future values can be
+     *  added without schema change. */
+    gender: string
     position: string
     department: string
     employment_type: string
@@ -171,6 +175,7 @@ export async function createEmployee(payload: CreateEmployeePayload) {
             nickname: payload.nickname || null,
             title: payload.title || null,
             date_of_birth: payload.date_of_birth || null,
+            gender: payload.gender || null,
             position: payload.position,
             department: payload.department,
             employment_type: payload.employment_type || 'full-time',

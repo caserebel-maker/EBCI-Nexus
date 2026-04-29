@@ -12,6 +12,9 @@ type EmpRow = {
     first_name_th: string | null
     last_name_th: string | null
     nickname: string | null
+    title: string | null
+    gender: string | null
+    date_of_birth: string | null
     position: string | null
     department: string | null
     secondary_department: string | null
@@ -29,7 +32,9 @@ type EmpRow = {
 }
 
 const EMP_SELECT = [
-    'id', 'first_name_th', 'last_name_th', 'nickname', 'position', 'department',
+    'id', 'first_name_th', 'last_name_th', 'nickname', 'title',
+    'gender', 'date_of_birth',
+    'position', 'department',
     'secondary_department',
     'start_date', 'photo_url', 'email', 'phone', 'applicant_id',
     'employee_code', 'employment_type', 'manager_id',
@@ -182,6 +187,9 @@ export default async function ProfilePage() {
             displayName={displayName}
             initials={initials}
             avatarUrl={avatarUrl}
+            title={emp?.title ?? null}
+            gender={emp?.gender ?? null}
+            dateOfBirth={emp?.date_of_birth ?? null}
             position={emp?.position ?? null}
             department={emp?.department ?? null}
             secondaryDepartment={emp?.secondary_department ?? null}
