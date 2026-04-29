@@ -1,7 +1,79 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { ROLE_CONFIG, type UserRole } from '@/config/roles'
+
+// Rate-limit thresholds. Tuned to block credential-stuffing without
+// frustrating legitimate users who fat-finger a password a few times.
+//   - 5 fails per email in 5 min  → block that email for 15 min
+//   - 20 fails per IP in 5 min     → block that IP for 15 min
+// Both windows roll: the count is "fails in last 5 min", not "fails
+// since last reset", so a successful login doesn't free up an attacker
+// who's still spraying.
+const RL_WINDOW_MIN = 5
+const RL_BLOCK_MIN  = 15
+const RL_EMAIL_MAX  = 5
+const RL_IP_MAX     = 20
+
+interface RateLimitDecision {
+    blocked: boolean
+    reason?: 'email' | 'ip'
+    retryAfterSec?: number
+}
+
+/** Pull the client IP out of the proxy headers Vercel sets. Falls back
+ *  to null if neither header is set (local dev usually) so the IP
+ *  bucket simply doesn't fire. */
+async function clientIp(): Promise<string | null> {
+    const h = await headers()
+    const fwd = h.get('x-forwarded-for')
+    if (fwd) return fwd.split(',')[0].trim()
+    return h.get('x-real-ip')
+}
+
+/** Return whether to block this attempt + which counter tripped. */
+async function checkRateLimit(emailLower: string, ip: string | null): Promise<RateLimitDecision> {
+    const sinceIso = new Date(Date.now() - RL_BLOCK_MIN * 60 * 1000).toISOString()
+
+    // Email bucket — narrowest signal, check first.
+    const { count: emailFails } = await supabaseAdmin
+        .from('login_attempts')
+        .select('id', { count: 'exact', head: true })
+        .eq('email_lower', emailLower)
+        .eq('success', false)
+        .gte('attempted_at', sinceIso)
+    if ((emailFails ?? 0) >= RL_EMAIL_MAX) {
+        return { blocked: true, reason: 'email', retryAfterSec: RL_BLOCK_MIN * 60 }
+    }
+
+    if (ip) {
+        const { count: ipFails } = await supabaseAdmin
+            .from('login_attempts')
+            .select('id', { count: 'exact', head: true })
+            .eq('ip_address', ip)
+            .eq('success', false)
+            .gte('attempted_at', sinceIso)
+        if ((ipFails ?? 0) >= RL_IP_MAX) {
+            return { blocked: true, reason: 'ip', retryAfterSec: RL_BLOCK_MIN * 60 }
+        }
+    }
+    return { blocked: false }
+}
+
+/** Best-effort attempt log. Errors are swallowed so a transient DB
+ *  glitch doesn't block legitimate logins; in that case we lose a
+ *  tick of rate-limit accuracy, not auth. */
+async function recordAttempt(emailLower: string, ip: string | null, success: boolean) {
+    try {
+        await supabaseAdmin.from('login_attempts').insert({
+            email_lower: emailLower,
+            ip_address: ip,
+            success,
+        })
+    } catch (err) {
+        console.warn('[Auth] login_attempts insert failed:', err)
+    }
+}
 
 /**
  * Resolve role from the public."User" table when auth metadata is
@@ -59,6 +131,28 @@ export async function POST(request: Request) {
             )
         }
 
+        const emailLower = String(email).trim().toLowerCase()
+        const ip = await clientIp()
+
+        // Pre-flight rate-limit check. Do this BEFORE Supabase Auth so
+        // a bot spraying passwords burns a ~5ms count() instead of a
+        // network round-trip to Supabase per attempt.
+        const limit = await checkRateLimit(emailLower, ip)
+        if (limit.blocked) {
+            console.warn(`[Auth] rate-limited: ${limit.reason} (email=${emailLower} ip=${ip})`)
+            return NextResponse.json(
+                {
+                    error: limit.reason === 'email'
+                        ? `บัญชีนี้พยายาม login ผิดเกินจำนวนครั้งที่อนุญาต — ลองใหม่ในอีก ${RL_BLOCK_MIN} นาที หรือใช้ "ลืมรหัสผ่าน?"`
+                        : `เครื่องนี้พยายาม login ผิดเกินจำนวนครั้งที่อนุญาต — ลองใหม่ในอีก ${RL_BLOCK_MIN} นาที`,
+                },
+                {
+                    status: 429,
+                    headers: limit.retryAfterSec ? { 'Retry-After': String(limit.retryAfterSec) } : undefined,
+                },
+            )
+        }
+
         // Use supabaseAdmin.auth.signInWithPassword — zero Prisma / DATABASE_URL dependency
         const { data, error } = await supabaseAdmin.auth.signInWithPassword({
             email,
@@ -66,12 +160,20 @@ export async function POST(request: Request) {
         })
 
         if (error || !data.user) {
+            // Record the failure BEFORE returning so the next attempt
+            // sees an updated counter. await on this so a fast attacker
+            // can't out-race the insert by submitting back-to-back.
+            await recordAttempt(emailLower, ip, false)
             console.log(`[Auth] Failed: ${email} — ${error?.message}`)
             return NextResponse.json(
                 { error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' },
                 { status: 401 }
             )
         }
+
+        // Successful login — log it too so we have the full audit
+        // trail (last successful login is useful for HR forensics).
+        await recordAttempt(emailLower, ip, true)
 
         const meta = data.user.user_metadata ?? {}
         const appMeta = data.user.app_metadata ?? {}
