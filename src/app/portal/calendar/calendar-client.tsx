@@ -179,14 +179,32 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                                 onClick={() => setSelected(isSelected ? null : dateStr)}
                                 className="relative flex flex-col items-center py-1 rounded-xl transition-all active:scale-95"
                                 style={{
+                                    // Off-day cells were rendering ~18% red
+                                    // over the maroon body — same hue family
+                                    // so the cell barely separated from the
+                                    // background. Use amber instead: completely
+                                    // different hue from the maroon page, still
+                                    // reads as "warning / non-working day" in
+                                    // Thai cultural conventions, and the
+                                    // amber/maroon contrast is the strongest
+                                    // pair we get without inventing a new
+                                    // colour. WFH stays green (already a
+                                    // distinct hue from the body); selected
+                                    // stays neutral white.
                                     background: isSelected
                                         ? 'rgba(255,255,255,0.22)'
                                         : isOffDay
-                                            ? 'rgba(248,113,113,0.18)'
+                                            ? 'rgba(251,191,36,0.28)'
                                             : isWfh
-                                                ? 'rgba(52,211,153,0.20)'
+                                                ? 'rgba(52,211,153,0.22)'
                                                 : hasEvent ? 'rgba(255,255,255,0.08)' : undefined,
-                                    border: isSelected ? '1px solid rgba(255,255,255,0.45)' : undefined,
+                                    border: isSelected
+                                        ? '1px solid rgba(255,255,255,0.45)'
+                                        : isOffDay
+                                            ? '1px solid rgba(251,191,36,0.55)'
+                                            : isWfh
+                                                ? '1px solid rgba(52,211,153,0.45)'
+                                                : undefined,
                                     minHeight: 44,
                                 }}
                             >
@@ -198,10 +216,16 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                                     className="w-7 h-7 flex items-center justify-center rounded-full font-bold text-sm"
                                     style={{
                                         background: isToday ? '#fbbf24' : undefined,
+                                        // Off-day numbers go amber (matches the
+                                        // new amber cell bg). Sunday-only cells
+                                        // (no holiday) keep the traditional red
+                                        // since the cell bg is still neutral.
+                                        // Saturday stays blue.
                                         color: isToday
                                             ? '#1a0a0d'
-                                            : isSun || isOffDay
-                                                ? '#FCA5A5'
+                                            : isOffDay
+                                                ? '#fde68a'
+                                                : isSun ? '#FCA5A5'
                                                 : isSat ? '#93C5FD' : '#ffffff',
                                         boxShadow: isToday ? '0 0 0 2px rgba(251,191,36,0.4)' : undefined,
                                     }}
@@ -211,13 +235,14 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
 
                                 {/* Holiday/WFH label (tiny). Bumped from 8 → 10px so the
                                     truncated name is readable on a phone without zooming;
-                                    the cell footers were near-illegible before. */}
+                                    the cell footers were near-illegible before. Off-day
+                                    text now amber to match the cell bg. */}
                                 {holiday && (
                                     <span className="leading-tight text-center px-0.5 truncate w-full font-semibold"
                                         style={{
                                             fontSize: '10px',
                                             maxWidth: '100%',
-                                            color: isWfh ? '#A7F3D0' : '#FECACA',
+                                            color: isWfh ? '#A7F3D0' : '#fde68a',
                                             marginTop: 2,
                                         }}>
                                         {isWfh ? `🏠 ${holiday.name}` : holiday.name}
@@ -259,8 +284,8 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                     {selectedHoliday && (() => {
                         const wfh = isWfhEntry(selectedHoliday)
                         const tone = wfh
-                            ? { bg: 'rgba(52,211,153,0.18)', border: 'rgba(52,211,153,0.4)', text: '#A7F3D0', sub: '#6EE7B7', icon: '🏠' }
-                            : { bg: 'rgba(248,113,113,0.18)', border: 'rgba(248,113,113,0.4)', text: '#FECACA', sub: '#FCA5A5', icon: '🎌' }
+                            ? { bg: 'rgba(52,211,153,0.22)', border: 'rgba(52,211,153,0.45)', text: '#A7F3D0', sub: '#6EE7B7', icon: '🏠' }
+                            : { bg: 'rgba(251,191,36,0.28)', border: 'rgba(251,191,36,0.55)', text: '#fde68a', sub: '#fcd34d', icon: '🎌' }
                         return (
                             <div className="flex items-center gap-2 mb-2 p-3 rounded-xl"
                                 style={{ background: tone.bg, border: `1px solid ${tone.border}` }}>
@@ -295,7 +320,7 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                 <div className="flex flex-wrap gap-x-4 gap-y-2">
                     {hasOffDayInMonth && (
                         <div className="flex items-center gap-1.5">
-                            <span className="w-3 h-3 rounded-sm" style={{ background: 'rgba(248,113,113,0.5)', border: '1px solid #F87171' }} />
+                            <span className="w-3 h-3 rounded-sm" style={{ background: 'rgba(251,191,36,0.5)', border: '1px solid #fbbf24' }} />
                             <span className="text-white/85 font-medium" style={{ fontSize: '12px' }}>วันหยุด</span>
                         </div>
                     )}
