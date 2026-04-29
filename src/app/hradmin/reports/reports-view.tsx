@@ -23,8 +23,60 @@ const glassCard = {
 
 type Tab = 'attendance' | 'leave' | 'contracts'
 
+/** Granularity for the attendance report. The action takes raw
+ *  fromDate/toDate; this only drives the UI's date pickers. */
+type Granularity = 'month' | 'week' | 'range'
+
 const MONTHS_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
 const MONTHS_TH_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม']
+
+/** Format a JS Date as Bangkok-local YYYY-MM-DD. We treat the input
+ *  Date as already-Bangkok (tz handling lives at the action layer). */
+function toDateKey(d: Date): string {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+}
+
+/** Get the Monday of the ISO week containing `d`. Returns the date
+ *  key (YYYY-MM-DD). ISO weeks run Mon-Sun; calling code adds 6 days
+ *  for the Sunday. */
+function mondayOf(d: Date): Date {
+    const x = new Date(d)
+    const dow = x.getDay()           // 0=Sun, 1=Mon, …, 6=Sat
+    const diff = (dow + 6) % 7        // Mon=0, Tue=1, …, Sun=6
+    x.setDate(x.getDate() - diff)
+    x.setHours(0, 0, 0, 0)
+    return x
+}
+
+/** Resolve the (fromDate, toDate) date keys for the active granularity.
+ *  Pure function — UI state in, two date strings out. */
+function resolveDateRange(
+    granularity: Granularity,
+    year: number,
+    month: number,
+    weekAnchor: string,
+    fromDate: string,
+    toDate: string,
+): { from: string; to: string } {
+    if (granularity === 'month') {
+        const lastDay = new Date(year, month, 0).getDate()
+        return {
+            from: `${year}-${String(month).padStart(2, '0')}-01`,
+            to:   `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`,
+        }
+    }
+    if (granularity === 'week') {
+        const anchor = weekAnchor ? new Date(weekAnchor + 'T00:00:00') : new Date()
+        const mon = mondayOf(anchor)
+        const sun = new Date(mon)
+        sun.setDate(mon.getDate() + 6)
+        return { from: toDateKey(mon), to: toDateKey(sun) }
+    }
+    return { from: fromDate, to: toDate }
+}
 
 function downloadCsv(filename: string, rows: string[][]) {
     const csv = rows.map(r => r.map(c => `"${(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -56,6 +108,21 @@ export function ReportsView({ departments }: Props) {
     const [month, setMonth] = useState(now.getMonth() + 1)
     const [department, setDepartment] = useState<string>('')
 
+    // Attendance tab adds a granularity selector. Defaults are tuned
+    // so a fresh page load lands on "current month" (the most common
+    // ask) — week + range modes pre-fill sensibly the moment a user
+    // switches to them.
+    const [granularity, setGranularity] = useState<Granularity>('month')
+    const [weekAnchor, setWeekAnchor] = useState(() => toDateKey(new Date()))
+    const [fromDate, setFromDate] = useState(() => {
+        const d = new Date(); d.setDate(d.getDate() - 6); return toDateKey(d)
+    })
+    const [toDate, setToDate] = useState(() => toDateKey(new Date()))
+
+    const { from: attFrom, to: attTo } = resolveDateRange(
+        granularity, year, month, weekAnchor, fromDate, toDate,
+    )
+
     const [attData, setAttData] = useState<AttendanceReport | null>(null)
     const [leaveData, setLeaveData] = useState<LeaveReport | null>(null)
     const [contractData, setContractData] = useState<ContractReport | null>(null)
@@ -64,14 +131,14 @@ export function ReportsView({ departments }: Props) {
     const loadedKey = useRef<string>('')
 
     // Load data whenever filters change. Keyed string so we only fire once per combo.
-    const key = `${tab}|${year}|${month}|${department}`
+    const key = `${tab}|${year}|${attFrom}|${attTo}|${department}`
     useEffect(() => {
         if (loadedKey.current === key) return
         loadedKey.current = key
         startTransition(async () => {
             setError(null)
             if (tab === 'attendance') {
-                const res = await getAttendanceReport(year, month, department || undefined)
+                const res = await getAttendanceReport(attFrom, attTo, department || undefined)
                 if ('error' in res) setError(res.error)
                 else setAttData(res)
             } else if (tab === 'leave') {
@@ -84,7 +151,7 @@ export function ReportsView({ departments }: Props) {
                 else setContractData(res)
             }
         })
-    }, [key, tab, year, month, department])
+    }, [key, tab, year, attFrom, attTo, department])
 
     return (
         <div className="space-y-4 lg:space-y-6">
@@ -103,36 +170,108 @@ export function ReportsView({ departments }: Props) {
 
             {/* Filters */}
             <div className="p-4 flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center" style={glassCard}>
-                {tab !== 'contracts' && (
+                {tab === 'leave' && (
+                    <div className="flex items-center gap-2">
+                        <Calendar size={14} className="text-white/50" />
+                        <label className="text-white/70 text-sm">ปี</label>
+                        <select
+                            value={year}
+                            onChange={e => setYear(parseInt(e.target.value))}
+                            className="bg-white/10 text-white text-sm px-3 py-1.5 rounded-lg border border-white/15 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                        >
+                            {[0, 1, 2].map(i => {
+                                const y = now.getFullYear() - i
+                                return <option key={y} value={y} className="text-black">{y + 543}</option>
+                            })}
+                        </select>
+                    </div>
+                )}
+
+                {tab === 'attendance' && (
                     <>
+                        {/* Granularity selector — drives which date inputs
+                            render below. Each option resolves to a
+                            (fromDate, toDate) pair via resolveDateRange. */}
                         <div className="flex items-center gap-2">
                             <Calendar size={14} className="text-white/50" />
-                            <label className="text-white/70 text-sm">ปี</label>
+                            <label className="text-white/70 text-sm">ช่วงเวลา</label>
                             <select
-                                value={year}
-                                onChange={e => setYear(parseInt(e.target.value))}
+                                value={granularity}
+                                onChange={e => setGranularity(e.target.value as Granularity)}
                                 className="bg-white/10 text-white text-sm px-3 py-1.5 rounded-lg border border-white/15 focus:outline-none focus:ring-2 focus:ring-amber-300"
                             >
-                                {[0, 1, 2].map(i => {
-                                    const y = now.getFullYear() - i
-                                    return <option key={y} value={y} className="text-black">{y + 543}</option>
-                                })}
+                                <option value="month" className="text-black">รายเดือน</option>
+                                <option value="week" className="text-black">รายสัปดาห์</option>
+                                <option value="range" className="text-black">กำหนดเอง</option>
                             </select>
                         </div>
 
-                        {tab === 'attendance' && (
+                        {granularity === 'month' && (
+                            <>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-white/70 text-sm">ปี</label>
+                                    <select
+                                        value={year}
+                                        onChange={e => setYear(parseInt(e.target.value))}
+                                        className="bg-white/10 text-white text-sm px-3 py-1.5 rounded-lg border border-white/15 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                                    >
+                                        {[0, 1, 2].map(i => {
+                                            const y = now.getFullYear() - i
+                                            return <option key={y} value={y} className="text-black">{y + 543}</option>
+                                        })}
+                                    </select>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-white/70 text-sm">เดือน</label>
+                                    <select
+                                        value={month}
+                                        onChange={e => setMonth(parseInt(e.target.value))}
+                                        className="bg-white/10 text-white text-sm px-3 py-1.5 rounded-lg border border-white/15 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                                    >
+                                        {MONTHS_TH.map((m, i) => (
+                                            <option key={i} value={i + 1} className="text-black">{m}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </>
+                        )}
+
+                        {granularity === 'week' && (
                             <div className="flex items-center gap-2">
-                                <label className="text-white/70 text-sm">เดือน</label>
-                                <select
-                                    value={month}
-                                    onChange={e => setMonth(parseInt(e.target.value))}
+                                <label className="text-white/70 text-sm">วันใดในสัปดาห์</label>
+                                <input
+                                    type="date"
+                                    value={weekAnchor}
+                                    onChange={e => setWeekAnchor(e.target.value)}
                                     className="bg-white/10 text-white text-sm px-3 py-1.5 rounded-lg border border-white/15 focus:outline-none focus:ring-2 focus:ring-amber-300"
-                                >
-                                    {MONTHS_TH.map((m, i) => (
-                                        <option key={i} value={i + 1} className="text-black">{m}</option>
-                                    ))}
-                                </select>
+                                />
+                                <span className="text-[11px] text-white/45">
+                                    ({attFrom} → {attTo})
+                                </span>
                             </div>
+                        )}
+
+                        {granularity === 'range' && (
+                            <>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-white/70 text-sm">จาก</label>
+                                    <input
+                                        type="date"
+                                        value={fromDate}
+                                        onChange={e => setFromDate(e.target.value)}
+                                        className="bg-white/10 text-white text-sm px-3 py-1.5 rounded-lg border border-white/15 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-white/70 text-sm">ถึง</label>
+                                    <input
+                                        type="date"
+                                        value={toDate}
+                                        onChange={e => setToDate(e.target.value)}
+                                        className="bg-white/10 text-white text-sm px-3 py-1.5 rounded-lg border border-white/15 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                                    />
+                                </div>
+                            </>
                         )}
                     </>
                 )}
@@ -196,7 +335,18 @@ function TabButton({ active, onClick, icon: Icon, children }: { active: boolean;
 
 function AttendanceTab({ data }: { data: AttendanceReport }) {
     const handleExport = () => {
-        const header = ['รหัส', 'ชื่อ-นามสกุล', 'แผนก', 'เข้าออฟฟิศ', 'WFH', 'Off-site', 'รวม', 'วันทำงาน']
+        // Two extra columns vs the legacy header: "มาสาย" (count of
+        // late office check-ins per employee) + "ขาดงาน" (workdays
+        // not covered by check-in or approved leave) + "ลา"
+        // (approved leave days inside the window). Order keeps the
+        // existing first-six columns intact so anyone with a saved
+        // template + macro doesn't break.
+        const header = [
+            'รหัส', 'ชื่อ-นามสกุล', 'แผนก',
+            'เข้าออฟฟิศ', 'WFH', 'Off-site', 'รวม',
+            'มาสาย', 'ลา', 'ขาดงาน', 'วันทำงาน', 'ช่วงเวลา',
+        ]
+        const rangeLabel = `${data.fromDate} ถึง ${data.toDate}`
         const rows = [
             header,
             ...data.rows.map(r => [
@@ -207,20 +357,37 @@ function AttendanceTab({ data }: { data: AttendanceReport }) {
                 String(r.wfhDays),
                 String(r.offsiteDays),
                 String(r.totalDays),
+                String(r.lateDays),
+                String(r.leaveDays),
+                String(r.absentDays),
                 String(data.workdays),
+                rangeLabel,
             ]),
         ]
-        downloadCsv(`attendance_${data.year}_${String(data.month).padStart(2, '0')}.csv`, rows)
+        // Filename embeds the range so multiple exports don't collide.
+        // Preserves the legacy month-only filename when the window is
+        // exactly one calendar month.
+        const filename = data.month && data.year
+            ? `attendance_${data.year}_${String(data.month).padStart(2, '0')}.csv`
+            : `attendance_${data.fromDate}_to_${data.toDate}.csv`
+        downloadCsv(filename, rows)
     }
 
-    const daysInMonth = new Date(data.year, data.month, 0).getDate()
+    // Banner copy adapts to whether the window is a calendar month
+    // (legacy phrasing) or a custom range / week.
+    const monthBanner = data.month && data.year
+        ? `สรุปเดือน ${MONTHS_TH_FULL[data.month - 1]} ${data.year + 543}`
+        : `สรุปการเข้างาน ${data.fromDate} ถึง ${data.toDate}`
+    const monthSubtitle = data.month && data.year
+        ? `ช่วงข้อมูล: ${data.fromDate}${data.holidays > 0 ? ` ถึง ${data.toDate}` : ''} · วันทำงาน ${data.workdays} วัน${data.holidays > 0 ? ` (หักวันหยุด ${data.holidays} วันแล้ว)` : ''}`
+        : `วันทำงาน ${data.workdays} วัน${data.holidays > 0 ? ` (หักวันหยุด ${data.holidays} วันแล้ว)` : ''}`
 
     return (
         <div className="space-y-4">
             <RangeBanner
-                title={`สรุปเดือน ${MONTHS_TH_FULL[data.month - 1]} ${data.year + 543}`}
-                subtitle={`ช่วงข้อมูล: 1–${daysInMonth} ${MONTHS_TH[data.month - 1]} · วันทำงาน ${data.workdays} วัน`}
-                hint="ตัวเลข 'วัน-คน' = ผลรวมจำนวนวันของพนักงานทุกคน (เช่น 7 คน × 1 วัน = 7 วัน-คน)"
+                title={monthBanner}
+                subtitle={monthSubtitle}
+                hint="ตัวเลข 'วัน-คน' = ผลรวมจำนวนวันของพนักงานทุกคน · มาสาย = check-in หลัง 8:30"
             />
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -265,7 +432,7 @@ function AttendanceTab({ data }: { data: AttendanceReport }) {
                     </button>
                 </div>
                 <div className="overflow-x-auto -mx-4 lg:mx-0">
-                    <table className="w-full text-sm min-w-[600px]">
+                    <table className="w-full text-sm min-w-[760px]">
                         <thead>
                             <tr className="border-b border-white/10 text-white/60 text-xs uppercase tracking-wider">
                                 <th className="text-left py-2 px-3">รหัส</th>
@@ -275,6 +442,9 @@ function AttendanceTab({ data }: { data: AttendanceReport }) {
                                 <th className="text-right py-2 px-3">WFH</th>
                                 <th className="text-right py-2 px-3">Off-site</th>
                                 <th className="text-right py-2 px-3">รวม</th>
+                                <th className="text-right py-2 px-3">มาสาย</th>
+                                <th className="text-right py-2 px-3">ลา</th>
+                                <th className="text-right py-2 px-3">ขาดงาน</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -287,11 +457,20 @@ function AttendanceTab({ data }: { data: AttendanceReport }) {
                                     <td className="py-2 px-3 text-right text-emerald-300 font-semibold">{r.wfhDays}</td>
                                     <td className="py-2 px-3 text-right text-amber-300 font-semibold">{r.offsiteDays}</td>
                                     <td className="py-2 px-3 text-right font-bold text-white">{r.totalDays}</td>
+                                    <td className={`py-2 px-3 text-right ${r.lateDays > 0 ? 'text-amber-300 font-semibold' : 'text-white/40'}`}>
+                                        {r.lateDays}
+                                    </td>
+                                    <td className={`py-2 px-3 text-right ${r.leaveDays > 0 ? 'text-violet-300 font-semibold' : 'text-white/40'}`}>
+                                        {r.leaveDays}
+                                    </td>
+                                    <td className={`py-2 px-3 text-right ${r.absentDays > 0 ? 'text-red-300 font-semibold' : 'text-white/40'}`}>
+                                        {r.absentDays}
+                                    </td>
                                 </tr>
                             ))}
                             {data.rows.length === 0 && (
                                 <tr>
-                                    <td colSpan={7} className="py-8 text-center text-white/50">ไม่มีข้อมูล</td>
+                                    <td colSpan={10} className="py-8 text-center text-white/50">ไม่มีข้อมูล</td>
                                 </tr>
                             )}
                         </tbody>
