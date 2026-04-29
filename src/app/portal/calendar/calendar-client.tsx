@@ -215,19 +215,23 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                                 <span
                                     className="w-7 h-7 flex items-center justify-center rounded-full font-bold text-sm"
                                     style={{
-                                        background: isToday ? '#fbbf24' : undefined,
-                                        // Off-day numbers go amber (matches the
-                                        // new amber cell bg). Sunday-only cells
-                                        // (no holiday) keep the traditional red
-                                        // since the cell bg is still neutral.
-                                        // Saturday stays blue.
+                                        // "Today" pill — switched from amber
+                                        // to white because amber now belongs
+                                        // to off-days (Mod's call: the two
+                                        // were too close in hue). White solid
+                                        // with dark maroon text reads as
+                                        // "current/active" and stands clear
+                                        // of every other cell tone (off-day
+                                        // amber, WFH green, weekday neutral,
+                                        // Sun red, Sat blue).
+                                        background: isToday ? '#ffffff' : undefined,
                                         color: isToday
-                                            ? '#1a0a0d'
+                                            ? '#561e23'
                                             : isOffDay
                                                 ? '#fde68a'
                                                 : isSun ? '#FCA5A5'
                                                 : isSat ? '#93C5FD' : '#ffffff',
-                                        boxShadow: isToday ? '0 0 0 2px rgba(251,191,36,0.4)' : undefined,
+                                        boxShadow: isToday ? '0 0 0 2px rgba(255,255,255,0.45)' : undefined,
                                     }}
                                 >
                                     {day}
@@ -331,7 +335,7 @@ export function CalendarClient({ holidays, leaveDays }: Props) {
                         </div>
                     )}
                     <div className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 rounded-full" style={{ background: '#fbbf24', boxShadow: '0 0 0 2px rgba(251,191,36,0.35)' }} />
+                        <span className="w-3 h-3 rounded-full" style={{ background: '#ffffff', boxShadow: '0 0 0 2px rgba(255,255,255,0.35)' }} />
                         <span className="text-white/85 font-medium" style={{ fontSize: '12px' }}>วันนี้</span>
                     </div>
                     {Object.entries(LEAVE_LABEL).filter(([k]) => leaveTypesInMonth.has(k)).map(([k, label]) => (
