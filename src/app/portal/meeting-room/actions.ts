@@ -3,26 +3,10 @@
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+import { BOOKING_HORIZON_DAYS, type RoomBooking } from './constants'
 
-export const ROOM_NAME = 'ห้องประชุมชั้น 2'
-export const BOOKING_HORIZON_DAYS = 7
 const MIN_DURATION_MIN = 15
 const MAX_DURATION_HOURS = 8
-
-export interface RoomBooking {
-    id: string
-    title: string
-    notes: string | null
-    attendees: string | null
-    starts_at: string
-    ends_at: string
-    booked_by_employee_id: string | null
-    booked_by_name: string
-    cancelled_at: string | null
-    cancelled_by_name: string | null
-    cancellation_reason: string | null
-    created_at: string
-}
 
 interface CreatePayload {
     title: string

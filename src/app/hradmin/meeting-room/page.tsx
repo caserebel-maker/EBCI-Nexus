@@ -1,11 +1,8 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
-import {
-    listAllBookingsForHr,
-    ROOM_NAME,
-    BOOKING_HORIZON_DAYS,
-} from '@/app/portal/meeting-room/actions'
+import { listAllBookingsForHr } from '@/app/portal/meeting-room/actions'
+import { ROOM_NAME, BOOKING_HORIZON_DAYS } from '@/app/portal/meeting-room/constants'
 import { MeetingRoomView } from '@/app/portal/meeting-room/meeting-room-view'
 
 export const dynamic = 'force-dynamic'

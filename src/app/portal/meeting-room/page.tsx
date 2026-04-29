@@ -1,7 +1,8 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
-import { listUpcomingBookings, listMyBookings, ROOM_NAME, BOOKING_HORIZON_DAYS } from './actions'
+import { listUpcomingBookings, listMyBookings } from './actions'
+import { ROOM_NAME, BOOKING_HORIZON_DAYS } from './constants'
 import { MeetingRoomView } from './meeting-room-view'
 
 export const dynamic = 'force-dynamic'

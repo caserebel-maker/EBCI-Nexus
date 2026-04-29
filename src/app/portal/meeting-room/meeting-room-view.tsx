@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import { DoorOpen, Plus, X, Clock, Users, FileText, Trash2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
-import { createBooking, cancelBooking, type RoomBooking } from './actions'
+import { createBooking, cancelBooking } from './actions'
+import type { RoomBooking } from './constants'
 import { formatBangkokTime, formatBangkokDateTime } from '@/lib/datetime'
 
 const glass: React.CSSProperties = {
