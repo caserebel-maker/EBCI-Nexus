@@ -5,6 +5,7 @@ import { getSession } from '@/lib/auth'
 import { haversineDistance } from '@/lib/geo'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
+import { getLeaveTodayInfo } from '@/lib/leave-today'
 
 // Helper: resolve employee_id from session (with email fallback for legacy users)
 async function getEmployeeId(): Promise<string | null> {
@@ -58,6 +59,19 @@ export async function checkIn(payload: CheckInPayload) {
     const employeeId = await getEmployeeId()
     if (!employeeId) {
         return { error: 'ไม่พบข้อมูลพนักงาน — กรุณาติดต่อ HR' }
+    }
+
+    // ── §1.3 Leave-day suppression ─────────────────────────────────────────
+    // If the employee has an approved (full-day) leave that covers today,
+    // refuse the check-in attempt. Half-day leaves still allow check-in
+    // (the other half of the day is normal work) — getLeaveTodayInfo
+    // sets blocksCheckin=false for those.
+    const leaveToday = await getLeaveTodayInfo(employeeId)
+    if (leaveToday?.blocksCheckin) {
+        const typeName = leaveToday.leave_type_name ?? 'ลา'
+        return {
+            error: `วันนี้คุณ${typeName}อยู่ — ไม่ต้องเช็คอิน หากต้องการยกเลิกใบลาให้กดที่หน้า "การลา"`,
+        }
     }
 
     // ── Anti-Trick #1: Time restriction (7:00-9:30 Bangkok time) ───────────

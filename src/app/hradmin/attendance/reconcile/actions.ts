@@ -11,6 +11,7 @@ export type ReconStatus =
     | 'discrepancy'    // card + mobile but > threshold
     | 'card_only'
     | 'mobile_only'
+    | 'on_leave'       // §1.3 — approved leave covers the date; never "ขาด"
     | 'absent'
 
 export interface ReconRow {
@@ -25,6 +26,10 @@ export interface ReconRow {
     varianceMinutes: number | null
     status: ReconStatus
     officialClockIn: string | null
+    /** §1.3 — when status='on_leave' or the employee has an approved
+     *  leave that day, surface the leave-type name so HR sees "ลาป่วย"
+     *  instead of just "ลา". Null for non-leave rows. */
+    leaveTypeName: string | null
 }
 
 export interface ReconSummary {
@@ -34,6 +39,7 @@ export interface ReconSummary {
     discrepancy: number
     cardOnly: number
     mobileOnly: number
+    onLeave: number
     absent: number
     rows: ReconRow[]
     reconciledAt: string
@@ -142,6 +148,38 @@ export async function reconcileDate(
         existingLogByEmp.set(l.employee_id as string, l.id as string)
     }
 
+    // 4b. §1.3 — approved leaves that cover this date. Drives the
+    // "absent → on_leave" reclassification so leave days never show
+    // up as ขาด in the dashboard. We pull all leave types in one
+    // round-trip to avoid N+1 lookups inside the row loop.
+    const { data: leavesOnDate } = await supabaseAdmin
+        .from('leave_requests')
+        .select('employee_id, leave_type_id, is_half_day, half_day_period')
+        .eq('status', 'approved')
+        .lte('start_date', date)
+        .gte('end_date', date)
+    const leaveTypeIds = Array.from(
+        new Set((leavesOnDate ?? []).map(r => r.leave_type_id as string)),
+    )
+    const { data: leaveTypes } = leaveTypeIds.length
+        ? await supabaseAdmin
+            .from('leave_types')
+            .select('id, name_th')
+            .in('id', leaveTypeIds)
+        : { data: [] as Array<{ id: string; name_th: string | null }> }
+    const leaveTypeNameById = new Map<string, string>(
+        (leaveTypes ?? []).map(t => [t.id as string, (t.name_th ?? '') as string]),
+    )
+    const leaveByEmp = new Map<string, { typeName: string; isHalfDay: boolean }>()
+    for (const r of leavesOnDate ?? []) {
+        const eid = r.employee_id as string
+        if (leaveByEmp.has(eid)) continue
+        leaveByEmp.set(eid, {
+            typeName: leaveTypeNameById.get(r.leave_type_id as string) ?? 'ลา',
+            isHalfDay: Boolean(r.is_half_day),
+        })
+    }
+
     // 5. Build reconciliation rows
     const reconciledAt = new Date().toISOString()
     const rows: ReconRow[] = []
@@ -150,10 +188,21 @@ export async function reconcileDate(
     for (const e of staff) {
         const cardTime = cardByEmp.get(e.id) ?? null
         const mobileTime = mobileByEmp.get(e.id) ?? null
-        const { status, variance } = classify(
+        const classified = classify(
             toMs(cardTime, 'bangkok'),
             toMs(mobileTime, 'utc'),
         )
+        const variance = classified.variance
+        // §1.3 — if the employee has an approved (full-day) leave that
+        // covers this date AND we'd otherwise mark them absent, flip
+        // the status to 'on_leave' so it never reads as "ขาด". Half-day
+        // leaves stay as their underlying status (the punch they DID
+        // make is more informative than a leave label).
+        const leaveOnDate = leaveByEmp.get(e.id) ?? null
+        let status: ReconStatus = classified.status
+        if (status === 'absent' && leaveOnDate && !leaveOnDate.isHalfDay) {
+            status = 'on_leave'
+        }
         const official =
             cardTime // card is the source of truth when present
                 ? cardTime
@@ -171,6 +220,7 @@ export async function reconcileDate(
             varianceMinutes: variance,
             status,
             officialClockIn: official,
+            leaveTypeName: leaveOnDate?.typeName ?? null,
         })
 
         const logId = existingLogByEmp.get(e.id)
@@ -216,7 +266,8 @@ export async function reconcileDate(
         matched: 1,
         card_only: 2,
         mobile_only: 3,
-        absent: 4,
+        on_leave: 4,
+        absent: 5,
     }
     rows.sort((a, b) => {
         const s = statusOrder[a.status] - statusOrder[b.status]
@@ -231,6 +282,7 @@ export async function reconcileDate(
         discrepancy: rows.filter(r => r.status === 'discrepancy').length,
         cardOnly: rows.filter(r => r.status === 'card_only').length,
         mobileOnly: rows.filter(r => r.status === 'mobile_only').length,
+        onLeave: rows.filter(r => r.status === 'on_leave').length,
         absent: rows.filter(r => r.status === 'absent').length,
         rows,
         reconciledAt,

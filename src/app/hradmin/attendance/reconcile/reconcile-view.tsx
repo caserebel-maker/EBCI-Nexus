@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react'
 import {
     CheckCircle2, AlertTriangle, Smartphone, CreditCard, XCircle,
-    Calendar, RefreshCw, FileDown, Search, Loader2, Users,
+    Calendar, RefreshCw, FileDown, Search, Loader2, Users, Palmtree,
 } from 'lucide-react'
 import { reconcileDate, type ReconSummary, type ReconStatus } from './actions'
 import { formatBangkokTime } from '@/lib/datetime'
@@ -27,6 +27,7 @@ const FILTERS: Array<{
     { key: 'discrepancy', label: 'ต่างกัน',    color: 'text-rose-200' },
     { key: 'card_only',   label: 'บัตรอย่างเดียว',  color: 'text-sky-200' },
     { key: 'mobile_only', label: 'มือถืออย่างเดียว', color: 'text-amber-200' },
+    { key: 'on_leave',    label: 'ลา',         color: 'text-amber-300' },
     { key: 'absent',      label: 'ขาด',       color: 'text-white/50' },
 ]
 
@@ -109,7 +110,8 @@ export function ReconcileView({ initialDate, initialData }: Props) {
         const header = ['รหัส', 'ชื่อ-นามสกุล', 'แผนก', 'ตำแหน่ง', 'บัตร', 'มือถือ', 'ต่าง(นาที)', 'สถานะ', 'เวลาอนุมัติ']
         const statusLabel: Record<ReconStatus, string> = {
             matched: 'ตรงกัน', discrepancy: 'ต่างเกิน 10 นาที',
-            card_only: 'บัตรอย่างเดียว', mobile_only: 'มือถืออย่างเดียว', absent: 'ขาด',
+            card_only: 'บัตรอย่างเดียว', mobile_only: 'มือถืออย่างเดียว',
+            on_leave: 'ลา', absent: 'ขาด',
         }
         const rows = [
             header,
@@ -177,12 +179,13 @@ export function ReconcileView({ initialDate, initialData }: Props) {
 
             {data && (
                 <>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
                         <SummaryCard icon={Users}        label="พนักงาน"      value={data.totalEmployees} color="text-white" />
                         <SummaryCard icon={CheckCircle2} label="ตรงกัน"       value={data.matched}       color="text-emerald-300" />
                         <SummaryCard icon={AlertTriangle} label="ต่างกัน"      value={data.discrepancy}   color="text-rose-300" />
                         <SummaryCard icon={CreditCard}   label="บัตรเท่านั้น"  value={data.cardOnly}      color="text-sky-300" />
                         <SummaryCard icon={Smartphone}   label="มือถือเท่านั้น" value={data.mobileOnly}    color="text-amber-300" />
+                        <SummaryCard icon={Palmtree}     label="ลา"           value={data.onLeave}       color="text-amber-300" />
                         <SummaryCard icon={XCircle}      label="ขาด"          value={data.absent}        color="text-white/60" />
                     </div>
 
@@ -195,6 +198,7 @@ export function ReconcileView({ initialDate, initialData }: Props) {
                                 key === 'discrepancy' ? data.discrepancy :
                                 key === 'card_only' ? data.cardOnly :
                                 key === 'mobile_only' ? data.mobileOnly :
+                                key === 'on_leave' ? data.onLeave :
                                 data.absent
                             const active = filter === key
                             return (
@@ -243,7 +247,7 @@ export function ReconcileView({ initialDate, initialData }: Props) {
                                             }`}>
                                                 {formatVariance(r.varianceMinutes)}
                                             </td>
-                                            <td className="py-2 px-3"><StatusBadge status={r.status} /></td>
+                                            <td className="py-2 px-3"><StatusBadge status={r.status} leaveTypeName={r.leaveTypeName} /></td>
                                         </tr>
                                     ))}
                                     {filteredRows.length === 0 && (
@@ -281,18 +285,22 @@ function SummaryCard({
     )
 }
 
-function StatusBadge({ status }: { status: ReconStatus }) {
+function StatusBadge({ status, leaveTypeName }: { status: ReconStatus; leaveTypeName?: string | null }) {
     const meta: Record<ReconStatus, { label: string; cls: string; Icon: typeof CheckCircle2 }> = {
         matched:     { label: 'ตรงกัน',     cls: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/30', Icon: CheckCircle2 },
         discrepancy: { label: 'ต่างกัน',    cls: 'bg-rose-500/20 text-rose-200 border-rose-400/30',            Icon: AlertTriangle },
         card_only:   { label: 'บัตรอย่างเดียว',  cls: 'bg-sky-500/20 text-sky-200 border-sky-400/30',             Icon: CreditCard },
         mobile_only: { label: 'มือถืออย่างเดียว', cls: 'bg-amber-500/20 text-amber-200 border-amber-400/30',       Icon: Smartphone },
+        on_leave:    { label: 'ลา',         cls: 'bg-amber-500/20 text-amber-200 border-amber-400/30',         Icon: Palmtree },
         absent:      { label: 'ขาด',       cls: 'bg-white/10 text-white/60 border-white/20',                  Icon: XCircle },
     }
     const { label, cls, Icon } = meta[status]
+    // §1.3 — when status is on_leave, prefer the actual leave type
+    // ("ลาป่วย" / "ลากิจ") so HR sees what kind of leave at a glance.
+    const display = status === 'on_leave' && leaveTypeName ? leaveTypeName : label
     return (
         <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${cls}`}>
-            <Icon size={10} /> {label}
+            <Icon size={10} /> {display}
         </span>
     )
 }

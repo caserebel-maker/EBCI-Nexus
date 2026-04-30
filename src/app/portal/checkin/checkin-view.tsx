@@ -5,11 +5,12 @@ import dynamic from 'next/dynamic'
 const CheckinMap = dynamic(() => import('@/components/checkin/checkin-map').then(m => m.CheckinMap), { ssr: false, loading: () => <div className="h-64 rounded-2xl bg-white/5 animate-pulse flex items-center justify-center text-white/40 text-sm">กำลังโหลดแผนที่...</div> })
 
 import { useState, useEffect } from 'react'
-import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut, X, Briefcase } from 'lucide-react'
+import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut, X, Briefcase, Palmtree } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { checkIn, checkOut } from './actions'
 import { haversineDistance } from '@/lib/geo'
 import { formatBangkokTime, formatBangkokDateTime } from '@/lib/datetime'
+import type { LeaveTodayInfo } from '@/lib/leave-today'
 
 interface Office {
     name: string
@@ -33,11 +34,16 @@ interface Checkin {
 interface Props {
     office: Office | null
     todayCheckin: Checkin | null
+    /** §1.3 — set when the user has an approved/pending leave covering
+     *  today. blocksCheckin=true (full-day approved) hides the CTA
+     *  entirely; blocksCheckin=false renders a banner above the
+     *  normal flow (half-day or pending). */
+    leaveToday: LeaveTodayInfo | null
 }
 
 type GPSState = 'idle' | 'requesting' | 'success' | 'error'
 
-export function CheckinView({ office, todayCheckin }: Props) {
+export function CheckinView({ office, todayCheckin, leaveToday }: Props) {
     const [gpsState, setGpsState] = useState<GPSState>('idle')
     const [gps, setGps] = useState<{ lat: number; lng: number; accuracy: number } | null>(null)
     const [gpsError, setGpsError] = useState<string | null>(null)
@@ -201,8 +207,42 @@ export function CheckinView({ office, todayCheckin }: Props) {
                 </div>
             </div>
 
-            {/* Already checked in — show checkout UI */}
-            {isCheckedIn ? (
+            {/* §1.3 — full-day approved leave: suppress CTA entirely.
+                Skip this branch if the user already managed to check in
+                today (e.g. leave was approved AFTER they punched in) so
+                the checkout button stays reachable. */}
+            {leaveToday?.blocksCheckin && !isCheckedIn ? (
+                <div
+                    className="rounded-2xl p-6 border border-amber-400/40 bg-amber-500/10"
+                    style={{ backdropFilter: 'blur(8px)' }}
+                >
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="h-12 w-12 rounded-full bg-amber-500/25 flex items-center justify-center">
+                            <Palmtree size={24} className="text-amber-200" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-amber-200/80">วันนี้คุณลาอยู่</p>
+                            <p className="text-lg font-bold text-white">
+                                {leaveToday.leave_type_name ?? 'ลา'}
+                            </p>
+                            <p className="text-xs text-white/50 mt-0.5">
+                                {leaveToday.start_date === leaveToday.end_date
+                                    ? leaveToday.start_date
+                                    : `${leaveToday.start_date} → ${leaveToday.end_date}`}
+                            </p>
+                        </div>
+                    </div>
+                    <p className="text-sm text-white/75 leading-relaxed">
+                        ไม่ต้องเช็คอินวันนี้ — ระบบจะไม่นับว่าขาดงาน
+                    </p>
+                    <p className="text-xs text-white/50 leading-relaxed mt-2">
+                        หากต้องการยกเลิกใบลา ให้ไปที่หน้า{' '}
+                        <a href="/portal/leave" className="underline decoration-amber-300/50 hover:text-amber-200">
+                            การลา
+                        </a>{' '}แล้วกด &ldquo;ส่งคำขอยกเลิก&rdquo;
+                    </p>
+                </div>
+            ) : isCheckedIn ? (
                 <div
                     className="rounded-2xl p-6 border border-emerald-500/40 bg-emerald-500/10"
                     style={{ backdropFilter: 'blur(8px)' }}
@@ -281,6 +321,28 @@ export function CheckinView({ office, todayCheckin }: Props) {
                 </div>
             ) : (
                 <>
+                    {/* §1.3 — informational banner when half-day approved
+                        OR a leave is still pending. The user can still
+                        check in (the other half / pre-approval slot is
+                        normal work) but we want them to know. */}
+                    {leaveToday && !leaveToday.blocksCheckin && (
+                        <div className="rounded-xl p-4 border border-amber-400/30 bg-amber-500/10 flex items-start gap-3">
+                            <Palmtree size={18} className="text-amber-200 mt-0.5 shrink-0" />
+                            <div className="text-sm">
+                                <p className="font-bold text-amber-100">
+                                    {leaveToday.is_half_day
+                                        ? `วันนี้คุณลาครึ่งวัน${leaveToday.half_day_period === 'morning' ? 'เช้า' : 'บ่าย'} (${leaveToday.leave_type_name ?? 'ลา'})`
+                                        : `ใบลา ${leaveToday.leave_type_name ?? ''} ของคุณยังรออนุมัติ`}
+                                </p>
+                                <p className="text-xs text-white/65 mt-0.5">
+                                    {leaveToday.is_half_day
+                                        ? 'อีกครึ่งวันยังต้องเช็คอินตามปกติ'
+                                        : 'ถ้าใบลาได้รับอนุมัติก่อนสิ้นวัน ระบบจะไม่นับว่าขาดงาน'}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Map */}
                     {office && (
                         <CheckinMap

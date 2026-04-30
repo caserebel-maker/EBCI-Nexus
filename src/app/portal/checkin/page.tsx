@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
+import { resolveSessionEmployeeId } from '@/lib/session-employee'
+import { getLeaveTodayInfo } from '@/lib/leave-today'
 import { CheckinView } from './checkin-view'
 import { getTodayCheckin } from './actions'
 
@@ -20,10 +22,19 @@ export default async function CheckinPage() {
 
     const todayCheckin = await getTodayCheckin()
 
+    // §1.3 — when an approved leave covers today, the page hides the
+    // CTA and shows a "วันนี้ลา ..." card. Half-day leaves still allow
+    // check-in (the other half is normal work) — getLeaveTodayInfo
+    // sets blocksCheckin=false for those, so we still render the
+    // standard flow with a banner.
+    const employeeId = await resolveSessionEmployeeId(session)
+    const leaveToday = employeeId ? await getLeaveTodayInfo(employeeId) : null
+
     return (
         <CheckinView
             office={location ?? null}
             todayCheckin={todayCheckin}
+            leaveToday={leaveToday}
         />
     )
 }
