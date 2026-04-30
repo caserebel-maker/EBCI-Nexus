@@ -2,6 +2,15 @@ import type { SessionUser } from './auth-types'
 
 export const SESSION_COOKIE_NAME = 'nexus_session'
 export const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7
+/**
+ * Extended lifetime when the user ticks "จำฉันไว้" at login. 30 days
+ * is a balance: long enough that older staff don't get logged out
+ * weekly, short enough that a forgotten device on a shared computer
+ * still expires within a typical leave/quarter cycle. Same signed +
+ * HMAC-verified cookie underneath; the difference is purely the `exp`
+ * field on the payload + the cookie's max-age.
+ */
+export const SESSION_COOKIE_REMEMBER_AGE_SECONDS = 60 * 60 * 24 * 30
 
 const SESSION_COOKIE_VERSION = 'v1'
 const HMAC_ALGORITHM = { name: 'HMAC', hash: 'SHA-256' }
@@ -72,15 +81,19 @@ function isSessionUser(value: unknown): value is SessionUser {
         )
 }
 
-export async function createSessionCookie(session: SessionUser): Promise<string> {
+export async function createSessionCookie(
+    session: SessionUser,
+    options: { expiresInSeconds?: number } = {},
+): Promise<string> {
     const secret = getSessionSecret()
     if (!secret) {
         throw new Error('Missing NEXUS_SESSION_SECRET or SESSION_COOKIE_SECRET')
     }
 
+    const lifetime = options.expiresInSeconds ?? SESSION_COOKIE_MAX_AGE_SECONDS
     const payload: SignedSessionPayload = {
         ...session,
-        exp: Math.floor(Date.now() / 1000) + SESSION_COOKIE_MAX_AGE_SECONDS,
+        exp: Math.floor(Date.now() / 1000) + lifetime,
     }
     const payloadBytes = new TextEncoder().encode(JSON.stringify(payload))
     const encodedPayload = base64UrlEncode(payloadBytes)

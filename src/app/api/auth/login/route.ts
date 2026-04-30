@@ -6,6 +6,7 @@ import {
     createSessionCookie,
     SESSION_COOKIE_MAX_AGE_SECONDS,
     SESSION_COOKIE_NAME,
+    SESSION_COOKIE_REMEMBER_AGE_SECONDS,
 } from '@/lib/session-cookie'
 
 // Rate-limit thresholds. Tuned to block credential-stuffing without
@@ -199,7 +200,16 @@ export async function POST(request: Request) {
         // (existing sessions, password-reset flows, etc.) but the value
         // is now a free-form login identifier — accepts either an email
         // or an employee_code. resolveLoginEmail() handles the lookup.
-        const { email: loginInput, password, redirectTo: requestedRedirect } = body
+        const {
+            email: loginInput,
+            password,
+            redirectTo: requestedRedirect,
+            // "จำฉันไว้" checkbox — extends the cookie max-age + the
+            // signed payload's `exp` from 7 days to 30 days. Same
+            // hardening (httpOnly, secure, sameSite=lax, HMAC sig);
+            // only the lifetime changes.
+            rememberMe,
+        } = body
 
         if (!loginInput || !password) {
             return NextResponse.json(
@@ -300,13 +310,20 @@ export async function POST(request: Request) {
         const name: string = meta.name ?? meta.full_name ?? data.user.email ?? 'User'
         const employeeId: string | undefined = meta.employeeId ?? undefined
 
-        const sessionData = await createSessionCookie({
-            id: data.user.id,
-            role,
-            name,
-            email: data.user.email ?? emailLower,
-            employeeId,
-        })
+        const wantsRemember = rememberMe === true || rememberMe === 'on'
+        const sessionLifetime = wantsRemember
+            ? SESSION_COOKIE_REMEMBER_AGE_SECONDS
+            : SESSION_COOKIE_MAX_AGE_SECONDS
+        const sessionData = await createSessionCookie(
+            {
+                id: data.user.id,
+                role,
+                name,
+                email: data.user.email ?? emailLower,
+                employeeId,
+            },
+            { expiresInSeconds: sessionLifetime },
+        )
         const cookieStore = await cookies()
         // sameSite='lax' is the modern default in major browsers, but
         // an explicit value is the safer call: it locks CSRF protection
@@ -320,7 +337,7 @@ export async function POST(request: Request) {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
+            maxAge: sessionLifetime,
             path: '/',
         })
 

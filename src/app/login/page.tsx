@@ -11,6 +11,7 @@ function LoginForm() {
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const [showPw, setShowPw] = useState(false)
+    const [rememberMe, setRememberMe] = useState(true)
     const searchParams = useSearchParams()
     const redirectAfterLogin = searchParams.get('redirect') ?? null
     const messageParam = searchParams.get('message')
@@ -74,6 +75,7 @@ function LoginForm() {
                                 body: JSON.stringify({
                                     ...data,
                                     ...(redirectAfterLogin ? { redirectTo: redirectAfterLogin } : {}),
+                                    rememberMe,
                                 })
                             })
 
@@ -150,6 +152,23 @@ function LoginForm() {
                                 </button>
                             </div>
                         </div>
+
+                        {/* Remember-me — extends signed cookie from 7 → 30
+                            days. Default checked because the user base is
+                            primarily older office staff on personal/work
+                            devices that don't change hands often; logging
+                            in weekly is the bigger risk than a forgotten
+                            session on a shared computer. Anyone on a true
+                            shared machine should untick. */}
+                        <label className="flex items-center gap-2 text-white/80 text-[13px] select-none cursor-pointer mt-1">
+                            <input
+                                type="checkbox"
+                                checked={rememberMe}
+                                onChange={e => setRememberMe(e.target.checked)}
+                                className="h-4 w-4 rounded border-white/30 bg-white/10 accent-[#882136]"
+                            />
+                            <span>จำฉันไว้ในเครื่องนี้ (30 วัน)</span>
+                        </label>
 
                         <div className="pt-4">
                             <button
