@@ -126,8 +126,8 @@ function AnnouncementModal({ a, onClose }: { a: Announcement; onClose: () => voi
                     <X size={18} />
                 </button>
                 {a.imageUrl && (
-                    <div className="w-full overflow-hidden bg-black/30" style={{ maxHeight: 400, borderRadius: '20px 20px 0 0' }}>
-                        <img src={a.imageUrl} alt={a.headline} className="w-full h-auto object-cover" style={{ maxHeight: 400 }} />
+                    <div className="w-full bg-black/30 flex justify-center" style={{ borderRadius: '20px 20px 0 0' }}>
+                        <img src={a.imageUrl} alt={a.headline} className="object-contain" style={{ maxHeight: '70vh', maxWidth: '100%' }} />
                     </div>
                 )}
                 <div className="p-5 sm:p-6 space-y-4">

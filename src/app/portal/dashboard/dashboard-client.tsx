@@ -216,8 +216,8 @@ function AnnouncementModal({ ann, onClose }: { ann: AnnouncementItem; onClose: (
                 </button>
 
                 {ann.imagePath && (
-                    <div className="w-full overflow-hidden bg-black/30" style={{ maxHeight: 400, borderRadius: '20px 20px 0 0' }}>
-                        <img src={ann.imagePath} alt={ann.headline} className="w-full h-auto object-cover" style={{ maxHeight: 400 }} />
+                    <div className="w-full bg-black/30 flex justify-center" style={{ borderRadius: '20px 20px 0 0' }}>
+                        <img src={ann.imagePath} alt={ann.headline} className="object-contain" style={{ maxHeight: '70vh', maxWidth: '100%' }} />
                     </div>
                 )}
 
