@@ -5,26 +5,26 @@
 
 ---
 
-## 🔁 ที่เครื่องถัดไป — **Laptop · 30 เม.ย. (~09:25 Bangkok)**
+## 🔁 ที่เครื่องถัดไป — **เครื่องไหนก็ได้ · หลัง APR30 office afternoon**
 
-> **อ่านเฉพาะตอนเปิด Claude Code ที่เครื่อง laptop**
+> **อ่านเฉพาะตอนเปิด Claude Code session ใหม่**
 
 **Step 1 — Pull ก่อน** (สำคัญสุด):
 ```bash
-cd ~/C1TB/EB-CI/EBCI-Nexus && git pull origin main --ff-only
+git pull origin main --ff-only
 ```
-*(ถ้า path บน laptop ต่างจากนี้ ให้ `cd` ไป repo `EBCI-Nexus` ตัวจริงก่อน pull)*
+*(`cd` ไป repo `EBCI-Nexus` ของเครื่องนั้นๆ ก่อน — path ต่างกันแต่ละเครื่อง)*
 
 **Step 2 — พิมพ์บอก Claude:**
 ```
-อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ laptop. หลัง pull แล้วเช็คว่า modal/popup ทุกหน้า (เช่น /portal/leave "ขอลาใหม่", /portal/meeting-room "จองห้อง", /careers status check) เป็นสี maroon อ่อน + อยู่กลางจอบนทั้ง mobile + desktop ตามที่ commit a162b92 ทำไว้. ถ้าผ่าน ให้ลุยต่อ §3.16 priority 2: half-day + hourly leave rules ใน docs/BETA_FEEDBACK.md §1.1+§1.5; commit แยกตาม subsection.
+อ่าน docs/NEXT.md แล้วทำต่อ — เริ่มที่ §3.4 Test bulk salary slip upload e2e (20 นาที). ถ้าทำเสร็จแล้วและไม่อยากรอข้อมูลจาก HR ให้ลุยต่อ §1.1 half-day rules หรือ §3.16 priority 2 ใน docs/BETA_FEEDBACK.md.
 ```
 
-**Step 3 — ตอบ Claude ว่าอยู่เครื่องไหน:** "อยู่ laptop"
+**Step 3 — ตอบ Claude ว่าอยู่เครื่องไหน:** "อยู่ office / home / laptop"
 
 ถ้า Claude บอก local behind origin → รัน `git pull origin main --ff-only` อีกครั้งก่อนเริ่มงาน
 
-**📅 Reminder อีก 30 นาที (~09:25 Bangkok วันนี้):** มี GCal event + Claude scheduled-task รออยู่ พร้อม prompt ด้านบน
+**ล่าสุดส่งแล้ว:** §1.4 cancel/withdraw approved leave + §1.3 leave-day check-in suppression (commits `cc84d12` + `66be09f`)
 
 ---
 
@@ -51,7 +51,17 @@ cd ~/C1TB/EB-CI/EBCI-Nexus && git pull origin main --ff-only
 
 ## 0. TL;DR ใน 30 วินาที
 
-**🔥 APR30 office morning — 5 commits:**
+**🔥 APR30 office afternoon — 4 commits (เพิ่งจบ):**
+
+1. **§3.14 XSS sweep + harden `action_url`** (`96a4fb6`) — added `src/lib/safe-url.ts` (`isInternalPath`/`toInternalPath`) and gated every action_url that ends up in a notification to internal-only paths. Email image URLs validated. 1 hardcoded `dangerouslySetInnerHTML`, 0 `.innerHTML` mutations — codebase already clean.
+
+2. **§2.5 Remember-me 30 วัน** (`fd2ef5f`) — login form มี checkbox "จำฉันไว้ในเครื่องนี้ (30 วัน)" default true. Backend ส่งค่าผ่าน `rememberMe` flag → session cookie expiresInSeconds = 30 วัน vs 7 วันปกติ.
+
+3. **§1.4 Cancel/withdraw approved leave** (`cc84d12`) — pending → ใช้ปุ่ม "ยกเลิก" ตรงๆ; approved → "ส่งคำขอยกเลิก" → approver กด อนุมัติ/ปฏิเสธ. Refund balance เฉพาะกรณี `start_date >= today`. Inbox สลับ title/body/placeholder ตาม `item.status`. DB: 3 columns ใหม่บน `leave_requests`. APIs: `/request-cancellation` + `/cancellation-decision`.
+
+4. **§1.3 Leave-day check-in suppression** (`66be09f`) — `/portal/checkin` แสดง "วันนี้คุณลาอยู่" แทน CTA ถ้ามีใบลา approved เต็มวัน. Server action ก็บล็อกซ้ำเป็น defense-in-depth. Half-day + pending แสดง banner เฉยๆ ไม่ block. HR `/hradmin/attendance/reconcile` มี status `on_leave` ใหม่ที่กิน `absent` → ไม่นับวันลาเป็น "ขาด" อีกต่อไป (พ่นชื่อประเภทจริง เช่น "ลาป่วย" ใน badge).
+
+**🔥 APR30 office morning — 5 commits (รอบก่อน):**
 
 1. **ValidationToast** (`61d8d80`) + **leave form validate-on-click** (`93fc519`) — fixes ปุ๊'s "Error" report on submit. Silent-disable → validate-on-click + centred maroon toast + red-border highlight + scroll/focus to first errored field. errorFields cleared as user types. Same form serves พักร้อน, so single fix covers both flows.
 
@@ -97,7 +107,16 @@ Sidebar polish · password change UI · WFH days · permissions list · email au
 
 ---
 
-## 1. Commits ของ session นี้ (APR30 office morning)
+## 1. Commits ของ session นี้ (APR30 office afternoon — beta unblocked items)
+
+| # | Commit | Track | สรุป |
+|---|---|---|---|
+| 4 | `66be09f` | 📅 Attendance | §1.3 leave-day check-in suppression + ลา in reconcile dashboard |
+| 3 | `cc84d12` | 🌴 Leave | §1.4 cancel/withdraw approved leave w/ approver sign-off |
+| 2 | `fd2ef5f` | 🔐 Auth | §2.5 remember-me 30-day signed session |
+| 1 | `96a4fb6` | 🛡️ Security | §3.14 XSS sweep + harden notification action_url |
+
+## 1b. Commits ของ session ก่อน (APR30 office morning)
 
 | # | Commit | Track | สรุป |
 |---|---|---|---|
