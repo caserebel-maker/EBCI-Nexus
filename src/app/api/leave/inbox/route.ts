@@ -24,18 +24,22 @@ export async function GET() {
         return NextResponse.json({ items: [], count: 0 })
     }
 
-    // Primary lookup: approver_id stores employees.id.
+    // Primary lookup: approver_id stores employees.id. Surface BOTH
+    // pending (initial decision) AND cancellation_requested (the §1.4
+    // approved-leave cancel flow) so the approver sees their full
+    // action queue in one place.
     const primary = await supabaseAdmin
         .from('leave_requests')
         .select(`
-            id, reference_code, leave_type_id, start_date, end_date,
+            id, reference_code, status, leave_type_id, start_date, end_date,
             total_days, is_half_day, half_day_period, reason,
             contact_during_leave, attachment_url, attachment_name,
+            cancellation_reason, cancellation_requested_at,
             submitted_at, created_at,
             employee_id
         `)
         .eq('approver_id', approverId)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'cancellation_requested'])
         .order('submitted_at', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: true })
     if (primary.error) {
@@ -54,14 +58,15 @@ export async function GET() {
         const secondary = await supabaseAdmin
             .from('leave_requests')
             .select(`
-                id, reference_code, leave_type_id, start_date, end_date,
+                id, reference_code, status, leave_type_id, start_date, end_date,
                 total_days, is_half_day, half_day_period, reason,
                 contact_during_leave, attachment_url, attachment_name,
+                cancellation_reason, cancellation_requested_at,
                 submitted_at, created_at,
                 employee_id
             `)
             .eq('approver_id', session.id)
-            .eq('status', 'pending')
+            .in('status', ['pending', 'cancellation_requested'])
             .order('submitted_at', { ascending: true, nullsFirst: false })
             .order('created_at', { ascending: true })
         if (!secondary.error && (secondary.data?.length ?? 0) > 0) {

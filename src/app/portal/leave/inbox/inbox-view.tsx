@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import {
     Inbox, Filter, Clock, Calendar as CalendarIcon, CheckCircle2, XCircle,
     Loader2, AlertCircle, ChevronDown, Paperclip, Phone, Building2,
-    Sparkles, X,
+    Sparkles, X, Ban,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -12,6 +12,9 @@ import { cn } from '@/lib/utils'
 interface InboxItem {
     id: string
     reference_code: string
+    /** API now surfaces both pending decisions and cancellation requests
+     *  in one queue — the action set differs per status. */
+    status: 'pending' | 'cancellation_requested'
     leave_type_id: string
     start_date: string
     end_date: string
@@ -22,6 +25,9 @@ interface InboxItem {
     contact_during_leave: string | null
     attachment_url: string | null
     attachment_name: string | null
+    /** Reason the employee gave when filing a cancellation request. */
+    cancellation_reason: string | null
+    cancellation_requested_at: string | null
     submitted_at: string | null
     created_at: string
     employee_id: string
@@ -341,9 +347,16 @@ function RequestCard({
                             >
                                 {lt?.name_th ?? item.leave_type_id}
                             </span>
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500/85 text-black">
-                                PENDING
-                            </span>
+                            {item.status === 'cancellation_requested' ? (
+                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-400/90 text-black inline-flex items-center gap-1">
+                                    <Ban size={10} />
+                                    ขอยกเลิก
+                                </span>
+                            ) : (
+                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500/85 text-black">
+                                    PENDING
+                                </span>
+                            )}
                         </div>
                         <p className="text-sm text-white/80 mt-0.5">
                             {formatThaiDateRange(item.start_date, item.end_date)}
@@ -359,6 +372,12 @@ function RequestCard({
                         <p className="text-[13px] text-white/75 mt-1.5 line-clamp-2">
                             &ldquo;{item.reason}&rdquo;
                         </p>
+                        {item.status === 'cancellation_requested' && item.cancellation_reason && (
+                            <p className="text-[12px] text-amber-200/90 mt-1 line-clamp-2 inline-flex items-start gap-1">
+                                <Ban size={11} className="mt-0.5 shrink-0" />
+                                <span>เหตุผลขอยกเลิก: <span className="text-amber-100">{item.cancellation_reason}</span></span>
+                            </p>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0 ml-auto sm:ml-0">
@@ -546,10 +565,20 @@ function ApproveDialog({
         setErr(null)
         startTransition(async () => {
             try {
-                const res = await fetch(`/api/leave/${item.id}/approve`, {
+                // §1.4 — for cancellation_requested rows the action is
+                // "approve the cancellation". Same dialog UX, different
+                // endpoint + payload shape.
+                const isCancelReq = item.status === 'cancellation_requested'
+                const url = isCancelReq
+                    ? `/api/leave/${item.id}/cancellation-decision`
+                    : `/api/leave/${item.id}/approve`
+                const body = isCancelReq
+                    ? { decision: 'approve', reason: notes.trim() || null }
+                    : { notes: notes.trim() || null }
+                const res = await fetch(url, {
                     method: 'POST',
                     headers: { 'content-type': 'application/json' },
-                    body: JSON.stringify({ notes: notes.trim() || null }),
+                    body: JSON.stringify(body),
                 })
                 const json = await res.json()
                 if (!res.ok) throw new Error(json?.error ?? 'อนุมัติไม่สำเร็จ')
@@ -560,6 +589,8 @@ function ApproveDialog({
         })
     }
 
+    const isCancelReq = item.status === 'cancellation_requested'
+
     return (
         <DialogShell onClose={onClose}>
             <div className="flex items-start gap-3 mb-4">
@@ -567,7 +598,9 @@ function ApproveDialog({
                     <CheckCircle2 size={20} />
                 </div>
                 <div>
-                    <h2 className="text-lg font-bold text-white">ยืนยันการอนุมัติใบลา</h2>
+                    <h2 className="text-lg font-bold text-white">
+                        {isCancelReq ? 'อนุมัติคำขอยกเลิกใบลา' : 'ยืนยันการอนุมัติใบลา'}
+                    </h2>
                     <p className="text-xs text-white/55 mt-0.5">{item.reference_code} · {fullApplicantName(item)}</p>
                 </div>
             </div>
@@ -579,6 +612,11 @@ function ApproveDialog({
                     {' · '}
                     <span className="tabular-nums">{Number(item.total_days)} วัน</span>
                 </p>
+                {isCancelReq && item.cancellation_reason && (
+                    <p className="text-sm text-amber-200/90 mt-2">
+                        เหตุผลขอยกเลิก: <span className="text-amber-100">{item.cancellation_reason}</span>
+                    </p>
+                )}
             </div>
             <label className="block mb-4">
                 <span className="text-[11px] uppercase tracking-wider text-white/55 font-bold">หมายเหตุ (optional)</span>
@@ -642,6 +680,7 @@ function RejectDialog({
     }, [onClose])
 
     const tooShort = reason.trim().length < 10
+    const isCancelReq = item.status === 'cancellation_requested'
     const submit = () => {
         if (tooShort) {
             setErr('กรุณาระบุเหตุผลอย่างน้อย 10 ตัวอักษร')
@@ -650,10 +689,18 @@ function RejectDialog({
         setErr(null)
         startTransition(async () => {
             try {
-                const res = await fetch(`/api/leave/${item.id}/reject`, {
+                // §1.4 — for cancellation_requested rows, "reject" means
+                // "reject the cancellation request" (leave stays approved).
+                const url = isCancelReq
+                    ? `/api/leave/${item.id}/cancellation-decision`
+                    : `/api/leave/${item.id}/reject`
+                const body = isCancelReq
+                    ? { decision: 'reject', reason: reason.trim() }
+                    : { rejection_reason: reason.trim() }
+                const res = await fetch(url, {
                     method: 'POST',
                     headers: { 'content-type': 'application/json' },
-                    body: JSON.stringify({ rejection_reason: reason.trim() }),
+                    body: JSON.stringify(body),
                 })
                 const json = await res.json()
                 if (!res.ok) throw new Error(json?.error ?? 'ปฏิเสธไม่สำเร็จ')
@@ -671,7 +718,9 @@ function RejectDialog({
                     <XCircle size={20} />
                 </div>
                 <div>
-                    <h2 className="text-lg font-bold text-white">ปฏิเสธใบลา</h2>
+                    <h2 className="text-lg font-bold text-white">
+                        {isCancelReq ? 'ปฏิเสธคำขอยกเลิกใบลา' : 'ปฏิเสธใบลา'}
+                    </h2>
                     <p className="text-xs text-white/55 mt-0.5">{item.reference_code} · {fullApplicantName(item)}</p>
                 </div>
             </div>
@@ -683,16 +732,21 @@ function RejectDialog({
                     {' · '}
                     <span className="tabular-nums">{Number(item.total_days)} วัน</span>
                 </p>
+                {isCancelReq && item.cancellation_reason && (
+                    <p className="text-sm text-amber-200/90 mt-2">
+                        เหตุผลขอยกเลิก: <span className="text-amber-100">{item.cancellation_reason}</span>
+                    </p>
+                )}
             </div>
             <label className="block mb-4">
                 <span className="text-[11px] uppercase tracking-wider text-white/55 font-bold">
-                    เหตุผลการปฏิเสธ <span className="text-red-300">*</span>
+                    {isCancelReq ? 'เหตุผลที่ไม่อนุมัติให้ยกเลิก' : 'เหตุผลการปฏิเสธ'} <span className="text-red-300">*</span>
                 </span>
                 <textarea
                     value={reason}
                     onChange={e => setReason(e.target.value)}
                     rows={4}
-                    placeholder="ระบุเหตุผลที่ไม่สามารถอนุมัติได้"
+                    placeholder={isCancelReq ? 'เช่น มีงานสำคัญที่ต้องการให้ทำตามแผนเดิม' : 'ระบุเหตุผลที่ไม่สามารถอนุมัติได้'}
                     className="mt-1.5 w-full rounded-lg bg-black/25 border border-white/15 text-white text-sm px-3 py-2 focus:outline-none focus:border-red-300/50"
                 />
                 <div className="flex items-center justify-between mt-1">

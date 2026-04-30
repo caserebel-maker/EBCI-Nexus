@@ -64,7 +64,7 @@ interface LeaveRequest {
     contact_during_leave: string | null
     attachment_url: string | null
     attachment_name: string | null
-    status: 'pending' | 'approved' | 'rejected' | 'cancelled'
+    status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'cancellation_requested'
     approver_id: string | null
     approver_name: string | null
     approved_at: string | null
@@ -73,6 +73,10 @@ interface LeaveRequest {
     submitted_at: string | null
     cancelled_at: string | null
     cancellation_reason: string | null
+    /** Set when employee files §1.4 cancel-request on an approved leave. */
+    cancellation_requested_at: string | null
+    /** Reason supplied by the approver when resolving a cancel request. */
+    cancellation_decision_reason: string | null
     created_at: string
 }
 
@@ -185,7 +189,11 @@ export function MyLeaveView({ year }: Props) {
     useEffect(() => { void loadAll() }, [loadAll])
 
     const counts = useMemo(() => {
-        const c: Record<StatusFilter, number> = { all: requests.length, pending: 0, approved: 0, rejected: 0, cancelled: 0 }
+        const c: Record<StatusFilter, number> = {
+            all: requests.length,
+            pending: 0, approved: 0, rejected: 0, cancelled: 0,
+            cancellation_requested: 0,
+        }
         for (const r of requests) c[r.status]++
         return c
     }, [requests])
@@ -494,10 +502,11 @@ function RequestsList({
 
 function StatusBadge({ status }: { status: LeaveRequest['status'] }) {
     const meta = {
-        pending:   { label: 'รออนุมัติ',   cls: 'bg-amber-500/25 text-amber-100',     icon: Clock },
-        approved:  { label: 'อนุมัติแล้ว', cls: 'bg-emerald-500/25 text-emerald-200', icon: CheckCircle2 },
-        rejected:  { label: 'ปฏิเสธ',      cls: 'bg-red-500/25 text-red-200',         icon: XCircle },
-        cancelled: { label: 'ยกเลิก',      cls: 'bg-white/10 text-white/60',          icon: Ban },
+        pending:                { label: 'รออนุมัติ',   cls: 'bg-amber-500/25 text-amber-100',     icon: Clock },
+        approved:               { label: 'อนุมัติแล้ว', cls: 'bg-emerald-500/25 text-emerald-200', icon: CheckCircle2 },
+        rejected:               { label: 'ปฏิเสธ',      cls: 'bg-red-500/25 text-red-200',         icon: XCircle },
+        cancelled:              { label: 'ยกเลิก',      cls: 'bg-white/10 text-white/60',          icon: Ban },
+        cancellation_requested: { label: 'รอยกเลิก',    cls: 'bg-amber-500/15 text-amber-200',     icon: Ban },
     }[status]
     const Icon = meta.icon
     return (
@@ -552,7 +561,38 @@ function LeaveDetailModal({
         }
     }
 
+    /**
+     * §1.4 — request-cancellation flow for ALREADY-APPROVED leave.
+     * Different endpoint, different status transition (approved →
+     * cancellation_requested), needs approver sign-off before the
+     * row actually flips to 'cancelled'.
+     */
+    const handleRequestCancellation = async () => {
+        if (!cancelReason.trim()) {
+            setCancelError('กรุณาระบุเหตุผลในการขอยกเลิก')
+            return
+        }
+        if (!confirm(`ส่งคำขอยกเลิกใบลา ${request.reference_code} ใช่หรือไม่? ผู้อนุมัติจะพิจารณาคำขอนี้`)) return
+        setCancelling(true)
+        setCancelError(null)
+        try {
+            const res = await fetch(`/api/leave/${request.id}/request-cancellation`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ reason: cancelReason.trim() }),
+            })
+            const json = await res.json()
+            if (!res.ok) throw new Error(json?.error ?? 'ส่งคำขอไม่สำเร็จ')
+            onCancelled() // reuses the parent's "refresh + close" callback
+        } catch (e) {
+            setCancelError(e instanceof Error ? e.message : 'ส่งคำขอไม่สำเร็จ')
+        } finally {
+            setCancelling(false)
+        }
+    }
+
     const canCancel = request.status === 'pending'
+    const canRequestCancellation = request.status === 'approved'
     const Icon = LEAVE_ICON[request.leave_type_id] ?? CalendarDays
 
     return (
@@ -629,6 +669,32 @@ function LeaveDetailModal({
                             <p className="text-sm text-white/80 whitespace-pre-wrap">{request.cancellation_reason}</p>
                         </div>
                     )}
+                    {/* §1.4 — show pending-cancellation context. The status
+                        is `cancellation_requested` (request filed but the
+                        approver hasn't decided), or `approved` after a
+                        rejection (cancellation_decision_reason is set
+                        meaning the request was reviewed and turned down). */}
+                    {request.status === 'cancellation_requested' && (
+                        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                            <p className="text-xs font-bold text-amber-200 mb-1">รอผลการพิจารณายกเลิก</p>
+                            <p className="text-sm text-amber-100">
+                                คำขอยกเลิกถูกส่งไปยังผู้อนุมัติแล้ว · รอผลการพิจารณา
+                            </p>
+                            {request.cancellation_reason && (
+                                <p className="mt-2 text-sm text-amber-100 whitespace-pre-wrap">
+                                    เหตุผล: {request.cancellation_reason}
+                                </p>
+                            )}
+                        </div>
+                    )}
+                    {request.status === 'approved' && request.cancellation_decision_reason && (
+                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+                            <p className="text-xs font-bold text-red-200 mb-1">คำขอยกเลิกถูกปฏิเสธ</p>
+                            <p className="text-sm text-red-100 whitespace-pre-wrap">
+                                เหตุผล: {request.cancellation_decision_reason}
+                            </p>
+                        </div>
+                    )}
 
                     {canCancel && (
                         <div className="pt-3 border-t border-white/10 space-y-2">
@@ -651,6 +717,37 @@ function LeaveDetailModal({
                             >
                                 {cancelling ? <Loader2 size={15} className="animate-spin" /> : <Ban size={15} />}
                                 ยกเลิกใบลา
+                            </button>
+                        </div>
+                    )}
+                    {/* §1.4 — request-cancellation for ALREADY-approved leave.
+                        Distinct CTA + reason required. The flow goes to the
+                        approver, not to instant cancellation. */}
+                    {canRequestCancellation && (
+                        <div className="pt-3 border-t border-white/10 space-y-2">
+                            <label className="block text-[11px] uppercase tracking-wider text-white/55 font-bold">
+                                เหตุผลในการขอยกเลิก <span className="text-red-300">*</span>
+                            </label>
+                            <textarea
+                                value={cancelReason}
+                                onChange={e => setCancelReason(e.target.value)}
+                                rows={3}
+                                placeholder="เช่น เปลี่ยนแผน / มีงานด่วน — ผู้อนุมัติจะพิจารณาคำขอนี้"
+                                className="w-full rounded-lg bg-black/25 border border-white/15 text-white text-sm px-3 py-2 focus:outline-none focus:border-amber-300/50"
+                            />
+                            {cancelError && <p className="text-red-300 text-sm">{cancelError}</p>}
+                            <p className="text-[11px] text-white/55 leading-relaxed">
+                                ใบลานี้อนุมัติแล้ว — ระบบจะส่งคำขอยกเลิกไปยังผู้อนุมัติเพื่อพิจารณา
+                                ถ้าวันลายังไม่ถึง ระบบจะคืนวันลาให้อัตโนมัติเมื่ออนุมัติ
+                            </p>
+                            <button
+                                type="button"
+                                onClick={handleRequestCancellation}
+                                disabled={cancelling || !cancelReason.trim()}
+                                className="w-full h-11 rounded-lg bg-amber-500/85 hover:bg-amber-500 disabled:opacity-60 text-[#1a0a0d] font-bold inline-flex items-center justify-center gap-2"
+                            >
+                                {cancelling ? <Loader2 size={15} className="animate-spin" /> : <Ban size={15} />}
+                                ส่งคำขอยกเลิก
                             </button>
                         </div>
                     )}
