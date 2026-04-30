@@ -1031,70 +1031,123 @@ function Step1TypePicker({
     balances: BalanceEntry[]
     selectedId: string | null
     onSelect: (id: string) => void
-    /** When true, the grid gets a red ring so the user sees they need
-     *  to pick a type before continuing. Cleared as soon as one is picked. */
+    /** When true, the dropdown gets a red border so the user sees they
+     *  need to pick a type before continuing. Cleared as soon as one
+     *  is picked. */
     errored?: boolean
 }) {
+    // Selected type details panel below the dropdown — shows the same
+    // info the old grid did (color chip, balance, requirements) but
+    // only for the picked type, so the form stays compact even with
+    // 11 categories instead of 6.
+    const selected = balances.find(b => b.leave_type_id === selectedId) ?? null
+    const SelectedIcon = selected ? (LEAVE_ICON[selected.leave_type_id] ?? CalendarDays) : null
+
     return (
-        <div
-            data-field="leaveType"
-            className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-xl"
-            style={errored ? {
-                padding: 8,
-                margin: -8,
-                border: '2px solid #ef4444',
-                boxShadow: '0 0 0 3px rgba(239,68,68,0.2)',
-            } : undefined}
-        >
-            {balances.map(b => {
-                const Icon = LEAVE_ICON[b.leave_type_id] ?? CalendarDays
-                const disabled = !b.is_unlimited && b.remaining_days <= 0
-                const selected = selectedId === b.leave_type_id
-                return (
-                    <button
-                        key={b.leave_type_id}
-                        type="button"
-                        onClick={() => !disabled && onSelect(b.leave_type_id)}
-                        disabled={disabled}
-                        className={cn(
-                            'p-4 rounded-xl text-left transition-all border-2',
-                            selected ? 'border-amber-300 bg-amber-400/10' : 'border-transparent bg-white/5 hover:bg-white/10',
-                            disabled && 'opacity-40 cursor-not-allowed',
-                        )}
-                    >
-                        <div className="flex items-center gap-3 mb-2">
-                            <span className="h-9 w-9 rounded-lg flex items-center justify-center text-white" style={{ background: b.color ?? '#882136' }}>
-                                <Icon size={16} />
-                            </span>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-white font-bold text-[15px] leading-tight">{b.name_th}</p>
-                                {b.advance_notice_days > 0 && (
-                                    <p className="text-[11px] text-amber-200">ขอล่วงหน้า ≥ {b.advance_notice_days} วัน</p>
+        <div className="space-y-3">
+            <label className="block">
+                <span className="text-[11px] uppercase tracking-wider text-white/55 font-bold">
+                    ประเภทการลา <span className="text-red-300">*</span>
+                </span>
+                <select
+                    data-field="leaveType"
+                    value={selectedId ?? ''}
+                    onChange={(e) => {
+                        const id = e.target.value
+                        if (!id) return
+                        const target = balances.find(b => b.leave_type_id === id)
+                        // Block selection when balance is exhausted (same
+                        // rule as the old grid's `disabled` state).
+                        if (!target) return
+                        if (!target.is_unlimited && target.remaining_days <= 0) return
+                        onSelect(id)
+                    }}
+                    className={cn(
+                        'mt-1.5 w-full h-12 px-3 rounded-lg bg-black/35 text-white text-base focus:outline-none transition-colors appearance-none',
+                        // Trailing chevron via inline background-image so the
+                        // native arrow doesn't render in the white square
+                        // some browsers show on dark backgrounds.
+                        errored
+                            ? 'border-2 border-red-500 focus:border-red-400'
+                            : 'border border-white/15 focus:border-amber-300/50',
+                    )}
+                    style={{
+                        ...(errored ? { boxShadow: '0 0 0 3px rgba(239,68,68,0.2)' } : {}),
+                        backgroundImage: 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' fill=\'%23ffffff99\' viewBox=\'0 0 16 16\'><path d=\'M4 6l4 4 4-4\'/></svg>")',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 12px center',
+                        backgroundSize: '14px 14px',
+                        paddingRight: 36,
+                    }}
+                >
+                    <option value="" disabled className="text-black">
+                        — เลือกประเภทการลา —
+                    </option>
+                    {balances.map(b => {
+                        const exhausted = !b.is_unlimited && b.remaining_days <= 0
+                        const remainingLabel = b.is_unlimited
+                            ? 'ไม่จำกัด'
+                            : `เหลือ ${b.remaining_days} / ${b.total_days} วัน`
+                        return (
+                            <option
+                                key={b.leave_type_id}
+                                value={b.leave_type_id}
+                                disabled={exhausted}
+                                className="text-black"
+                            >
+                                {b.name_th} · {remainingLabel}
+                                {exhausted ? ' (วันลาหมดแล้ว)' : ''}
+                            </option>
+                        )
+                    })}
+                </select>
+            </label>
+
+            {selected && SelectedIcon && (
+                <div
+                    className="p-4 rounded-xl border-2 transition-all"
+                    style={{
+                        borderColor: 'rgba(252,211,77,0.45)',
+                        background: 'rgba(252,211,77,0.08)',
+                    }}
+                >
+                    <div className="flex items-center gap-3">
+                        <span
+                            className="h-10 w-10 rounded-lg flex items-center justify-center text-white shrink-0"
+                            style={{ background: selected.color ?? '#882136' }}
+                        >
+                            <SelectedIcon size={18} />
+                        </span>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-white font-bold text-[15px] leading-tight">{selected.name_th}</p>
+                            <p className="text-xs text-white/65 mt-0.5">
+                                {selected.is_unlimited ? (
+                                    <>คงเหลือ: <span className="text-emerald-200 font-semibold">ไม่จำกัด</span></>
+                                ) : (
+                                    <>เหลือ <span className="text-white font-semibold">{selected.remaining_days}</span> / {selected.total_days} วัน</>
                                 )}
-                                {!b.same_day_allowed && b.leave_type_id === 'sick' && (
-                                    <p className="text-[11px] text-rose-200">ต้องเป็นวันที่ผ่านไปแล้ว</p>
-                                )}
-                                {b.leave_type_id === 'sick' ? (
-                                    <p className="text-[11px] text-sky-200 inline-flex items-center gap-1 mt-0.5">
-                                        <Paperclip size={10} /> ใบรับรองแพทย์เมื่อป่วย ≥ 3 วัน
-                                    </p>
-                                ) : b.requires_attachment && (
-                                    <p className="text-[11px] text-sky-200 inline-flex items-center gap-1 mt-0.5">
-                                        <Paperclip size={10} /> ต้องแนบเอกสาร
-                                    </p>
-                                )}
-                            </div>
+                            </p>
                         </div>
-                        <p className="text-xs text-white/65">
-                            {b.is_unlimited ? (
-                                <>คงเหลือ: <span className="text-emerald-200 font-semibold">ไม่จำกัด</span></>
-                            ) : (
-                                <>เหลือ <span className="text-white font-semibold">{b.remaining_days}</span> / {b.total_days} วัน</>
-                            )}
-                        </p>
-                    </button>
-                )
-            })}
+                    </div>
+                    <div className="mt-2.5 space-y-1">
+                        {selected.advance_notice_days > 0 && (
+                            <p className="text-[11px] text-amber-200">ขอล่วงหน้า ≥ {selected.advance_notice_days} วัน</p>
+                        )}
+                        {!selected.same_day_allowed && selected.leave_type_id === 'sick' && (
+                            <p className="text-[11px] text-rose-200">ต้องเป็นวันที่ผ่านไปแล้ว</p>
+                        )}
+                        {selected.leave_type_id === 'sick' ? (
+                            <p className="text-[11px] text-sky-200 inline-flex items-center gap-1">
+                                <Paperclip size={10} /> ใบรับรองแพทย์เมื่อป่วย ≥ 3 วัน
+                            </p>
+                        ) : selected.requires_attachment && (
+                            <p className="text-[11px] text-sky-200 inline-flex items-center gap-1">
+                                <Paperclip size={10} /> ต้องแนบเอกสาร
+                            </p>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

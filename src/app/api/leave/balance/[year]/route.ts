@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { resolveSessionEmployeeId } from '@/lib/session-employee'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import {
     fetchActiveLeaveTypes,
     fetchBalancesForEmployee,
     computeRemaining,
+    leaveTypeVisibleForGender,
+    normalizeGender,
 } from '@/lib/leave-balance'
 
 export const dynamic = 'force-dynamic'
@@ -33,13 +36,25 @@ export async function GET(
         return NextResponse.json({ error: 'ปีไม่ถูกต้อง' }, { status: 400 })
     }
 
-    const [types, balances] = await Promise.all([
+    const [types, balances, employeeRow] = await Promise.all([
         fetchActiveLeaveTypes(),
         fetchBalancesForEmployee(employeeId, year),
+        supabaseAdmin
+            .from('employees')
+            .select('gender')
+            .eq('id', employeeId)
+            .maybeSingle(),
     ])
 
+    // Filter out gender-restricted types so a male employee never sees
+    // ลาคลอด in the dropdown, and a female employee never sees
+    // ลาเกณฑ์ทหาร / ลาอุปสมบท. Unknown gender → show everything (we'd
+    // rather an HR fix than block the user).
+    const employeeGender = normalizeGender(employeeRow.data?.gender ?? null)
+    const visibleTypes = types.filter(t => leaveTypeVisibleForGender(t, employeeGender))
+
     const balanceByType = new Map(balances.map(b => [b.leave_type_id, b]))
-    const enriched = types.map(t => {
+    const enriched = visibleTypes.map(t => {
         const row = balanceByType.get(t.id) ?? null
         const total = Number(row?.total_days ?? 0)
         const used = Number(row?.used_days ?? 0)

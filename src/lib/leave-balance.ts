@@ -16,6 +16,34 @@ export interface LeaveType {
     description: string | null
     is_active: boolean | null
     display_order: number | null
+    /** 'male' | 'female' | null. When set, this leave_type is hidden
+     *  from employees of the opposite gender (e.g. ลาคลอด is female-
+     *  only, ลาเกณฑ์ทหาร / ลาอุปสมบท are male-only). NULL = visible
+     *  to everyone. */
+    gender_restriction: string | null
+}
+
+/** Map any historical gender literal (English code or legacy Thai) to
+ *  the canonical 'male' | 'female' used by gender_restriction. NULL
+ *  means "unknown" — we then show every type, since hiding leave
+ *  options based on missing data would punish the employee. */
+export function normalizeGender(g: string | null | undefined): 'male' | 'female' | null {
+    if (!g) return null
+    const s = g.trim().toLowerCase()
+    if (s === 'male' || s === 'm' || s === 'ชาย') return 'male'
+    if (s === 'female' || s === 'f' || s === 'หญิง') return 'female'
+    return null
+}
+
+/** Predicate: should this leave type appear in the dropdown for an
+ *  employee with the given (normalised) gender? */
+export function leaveTypeVisibleForGender(
+    type: Pick<LeaveType, 'gender_restriction'>,
+    gender: 'male' | 'female' | null,
+): boolean {
+    if (!type.gender_restriction) return true
+    if (gender === null) return true // unknown gender → don't hide
+    return type.gender_restriction === gender
 }
 
 export interface LeaveBalanceRow {
