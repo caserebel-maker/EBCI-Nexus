@@ -5,26 +5,26 @@
 
 ---
 
-## 🔁 ที่เครื่องถัดไป — **Office · พรุ่งนี้ 30 เม.ย.**
+## 🔁 ที่เครื่องถัดไป — **Laptop · 30 เม.ย. (~09:25 Bangkok)**
 
-> **อ่านเฉพาะตอนเปิด Claude Code ที่เครื่องใหม่**
+> **อ่านเฉพาะตอนเปิด Claude Code ที่เครื่อง laptop**
 
 **Step 1 — Pull ก่อน** (สำคัญสุด):
 ```bash
-cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff-only
+cd ~/C1TB/EB-CI/EBCI-Nexus && git pull origin main --ff-only
 ```
-*(ถ้า path ออฟฟิศเปลี่ยน ให้ `cd` ไป repo `EBCI-Nexus` ตัวจริงก่อน pull)*
+*(ถ้า path บน laptop ต่างจากนี้ ให้ `cd` ไป repo `EBCI-Nexus` ตัวจริงก่อน pull)*
 
 **Step 2 — พิมพ์บอก Claude:**
 ```
-อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ office. ก่อนลุยให้ verify commit 4da85a6 เรื่องเมนูอัปโหลดสลิปของสุชาติ: login suchat@ebcitrade.com แล้วต้องเห็นเมนูพนักงานปกติ + อัปโหลดสลิปเงินเดือน โดยไม่มีปุ่มสลับ HR Admin. จากนั้นอ่าน docs/BETA_FEEDBACK.md ถ้ามี แล้วทำ §1 P0 ทั้ง 5 ข้อ commit แยกตาม subsection; ถ้าไฟล์ยังไม่มี ให้ถามปอนด์ก่อนเริ่ม.
+อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ laptop. หลัง pull แล้วเช็คว่า modal/popup ทุกหน้า (เช่น /portal/leave "ขอลาใหม่", /portal/meeting-room "จองห้อง", /careers status check) เป็นสี maroon อ่อน + อยู่กลางจอบนทั้ง mobile + desktop ตามที่ commit a162b92 ทำไว้. ถ้าผ่าน ให้ลุยต่อ §3.16 priority 2: half-day + hourly leave rules ใน docs/BETA_FEEDBACK.md §1.1+§1.5; commit แยกตาม subsection.
 ```
 
-**Step 3 — ตอบ Claude ว่าอยู่เครื่องไหน:** "อยู่ office"
+**Step 3 — ตอบ Claude ว่าอยู่เครื่องไหน:** "อยู่ laptop"
 
 ถ้า Claude บอก local behind origin → รัน `git pull origin main --ff-only` อีกครั้งก่อนเริ่มงาน
 
-**📅 Reminder ตอน 9 โมงเช้า 30 เม.ย.:** มี Codex task รออยู่ พร้อม prompt ด้านบน
+**📅 Reminder อีก 30 นาที (~09:25 Bangkok วันนี้):** มี GCal event + Claude scheduled-task รออยู่ พร้อม prompt ด้านบน
 
 ---
 
@@ -51,11 +51,15 @@ cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff
 
 ## 0. TL;DR ใน 30 วินาที
 
-**🔥 APR30 office morning — 2 commits (validation UX fix):**
+**🔥 APR30 office morning — 5 commits:**
 
-1. **ValidationToast component** (`61d8d80`) — reusable centred toast for client-side form errors. Maroon gradient + red border, 3s auto-dismiss with progress bar, hover pauses, X close, no backdrop close, fade+scale animation. `src/components/ui/validation-toast.tsx`.
+1. **ValidationToast** (`61d8d80`) + **leave form validate-on-click** (`93fc519`) — fixes ปุ๊'s "Error" report on submit. Silent-disable → validate-on-click + centred maroon toast + red-border highlight + scroll/focus to first errored field. errorFields cleared as user types. Same form serves พักร้อน, so single fix covers both flows.
 
-2. **Leave form validation UX** (`93fc519`) — fixes the bug ปุ๊ reported (clicked "ส่งใบลา" → "Error" with no detail). Vercel runtime logs were empty — root cause was client-side: next/submit buttons silently disabled when fields missing. Replaced silent-disable with validate-on-click + ValidationToast + per-input red-border highlight + scroll/focus to first errored field. errorFields cleared as soon as user types. Same form serves พักร้อน (single modal, type picked at step 1) so this single fix covers both flows.
+2. **Leave categories expansion to 11 + dropdown picker** (`efc8be8`) — added 5 new types per ม๊อด's list: ลาทำหมัน · ลาคลอด · ลารับราชการทหาร · ลาเกณฑ์ทหาร · ลาอุปสมบท. Renamed `marriage` → ลาสมรส. Added `gender_restriction` column so a male never sees ลาคลอด in the dropdown and a female never sees ลาเกณฑ์ทหาร / ลาอุปสมบท. Step1 grid → native `<select>` with "name · เหลือ X / Y วัน" inline. Yellow detail card below shows icon/balance/requirements for picked type.
+
+3. **Modal sweep** (`a162b92`) — every popup in the app now uses `rgba(86,30,35,0.77)` (brand maroon, -20% opacity from previous near-black) and is **always centred** on mobile (was bottom-sheet). Touched 11 files: leave (new+cancel+inbox+policies+calendar), announcements (portal+hradmin), dashboard, meeting-room, careers, permissions, priority-alerts.
+
+4. **Docs refresh** (`342ef8b`) — recorded morning fixes in NEXT.md.
 
 **🔥 APR29 office afternoon — 8 commits + 4-tester DB recovery:**
 
@@ -97,6 +101,9 @@ Sidebar polish · password change UI · WFH days · permissions list · email au
 
 | # | Commit | Track | สรุป |
 |---|---|---|---|
+| 5 | `a162b92` | 🎨 Modals | sweep — soften maroon panel + always-centered on mobile (11 files) |
+| 4 | `efc8be8` | 🌴 Leave | expand to 11 categories + native dropdown picker + gender filter |
+| 3 | `342ef8b` | 📚 Docs | record APR30 validation UX fix |
 | 2 | `93fc519` | 🐛 Leave UX | validate-on-click + red borders + ValidationToast wired into leave form |
 | 1 | `61d8d80` | 🆕 UI | ValidationToast component (centred, 3s, hover-pause, X close) |
 
@@ -444,7 +451,7 @@ EMAIL_FROM_CAREERS · EMAIL_FROM_HR · EMAIL_FROM_SYSTEM
 ## 5. Git + deploy state
 
 - **Repo:** `caserebel-maker/EBCI-Nexus`
-- **Last commit:** `93fc519` (leave form validation UX — silent-disable → validate-on-click + ValidationToast)
+- **Last commit:** `a162b92` (modal sweep — soft maroon + always-centered on mobile)
 - **Vercel deploy:** auto — `https://ebci-nexus.vercel.app`
 - **Build:** ✓ TS clean (`tsc --noEmit` exit 0 ก่อน push); Vercel turbopack production build เคย fail รอบกลางวันเพราะ `'use server'` rule แต่ fix แล้ว (`522c313`)
 
