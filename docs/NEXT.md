@@ -5,31 +5,32 @@
 
 ---
 
-## 🔁 ที่เครื่องถัดไป — **Office Mac mini · APR30 บ่ายหลังเดินทางถึง**
+## 🔁 ที่เครื่องถัดไป — **Home · คืนนี้ 30 เม.ย. (~19:00 Bangkok)**
 
-> **อ่านเฉพาะตอนเปิด Claude Code ที่เครื่อง office (Mac mini)**
+> **อ่านเฉพาะตอนเปิด Claude Code ที่ home Mac**
 
-**Step 1 — Pull ก่อน** (สำคัญสุด — laptop เพิ่ง push 3 commits ตอน 13:36):
+**Step 1 — Pull ก่อน** (สำคัญสุด):
 ```bash
-cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff-only
+cd ~/C1TB/EB-CI/EBCI-Nexus && git pull origin main --ff-only
 ```
+*(ถ้า path ที่บ้านต่างไป ให้ `cd` ไป repo `EBCI-Nexus` ตัวจริงก่อน pull)*
 
 **Step 2 — พิมพ์บอก Claude:**
 ```
-อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ office. หลัง pull แล้ว verify §1.4 + §1.3 บนเครื่องจริง:
-1. login พนักงานที่มีใบลา approved ครอบวันนี้ → /portal/checkin ต้องแสดง "วันนี้คุณลาอยู่" แทน CTA
-2. login approver → /portal/leave/inbox ต้องเห็น cancellation request แสดง "ขอยกเลิก" badge แทน "PENDING"
-3. /hradmin/attendance/reconcile → เลือกวันนี้ → ต้องเห็น summary card "ลา" แยกจาก "ขาด"
-ถ้าผ่าน ลุยต่อ §3.4 Test bulk salary slip e2e (20 นาที) หรือถ้าไม่อยากรอข้อมูล HR ให้ทำ §1.1 half-day rules ใน docs/BETA_FEEDBACK.md.
+อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ home. หลัง pull แล้ว verify บนเครื่องจริง 3 อย่าง:
+1. /portal/announcements → กดเข้าประกาศที่มีรูปแนวตั้ง (commit 2bc77df) → ต้องเห็นรูปเต็มไม่โดน crop
+2. login พนักงานที่มีใบลา approved ครอบวันนี้ → /portal/checkin ต้องแสดง "วันนี้คุณลาอยู่" แทน CTA (commit 66be09f)
+3. login approver → /portal/leave/inbox ต้องเห็น cancellation request แสดง "ขอยกเลิก" badge (commit cc84d12)
+ถ้าผ่าน ลุยต่อ §1.1 half-day + hourly leave rules ใน docs/BETA_FEEDBACK.md.
 ```
 
-**Step 3 — ตอบ Claude ว่าอยู่เครื่องไหน:** "อยู่ office"
+**Step 3 — ตอบ Claude ว่าอยู่เครื่องไหน:** "อยู่ home"
 
 ถ้า Claude บอก local behind origin → รัน `git pull origin main --ff-only` อีกครั้งก่อนเริ่มงาน
 
-**📅 Reminder:** มี GCal event + Claude scheduled-task รออยู่ พร้อม prompt ด้านบน
+**📅 Reminder ตอน 19:00 คืนนี้ (Bangkok):** มี GCal event + Claude scheduled-task รออยู่ พร้อม prompt ด้านบน
 
-**ล่าสุดส่งแล้ว (laptop · 13:36):** §3.14 XSS, §2.5 remember-me, §1.4 cancel approved leave, §1.3 check-in suppression (commits `96a4fb6`, `fd2ef5f`, `cc84d12`, `66be09f`, docs `ffadda5`)
+**ล่าสุดเสร็จ (laptop+office · APR30):** §3.14 XSS, §2.5 remember-me, §1.4 cancel approved leave, §1.3 check-in suppression, รูปประกาศแสดงเต็ม (commits `96a4fb6`, `fd2ef5f`, `cc84d12`, `66be09f`, `2bc77df`)
 
 ---
 
