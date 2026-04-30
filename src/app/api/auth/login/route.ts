@@ -44,6 +44,46 @@ function sanitizeRedirectPath(value: unknown, role: UserRole): string | null {
     }
 }
 
+/**
+ * Resolve the actual `auth.users.email` to use for sign-in from a free-form
+ * login identifier. Accepts either:
+ *
+ *   - an email   (contains `@`) — used as-is, lowercased
+ *   - an employee_code (no `@`) — looked up against `employees.employee_code`
+ *     and the matching `employees.email` is returned
+ *
+ * The employee-code path is tolerant of casual formatting:
+ *   "074-47", "07447", "074 47", " 074-47 " all resolve to the same row.
+ *
+ * Returns null when nothing matches; the caller treats that the same as a
+ * wrong-password attempt so we don't leak which codes exist.
+ */
+async function resolveLoginEmail(rawInput: string): Promise<string | null> {
+    const trimmed = rawInput.trim()
+    if (!trimmed) return null
+
+    if (trimmed.includes('@')) {
+        return trimmed.toLowerCase()
+    }
+
+    // Employee code path. Look up both the literal input and a normalized
+    // (digits-only) variant so the same DB row matches "074-47" / "07447".
+    const normalized = trimmed.replace(/[\s-]/g, '')
+    const { data, error } = await supabaseAdmin
+        .from('employees')
+        .select('email, employee_code')
+        .or(`employee_code.eq.${trimmed},employee_code.eq.${normalized}`)
+        .limit(1)
+        .maybeSingle()
+    if (error) {
+        console.warn('[Auth] employee_code lookup failed:', error)
+        return null
+    }
+    const email = (data?.email as string | null)?.trim()
+    if (!email) return null
+    return email.toLowerCase()
+}
+
 /** Pull the client IP out of the proxy headers Vercel sets. Falls back
  *  to null if neither header is set (local dev usually) so the IP
  *  bucket simply doesn't fire. */
@@ -145,17 +185,36 @@ async function lookupRoleFromUserTable(
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        const { email, password, redirectTo: requestedRedirect } = body
+        // The form field is still called `email` for backward compat
+        // (existing sessions, password-reset flows, etc.) but the value
+        // is now a free-form login identifier — accepts either an email
+        // or an employee_code. resolveLoginEmail() handles the lookup.
+        const { email: loginInput, password, redirectTo: requestedRedirect } = body
 
-        if (!email || !password) {
+        if (!loginInput || !password) {
             return NextResponse.json(
-                { error: 'กรุณากรอกอีเมลและรหัสผ่าน' },
+                { error: 'กรุณากรอกรหัสพนักงาน/อีเมล และรหัสผ่าน' },
                 { status: 400 }
             )
         }
 
-        const emailLower = String(email).trim().toLowerCase()
         const ip = await clientIp()
+
+        // Resolve the input → actual auth.users email. Failures here
+        // return the same generic 401 as wrong-password so an attacker
+        // can't enumerate which employee_codes exist.
+        const resolvedEmail = await resolveLoginEmail(String(loginInput))
+        if (!resolvedEmail) {
+            // Log against the raw input bucket so rate-limit still
+            // catches code-based spraying. We deliberately don't log
+            // success/fail to avoid populating a "valid codes" oracle.
+            await recordAttempt(String(loginInput).trim().toLowerCase(), ip, false)
+            return NextResponse.json(
+                { error: 'รหัสพนักงาน/อีเมล หรือรหัสผ่านไม่ถูกต้อง' },
+                { status: 401 }
+            )
+        }
+        const emailLower = resolvedEmail
 
         // Pre-flight rate-limit check. Do this BEFORE Supabase Auth so
         // a bot spraying passwords burns a ~5ms count() instead of a
@@ -178,7 +237,7 @@ export async function POST(request: Request) {
 
         // Use supabaseAdmin.auth.signInWithPassword — zero Prisma / DATABASE_URL dependency
         const { data, error } = await supabaseAdmin.auth.signInWithPassword({
-            email,
+            email: emailLower,
             password,
         })
 
@@ -187,9 +246,9 @@ export async function POST(request: Request) {
             // sees an updated counter. await on this so a fast attacker
             // can't out-race the insert by submitting back-to-back.
             await recordAttempt(emailLower, ip, false)
-            console.log(`[Auth] Failed: ${email} — ${error?.message}`)
+            console.log(`[Auth] Failed: ${emailLower} (input='${loginInput}') — ${error?.message}`)
             return NextResponse.json(
-                { error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' },
+                { error: 'รหัสพนักงาน/อีเมล หรือรหัสผ่านไม่ถูกต้อง' },
                 { status: 401 }
             )
         }
@@ -257,7 +316,7 @@ export async function POST(request: Request) {
 
         const homePath = ROLE_CONFIG[role]?.homePath ?? '/portal'
         const redirectTo = sanitizeRedirectPath(requestedRedirect, role) ?? homePath
-        console.log(`[Auth] OK: ${email} role=${role} → ${redirectTo} (requested=${requestedRedirect ?? 'none'})`)
+        console.log(`[Auth] OK: ${emailLower} role=${role} → ${redirectTo} (requested=${requestedRedirect ?? 'none'})`)
 
         return NextResponse.json({ success: true, role, redirectTo })
 

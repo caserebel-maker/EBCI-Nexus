@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Loader2, Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { Loader2, IdCard, Lock, Eye, EyeOff } from 'lucide-react'
 import { LanguageToggle } from '@/components/ui/language-toggle'
 import { useTranslation } from '@/contexts/language-context'
 
@@ -110,14 +110,25 @@ function LoginForm() {
 
                         <div className="space-y-4">
                             <div className="relative">
-                                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-white/70" />
+                                {/*
+                                    Hybrid identifier — accepts รหัสพนักงาน
+                                    OR อีเมล. The form field is still named
+                                    `email` so existing flows (password reset,
+                                    saved sessions) keep working; the server
+                                    resolves codes → email transparently.
+                                    type="text" + autoComplete="username" so
+                                    the browser/keychain doesn't keyboard-spam
+                                    the @ key for code-only users.
+                                */}
+                                <IdCard className="absolute left-3 top-2.5 h-4 w-4 text-white/70" />
                                 <input
                                     name="email"
-                                    type="email"
+                                    type="text"
                                     required
-                                    autoComplete="email"
+                                    autoComplete="username"
+                                    inputMode="text"
                                     className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/60 pl-9 pr-3 py-2 rounded-xl focus:ring-2 focus:ring-[#882136] focus:border-white/50 outline-none transition-all hover:bg-white/20 shadow-none text-[15px]"
-                                    placeholder={t('auth.email')}
+                                    placeholder="รหัสพนักงาน หรืออีเมล"
                                 />
                             </div>
 
