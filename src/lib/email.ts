@@ -145,9 +145,13 @@ export function buildAnnouncementEmail({
         .map(line => `<p style="margin:0 0 8px 0;line-height:1.7;color:#374151;">${escapeHtml(line)}</p>`)
         .join('')
 
+    // Escape the image URL even though it's a server-generated Supabase
+    // signed URL today — defense-in-depth, in case a future caller
+    // forwards a less-trusted source. escapeHtml covers `"` `<` `>` `&`
+    // which is the right minimum for an HTML-attribute context.
     const imageBlock = imageUrl
         ? `<div style="margin:24px 0;">
-               <img src="${imageUrl}" alt="${safeHeadline}"
+               <img src="${escapeHtml(imageUrl)}" alt="${safeHeadline}"
                     style="width:100%;max-height:360px;object-fit:cover;border-radius:8px;display:block;" />
            </div>`
         : ''

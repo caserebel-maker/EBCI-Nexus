@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { CheckCheck, Loader2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toInternalPath } from '@/lib/safe-url'
 import {
     useNotifications,
     type NotificationRow,
@@ -73,7 +74,12 @@ export function NotificationDropdown({ open, onClose, state }: Props) {
     const handleItemClick = (n: NotificationRow) => {
         if (!n.is_read) void markRead(n.id)
         onClose()
-        if (!n.action_url) return
+        // Defense-in-depth: action_url is server-written today (every
+        // createNotification call site uses a hardcoded path), but
+        // validate before handing to router so a future leak via DB
+        // can't deliver a `javascript:` URL that would fire inline.
+        const safeUrl = toInternalPath(n.action_url)
+        if (!safeUrl) return
         // Same admin/portal awareness as the "ดูทั้งหมด" link: if the
         // bell was opened from /hradmin and the stored action_url
         // points at a /portal/* page that has an /hradmin/* mirror,
@@ -81,8 +87,8 @@ export function NotificationDropdown({ open, onClose, state }: Props) {
         // halfway through reviewing a notification. Fall back to the
         // original URL for portal-only paths (announcements, profile).
         const target = pathname?.startsWith('/hradmin')
-            ? rewriteForAdmin(n.action_url)
-            : n.action_url
+            ? rewriteForAdmin(safeUrl)
+            : safeUrl
         router.push(target)
     }
 

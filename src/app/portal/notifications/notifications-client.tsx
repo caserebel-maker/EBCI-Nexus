@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCheck, Loader2, X, Bell, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toInternalPath } from '@/lib/safe-url'
 import type { NotificationRow } from '@/hooks/useNotifications'
 import { NotificationItem } from '@/components/notifications/NotificationItem'
 
@@ -132,7 +133,9 @@ export function NotificationsClient() {
 
     const onItemClick = useCallback((n: NotificationRow) => {
         if (!n.is_read) void markRead(n.id)
-        if (n.action_url) router.push(n.action_url)
+        // Defense-in-depth — see NotificationDropdown for rationale.
+        const safeUrl = toInternalPath(n.action_url)
+        if (safeUrl) router.push(safeUrl)
     }, [markRead, router])
 
     // Apply client-side type filter
