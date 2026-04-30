@@ -201,7 +201,7 @@ function AnnouncementModal({ ann, onClose }: { ann: AnnouncementItem; onClose: (
                 className="w-full max-w-lg max-h-[85vh] overflow-y-auto relative shadow-2xl animate-in fade-in zoom-in-95 duration-200"
                 style={{
                     ...glass,
-                    background: 'rgba(15,4,7,0.94)',
+                    background: 'rgba(86,30,35,0.77)',
                     borderRadius: '20px',
                 }}
                 onClick={e => e.stopPropagation()}

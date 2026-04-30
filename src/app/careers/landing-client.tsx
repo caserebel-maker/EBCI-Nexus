@@ -167,7 +167,7 @@ function ResumeDraftModal({ onClose }: { onClose: () => void }) {
 
     return (
         <div
-            className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4"
+            className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4"
             style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
             onClick={onClose}
         >
@@ -175,8 +175,8 @@ function ResumeDraftModal({ onClose }: { onClose: () => void }) {
                 className="w-full sm:max-w-md relative p-6 sm:p-7 text-white"
                 style={{
                     ...glass,
-                    background: 'linear-gradient(145deg,rgba(86,30,35,0.94) 0%,rgba(60,15,20,0.97) 100%)',
-                    borderRadius: '20px 20px 0 0',
+                    background: 'rgba(86,30,35,0.77)',
+                    borderRadius: '20px',
                 }}
                 onClick={e => e.stopPropagation()}
             >

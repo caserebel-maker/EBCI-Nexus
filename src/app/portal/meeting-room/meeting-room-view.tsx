@@ -297,7 +297,7 @@ function BookingFormModal({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3"
+            className="fixed inset-0 z-50 flex items-center justify-center p-3"
             style={{ background: 'rgba(47,0,0,0.5)', backdropFilter: 'blur(6px)' }}
             onClick={onClose}
         >
@@ -306,7 +306,7 @@ function BookingFormModal({
                 onClick={(e) => e.stopPropagation()}
                 className="w-full max-w-lg p-5 max-h-[92vh] overflow-y-auto"
                 style={{
-                    background: 'linear-gradient(160deg, rgba(86,30,35,0.95) 0%, rgba(107,34,40,0.95) 60%, rgba(139,53,64,0.95) 100%)',
+                    background: 'rgba(86,30,35,0.77)',
                     backdropFilter: 'blur(16px)',
                     border: '1px solid rgba(255,255,255,0.18)',
                     borderRadius: '20px',

@@ -170,7 +170,7 @@ function AnnouncementModal({ a, onClose }: { a: Announcement; onClose: () => voi
             <div
                 className="w-full max-w-xl max-h-[85vh] overflow-y-auto relative border border-white/10 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
                 style={{
-                    background: 'rgba(15,4,7,0.96)',
+                    background: 'rgba(86,30,35,0.77)',
                     backdropFilter: 'blur(16px)',
                     WebkitBackdropFilter: 'blur(16px)',
                     borderRadius: '20px',

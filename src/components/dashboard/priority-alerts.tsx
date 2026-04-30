@@ -47,7 +47,7 @@ function AlertModal({ alert, onClose }: { alert: PriorityAlert; onClose: () => v
                     isEmergency ? 'border-red-500/70' : 'border-amber-400/70',
                 )}
                 style={{
-                    background: 'rgba(15,4,7,0.96)',
+                    background: 'rgba(86,30,35,0.77)',
                     backdropFilter: 'blur(16px)',
                     WebkitBackdropFilter: 'blur(16px)',
                     borderRadius: '20px',

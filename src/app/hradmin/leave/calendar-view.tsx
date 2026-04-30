@@ -560,7 +560,7 @@ function DayDetailModal({
 
     return (
         <div
-            className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center px-0 sm:px-4 py-0 sm:py-8"
+            className="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-8"
             onClick={onClose}
         >
             <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" aria-hidden="true" />

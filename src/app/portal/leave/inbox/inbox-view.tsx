@@ -742,7 +742,7 @@ function DialogShell({
             <div
                 className="w-full max-w-lg max-h-[85vh] overflow-y-auto relative shadow-2xl animate-in fade-in zoom-in-95 duration-200 p-5 sm:p-6"
                 style={{
-                    background: 'rgba(15,4,7,0.97)',
+                    background: 'rgba(86,30,35,0.77)',
                     border: '1px solid rgba(255,255,255,0.15)',
                     borderRadius: '20px',
                 }}

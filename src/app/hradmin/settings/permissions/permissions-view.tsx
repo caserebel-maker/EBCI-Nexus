@@ -416,7 +416,7 @@ function EditPermissionsModal({
     if (typeof document === 'undefined') return null
     return createPortal(
         <div
-            className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center px-0 sm:px-4 py-0 sm:py-8"
+            className="fixed inset-0 z-[90] flex items-center justify-center p-3 sm:p-8"
             onClick={onClose}
         >
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" aria-hidden="true" />

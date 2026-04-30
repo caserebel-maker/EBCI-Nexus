@@ -557,13 +557,13 @@ function LeaveDetailModal({
 
     return (
         <div
-            className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4"
+            className="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-4"
             style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
             onClick={onClose}
         >
             <div
                 className="w-full sm:max-w-xl max-h-[90vh] overflow-y-auto relative"
-                style={{ background: 'rgba(15,4,7,0.97)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '20px 20px 0 0' }}
+                style={{ background: 'rgba(86,30,35,0.77)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '20px' }}
                 onClick={e => e.stopPropagation()}
             >
                 <button onClick={onClose} className="absolute top-3 right-3 h-9 w-9 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center z-10" aria-label="ปิด">
@@ -889,13 +889,13 @@ function NewLeaveModal({
 
     return (
         <div
-            className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4"
+            className="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-4"
             style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
             onClick={onClose}
         >
             <div
                 className="w-full sm:max-w-2xl max-h-[95vh] overflow-y-auto relative"
-                style={{ background: 'rgba(15,4,7,0.97)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '20px 20px 0 0' }}
+                style={{ background: 'rgba(86,30,35,0.77)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '20px' }}
                 onClick={e => e.stopPropagation()}
             >
                 <div className="sticky top-0 z-10 bg-gradient-to-b from-[#15040a] to-[#15040aee] px-5 sm:px-6 py-4 border-b border-white/10 flex items-center justify-between">
