@@ -66,20 +66,30 @@ async function resolveLoginEmail(rawInput: string): Promise<string | null> {
         return trimmed.toLowerCase()
     }
 
-    // Employee code path. Look up both the literal input and a normalized
-    // (digits-only) variant so the same DB row matches "074-47" / "07447".
-    const normalized = trimmed.replace(/[\s-]/g, '')
+    // Employee code path. Every code in the DB is stored as `XXX-YY`
+    // (verified: 55/55 rows have a dash). Postgrest's .or() can't
+    // call replace() server-side, so the resilient way to match
+    // "074-47" / "07447" / "074 47" against the canonical "074-47"
+    // row is to fetch all (codes, emails) pairs and compare on the
+    // normalized form in JS. ~55 rows × ~30 bytes = ~2 KB per login,
+    // cheap given the per-attempt rate-limit cap. Refactor to a
+    // SECURITY DEFINER RPC if the directory grows past a few hundred.
+    const inputNormalized = trimmed.replace(/[\s-]/g, '').toLowerCase()
+    if (!inputNormalized) return null
+
     const { data, error } = await supabaseAdmin
         .from('employees')
         .select('email, employee_code')
-        .or(`employee_code.eq.${trimmed},employee_code.eq.${normalized}`)
-        .limit(1)
-        .maybeSingle()
+        .not('employee_code', 'is', null)
     if (error) {
         console.warn('[Auth] employee_code lookup failed:', error)
         return null
     }
-    const email = (data?.email as string | null)?.trim()
+    const match = (data ?? []).find(r => {
+        const code = (r.employee_code as string | null) ?? ''
+        return code.replace(/[\s-]/g, '').toLowerCase() === inputNormalized
+    })
+    const email = (match?.email as string | null)?.trim()
     if (!email) return null
     return email.toLowerCase()
 }
