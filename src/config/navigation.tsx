@@ -74,6 +74,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
                 { label: 'อนุมัติการลา',   href: '/hradmin/leave/inbox',        icon: CheckCircle },
                 { label: 'ตรวจสายอนุมัติ', href: '/hradmin/leave/approval-audit', icon: GitBranch },
                 { label: 'นโยบายการลา',  href: '/hradmin/leave/policies',     icon: ScrollText },
+                { label: 'นโยบาย (พนักงาน)', href: '/portal/leave-policy',        icon: ScrollText },
             ],
         },
         {
@@ -105,6 +106,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         { label: 'อนุมัติการลา', href: '/portal/leave/inbox', icon: ClipboardCheck },
         { label: 'ผังองค์กร', href: '/portal/organization', icon: Network },
         { label: 'ปฏิทิน', href: '/portal/calendar', icon: Calendar },
+        { label: 'นโยบายการลา', href: '/portal/leave-policy', icon: ScrollText },
         { label: 'จองห้องประชุม', href: '/portal/meeting-room', icon: DoorOpen },
         { label: 'dashboard.announcements', href: '/portal/announcements', icon: Megaphone },
         { label: 'ตั้งค่า', href: '/portal/settings', icon: Settings },
@@ -120,6 +122,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         // inbox menu item.
         { label: 'ผังองค์กร', href: '/portal/organization', icon: Network },
         { label: 'ปฏิทิน', href: '/portal/calendar', icon: Calendar },
+        { label: 'นโยบายการลา', href: '/portal/leave-policy', icon: ScrollText },
         { label: 'จองห้องประชุม', href: '/portal/meeting-room', icon: DoorOpen },
         { label: 'dashboard.announcements', href: '/portal/announcements', icon: Megaphone },
         // Was '/portal/payslips' which doesn't exist as a route — the actual

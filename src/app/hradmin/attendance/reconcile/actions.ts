@@ -30,6 +30,11 @@ export interface ReconRow {
      *  leave that day, surface the leave-type name so HR sees "ลาป่วย"
      *  instead of just "ลา". Null for non-leave rows. */
     leaveTypeName: string | null
+    /** §3.16p2 — true when the employee has a half-day leave on this date.
+     *  Used by the UI to show a "ลาครึ่งเช้า/บ่าย" badge alongside
+     *  the underlying status (matched/card_only/etc.). */
+    isHalfDayLeave: boolean
+    halfDayLeavePeriod: 'morning' | 'afternoon' | null
 }
 
 export interface ReconSummary {
@@ -170,13 +175,14 @@ export async function reconcileDate(
     const leaveTypeNameById = new Map<string, string>(
         (leaveTypes ?? []).map(t => [t.id as string, (t.name_th ?? '') as string]),
     )
-    const leaveByEmp = new Map<string, { typeName: string; isHalfDay: boolean }>()
+    const leaveByEmp = new Map<string, { typeName: string; isHalfDay: boolean; halfDayPeriod: 'morning' | 'afternoon' | null }>()
     for (const r of leavesOnDate ?? []) {
         const eid = r.employee_id as string
         if (leaveByEmp.has(eid)) continue
         leaveByEmp.set(eid, {
             typeName: leaveTypeNameById.get(r.leave_type_id as string) ?? 'ลา',
             isHalfDay: Boolean(r.is_half_day),
+            halfDayPeriod: (r.half_day_period as 'morning' | 'afternoon' | null) ?? null,
         })
     }
 
@@ -221,6 +227,8 @@ export async function reconcileDate(
             status,
             officialClockIn: official,
             leaveTypeName: leaveOnDate?.typeName ?? null,
+            isHalfDayLeave: leaveOnDate?.isHalfDay ?? false,
+            halfDayLeavePeriod: leaveOnDate?.halfDayPeriod ?? null,
         })
 
         const logId = existingLogByEmp.get(e.id)

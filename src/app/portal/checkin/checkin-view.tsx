@@ -11,6 +11,7 @@ import { checkIn, checkOut } from './actions'
 import { haversineDistance } from '@/lib/geo'
 import { formatBangkokTime, formatBangkokDateTime } from '@/lib/datetime'
 import type { LeaveTodayInfo } from '@/lib/leave-today'
+import { WORK_SCHEDULE, HALF_DAY_RULES } from '@/lib/leave-constants'
 
 interface Office {
     name: string
@@ -336,7 +337,9 @@ export function CheckinView({ office, todayCheckin, leaveToday }: Props) {
                                 </p>
                                 <p className="text-xs text-white/65 mt-0.5">
                                     {leaveToday.is_half_day
-                                        ? 'อีกครึ่งวันยังต้องเช็คอินตามปกติ'
+                                        ? leaveToday.half_day_period === 'morning'
+                                            ? `เช็คอินตอนบ่ายได้ตั้งแต่ ${WORK_SCHEDULE.afternoonStart} น. (ก่อน ${HALF_DAY_RULES.afternoonCheckinDeadline} น.)`
+                                            : `เช็คอินตอนเช้าตามปกติ ก่อน ${WORK_SCHEDULE.morningEnd} น. · ลาได้ตั้งแต่ ${WORK_SCHEDULE.afternoonStart} น.`
                                         : 'ถ้าใบลาได้รับอนุมัติก่อนสิ้นวัน ระบบจะไม่นับว่าขาดงาน'}
                                 </p>
                             </div>

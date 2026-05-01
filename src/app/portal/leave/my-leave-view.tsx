@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ValidationToast } from '@/components/ui/validation-toast'
+import { WORK_SCHEDULE, HALF_DAY_RULES } from '@/lib/leave-constants'
 
 // ── Validation field IDs + Thai labels ────────────────────────────────────────
 // Used by both validate() and the per-input red-border styling so the toast
@@ -1245,6 +1246,15 @@ function Step1TypePicker({
                     </div>
                 </div>
             )}
+
+            <a
+                href="/portal/leave-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-amber-300/70 hover:text-amber-300 transition-colors"
+            >
+                ดูนโยบายการลา →
+            </a>
         </div>
     )
 }
@@ -1340,20 +1350,34 @@ function Step2Dates({
                     <span className="text-sm text-white">ลาครึ่งวัน</span>
                 </label>
                 {isHalfDay && (
-                    <div className="mt-3 flex gap-2">
-                        {(['morning', 'afternoon'] as const).map(p => (
-                            <button
-                                key={p}
-                                type="button"
-                                onClick={() => setHalfDayPeriod(p)}
-                                className={cn(
-                                    'flex-1 h-10 rounded-lg text-sm font-semibold transition-all',
-                                    halfDayPeriod === p ? 'bg-amber-400 text-black' : 'bg-black/25 text-white/75 border border-white/15',
-                                )}
-                            >
-                                {p === 'morning' ? 'เช้า' : 'บ่าย'}
-                            </button>
-                        ))}
+                    <div className="mt-3 space-y-2.5">
+                        <div className="flex gap-2">
+                            {(['morning', 'afternoon'] as const).map(p => (
+                                <button
+                                    key={p}
+                                    type="button"
+                                    onClick={() => setHalfDayPeriod(p)}
+                                    className={cn(
+                                        'flex-1 h-10 rounded-lg text-sm font-semibold transition-all',
+                                        halfDayPeriod === p ? 'bg-amber-400 text-black' : 'bg-black/25 text-white/75 border border-white/15',
+                                    )}
+                                >
+                                    {p === 'morning' ? 'เช้า' : 'บ่าย'}
+                                </button>
+                            ))}
+                        </div>
+                        {/* §3.16p2 — contextual tip explaining check-in rules for
+                            the selected half-day period so employees know what
+                            to expect before submitting. */}
+                        <div className="p-2.5 rounded-lg bg-orange-500/10 border border-orange-400/20 text-xs text-orange-100 flex items-start gap-2">
+                            <Info size={12} className="mt-0.5 shrink-0 text-orange-200" />
+                            <span>
+                                {halfDayPeriod === 'morning'
+                                    ? `ลาเช้า (${WORK_SCHEDULE.morningStart}-${WORK_SCHEDULE.morningEnd}) — ไม่ต้องเช็คอินตอนเช้า แต่ต้องเช็คอินตอนบ่ายก่อน ${HALF_DAY_RULES.afternoonCheckinDeadline} น.`
+                                    : `ลาบ่าย (${WORK_SCHEDULE.afternoonStart}-${WORK_SCHEDULE.afternoonEnd}) — เช็คอินตอนเช้าตามปกติ ไม่ต้องเช็คอินตอนบ่าย`
+                                }
+                            </span>
+                        </div>
                     </div>
                 )}
             </div>

@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react'
 import {
     CheckCircle2, AlertTriangle, Smartphone, CreditCard, XCircle,
-    Calendar, RefreshCw, FileDown, Search, Loader2, Users, Palmtree,
+    Calendar, RefreshCw, FileDown, Search, Loader2, Users, Palmtree, Sun,
 } from 'lucide-react'
 import { reconcileDate, type ReconSummary, type ReconStatus } from './actions'
 import { formatBangkokTime } from '@/lib/datetime'
@@ -123,7 +123,7 @@ export function ReconcileView({ initialDate, initialData }: Props) {
                 formatTime(r.cardTime, 'bangkok'),
                 formatTime(r.mobileTime, 'utc'),
                 r.varianceMinutes !== null ? String(r.varianceMinutes) : '',
-                statusLabel[r.status],
+                `${statusLabel[r.status]}${r.isHalfDayLeave ? ` (ครึ่งวัน${r.halfDayLeavePeriod === 'morning' ? 'เช้า' : 'บ่าย'})` : ''}`,
                 // official_clock_in mirrors card when present, mobile otherwise
                 formatTime(r.officialClockIn, r.cardTime ? 'bangkok' : 'utc'),
             ]),
@@ -247,7 +247,17 @@ export function ReconcileView({ initialDate, initialData }: Props) {
                                             }`}>
                                                 {formatVariance(r.varianceMinutes)}
                                             </td>
-                                            <td className="py-2 px-3"><StatusBadge status={r.status} leaveTypeName={r.leaveTypeName} /></td>
+                                            <td className="py-2 px-3">
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    <StatusBadge status={r.status} leaveTypeName={r.leaveTypeName} />
+                                                    {r.isHalfDayLeave && (
+                                                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-orange-500/15 text-orange-200 border-orange-400/30">
+                                                            <Sun size={9} />
+                                                            ครึ่ง{r.halfDayLeavePeriod === 'morning' ? 'เช้า' : 'บ่าย'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
                                         </tr>
                                     ))}
                                     {filteredRows.length === 0 && (
