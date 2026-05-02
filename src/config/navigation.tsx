@@ -31,22 +31,26 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
             href: '/hradmin/dashboard',
             icon: LayoutDashboard,
         },
+        // "พนักงาน" group covers everyone in the people pipeline —
+        // current employees (รายชื่อ + ผังองค์กร) AND candidates flowing
+        // through hiring (รับสมัครงาน). Different lifecycle stages of
+        // the same domain.
         {
             label: 'dashboard.employees',
             icon: Users,
-            matchPrefix: ['/hradmin/employees', '/hradmin/organization'],
+            matchPrefix: ['/hradmin/employees', '/hradmin/organization', '/hradmin/applicants'],
             children: [
-                { label: 'รายชื่อ',   href: '/hradmin/employees',    icon: User },
-                { label: 'ผังองค์กร', href: '/hradmin/organization', icon: Network },
+                { label: 'รายชื่อ',     href: '/hradmin/employees',    icon: User },
+                { label: 'ผังองค์กร',   href: '/hradmin/organization', icon: Network },
+                { label: 'รับสมัครงาน', href: '/hradmin/applicants',   icon: Briefcase },
             ],
         },
+        // "การเข้างาน" — renamed from "เวลาทำงาน" (clearer: it's about
+        // who's in the office today). ปฏิทินบริษัท sits here because
+        // holidays/WFH are inputs into the attendance reckoning, not a
+        // leave concept per se.
         {
-            label: 'ประกาศข่าวสาร',
-            href: '/hradmin/announcements',
-            icon: Megaphone,
-        },
-        {
-            label: 'เวลาทำงาน',
+            label: 'การเข้างาน',
             icon: Clock,
             matchPrefix: ['/hradmin/attendance', '/hradmin/holidays', '/hradmin/reports'],
             children: [
@@ -56,42 +60,38 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
                 { label: 'ส่งออกข้อมูล (CSV)', href: '/hradmin/reports?tab=attendance',    icon: FileText },
             ],
         },
+        // "การลา" — slimmed: removed the duplicate "ของฉัน" link to
+        // /portal/leave (HR can preview the employee surfaces via the
+        // "สลับเป็นพนักงาน" toggle at the top of the sidebar — no need
+        // to bake portal links into the HR menu).
         {
             label: 'การลา',
             icon: Calendar,
-            // The group lights up on /hradmin/leave* AND /portal/leave*
-            // because "ของฉัน" lives under /portal. comp-days lives under
-            // a sibling path but conceptually belongs to the leave group.
-            matchPrefix: ['/hradmin/leave', '/portal/leave', '/hradmin/comp-days', '/portal/comp-days'],
+            matchPrefix: ['/hradmin/leave', '/hradmin/comp-days'],
             children: [
                 { label: 'ภาพรวม',        href: '/hradmin/leave',              icon: BarChart3 },
                 { label: 'ใบลาทั้งหมด',   href: '/hradmin/leave?tab=requests', icon: FileText },
                 { label: 'วันลาพนักงาน',  href: '/hradmin/leave?tab=balances', icon: Wallet },
-                { label: 'ปฏิทิน',        href: '/hradmin/leave?tab=calendar', icon: CalendarDays },
-                { label: 'ของฉัน',        href: '/portal/leave',               icon: UserCircle },
-                // HR admins get the /hradmin variant of the inbox so approving
-                // a request doesn't flip the shell into employee mode. Manager
-                // + employee nav entries (below) still use /portal.
+                { label: 'ปฏิทินการลา',   href: '/hradmin/leave?tab=calendar', icon: CalendarDays },
                 { label: 'อนุมัติการลา',   href: '/hradmin/leave/inbox',        icon: CheckCircle },
                 { label: 'ตรวจสายอนุมัติ', href: '/hradmin/leave/approval-audit', icon: GitBranch },
                 { label: 'วันหยุดสะสม',   href: '/hradmin/comp-days',          icon: CalendarHeart },
                 { label: 'นโยบายการลา',  href: '/hradmin/leave/policies',     icon: ScrollText },
-                // The /portal/leave-policy link was here previously but
-                // navigating to a /portal route from the HR shell flips
-                // the user back into employee mode (since the shell role
-                // is path-derived). HR can preview the employee view by
-                // pressing "สลับเป็นพนักงาน" at the top of the sidebar.
             ],
         },
+        // "เนื้อหาและกิจกรรม" — new group bundling content + facility
+        // booking (announcements + meeting-room). Was two separate top-
+        // level items; grouping reduces main-nav count from 8 → 6.
+        // (รับสมัครงาน moved up into "พนักงาน" since it's the same
+        //  people-pipeline domain.)
         {
-            label: 'จองห้องประชุม',
-            href: '/hradmin/meeting-room',
-            icon: DoorOpen,
-        },
-        {
-            label: 'รับสมัครงาน',
-            href: '/hradmin/applicants',
-            icon: Briefcase,
+            label: 'เนื้อหาและกิจกรรม',
+            icon: Megaphone,
+            matchPrefix: ['/hradmin/announcements', '/hradmin/meeting-room'],
+            children: [
+                { label: 'ประกาศข่าวสาร', href: '/hradmin/announcements', icon: Megaphone },
+                { label: 'จองห้องประชุม', href: '/hradmin/meeting-room',  icon: DoorOpen },
+            ],
         },
         {
             label: 'ตั้งค่าระบบ',
