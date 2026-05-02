@@ -19,15 +19,15 @@ const CURRENT_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - 1 + i)
 
 // Calendar entry types — these are the four `holidays.type` values the UI
-// renders today. Display label + chip color per type. Anything outside this
-// map falls through to the "company" preset so legacy/imported data still
-// shows up gracefully (e.g. early 2026 seed inserted `religious` rows that
-// were not in the old 2-type map).
-const TYPE_CONFIG: Record<string, { label: string; color: string }> = {
-    public:    { label: 'นักขัตฤกษ์',     color: '#F87171' },
-    religious: { label: 'วันสำคัญทางศาสนา', color: '#F472B6' },
-    company:   { label: 'บริษัทกำหนด',    color: '#60A5FA' },
-    wfh:       { label: 'WFH',            color: '#34D399' },
+// renders today. Display label + chip color + emoji per type. Emoji shows
+// in the calendar grid (1 per event) so the user can scan a month at a
+// glance without reading text. Anything outside this map falls through to
+// the "company" preset so legacy/imported data still shows up gracefully.
+const TYPE_CONFIG: Record<string, { label: string; color: string; emoji: string }> = {
+    public:    { label: 'นักขัตฤกษ์',      color: '#F87171', emoji: '🇹🇭' },
+    religious: { label: 'วันสำคัญทางศาสนา', color: '#F472B6', emoji: '🛕' },
+    company:   { label: 'บริษัทกำหนด',     color: '#60A5FA', emoji: '📌' },
+    wfh:       { label: 'WFH',             color: '#34D399', emoji: '🏠' },
 }
 const TYPE_OPTIONS: Array<{ value: string; label: string }> = [
     { value: 'public',    label: 'นักขัตฤกษ์ (วันหยุด)' },
@@ -204,6 +204,8 @@ export default function HolidaysPage() {
                     holidays={holidays}
                     loading={loading}
                     onEdit={openEdit}
+                    onDelete={handleDelete}
+                    deleteId={deleteId}
                 />
             )}
 
@@ -363,7 +365,7 @@ export default function HolidaysPage() {
  * mutation. Add-day still goes through the "+ เพิ่มรายการ" header CTA.
  */
 function CalendarMonthView({
-    year, month, onMonthChange, holidays, loading, onEdit,
+    year, month, onMonthChange, holidays, loading, onEdit, onDelete, deleteId,
 }: {
     year: number
     month: number   // 0-indexed
@@ -371,7 +373,10 @@ function CalendarMonthView({
     holidays: Holiday[]
     loading: boolean
     onEdit: (h: Holiday) => void
+    onDelete: (id: string) => void
+    deleteId: string | null
 }) {
+    const [selectedDate, setSelectedDate] = useState<string | null>(null)
     // Group holidays by date for O(1) lookup per cell.
     const byDate = useMemo(() => {
         const m = new Map<string, Holiday[]>()
@@ -449,55 +454,66 @@ function CalendarMonthView({
                 <div className="grid grid-cols-7 gap-1.5">
                     {cells.map((d, i) => {
                         if (d === null) {
-                            return <div key={i} className="min-h-[110px] rounded-md bg-white/[0.02]" />
+                            return <div key={i} className="min-h-[80px] rounded-md bg-white/[0.02]" />
                         }
                         const key = monthKey(d)
                         const events = byDate.get(key) ?? []
                         const isToday = key === todayStr
                         const dow = (firstDow + d - 1) % 7
                         const isWeekend = dow === 0 || dow === 6
+                        const hasEvents = events.length > 0
+                        // Tooltip: list all event names so desktop hover shows
+                        // every entry on the day without opening the modal.
+                        const tooltip = hasEvents
+                            ? events.map(e => `${(TYPE_CONFIG[e.type] ?? TYPE_CONFIG.company).emoji} ${e.name}`).join('\n')
+                            : undefined
                         return (
-                            <div
+                            <button
                                 key={i}
-                                className={`min-h-[110px] rounded-md p-2 flex flex-col gap-1.5 transition-colors ${
+                                type="button"
+                                onClick={() => hasEvents && setSelectedDate(key)}
+                                title={tooltip}
+                                disabled={!hasEvents}
+                                className={`min-h-[80px] rounded-md p-2 flex flex-col gap-1.5 transition-all text-left ${
                                     isToday
                                         ? 'bg-amber-400/15 border border-amber-400/60'
-                                        : 'bg-white/[0.07] border border-white/15 hover:bg-white/[0.11]'
+                                        : hasEvents
+                                            ? 'bg-white/[0.07] border border-white/15 hover:bg-white/[0.13] hover:border-white/30 cursor-pointer'
+                                            : 'bg-white/[0.04] border border-white/10 cursor-default'
                                 }`}
                             >
                                 <span className={`text-base font-bold tabular-nums leading-none ${
                                     isToday ? 'text-amber-200'
                                         : isWeekend ? 'text-amber-200'
-                                        : 'text-white'
+                                        : hasEvents ? 'text-white' : 'text-white/55'
                                 }`}>
                                     {d}
                                 </span>
-                                <div className="flex flex-col gap-1 overflow-hidden">
-                                    {events.slice(0, 2).map(h => {
-                                        const cfg = TYPE_CONFIG[h.type] ?? TYPE_CONFIG.company
-                                        return (
-                                            <button
-                                                key={h.id}
-                                                type="button"
-                                                onClick={() => onEdit(h)}
-                                                title={`${h.name} — แตะเพื่อแก้ไข`}
-                                                className="text-left text-sm font-semibold text-white px-1.5 py-1 rounded leading-tight truncate hover:brightness-125"
-                                                style={{
-                                                    background: `${cfg.color}55`,
-                                                    borderLeft: `3px solid ${cfg.color}`,
-                                                }}
-                                            >
-                                                {h.type === 'wfh' && '🏠 '}{h.name}
-                                            </button>
-                                        )
-                                    })}
-                                    {events.length > 2 && (
-                                        <span className="text-xs font-semibold text-white/75 px-1 leading-tight">
-                                            +{events.length - 2} อื่น
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
+                                {hasEvents && (
+                                    <div className="flex flex-wrap items-center gap-1 mt-auto">
+                                        {events.slice(0, 4).map(h => {
+                                            const cfg = TYPE_CONFIG[h.type] ?? TYPE_CONFIG.company
+                                            return (
+                                                <span
+                                                    key={h.id}
+                                                    className="inline-flex items-center justify-center h-6 w-6 rounded text-sm leading-none"
+                                                    style={{
+                                                        background: `${cfg.color}40`,
+                                                        border: `1px solid ${cfg.color}80`,
+                                                    }}
+                                                >
+                                                    {cfg.emoji}
+                                                </span>
+                                            )
+                                        })}
+                                        {events.length > 4 && (
+                                            <span className="text-xs font-semibold text-white/75 px-1">
+                                                +{events.length - 4}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </button>
                         )
                     })}
                 </div>
@@ -507,10 +523,132 @@ function CalendarMonthView({
             <div className="pt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
                 {Object.entries(TYPE_CONFIG).map(([t, cfg]) => (
                     <span key={t} className="inline-flex items-center gap-1.5">
-                        <span className="h-3 w-3 rounded-sm" style={{ background: cfg.color }} />
+                        <span className="text-base leading-none">{cfg.emoji}</span>
                         <span className="text-white/85 font-medium">{cfg.label}</span>
                     </span>
                 ))}
+            </div>
+
+            {/* Day detail modal — opens when user clicks a cell with events */}
+            {selectedDate && (
+                <DayDetailModal
+                    dateIso={selectedDate}
+                    events={byDate.get(selectedDate) ?? []}
+                    onClose={() => setSelectedDate(null)}
+                    onEdit={(h) => { setSelectedDate(null); onEdit(h) }}
+                    onDelete={onDelete}
+                    deleteId={deleteId}
+                />
+            )}
+        </div>
+    )
+}
+
+// ─── Day detail modal ────────────────────────────────────────────────────────
+/**
+ * Click a calendar cell → this modal lists every event on that date with
+ * full names (no truncation), color-coded chips, and per-row edit/delete
+ * controls. Solves the "ชื่อยาวเกินไป" problem the icon-row pattern
+ * intentionally trades away — full text lives here, scan-able icons live
+ * on the grid.
+ */
+function DayDetailModal({
+    dateIso, events, onClose, onEdit, onDelete, deleteId,
+}: {
+    dateIso: string
+    events: Holiday[]
+    onClose: () => void
+    onEdit: (h: Holiday) => void
+    onDelete: (id: string) => void
+    deleteId: string | null
+}) {
+    // Format the date with weekday name for instant context
+    // (e.g. "พฤหัสบดี · 12 สิงหาคม 2569").
+    const headline = useMemo(() => {
+        const [y, m, d] = dateIso.split('-').map(Number)
+        const date = new Date(y, m - 1, d)
+        const dows = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์']
+        return `${dows[date.getDay()]} · ${d} ${THAI_MONTHS[m - 1]} ${y + 543}`
+    }, [dateIso])
+
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+        window.addEventListener('keydown', onKey)
+        const prev = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        return () => {
+            window.removeEventListener('keydown', onKey)
+            document.body.style.overflow = prev
+        }
+    }, [onClose])
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+            onClick={onClose}
+        >
+            <div
+                className="w-full max-w-lg rounded-2xl overflow-hidden"
+                style={{ background: 'rgba(20,5,8,0.96)', border: '1px solid rgba(255,255,255,0.15)' }}
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                    <h2 className="text-white font-bold text-base">{headline}</h2>
+                    <button
+                        onClick={onClose}
+                        className="text-white/40 hover:text-white transition-colors"
+                        aria-label="ปิด"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="px-5 py-4 max-h-[70vh] overflow-y-auto space-y-3">
+                    {events.map(h => {
+                        const cfg = TYPE_CONFIG[h.type] ?? TYPE_CONFIG.company
+                        return (
+                            <div
+                                key={h.id}
+                                className="rounded-xl p-3.5 border"
+                                style={{
+                                    background: `${cfg.color}1a`,
+                                    borderColor: `${cfg.color}55`,
+                                }}
+                            >
+                                <div className="flex items-center gap-2 mb-1.5">
+                                    <span className="text-lg leading-none">{cfg.emoji}</span>
+                                    <span
+                                        className="text-xs font-bold px-2 py-0.5 rounded"
+                                        style={{ background: `${cfg.color}30`, color: cfg.color }}
+                                    >
+                                        {cfg.label}
+                                    </span>
+                                </div>
+                                <p className="text-base font-semibold text-white leading-snug">
+                                    {h.name}
+                                </p>
+                                <div className="flex items-center gap-2 mt-3">
+                                    <button
+                                        onClick={() => onEdit(h)}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white text-sm font-semibold"
+                                    >
+                                        <Pencil size={13} /> แก้ไข
+                                    </button>
+                                    <button
+                                        onClick={() => onDelete(h.id)}
+                                        disabled={deleteId === h.id}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-200 text-sm font-semibold disabled:opacity-50"
+                                    >
+                                        {deleteId === h.id
+                                            ? <Loader2 size={13} className="animate-spin" />
+                                            : <Trash2 size={13} />
+                                        } ลบ
+                                    </button>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
             </div>
         </div>
     )
