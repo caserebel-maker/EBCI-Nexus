@@ -94,17 +94,44 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
     // employees.is_approver. HR admins are excluded from this branch
     // because they already get /hradmin/leave/inbox in their main nav,
     // and the /portal preview should mirror a regular-employee experience.
+    //
+    // After the nav restructure (be6e7ca), the "การลา" surfaces moved
+    // into a group. Inject the approver inbox INTO that group's children
+    // (right after "ใบลาของฉัน") so it lives next to the other leave
+    // surfaces instead of dangling as a top-level item. Falls back to a
+    // top-level push if the group can't be found (defensive — shouldn't
+    // happen in practice but keeps the inbox reachable on misconfig).
     if (
         effectiveRole === 'employee'
         && role !== 'hr_admin'
         && profile?.isApprover
-        && !navItems.some(i => i.href === '/portal/leave/inbox')
     ) {
-        navItems.push({
+        const approverInboxItem: NavItem = {
             label: 'อนุมัติการลา',
             href: '/portal/leave/inbox',
             icon: ClipboardCheck,
-        })
+        }
+        const leaveGroupIndex = navItems.findIndex(
+            i => i.label === 'การลา' && Array.isArray(i.children),
+        )
+        if (leaveGroupIndex >= 0) {
+            const group = navItems[leaveGroupIndex]
+            const alreadyHas = group.children?.some(c => c.href === '/portal/leave/inbox')
+            if (!alreadyHas) {
+                // Clone so we don't mutate the imported config (it'd
+                // bleed across renders since modules are singletons).
+                navItems[leaveGroupIndex] = {
+                    ...group,
+                    children: [
+                        group.children![0],          // "ใบลาของฉัน" stays first
+                        approverInboxItem,           // approver inbox second
+                        ...group.children!.slice(1),
+                    ],
+                }
+            }
+        } else if (!navItems.some(i => i.href === '/portal/leave/inbox')) {
+            navItems.push(approverInboxItem)
+        }
     }
 
     return (

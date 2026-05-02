@@ -108,34 +108,78 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
     [ROLES.MANAGER]: [
         { label: 'dashboard.title', href: '/hradmin/dashboard', icon: LayoutDashboard },
         { label: 'เช็คอิน', href: '/portal/checkin', icon: MapPin },
-        { label: 'leave.myLeave', href: '/portal/leave', icon: Palmtree },
-        { label: 'วันหยุดสะสม', href: '/portal/comp-days', icon: CalendarHeart },
-        { label: 'อนุมัติการลา', href: '/portal/leave/inbox', icon: ClipboardCheck },
-        { label: 'ผังองค์กร', href: '/portal/organization', icon: Network },
-        { label: 'ปฏิทิน', href: '/portal/calendar', icon: Calendar },
-        { label: 'นโยบายการลา', href: '/portal/leave-policy', icon: ScrollText },
-        { label: 'จองห้องประชุม', href: '/portal/meeting-room', icon: DoorOpen },
-        { label: 'dashboard.announcements', href: '/portal/announcements', icon: Megaphone },
+        // "การลา" group — bundles all leave-adjacent surfaces so the
+        // sidebar stays under 6 main items. The approver inbox sits at
+        // the top of the group because it's the differentiator vs pure
+        // employees (and the action a manager opens the menu to do).
+        {
+            label: 'การลา',
+            icon: Palmtree,
+            matchPrefix: ['/portal/leave', '/portal/comp-days', '/portal/calendar'],
+            children: [
+                { label: 'ใบลาของฉัน',    href: '/portal/leave',           icon: Palmtree },
+                { label: 'อนุมัติการลา',  href: '/portal/leave/inbox',     icon: ClipboardCheck },
+                { label: 'วันหยุดสะสม',   href: '/portal/comp-days',       icon: CalendarHeart },
+                { label: 'ปฏิทิน',        href: '/portal/calendar',        icon: Calendar },
+                { label: 'นโยบายการลา',  href: '/portal/leave-policy',    icon: ScrollText },
+            ],
+        },
+        // "บริษัท" group — read-only org-wide info that managers consult
+        // (announcements they need to read, the org chart for delegation,
+        // the meeting room schedule). Distinct from "การลา" because none
+        // of these involve a leave-balance decision.
+        {
+            label: 'บริษัท',
+            icon: Network,
+            matchPrefix: ['/portal/announcements', '/portal/organization', '/portal/meeting-room'],
+            children: [
+                { label: 'ประกาศข่าวสาร',  href: '/portal/announcements',  icon: Megaphone },
+                { label: 'ผังองค์กร',      href: '/portal/organization',   icon: Network },
+                { label: 'จองห้องประชุม',  href: '/portal/meeting-room',   icon: DoorOpen },
+            ],
+        },
         { label: 'ตั้งค่า', href: '/portal/settings', icon: Settings },
     ],
     [ROLES.EMPLOYEE]: [
         { label: 'dashboard.portal', href: '/portal', icon: LayoutDashboard },
         { label: 'เช็คอิน', href: '/portal/checkin', icon: MapPin },
-        { label: 'recruitment.personalInfo', href: '/portal/profile', icon: UserCircle },
-        { label: 'leave.myLeave', href: '/portal/leave', icon: Palmtree },
-        { label: 'วันหยุดสะสม', href: '/portal/comp-days', icon: CalendarHeart },
-        // "อนุมัติการลา" intentionally NOT in the default — it's appended
-        // dynamically in shell.tsx for users with employees.is_approver = true.
-        // Pure-employee accounts who never approve anyone don't see an empty
-        // inbox menu item.
-        { label: 'ผังองค์กร', href: '/portal/organization', icon: Network },
-        { label: 'ปฏิทิน', href: '/portal/calendar', icon: Calendar },
-        { label: 'นโยบายการลา', href: '/portal/leave-policy', icon: ScrollText },
-        { label: 'จองห้องประชุม', href: '/portal/meeting-room', icon: DoorOpen },
-        { label: 'dashboard.announcements', href: '/portal/announcements', icon: Megaphone },
-        // Was '/portal/payslips' which doesn't exist as a route — the actual
-        // page is at '/portal/payroll'. Fixed Apr 28.
-        { label: 'สลิปของฉัน', href: '/portal/payroll', icon: FileText },
+        // "การลา" group — same shape as MANAGER but without the approver
+        // inbox (which gets appended dynamically in shell.tsx for users
+        // with employees.is_approver = true).
+        {
+            label: 'การลา',
+            icon: Palmtree,
+            matchPrefix: ['/portal/leave', '/portal/comp-days', '/portal/calendar'],
+            children: [
+                { label: 'ใบลาของฉัน',    href: '/portal/leave',           icon: Palmtree },
+                { label: 'วันหยุดสะสม',   href: '/portal/comp-days',       icon: CalendarHeart },
+                { label: 'ปฏิทิน',        href: '/portal/calendar',        icon: Calendar },
+                { label: 'นโยบายการลา',  href: '/portal/leave-policy',    icon: ScrollText },
+            ],
+        },
+        // "ของฉัน" group — personal data the employee owns / consults
+        // about themselves. Profile + payslip live here; settings stays
+        // separate at the bottom (system controls, not personal data).
+        {
+            label: 'ของฉัน',
+            icon: UserCircle,
+            matchPrefix: ['/portal/profile', '/portal/payroll'],
+            children: [
+                { label: 'recruitment.personalInfo', href: '/portal/profile', icon: UserCircle },
+                { label: 'สลิปเงินเดือน',           href: '/portal/payroll', icon: FileText },
+            ],
+        },
+        // "บริษัท" group — org-wide read-only surfaces.
+        {
+            label: 'บริษัท',
+            icon: Network,
+            matchPrefix: ['/portal/announcements', '/portal/organization', '/portal/meeting-room'],
+            children: [
+                { label: 'dashboard.announcements', href: '/portal/announcements', icon: Megaphone },
+                { label: 'ผังองค์กร',                href: '/portal/organization',  icon: Network },
+                { label: 'จองห้องประชุม',           href: '/portal/meeting-room',  icon: DoorOpen },
+            ],
+        },
         { label: 'ตั้งค่า', href: '/portal/settings', icon: Settings },
     ],
 }
