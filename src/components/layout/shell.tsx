@@ -89,48 +89,57 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
             icon: Wallet,
         })
     }
-    // "อนุมัติการลา" was removed from the EMPLOYEE default — append it back
-    // only when the employee has been designated an approver via
+    // Approver inbox injection — "อนุมัติการลา" + "อนุมัติ WFH" were
+    // removed from the EMPLOYEE default and instead appended only when
+    // the employee has been designated an approver via
     // employees.is_approver. HR admins are excluded from this branch
     // because they already get /hradmin/leave/inbox in their main nav,
     // and the /portal preview should mirror a regular-employee experience.
     //
-    // After the nav restructure (be6e7ca), the "การลา" surfaces moved
-    // into a group. Inject the approver inbox INTO that group's children
-    // (right after "ใบลาของฉัน") so it lives next to the other leave
-    // surfaces instead of dangling as a top-level item. Falls back to a
-    // top-level push if the group can't be found (defensive — shouldn't
-    // happen in practice but keeps the inbox reachable on misconfig).
+    // The "การลาและ WFH" group is the home for these inboxes. We inject
+    // both right after "ใบลาของฉัน" and "ขอ WFH" respectively so they
+    // sit next to the surfaces they review. Clone the group so we never
+    // mutate the imported config (modules are singletons across renders).
     if (
         effectiveRole === 'employee'
         && role !== 'hr_admin'
         && profile?.isApprover
     ) {
-        const approverInboxItem: NavItem = {
+        const leaveInbox: NavItem = {
             label: 'อนุมัติการลา',
             href: '/portal/leave/inbox',
             icon: ClipboardCheck,
         }
-        const leaveGroupIndex = navItems.findIndex(
-            i => i.label === 'การลา' && Array.isArray(i.children),
+        const wfhInbox: NavItem = {
+            label: 'อนุมัติ WFH',
+            href: '/portal/wfh/inbox',
+            icon: ClipboardCheck,
+        }
+        const groupIndex = navItems.findIndex(
+            i => i.label === 'การลาและ WFH' && Array.isArray(i.children),
         )
-        if (leaveGroupIndex >= 0) {
-            const group = navItems[leaveGroupIndex]
-            const alreadyHas = group.children?.some(c => c.href === '/portal/leave/inbox')
-            if (!alreadyHas) {
-                // Clone so we don't mutate the imported config (it'd
-                // bleed across renders since modules are singletons).
-                navItems[leaveGroupIndex] = {
-                    ...group,
-                    children: [
-                        group.children![0],          // "ใบลาของฉัน" stays first
-                        approverInboxItem,           // approver inbox second
-                        ...group.children!.slice(1),
-                    ],
-                }
+        if (groupIndex >= 0) {
+            const group = navItems[groupIndex]
+            const children = [...(group.children ?? [])]
+            // Insert each approver inbox immediately after the matching
+            // "submit" surface so the order is: ใบลาของฉัน → อนุมัติการลา
+            // → ขอ WFH → อนุมัติ WFH → (rest). Skip injection if it's
+            // already there (fast-refresh / re-render).
+            const insertAfter = (afterHref: string, item: NavItem) => {
+                if (children.some(c => c.href === item.href)) return
+                const idx = children.findIndex(c => c.href === afterHref)
+                if (idx < 0) { children.push(item); return }
+                children.splice(idx + 1, 0, item)
             }
-        } else if (!navItems.some(i => i.href === '/portal/leave/inbox')) {
-            navItems.push(approverInboxItem)
+            insertAfter('/portal/leave', leaveInbox)
+            insertAfter('/portal/wfh', wfhInbox)
+            navItems[groupIndex] = { ...group, children }
+        } else {
+            // Defensive fallback: if the group is missing entirely (config
+            // drift), append the inboxes as top-level items so they stay
+            // reachable.
+            if (!navItems.some(i => i.href === '/portal/leave/inbox')) navItems.push(leaveInbox)
+            if (!navItems.some(i => i.href === '/portal/wfh/inbox')) navItems.push(wfhInbox)
         }
     }
 

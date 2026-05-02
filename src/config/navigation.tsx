@@ -2,7 +2,7 @@ import {
     LayoutDashboard, Users, UserCircle, FileText, Settings, Megaphone,
     CalendarDays, ClipboardCheck, ShieldCheck, CalendarOff, MapPin, Network, Palmtree,
     Activity, ScrollText, BarChart3, Clock, Calendar, Briefcase, User,
-    Gift, Wallet, CheckCircle, Database, DoorOpen, GitBranch, CalendarHeart,
+    Gift, Wallet, CheckCircle, Database, DoorOpen, GitBranch, CalendarHeart, Home,
 } from 'lucide-react'
 import { ROLES, type UserRole } from './roles'
 
@@ -65,7 +65,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         // "สลับเป็นพนักงาน" toggle at the top of the sidebar — no need
         // to bake portal links into the HR menu).
         {
-            label: 'การลา',
+            label: 'การลาและ WFH',
             icon: Calendar,
             matchPrefix: ['/hradmin/leave', '/hradmin/comp-days'],
             children: [
@@ -113,12 +113,14 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         // the top of the group because it's the differentiator vs pure
         // employees (and the action a manager opens the menu to do).
         {
-            label: 'การลา',
+            label: 'การลาและ WFH',
             icon: Palmtree,
-            matchPrefix: ['/portal/leave', '/portal/comp-days', '/portal/calendar'],
+            matchPrefix: ['/portal/leave', '/portal/wfh', '/portal/comp-days', '/portal/calendar'],
             children: [
                 { label: 'ใบลาของฉัน',    href: '/portal/leave',           icon: Palmtree },
+                { label: 'ขอ WFH',        href: '/portal/wfh',             icon: Home },
                 { label: 'อนุมัติการลา',  href: '/portal/leave/inbox',     icon: ClipboardCheck },
+                { label: 'อนุมัติ WFH',   href: '/portal/wfh/inbox',       icon: ClipboardCheck },
                 { label: 'วันหยุดสะสม',   href: '/portal/comp-days',       icon: CalendarHeart },
                 { label: 'ปฏิทิน',        href: '/portal/calendar',        icon: Calendar },
                 { label: 'นโยบายการลา',  href: '/portal/leave-policy',    icon: ScrollText },
@@ -147,11 +149,12 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         // inbox (which gets appended dynamically in shell.tsx for users
         // with employees.is_approver = true).
         {
-            label: 'การลา',
+            label: 'การลาและ WFH',
             icon: Palmtree,
-            matchPrefix: ['/portal/leave', '/portal/comp-days', '/portal/calendar'],
+            matchPrefix: ['/portal/leave', '/portal/wfh', '/portal/comp-days', '/portal/calendar'],
             children: [
                 { label: 'ใบลาของฉัน',    href: '/portal/leave',           icon: Palmtree },
+                { label: 'ขอ WFH',        href: '/portal/wfh',             icon: Home },
                 { label: 'วันหยุดสะสม',   href: '/portal/comp-days',       icon: CalendarHeart },
                 { label: 'ปฏิทิน',        href: '/portal/calendar',        icon: Calendar },
                 { label: 'นโยบายการลา',  href: '/portal/leave-policy',    icon: ScrollText },
