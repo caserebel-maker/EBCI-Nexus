@@ -236,9 +236,31 @@ function NewWfhModal({
     const [contact, setContact] = useState('')
     const [submitting, startTransition] = useTransition()
     const [err, setErr] = useState<string | null>(null)
+    /**
+     * Approver preview — fetched once when the modal opens. Same logic
+     * as wfh.ts::submitWfhRequest (resolveLeaveApprover) so what shows
+     * here is exactly who will receive the request. null = unresolved
+     * (chain broken / not wired in HR), in which case we disable submit.
+     */
+    const [approver, setApprover] = useState<{ id: string; name: string } | null | 'loading'>('loading')
+    useEffect(() => {
+        let cancelled = false
+        fetch('/api/wfh/my-approver', { cache: 'no-store' })
+            .then(r => r.json())
+            .then(json => {
+                if (cancelled) return
+                setApprover(json?.approver ?? null)
+            })
+            .catch(() => { if (!cancelled) setApprover(null) })
+        return () => { cancelled = true }
+    }, [])
 
     const totalDays = daysInclusive(startDate, endDate)
-    const canSubmit = totalDays > 0 && reason.trim().length > 0 && totalDays <= 30
+    // Submit disabled if no approver wired (chain broken in HR setup) —
+    // server would reject anyway, but blocking the button gives a clearer
+    // failure mode than waiting for the post-submit error.
+    const hasApprover = approver !== null && approver !== 'loading'
+    const canSubmit = totalDays > 0 && reason.trim().length > 0 && totalDays <= 30 && hasApprover
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -295,7 +317,7 @@ function NewWfhModal({
                 <div className="p-5 space-y-4">
                     <div className="grid grid-cols-2 gap-3">
                         <label className="block">
-                            <span className="text-[11px] uppercase tracking-wider text-white/55 font-bold">
+                            <span className="text-sm font-bold text-white/85">
                                 วันที่เริ่ม <span className="text-red-300">*</span>
                             </span>
                             <input
@@ -306,11 +328,11 @@ function NewWfhModal({
                                     setStartDate(e.target.value)
                                     if (e.target.value > endDate) setEndDate(e.target.value)
                                 }}
-                                className="mt-1.5 w-full h-11 px-3 rounded-lg bg-black/35 text-white text-base focus:outline-none border border-white/10 focus:border-amber-400"
+                                className="mt-1.5 w-full h-11 px-3 rounded-lg bg-black/35 text-white text-sm focus:outline-none border border-white/10 focus:border-amber-400"
                             />
                         </label>
                         <label className="block">
-                            <span className="text-[11px] uppercase tracking-wider text-white/55 font-bold">
+                            <span className="text-sm font-bold text-white/85">
                                 วันที่สิ้นสุด <span className="text-red-300">*</span>
                             </span>
                             <input
@@ -318,7 +340,7 @@ function NewWfhModal({
                                 value={endDate}
                                 min={startDate}
                                 onChange={(e) => setEndDate(e.target.value)}
-                                className="mt-1.5 w-full h-11 px-3 rounded-lg bg-black/35 text-white text-base focus:outline-none border border-white/10 focus:border-amber-400"
+                                className="mt-1.5 w-full h-11 px-3 rounded-lg bg-black/35 text-white text-sm focus:outline-none border border-white/10 focus:border-amber-400"
                             />
                         </label>
                     </div>
@@ -331,7 +353,7 @@ function NewWfhModal({
                     )}
 
                     <label className="block">
-                        <span className="text-[11px] uppercase tracking-wider text-white/55 font-bold">
+                        <span className="text-sm font-bold text-white/85">
                             เหตุผล <span className="text-red-300">*</span>
                         </span>
                         <textarea
@@ -340,13 +362,13 @@ function NewWfhModal({
                             placeholder="เช่น ช่างมาล้างแอร์ที่บ้าน · พาลูกหาหมอ · รอช่างซ่อม"
                             maxLength={500}
                             rows={3}
-                            className="mt-1.5 w-full px-3 py-2.5 rounded-lg bg-black/35 text-white text-base focus:outline-none border border-white/10 focus:border-amber-400 placeholder-white/30 resize-none"
+                            className="mt-1.5 w-full px-3 py-2.5 rounded-lg bg-black/35 text-white text-sm focus:outline-none border border-white/10 focus:border-amber-400 placeholder-white/30 resize-none"
                         />
                     </label>
 
                     <label className="block">
-                        <span className="text-[11px] uppercase tracking-wider text-white/55 font-bold">
-                            ช่องทางติดต่อระหว่าง WFH (ไม่บังคับ)
+                        <span className="text-sm font-bold text-white/85">
+                            ช่องทางติดต่อระหว่าง WFH <span className="text-white/45 font-normal">(ไม่บังคับ)</span>
                         </span>
                         <input
                             type="text"
@@ -354,13 +376,44 @@ function NewWfhModal({
                             onChange={(e) => setContact(e.target.value)}
                             placeholder="เช่น Line: ponds123 · มือถือ 081-xxx-xxxx"
                             maxLength={200}
-                            className="mt-1.5 w-full h-11 px-3 rounded-lg bg-black/35 text-white text-base focus:outline-none border border-white/10 focus:border-amber-400 placeholder-white/30"
+                            className="mt-1.5 w-full h-11 px-3 rounded-lg bg-black/35 text-white text-sm focus:outline-none border border-white/10 focus:border-amber-400 placeholder-white/30"
                         />
                     </label>
 
-                    <div className="rounded-lg p-3 bg-blue-400/10 border border-blue-400/30 text-[11px] text-blue-100 inline-flex items-start gap-2 w-full">
-                        <Info size={12} className="mt-0.5 shrink-0" />
-                        <span>คำขอจะส่งให้ผู้บังคับบัญชาตามสายงาน · เมื่ออนุมัติแล้ว สามารถเช็คอิน WFH ผ่านแอปได้ในวันที่กำหนด · ไม่ตัดยอดวันลา</span>
+                    {/* Approver preview — readonly, server-resolved from
+                        the same logic used at submit. Approver is not
+                        editable on purpose: WFH must route up the actual
+                        chain (otherwise an employee could bypass their
+                        manager). When the chain is broken, surface a
+                        red warning + disable submit instead of a silent
+                        post-submit error. */}
+                    <div className="block">
+                        <span className="text-sm font-bold text-white/85">
+                            ผู้อนุมัติ <span className="text-white/45 font-normal">(ระบบกำหนดอัตโนมัติ)</span>
+                        </span>
+                        <div className="mt-1.5">
+                            {approver === 'loading' ? (
+                                <div className="h-11 px-3 rounded-lg bg-black/35 border border-white/10 inline-flex items-center gap-2 text-sm text-white/55 w-full">
+                                    <Loader2 size={14} className="animate-spin" />
+                                    กำลังหาผู้อนุมัติของคุณ…
+                                </div>
+                            ) : approver === null ? (
+                                <div className="px-3 py-2.5 rounded-lg bg-rose-500/15 border border-rose-500/40 inline-flex items-start gap-2 text-sm text-rose-200 w-full">
+                                    <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                                    <span>ไม่พบผู้อนุมัติตามสายงาน — กรุณาแจ้ง HR เพื่อตั้งค่าผู้อนุมัติของคุณก่อนยื่นคำขอ</span>
+                                </div>
+                            ) : (
+                                <div className="h-11 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 inline-flex items-center gap-2 text-sm text-white w-full">
+                                    <CheckCircle2 size={14} className="text-emerald-300 shrink-0" />
+                                    <span className="font-semibold">{approver.name}</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="rounded-lg p-3 bg-blue-400/10 border border-blue-400/30 text-sm text-blue-100 inline-flex items-start gap-2 w-full leading-relaxed">
+                        <Info size={14} className="mt-0.5 shrink-0" />
+                        <span>เมื่อผู้อนุมัติยืนยันแล้ว สามารถเช็คอิน WFH ผ่านแอปได้ในวันที่กำหนด · ไม่ตัดยอดวันลา</span>
                     </div>
 
                     {err && (
