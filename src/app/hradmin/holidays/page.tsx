@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
-import { Plus, Pencil, Trash2, X, CalendarDays, Loader2, Megaphone } from 'lucide-react'
+import {
+    Plus, Pencil, Trash2, X, CalendarDays, Loader2, Megaphone,
+    List as ListIcon, LayoutGrid, ChevronLeft, ChevronRight,
+} from 'lucide-react'
 
 interface Holiday {
     id: string
@@ -52,6 +55,10 @@ export default function HolidaysPage() {
     const [form, setForm] = useState(emptyForm)
     const [saving, setSaving] = useState(false)
     const [deleteId, setDeleteId] = useState<string | null>(null)
+    const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
+    /** Calendar view month cursor — independent of `year` (the year filter
+     *  used by the list view). When the year changes we snap month back to 0. */
+    const [calMonth, setCalMonth] = useState(new Date().getMonth())
 
     const fetchHolidays = useCallback(async () => {
         setLoading(true)
@@ -145,14 +152,14 @@ export default function HolidaysPage() {
                 </div>
             </div>
 
-            {/* Year filter */}
-            <div className="flex items-center gap-3">
+            {/* Year filter + view toggle */}
+            <div className="flex items-center gap-3 flex-wrap">
                 <span className="text-white/60 text-sm">ปี:</span>
                 <div className="flex gap-2">
                     {YEARS.map(y => (
                         <button
                             key={y}
-                            onClick={() => setYear(y)}
+                            onClick={() => { setYear(y); setCalMonth(new Date().getMonth()) }}
                             className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
                                 y === year
                                     ? 'bg-white/20 text-white'
@@ -163,9 +170,45 @@ export default function HolidaysPage() {
                         </button>
                     ))}
                 </div>
+                {/* View toggle — pushed to the right */}
+                <div className="ml-auto inline-flex rounded-lg border border-white/15 bg-black/20 p-0.5">
+                    <button
+                        type="button"
+                        onClick={() => setViewMode('list')}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-semibold transition-colors ${
+                            viewMode === 'list' ? 'bg-white/20 text-white' : 'text-white/55 hover:text-white'
+                        }`}
+                        title="มุมมองรายการ"
+                    >
+                        <ListIcon size={13} /> รายการ
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setViewMode('calendar')}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-semibold transition-colors ${
+                            viewMode === 'calendar' ? 'bg-white/20 text-white' : 'text-white/55 hover:text-white'
+                        }`}
+                        title="มุมมองปฏิทิน"
+                    >
+                        <LayoutGrid size={13} /> ปฏิทิน
+                    </button>
+                </div>
             </div>
 
-            {/* Table */}
+            {/* Calendar view (month grid) */}
+            {viewMode === 'calendar' && (
+                <CalendarMonthView
+                    year={year}
+                    month={calMonth}
+                    onMonthChange={setCalMonth}
+                    holidays={holidays}
+                    loading={loading}
+                    onEdit={openEdit}
+                />
+            )}
+
+            {/* Table view */}
+            {viewMode === 'list' && (
             <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)' }}>
                 {loading ? (
                     <div className="flex justify-center items-center py-16">
@@ -227,6 +270,7 @@ export default function HolidaysPage() {
                     </table>
                 )}
             </div>
+            )}
 
             {/* Add/Edit Modal */}
             {modalOpen && (
@@ -304,6 +348,171 @@ export default function HolidaysPage() {
                     </div>
                 </div>
             )}
+        </div>
+    )
+}
+
+// ─── Calendar month view ─────────────────────────────────────────────────────
+/**
+ * Month grid showing every holiday/WFH/special day in a single view.
+ * Cells render up to 2 colored chips (label = holiday name) — anything
+ * beyond 2 collapses into "+N more" so a busy month doesn't blow out the
+ * row height. Hover/click reveals all entries for that day.
+ *
+ * Click a chip → openEdit() so the existing edit modal handles the
+ * mutation. Add-day still goes through the "+ เพิ่มรายการ" header CTA.
+ */
+function CalendarMonthView({
+    year, month, onMonthChange, holidays, loading, onEdit,
+}: {
+    year: number
+    month: number   // 0-indexed
+    onMonthChange: (m: number) => void
+    holidays: Holiday[]
+    loading: boolean
+    onEdit: (h: Holiday) => void
+}) {
+    // Group holidays by date for O(1) lookup per cell.
+    const byDate = useMemo(() => {
+        const m = new Map<string, Holiday[]>()
+        for (const h of holidays) {
+            const arr = m.get(h.date) ?? []
+            arr.push(h)
+            m.set(h.date, arr)
+        }
+        return m
+    }, [holidays])
+
+    // Build the grid cells (leading nulls so day 1 lines up under the
+    // correct weekday column; trailing nulls so we always render full weeks).
+    const firstDow = new Date(year, month, 1).getDay()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const cells: Array<number | null> = [
+        ...Array(firstDow).fill(null),
+        ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+    ]
+    while (cells.length % 7 !== 0) cells.push(null)
+
+    const todayStr = useMemo(() => {
+        const t = new Date()
+        return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
+    }, [])
+
+    const monthKey = (d: number) =>
+        `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+
+    const goPrev = () => {
+        if (month === 0) onMonthChange(11)
+        else onMonthChange(month - 1)
+    }
+    const goNext = () => {
+        if (month === 11) onMonthChange(0)
+        else onMonthChange(month + 1)
+    }
+
+    return (
+        <div className="rounded-2xl p-3 sm:p-4 space-y-3" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)' }}>
+            {/* Month header */}
+            <div className="flex items-center justify-between">
+                <button
+                    onClick={goPrev}
+                    className="h-8 w-8 inline-flex items-center justify-center rounded-md bg-white/5 hover:bg-white/10 text-white"
+                    aria-label="เดือนก่อนหน้า"
+                >
+                    <ChevronLeft size={16} />
+                </button>
+                <p className="text-white font-bold text-base">
+                    {THAI_MONTHS[month]} {year + 543}
+                </p>
+                <button
+                    onClick={goNext}
+                    className="h-8 w-8 inline-flex items-center justify-center rounded-md bg-white/5 hover:bg-white/10 text-white"
+                    aria-label="เดือนถัดไป"
+                >
+                    <ChevronRight size={16} />
+                </button>
+            </div>
+
+            {/* Weekday header */}
+            <div className="grid grid-cols-7 gap-1 text-center text-[10px] uppercase tracking-wider text-white/45 font-bold">
+                {['อา','จ','อ','พ','พฤ','ศ','ส'].map((d, i) => (
+                    <div key={i} className={`py-1 ${i === 0 || i === 6 ? 'text-amber-200/55' : ''}`}>{d}</div>
+                ))}
+            </div>
+
+            {/* Grid */}
+            {loading ? (
+                <div className="flex justify-center py-12">
+                    <Loader2 size={20} className="text-white/50 animate-spin" />
+                </div>
+            ) : (
+                <div className="grid grid-cols-7 gap-1">
+                    {cells.map((d, i) => {
+                        if (d === null) {
+                            return <div key={i} className="aspect-square sm:min-h-[78px] rounded-md bg-white/[0.02]" />
+                        }
+                        const key = monthKey(d)
+                        const events = byDate.get(key) ?? []
+                        const isToday = key === todayStr
+                        const dow = (firstDow + d - 1) % 7
+                        const isWeekend = dow === 0 || dow === 6
+                        return (
+                            <div
+                                key={i}
+                                className={`aspect-square sm:min-h-[78px] sm:aspect-auto rounded-md p-1.5 flex flex-col gap-0.5 transition-colors ${
+                                    isToday
+                                        ? 'bg-amber-400/15 border border-amber-400/50'
+                                        : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                                }`}
+                            >
+                                <span className={`text-[11px] font-bold tabular-nums ${
+                                    isToday ? 'text-amber-200'
+                                        : isWeekend ? 'text-amber-200/65'
+                                        : 'text-white/75'
+                                }`}>
+                                    {d}
+                                </span>
+                                <div className="flex flex-col gap-0.5 overflow-hidden">
+                                    {events.slice(0, 2).map(h => {
+                                        const cfg = TYPE_CONFIG[h.type] ?? TYPE_CONFIG.company
+                                        return (
+                                            <button
+                                                key={h.id}
+                                                type="button"
+                                                onClick={() => onEdit(h)}
+                                                title={`${h.name} — แตะเพื่อแก้ไข`}
+                                                className="text-left text-[10px] px-1 py-0.5 rounded leading-tight truncate hover:brightness-125"
+                                                style={{
+                                                    background: `${cfg.color}28`,
+                                                    color: cfg.color,
+                                                    borderLeft: `2px solid ${cfg.color}`,
+                                                }}
+                                            >
+                                                {h.type === 'wfh' && '🏠 '}{h.name}
+                                            </button>
+                                        )
+                                    })}
+                                    {events.length > 2 && (
+                                        <span className="text-[10px] text-white/55 px-1 leading-tight">
+                                            +{events.length - 2} อื่น
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+
+            {/* Legend */}
+            <div className="pt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px]">
+                {Object.entries(TYPE_CONFIG).map(([t, cfg]) => (
+                    <span key={t} className="inline-flex items-center gap-1">
+                        <span className="h-2 w-2 rounded-sm" style={{ background: cfg.color }} />
+                        <span className="text-white/55">{cfg.label}</span>
+                    </span>
+                ))}
+            </div>
         </div>
     )
 }

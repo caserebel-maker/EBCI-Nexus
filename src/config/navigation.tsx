@@ -76,7 +76,11 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
                 { label: 'ตรวจสายอนุมัติ', href: '/hradmin/leave/approval-audit', icon: GitBranch },
                 { label: 'วันหยุดสะสม',   href: '/hradmin/comp-days',          icon: CalendarHeart },
                 { label: 'นโยบายการลา',  href: '/hradmin/leave/policies',     icon: ScrollText },
-                { label: 'นโยบาย (พนักงาน)', href: '/portal/leave-policy',        icon: ScrollText },
+                // The /portal/leave-policy link was here previously but
+                // navigating to a /portal route from the HR shell flips
+                // the user back into employee mode (since the shell role
+                // is path-derived). HR can preview the employee view by
+                // pressing "สลับเป็นพนักงาน" at the top of the sidebar.
             ],
         },
         {
