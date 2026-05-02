@@ -5,32 +5,40 @@
 
 ---
 
-## 🔁 ที่เครื่องถัดไป — **Home · คืนนี้ 30 เม.ย. (~19:00 Bangkok)**
+## 🔁 ที่เครื่องถัดไป — **Office · อังคาร 5 พ.ค. (HIP Ci100S admin panel check)**
 
-> **อ่านเฉพาะตอนเปิด Claude Code ที่ home Mac**
+> **อ่านเฉพาะตอนเปิด Claude Code ที่ office Mac mini**
 
-**Step 1 — Pull ก่อน** (สำคัญสุด):
+**Step 1 — Pull ก่อน:**
 ```bash
-cd ~/C1TB/EB-CI/EBCI-Nexus && git pull origin main --ff-only
-```
-*(ถ้า path ที่บ้านต่างไป ให้ `cd` ไป repo `EBCI-Nexus` ตัวจริงก่อน pull)*
-
-**Step 2 — พิมพ์บอก Claude:**
-```
-อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ home. หลัง pull แล้ว verify บนเครื่องจริง 3 อย่าง:
-1. /portal/announcements → กดเข้าประกาศที่มีรูปแนวตั้ง (commit 2bc77df) → ต้องเห็นรูปเต็มไม่โดน crop
-2. login พนักงานที่มีใบลา approved ครอบวันนี้ → /portal/checkin ต้องแสดง "วันนี้คุณลาอยู่" แทน CTA (commit 66be09f)
-3. login approver → /portal/leave/inbox ต้องเห็น cancellation request แสดง "ขอยกเลิก" badge (commit cc84d12)
-ถ้าผ่าน ลุยต่อ §1.1 half-day + hourly leave rules ใน docs/BETA_FEEDBACK.md.
+cd <office-path>/EBCI-Nexus && git pull origin main --ff-only
 ```
 
-**Step 3 — ตอบ Claude ว่าอยู่เครื่องไหน:** "อยู่ home"
+**Step 2 — Tuesday office task (~30 นาที):**
+1. เปิด HIP Ci100S admin panel ที่ `http://192.168.1.40` (login admin)
+2. หา section **Webhook / Push URL / Event notification / Cloud sync** — ถ้ามี:
+   - Set URL = `https://nexus.ebcitrade.com/api/webhooks/card-scan`
+   - Set header `X-Webhook-Secret: <secret>` (gen ผ่าน `openssl rand -hex 32` ก่อน)
+   - Add same secret เข้า Vercel env vars เป็น `CARD_SCAN_WEBHOOK_SECRET`
+   - Test: ทาบบัตรจริง → ดู Vercel logs ว่ามี `[webhooks/card-scan] inserted`
+3. ถ้าไม่มี webhook section → fall back **Option B**: เขียน Python agent บน office Mac poll HIP TCP port 5005 → POST ไปยัง webhook ตัวเดียวกัน (endpoint flexible อยู่แล้ว)
 
-ถ้า Claude บอก local behind origin → รัน `git pull origin main --ff-only` อีกครั้งก่อนเริ่มงาน
+**Step 3 — Verify 3 tests ที่ค้างมาตั้งแต่ APR30:**
+1. `/portal/announcements` → กดประกาศรูปแนวตั้ง → เห็นเต็มไม่ crop (`2bc77df`)
+2. login พนักงานที่ลา approved วันนี้ → `/portal/checkin` แสดง "วันนี้คุณลาอยู่" (`66be09f`)
+3. login approver → `/portal/leave/inbox` เห็น "ขอยกเลิก" badge (`cc84d12`)
 
-**📅 Reminder ตอน 19:00 คืนนี้ (Bangkok):** มี GCal event + Claude scheduled-task รออยู่ พร้อม prompt ด้านบน
+**Step 4 — พิมพ์บอก Claude:**
+```
+อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ office. ทำ Tuesday HIP webhook check ก่อน
+แล้ว report กลับ: HIP Ci100S admin panel มี webhook config มั้ย? ถ้ามี → set URL,
+ถ้าไม่มี → ลุย Option B (Python agent)
+```
 
-**ล่าสุดเสร็จ (laptop+office · APR30):** §3.14 XSS, §2.5 remember-me, §1.4 cancel approved leave, §1.3 check-in suppression, รูปประกาศแสดงเต็ม (commits `96a4fb6`, `fd2ef5f`, `cc84d12`, `66be09f`, `2bc77df`)
+**ล่าสุดเสร็จ (home · APR30 evening):**
+- `2862fd1` — §3.1 Phase 1A: smart suppression `/portal/checkin` (card scan วันนี้ → ซ่อน CTA แสดง "บัตร scan แล้ว XX:XX")
+- `1108af6` — §3.1 Phase 1B: `POST /api/webhooks/card-scan` endpoint (HMAC + shared-secret auth, idempotent, batch ≤500)
+- `a27c3b1` — fix FK: `leave_balances.last_adjusted_by` เขียน User.id (ไม่ใช่ employees.id) — sweep แล้วทุก FK→User.id ทั้ง 9 column ถูกต้อง
 
 ---
 
@@ -113,7 +121,15 @@ Sidebar polish · password change UI · WFH days · permissions list · email au
 
 ---
 
-## 1. Commits ของ session นี้ (APR30 office afternoon — beta unblocked items)
+## 1. Commits ของ session นี้ (APR30 evening home — office check-in solution Phase 1)
+
+| # | Commit | Track | สรุป |
+|---|---|---|---|
+| 3 | `1108af6` | 🪝 Webhook | `POST /api/webhooks/card-scan` — HMAC + shared-secret auth, idempotent on (employee_id, scan_time), batch ≤500, GET probe |
+| 2 | `2862fd1` | 📅 Checkin | §3.1 Phase 1A — smart suppression: scan วันนี้ → ซ่อน CTA แสดง "บัตร scan แล้ว XX:XX" + escape "ฉันยังไม่ได้ทาบบัตร" |
+| 1 | `a27c3b1` | 🐛 FK | `leave_balances.last_adjusted_by` เขียน User.id (ไม่ใช่ employees.id) — fix 5 writes + 1 read; sweep ทุก FK→User.id ผ่านหมด |
+
+## 1a. Commits ของ session ก่อน (APR30 office afternoon — beta unblocked items)
 
 | # | Commit | Track | สรุป |
 |---|---|---|---|
@@ -413,6 +429,25 @@ Verify this session:
 - `npx tsc --noEmit` ✅
 - `npm run build` ✅ (ยังมี warning เดิม: Next 16 ไม่รองรับ `eslint` key ใน `next.config.ts`, และ `middleware` convention deprecated → proxy)
 
+### 3.17 ⭐ §3.1 BETA Office check-in solution — Phase 1 ✅ shipped, Tuesday confirms Phase 2 path
+
+**Done APR30 evening (commits `2862fd1` + `1108af6`):**
+- **Phase 1A — Smart suppression** (`/portal/checkin`): ตรวจ `card_scans` วันนี้ของพนักงานคนนั้น → ถ้ามี → ซ่อน CTA แสดง "บัตรของคุณ scan แล้ว XX:XX น." + ปุ่ม "ฉันยังไม่ได้ทาบบัตร" สำหรับ override (กรณี lookup ผิด). Works for both batch CSV import (current) AND realtime webhook (future) — same source of truth.
+- **Phase 1B — Webhook endpoint** (`/api/webhooks/card-scan`): พร้อมรับทั้ง HIP push (ถ้า device รองรับ) และ Python agent push (Option B fallback) — endpoint shape เดียวกัน, ไม่เสียงานไม่ว่าผลของ Tuesday จะเป็นทางไหน. Auth dual: `X-Webhook-Secret` (constant-time) หรือ `X-Webhook-Signature: sha256=<hmac>`. Idempotent on `(employee_id, scan_time)`.
+
+**Tuesday office task (decision point):**
+1. เปิด HIP Ci100S admin panel ที่ `http://192.168.1.40` หา section Webhook/Push URL/Event notification/Cloud sync
+2. **ถ้ามี → Option A:**
+   - `openssl rand -hex 32` → set Vercel env `CARD_SCAN_WEBHOOK_SECRET`
+   - HIP config: URL `https://nexus.ebcitrade.com/api/webhooks/card-scan` + header `X-Webhook-Secret: <secret>`
+   - ทาบบัตรจริง 1 ครั้ง → ดู Vercel logs ว่ามี `inserted` + `/portal/checkin` ของคนนั้นเปลี่ยนเป็น banner ภายในไม่กี่วิ
+3. **ถ้าไม่มี → Option B:**
+   - เขียน Python agent (~50 บรรทัด) บน office Mac mini: poll HIP TCP port 5005 ทุก 30 วิ → แปลงเป็น JSON → POST ไปยัง webhook ตัวเดียวกัน
+   - Agent run via `launchd` plist
+   - เซ็ต env `CARD_SCAN_WEBHOOK_SECRET` ที่ทั้ง Vercel + agent
+
+**ไม่ว่าทางไหน — Phase 1A suppression banner ทำงานทันทีหลัง webhook ยิงเข้ามา** (อ่าน `card_scans` ตรงๆ ไม่ต้องรอ reconcile cron).
+
 ### 3.16 ⭐ Beta leave/attendance policy backlog — do one at a time
 
 Feedback captured Apr 29 after beta:
@@ -455,6 +490,10 @@ Email notification note from beta:
 NEXT_PUBLIC_SUPABASE_URL · NEXT_PUBLIC_SUPABASE_ANON_KEY · SUPABASE_SERVICE_ROLE_KEY
 RESEND_API_KEY · EMAIL_FROM · EMAIL_REPLY_TO · HR_NOTIFY_EMAIL · NEXT_PUBLIC_APP_URL
 EMAIL_FROM_CAREERS · EMAIL_FROM_HR · EMAIL_FROM_SYSTEM
+NEXUS_SESSION_SECRET   # signed session cookie (32+ bytes random)
+
+# 🆕 ต้อง set ตอน Tuesday office visit (ก่อนเปิด HIP webhook):
+CARD_SCAN_WEBHOOK_SECRET   # gen ผ่าน `openssl rand -hex 32` — ใส่ที่ Vercel + เป็น header X-Webhook-Secret ที่ HIP/agent ใช้ POST
 ```
 
 **Test accounts (อัปเดตหลัง APR27):**
@@ -476,9 +515,9 @@ EMAIL_FROM_CAREERS · EMAIL_FROM_HR · EMAIL_FROM_SYSTEM
 ## 5. Git + deploy state
 
 - **Repo:** `caserebel-maker/EBCI-Nexus`
-- **Last commit:** `a162b92` (modal sweep — soft maroon + always-centered on mobile)
-- **Vercel deploy:** auto — `https://ebci-nexus.vercel.app`
-- **Build:** ✓ TS clean (`tsc --noEmit` exit 0 ก่อน push); Vercel turbopack production build เคย fail รอบกลางวันเพราะ `'use server'` rule แต่ fix แล้ว (`522c313`)
+- **Last commit:** `1108af6` (`POST /api/webhooks/card-scan` — HMAC + shared-secret auth)
+- **Vercel deploy:** auto — `https://nexus.ebcitrade.com`
+- **Build:** ✓ TS clean (`tsc --noEmit` 0 errors บนไฟล์ที่แตะใน Phase 1A + 1B)
 
 **Push pattern:** `git push origin HEAD:main`
 
@@ -563,5 +602,5 @@ ORDER BY e.email;
 
 ---
 
-*Generated APR29 office afternoon · 8 source commits + 4-tester DB recovery · §3.16.1 ✅ · Last commit `64e4c4e` · routes +3 (`/portal/meeting-room`, `/hradmin/meeting-room`, `/hradmin/leave/approval-audit`)*
-*Next session ที่ laptop/home: §3.16 priority 2 — half-day + hourly leave rules.*
+*Generated APR30 evening home · 3 commits (`a27c3b1` FK fix + `2862fd1` Phase 1A + `1108af6` Phase 1B) · routes +1 (`/api/webhooks/card-scan`)*
+*Next session ที่ office อังคาร 5 พ.ค.: HIP Ci100S admin panel webhook check (decision Option A vs B) → set `CARD_SCAN_WEBHOOK_SECRET` → end-to-end test ทาบบัตรจริง.*
