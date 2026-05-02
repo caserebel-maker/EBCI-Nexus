@@ -3135,3 +3135,52 @@ While I was working, Codex pushed two security commits I pulled before §3.16:
 ## Older sections deferred (will append later if needed)
 
 §19 (APR28 office) and §20 (APR29 morning + evening) entries are summarised in NEXT.md §0 TL;DR. The dedicated §19/§20 detail blocks were skipped to keep this archive append moving — if a future bug investigation needs the Apr 28-29 morning detail, the relevant context is in NEXT.md and the commits themselves (`b357a86`, `2d49dbe`, `136863e`, `37cffab`, `13d566d`, `206b405`, `1048759`).
+
+---
+
+## §21 — 2 พ.ค. 2026 (Office Mac mini M4, late afternoon → evening)
+
+**Context:** Pivot from Nexus → designing **EBCI Flow** (operations workspace + customer tracking page). Most of session was UI/UX + architecture discussion based on Master Brief + EBCIREVO presentation.
+
+### Key decisions
+- **Naming:** Flow (เลือกแล้ว) for Operations + AI workspace · Vault recommended for Accounting (replaces "Pulse" from Brief — sound match better with accounting/ledger image)
+- **# of apps:** 3 codebases (Nexus + Flow + Vault) + 2 features (mobile scanner = mode of Flow, customer = tracking link). EBCIREVO's 5-app pitch ≈ same content, different packaging — use 5-apps for MD pitch, build 3 codebases.
+- **Customer Portal:** Skip full Customer Portal Phase 2-3. Use **token URL via LINE** + **self-service form** (B/L + customer name verification) instead. Real Customer Portal only if validated demand.
+- **Theme:** Maroon gradient matches Nexus (`#561e23 → #ad5f6c`) but with **light bg + white cards** to differentiate. Customer track gets gradient mobile header.
+- **Database strategy:** Single Supabase project + schema-based separation (flow/vault/audit) — stays in free tier limit (2 projects/org). Use **Cloudflare R2** for PDFs (10GB free + no egress).
+- **AI strategy:** Gemini free tier first → Claude API only for critical (HS Code, Doc Processor). Saves ~฿8K/mo.
+
+### Built
+- **EBCI-Flow-Prototype** (new repo, private) — vanilla HTML/CSS/JS prototype
+  - **Staff side** (`/`): 8 modules — Dashboard, Shipment Desk, ESR Tracking, Reply Helper, Doc Processor, HS Code Lookup, KB, Audit Log. Deep Blue dark theme.
+  - **Customer side** (`/track`): Landing search form + tracking detail + recent (localStorage) + contact + FAQ. Maroon gradient + sidebar/bottom nav. Mobile gradient header. Lucide SVG icons throughout.
+- Live: https://ebci-flow.vercel.app
+
+### Iterated through 5 themes before settling
+1. Dark Deep Blue (staff app baseline) ✅ kept
+2. Coral light (track) — friendly but not distinct enough
+3. Glassmorphism dark (track) — premium but too dramatic for customer use
+4. Coral red + gradient app-like (track) — modern but too coral
+5. **Maroon gradient (track)** ✅ — matches Nexus brand + differentiated by light areas
+
+### Key technical decisions in prototype
+- Lucide-style inline SVG icons via `<symbol>` + `<use>` (replaces emoji)
+- Sidebar 240px desktop with logo area + text labels + active pill state
+- Bottom nav 70px mobile + active 3px coral indicator + safe-area-inset
+- Mobile gradient header with shimmer overlay + radial glow + glass top-right elements
+- Customer search with fuzzy match + customer name aliases (B/L + ชื่อบริษัท verification)
+
+### Quirks worth carrying forward
+1. **Vercel Hobby commercial use = TOS violation** (low risk for 50-person internal, but worth $20/mo Pro if enforced)
+2. **Cloudflare R2 >> Supabase Storage** for PDFs in Thailand (no egress fees crucial)
+3. **Brief's Pulse name doesn't fit accounting** — Pulse = monitoring/dashboard feel. Vault (security/storage) or Ledger (traditional accounting) fits 8 modules better.
+4. **EBCIREVO's "Scanner PWA" is just Workspace mobile mode** — they call it separate app for marketing, but it's same codebase
+5. **EBCIREVO's "Customer Portal Phase 2 = Public Tracking"** — same as my tracking link recommendation, just packaged as 1 app with 2 phases
+6. **Customer doesn't need to know "Flow" branding** — track.ebcinext.com cleaner than flow.ebcinext.com/t/xxx
+
+### Commits
+- **EBCI-Flow-Prototype** `1cafe2e` — initial commit (5066 insertions, 9 files)
+- **EBCI-Nexus** — NEXT.md update (this commit)
+
+### Next session
+Open at home Mac mini M2 Pro → demo to MD + คุณจิม → if approved, start migration to Next.js + Supabase production stack.
