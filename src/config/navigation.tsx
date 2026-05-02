@@ -2,7 +2,7 @@ import {
     LayoutDashboard, Users, UserCircle, FileText, Settings, Megaphone,
     CalendarDays, ClipboardCheck, ShieldCheck, CalendarOff, MapPin, Network, Palmtree,
     Activity, ScrollText, BarChart3, Clock, Calendar, Briefcase, User,
-    Gift, Wallet, CheckCircle, Database, DoorOpen, GitBranch,
+    Gift, Wallet, CheckCircle, Database, DoorOpen, GitBranch, CalendarHeart,
 } from 'lucide-react'
 import { ROLES, type UserRole } from './roles'
 
@@ -60,8 +60,9 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
             label: 'การลา',
             icon: Calendar,
             // The group lights up on /hradmin/leave* AND /portal/leave*
-            // because "ของฉัน" lives under /portal.
-            matchPrefix: ['/hradmin/leave', '/portal/leave'],
+            // because "ของฉัน" lives under /portal. comp-days lives under
+            // a sibling path but conceptually belongs to the leave group.
+            matchPrefix: ['/hradmin/leave', '/portal/leave', '/hradmin/comp-days', '/portal/comp-days'],
             children: [
                 { label: 'ภาพรวม',        href: '/hradmin/leave',              icon: BarChart3 },
                 { label: 'ใบลาทั้งหมด',   href: '/hradmin/leave?tab=requests', icon: FileText },
@@ -73,6 +74,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
                 // + employee nav entries (below) still use /portal.
                 { label: 'อนุมัติการลา',   href: '/hradmin/leave/inbox',        icon: CheckCircle },
                 { label: 'ตรวจสายอนุมัติ', href: '/hradmin/leave/approval-audit', icon: GitBranch },
+                { label: 'วันหยุดสะสม',   href: '/hradmin/comp-days',          icon: CalendarHeart },
                 { label: 'นโยบายการลา',  href: '/hradmin/leave/policies',     icon: ScrollText },
                 { label: 'นโยบาย (พนักงาน)', href: '/portal/leave-policy',        icon: ScrollText },
             ],
@@ -103,6 +105,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         { label: 'dashboard.title', href: '/hradmin/dashboard', icon: LayoutDashboard },
         { label: 'เช็คอิน', href: '/portal/checkin', icon: MapPin },
         { label: 'leave.myLeave', href: '/portal/leave', icon: Palmtree },
+        { label: 'วันหยุดสะสม', href: '/portal/comp-days', icon: CalendarHeart },
         { label: 'อนุมัติการลา', href: '/portal/leave/inbox', icon: ClipboardCheck },
         { label: 'ผังองค์กร', href: '/portal/organization', icon: Network },
         { label: 'ปฏิทิน', href: '/portal/calendar', icon: Calendar },
@@ -116,6 +119,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         { label: 'เช็คอิน', href: '/portal/checkin', icon: MapPin },
         { label: 'recruitment.personalInfo', href: '/portal/profile', icon: UserCircle },
         { label: 'leave.myLeave', href: '/portal/leave', icon: Palmtree },
+        { label: 'วันหยุดสะสม', href: '/portal/comp-days', icon: CalendarHeart },
         // "อนุมัติการลา" intentionally NOT in the default — it's appended
         // dynamically in shell.tsx for users with employees.is_approver = true.
         // Pure-employee accounts who never approve anyone don't see an empty
