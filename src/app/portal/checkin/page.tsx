@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
 import { resolveSessionEmployeeId } from '@/lib/session-employee'
 import { getLeaveTodayInfo } from '@/lib/leave-today'
+import { getCardScanTodayInfo } from '@/lib/card-scan-today'
 import { CheckinView } from './checkin-view'
 import { getTodayCheckin } from './actions'
 
@@ -27,14 +28,26 @@ export default async function CheckinPage() {
     // check-in (the other half is normal work) — getLeaveTodayInfo
     // sets blocksCheckin=false for those, so we still render the
     // standard flow with a banner.
+    //
+    // §3.1 (Phase 1) — when a card scan exists today (HIP card reader
+    // → CSV import), suppress the in-app CTA so the user doesn't double
+    // check in. Realtime via webhook lands later (Tuesday office visit
+    // confirms HIP push capability). Either way card_scans is the same
+    // source of truth so this surface works for both batch + realtime.
     const employeeId = await resolveSessionEmployeeId(session)
-    const leaveToday = employeeId ? await getLeaveTodayInfo(employeeId) : null
+    const [leaveToday, cardScanToday] = employeeId
+        ? await Promise.all([
+            getLeaveTodayInfo(employeeId),
+            getCardScanTodayInfo(employeeId),
+        ])
+        : [null, null]
 
     return (
         <CheckinView
             office={location ?? null}
             todayCheckin={todayCheckin}
             leaveToday={leaveToday}
+            cardScanToday={cardScanToday}
         />
     )
 }

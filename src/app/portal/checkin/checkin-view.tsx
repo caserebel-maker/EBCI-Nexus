@@ -5,12 +5,14 @@ import dynamic from 'next/dynamic'
 const CheckinMap = dynamic(() => import('@/components/checkin/checkin-map').then(m => m.CheckinMap), { ssr: false, loading: () => <div className="h-64 rounded-2xl bg-white/5 animate-pulse flex items-center justify-center text-white/40 text-sm">กำลังโหลดแผนที่...</div> })
 
 import { useState, useEffect } from 'react'
-import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut, X, Briefcase, Palmtree } from 'lucide-react'
+import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut, X, Briefcase, Palmtree, IdCard } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { checkIn, checkOut } from './actions'
 import { haversineDistance } from '@/lib/geo'
 import { formatBangkokTime, formatBangkokDateTime } from '@/lib/datetime'
 import type { LeaveTodayInfo } from '@/lib/leave-today'
+import type { CardScanTodayInfo } from '@/lib/card-scan-today'
+import { formatScanClock } from '@/lib/card-scan-today'
 import { WORK_SCHEDULE, HALF_DAY_RULES } from '@/lib/leave-constants'
 
 interface Office {
@@ -40,11 +42,17 @@ interface Props {
      *  entirely; blocksCheckin=false renders a banner above the
      *  normal flow (half-day or pending). */
     leaveToday: LeaveTodayInfo | null
+    /** §3.1 Phase 1 — set when a card_scans row exists for the user
+     *  today (HIP card reader → CSV import, eventually realtime
+     *  webhook). When present and not on leave + not already checked
+     *  in via app, we swap the CTA for an acknowledgement card so
+     *  the user doesn't double check in. */
+    cardScanToday: CardScanTodayInfo | null
 }
 
 type GPSState = 'idle' | 'requesting' | 'success' | 'error'
 
-export function CheckinView({ office, todayCheckin, leaveToday }: Props) {
+export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday }: Props) {
     const [gpsState, setGpsState] = useState<GPSState>('idle')
     const [gps, setGps] = useState<{ lat: number; lng: number; accuracy: number } | null>(null)
     const [gpsError, setGpsError] = useState<string | null>(null)
@@ -59,6 +67,17 @@ export function CheckinView({ office, todayCheckin, leaveToday }: Props) {
 
     const isCheckedIn = !!todayCheckin && !todayCheckin.checked_out_at
     const isFullyCheckedOut = !!todayCheckin && !!todayCheckin.checked_out_at
+    // §3.1 Phase 1 — show card-scan ack when:
+    //   - we found a card scan today, AND
+    //   - the user hasn't also app-checked-in (otherwise the existing
+    //     branches handle the active session correctly), AND
+    //   - they're not on a full-day approved leave (leave branch wins —
+    //     it's the more interesting context to surface)
+    // Manual escape hatch for "I tapped someone else's card by mistake"
+    // is `showManualOverride` below — defaults off, click to reveal CTA.
+    const cardScanSuppressed = !!cardScanToday && !isCheckedIn && !isFullyCheckedOut
+        && !(leaveToday?.blocksCheckin)
+    const [showManualOverride, setShowManualOverride] = useState(false)
 
     // Auto-request GPS on mount (if not already checked in)
     useEffect(() => {
@@ -208,11 +227,56 @@ export function CheckinView({ office, todayCheckin, leaveToday }: Props) {
                 </div>
             </div>
 
-            {/* §1.3 — full-day approved leave: suppress CTA entirely.
+            {/* §3.1 Phase 1 — card scan today: ack the punch, suppress
+                the CTA so the user doesn't double check in. Card scan
+                is the source of truth for office attendance; the in-app
+                check-in exists only for WFH + field work + as a fallback
+                when the user clicks "ฉันยังไม่ได้ทาบบัตร". */}
+            {cardScanSuppressed && !showManualOverride ? (
+                <div
+                    className="rounded-2xl p-6 border border-emerald-500/40 bg-emerald-500/10"
+                    style={{ backdropFilter: 'blur(8px)' }}
+                >
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="h-12 w-12 rounded-full bg-emerald-500/25 flex items-center justify-center">
+                            <IdCard size={24} className="text-emerald-200" />
+                        </div>
+                        <div>
+                            <p className="text-sm text-emerald-200/80">บัตรของคุณถูก scan แล้ว</p>
+                            <p className="text-lg font-bold text-white tabular-nums">
+                                {formatScanClock(cardScanToday!.earliestScanTime)} น.
+                                {cardScanToday!.earliestScanType === 'in' && (
+                                    <span className="ml-2 text-sm font-normal text-emerald-200/70">(เข้างาน)</span>
+                                )}
+                                {cardScanToday!.earliestScanType === 'out' && (
+                                    <span className="ml-2 text-sm font-normal text-amber-200/70">(ออกงาน)</span>
+                                )}
+                            </p>
+                            <p className="text-xs text-white/50 mt-0.5">
+                                {cardScanToday!.scanCount > 1
+                                    ? `บันทึก ${cardScanToday!.scanCount} ครั้งวันนี้ (ล่าสุด ${formatScanClock(cardScanToday!.latestScanTime)} น.)`
+                                    : 'ระบบบันทึกเวลาเข้างานให้แล้ว'}
+                            </p>
+                        </div>
+                    </div>
+                    <p className="text-sm text-white/75 leading-relaxed">
+                        ไม่ต้องเช็คอินผ่านแอปซ้ำ — ระบบจะรวมข้อมูลบัตรเข้ากับ attendance log อัตโนมัติ
+                    </p>
+                    <button
+                        type="button"
+                        onClick={() => setShowManualOverride(true)}
+                        className="mt-3 text-xs text-white/55 underline decoration-dotted hover:text-white/85"
+                    >
+                        ฉันยังไม่ได้ทาบบัตร — ขอเช็คอินผ่านแอป
+                    </button>
+                </div>
+            ) :
+
+            /* §1.3 — full-day approved leave: suppress CTA entirely.
                 Skip this branch if the user already managed to check in
                 today (e.g. leave was approved AFTER they punched in) so
-                the checkout button stays reachable. */}
-            {leaveToday?.blocksCheckin && !isCheckedIn ? (
+                the checkout button stays reachable. */
+            leaveToday?.blocksCheckin && !isCheckedIn ? (
                 <div
                     className="rounded-2xl p-6 border border-amber-400/40 bg-amber-500/10"
                     style={{ backdropFilter: 'blur(8px)' }}
