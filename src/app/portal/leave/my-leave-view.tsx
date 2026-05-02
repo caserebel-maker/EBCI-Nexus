@@ -281,25 +281,31 @@ export function MyLeaveView({ year }: Props) {
                 </div>
             )}
 
-            {/* Balance cards */}
-            <BalanceGrid
+            {/* Action button — promoted above the balance list (was below
+                an 11-tile grid that pushed it off-screen on mobile). Solid
+                amber-400 instead of the maroon gradient so it pops against
+                the maroon page bg; same colour the submit/next buttons use
+                inside the leave modal, so the call-to-action visual reads
+                consistently across the flow. */}
+            <button
+                type="button"
+                onClick={() => setFormOpen('new')}
+                disabled={loading || balances.length === 0}
+                className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl text-black font-bold shadow-lg shadow-amber-500/30 transition-all active:scale-95 disabled:opacity-50 bg-amber-400 hover:bg-amber-300"
+            >
+                <Plus size={18} />
+                ยื่นใบลาใหม่
+            </button>
+
+            {/* Balance list — compact horizontal-bar rows (was 6-col tile
+                grid). Click a row to filter the requests list below by
+                that leave type — same interaction the tiles had. */}
+            <BalanceList
                 balances={balances}
                 loading={loading}
                 selectedId={filterType}
                 onSelect={id => setFilterType(cur => cur === id ? null : id)}
             />
-
-            {/* Action button */}
-            <button
-                type="button"
-                onClick={() => setFormOpen('new')}
-                disabled={loading || balances.length === 0}
-                className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl text-white font-bold shadow-lg shadow-[#882136]/40 transition-all active:scale-95"
-                style={{ background: 'linear-gradient(135deg,#561e23 0%,#ad5f6c 100%)' }}
-            >
-                <Plus size={17} />
-                ยื่นใบลาใหม่
-            </button>
 
             {/* §2.4 — Drafts section. Only renders when there's at least
                 one autosaved draft. Resume opens NewLeaveModal hydrated
@@ -458,7 +464,16 @@ function DraftRow({
 }
 
 // ── Balance grid ─────────────────────────────────────────────────────────────
-function BalanceGrid({
+/**
+ * Compact balance list — was a 6-col tile grid (BalanceGrid) that
+ * pushed the "ยื่นใบลาใหม่" button off-screen on mobile when the
+ * leave-type roster grew to 11 categories. Each leave type is now
+ * one short row with: icon + name + horizontal progress bar + the
+ * raw "remaining / total" number. Same click-to-filter interaction
+ * as the tiles. Mobile: 1-col; desktop: 2-col so wide screens still
+ * pack the rows side-by-side.
+ */
+function BalanceList({
     balances, loading, selectedId, onSelect,
 }: {
     balances: BalanceEntry[]
@@ -468,15 +483,15 @@ function BalanceGrid({
 }) {
     if (loading && balances.length === 0) {
         return (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                {[1,2,3,4,5,6].map(i => (
-                    <div key={i} className="p-4 h-28 animate-pulse" style={glass} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {[1,2,3,4].map(i => (
+                    <div key={i} className="h-12 rounded-xl animate-pulse" style={glass} />
                 ))}
             </div>
         )
     }
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {balances.map(b => {
                 const Icon = LEAVE_ICON[b.leave_type_id] ?? CalendarDays
                 const isSelected = selectedId === b.leave_type_id
@@ -489,7 +504,7 @@ function BalanceGrid({
                         type="button"
                         onClick={() => onSelect(b.leave_type_id)}
                         className={cn(
-                            'p-3.5 text-left transition-all active:scale-[0.98]',
+                            'px-3 py-2.5 text-left transition-all active:scale-[0.98] flex items-center gap-3',
                             isSelected ? 'ring-2 ring-amber-300/70' : 'hover:bg-white/10',
                         )}
                         style={{
@@ -497,36 +512,47 @@ function BalanceGrid({
                             borderColor: isSelected ? 'rgba(252,211,77,0.6)' : glass.border as string,
                         }}
                     >
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                            <span
-                                className="h-8 w-8 rounded-lg flex items-center justify-center text-white shrink-0"
-                                style={{ background: b.color ?? '#882136' }}
-                            >
-                                <Icon size={15} strokeWidth={2} />
-                            </span>
-                        </div>
-                        <p className="text-xs font-bold text-white leading-tight">{b.name_th}</p>
-                        <p className="mt-1.5 text-white tabular-nums">
-                            {b.is_unlimited ? (
-                                <span className="text-lg font-bold text-emerald-200">ไม่จำกัด</span>
-                            ) : (
-                                <>
-                                    <span className="text-lg font-bold">{b.remaining_days}</span>
-                                    <span className="text-white/50 text-xs ml-1">/ {b.total_days}</span>
-                                </>
-                            )}
-                        </p>
-                        {!b.is_unlimited && b.total_days > 0 && (
-                            <div className="mt-1.5 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                                <div
-                                    className="h-full rounded-full transition-all"
-                                    style={{ width: `${percent}%`, background: b.color ?? '#ad5f6c' }}
-                                />
+                        {/* Type icon — small square chip, color from DB */}
+                        <span
+                            className="h-9 w-9 rounded-lg flex items-center justify-center text-white shrink-0"
+                            style={{ background: b.color ?? '#882136' }}
+                        >
+                            <Icon size={16} strokeWidth={2} />
+                        </span>
+
+                        {/* Name + progress bar (stacked, fills remaining width) */}
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-baseline justify-between gap-2 mb-1">
+                                <p className="text-sm font-semibold text-white truncate">
+                                    {b.name_th}
+                                </p>
+                                <p className="text-sm tabular-nums shrink-0">
+                                    {b.is_unlimited ? (
+                                        <span className="font-bold text-emerald-200">ไม่จำกัด</span>
+                                    ) : (
+                                        <>
+                                            <span className="font-bold text-white">{b.remaining_days}</span>
+                                            <span className="text-white/50"> / {b.total_days}</span>
+                                        </>
+                                    )}
+                                </p>
                             </div>
-                        )}
-                        {b.pending_days > 0 && (
-                            <p className="text-[10px] text-amber-200 mt-1">รอ {b.pending_days} วัน</p>
-                        )}
+                            {!b.is_unlimited && b.total_days > 0 ? (
+                                <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full transition-all"
+                                        style={{ width: `${percent}%`, background: b.color ?? '#ad5f6c' }}
+                                    />
+                                </div>
+                            ) : (
+                                <div className="h-1.5" /> /* keeps row height stable */
+                            )}
+                            {b.pending_days > 0 && (
+                                <p className="text-[10px] text-amber-200 mt-0.5 leading-none">
+                                    รอ {b.pending_days} วัน
+                                </p>
+                            )}
+                        </div>
                     </button>
                 )
             })}
