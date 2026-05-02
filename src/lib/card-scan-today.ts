@@ -1,6 +1,7 @@
 import 'server-only'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { bangkokTodayIso } from '@/lib/leave-validations'
+import type { CardScanTodayInfo } from '@/lib/card-scan-shared'
 
 /**
  * Smart office check-in suppression — Phase 1 of §3.1 BETA_FEEDBACK.
@@ -27,18 +28,12 @@ import { bangkokTodayIso } from '@/lib/leave-validations'
  * scan_time is stored as Bangkok wall-clock (per existing reconcile
  * comments in src/app/hradmin/attendance/reconcile/actions.ts) — we
  * compare directly against bangkokTodayIso() without timezone math.
+ *
+ * The `CardScanTodayInfo` type and `formatScanClock` helper live in
+ * `./card-scan-shared.ts` so client components can import them
+ * without dragging supabaseAdmin / 'server-only' into the browser
+ * bundle (Next.js 16 Turbopack enforces this strictly).
  */
-
-export interface CardScanTodayInfo {
-    /** Earliest scan today — drives the "scan แล้วเวลา XX:XX" banner. */
-    earliestScanTime: string  // ISO without tz, Bangkok wall-clock
-    /** Latest scan today — useful when employee has scanned out at end of day. */
-    latestScanTime: string
-    /** Total scans today (in + out + any extras). */
-    scanCount: number
-    /** Earliest scan_type when set ('in'|'out'|null). */
-    earliestScanType: 'in' | 'out' | null
-}
 
 export async function getCardScanTodayInfo(
     employeeId: string,
@@ -69,15 +64,4 @@ export async function getCardScanTodayInfo(
         scanCount:        scans.length,
         earliestScanType: (scans[0].scan_type as 'in' | 'out' | null) ?? null,
     }
-}
-
-/**
- * Format `2026-05-02T08:35:14` → `08:35`. Bangkok wall-clock string,
- * no timezone math because the stored value is already local. Falls
- * back to the raw input on bad shape.
- */
-export function formatScanClock(iso: string): string {
-    const m = /T(\d{2}):(\d{2})/.exec(iso)
-    if (!m) return iso
-    return `${m[1]}:${m[2]}`
 }

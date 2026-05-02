@@ -11,8 +11,7 @@ import { checkIn, checkOut } from './actions'
 import { haversineDistance } from '@/lib/geo'
 import { formatBangkokTime, formatBangkokDateTime } from '@/lib/datetime'
 import type { LeaveTodayInfo } from '@/lib/leave-today'
-import type { CardScanTodayInfo } from '@/lib/card-scan-today'
-import { formatScanClock } from '@/lib/card-scan-today'
+import { formatScanClock, type CardScanTodayInfo } from '@/lib/card-scan-shared'
 import { WORK_SCHEDULE, HALF_DAY_RULES } from '@/lib/leave-constants'
 
 interface Office {
