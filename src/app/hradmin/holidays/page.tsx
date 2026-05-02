@@ -434,9 +434,9 @@ function CalendarMonthView({
             </div>
 
             {/* Weekday header */}
-            <div className="grid grid-cols-7 gap-1 text-center text-[10px] uppercase tracking-wider text-white/45 font-bold">
+            <div className="grid grid-cols-7 gap-1 text-center text-xs uppercase tracking-wider text-white/70 font-bold">
                 {['อา','จ','อ','พ','พฤ','ศ','ส'].map((d, i) => (
-                    <div key={i} className={`py-1 ${i === 0 || i === 6 ? 'text-amber-200/55' : ''}`}>{d}</div>
+                    <div key={i} className={`py-1.5 ${i === 0 || i === 6 ? 'text-amber-200' : ''}`}>{d}</div>
                 ))}
             </div>
 
@@ -446,10 +446,10 @@ function CalendarMonthView({
                     <Loader2 size={20} className="text-white/50 animate-spin" />
                 </div>
             ) : (
-                <div className="grid grid-cols-7 gap-1">
+                <div className="grid grid-cols-7 gap-1.5">
                     {cells.map((d, i) => {
                         if (d === null) {
-                            return <div key={i} className="aspect-square sm:min-h-[78px] rounded-md bg-white/[0.02]" />
+                            return <div key={i} className="min-h-[110px] rounded-md bg-white/[0.02]" />
                         }
                         const key = monthKey(d)
                         const events = byDate.get(key) ?? []
@@ -459,20 +459,20 @@ function CalendarMonthView({
                         return (
                             <div
                                 key={i}
-                                className={`aspect-square sm:min-h-[78px] sm:aspect-auto rounded-md p-1.5 flex flex-col gap-0.5 transition-colors ${
+                                className={`min-h-[110px] rounded-md p-2 flex flex-col gap-1.5 transition-colors ${
                                     isToday
-                                        ? 'bg-amber-400/15 border border-amber-400/50'
-                                        : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                                        ? 'bg-amber-400/15 border border-amber-400/60'
+                                        : 'bg-white/[0.07] border border-white/15 hover:bg-white/[0.11]'
                                 }`}
                             >
-                                <span className={`text-[11px] font-bold tabular-nums ${
+                                <span className={`text-base font-bold tabular-nums leading-none ${
                                     isToday ? 'text-amber-200'
-                                        : isWeekend ? 'text-amber-200/65'
-                                        : 'text-white/75'
+                                        : isWeekend ? 'text-amber-200'
+                                        : 'text-white'
                                 }`}>
                                     {d}
                                 </span>
-                                <div className="flex flex-col gap-0.5 overflow-hidden">
+                                <div className="flex flex-col gap-1 overflow-hidden">
                                     {events.slice(0, 2).map(h => {
                                         const cfg = TYPE_CONFIG[h.type] ?? TYPE_CONFIG.company
                                         return (
@@ -481,11 +481,10 @@ function CalendarMonthView({
                                                 type="button"
                                                 onClick={() => onEdit(h)}
                                                 title={`${h.name} — แตะเพื่อแก้ไข`}
-                                                className="text-left text-[10px] px-1 py-0.5 rounded leading-tight truncate hover:brightness-125"
+                                                className="text-left text-sm font-semibold text-white px-1.5 py-1 rounded leading-tight truncate hover:brightness-125"
                                                 style={{
-                                                    background: `${cfg.color}28`,
-                                                    color: cfg.color,
-                                                    borderLeft: `2px solid ${cfg.color}`,
+                                                    background: `${cfg.color}55`,
+                                                    borderLeft: `3px solid ${cfg.color}`,
                                                 }}
                                             >
                                                 {h.type === 'wfh' && '🏠 '}{h.name}
@@ -493,7 +492,7 @@ function CalendarMonthView({
                                         )
                                     })}
                                     {events.length > 2 && (
-                                        <span className="text-[10px] text-white/55 px-1 leading-tight">
+                                        <span className="text-xs font-semibold text-white/75 px-1 leading-tight">
                                             +{events.length - 2} อื่น
                                         </span>
                                     )}
@@ -505,11 +504,11 @@ function CalendarMonthView({
             )}
 
             {/* Legend */}
-            <div className="pt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px]">
+            <div className="pt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
                 {Object.entries(TYPE_CONFIG).map(([t, cfg]) => (
-                    <span key={t} className="inline-flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-sm" style={{ background: cfg.color }} />
-                        <span className="text-white/55">{cfg.label}</span>
+                    <span key={t} className="inline-flex items-center gap-1.5">
+                        <span className="h-3 w-3 rounded-sm" style={{ background: cfg.color }} />
+                        <span className="text-white/85 font-medium">{cfg.label}</span>
                     </span>
                 ))}
             </div>
