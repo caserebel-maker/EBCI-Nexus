@@ -50,26 +50,25 @@ const HR_ADMIN_NAV_PORTAL: NavItem[] = [
 const NAV_CONFIG: Record<Role, NavItem[]> = {
     hr_admin: HR_ADMIN_NAV_PORTAL, // default; overridden dynamically in component
 
-    // Bottom-tab choice = "what does this user open daily, that ISN'T
-    // covered by another tab and ISN'T deep inside a group?"
-    //   หน้าแรก  — daily landing
-    //   เช็คอิน  — every workday
-    //   สลิป    — once a month (was 'การลา', but that duplicated
-    //              "การลาและ WFH" group inside the More panel — Mod
-    //              flagged the redundancy 3 May)
-    //   โปรไฟล์ — quick personal info access
-    // Leave + WFH still reachable in 1 tap via More → การลาและ WFH.
+    // Bottom tabs = the 4 most-frequent destinations. การลา is back here
+    // (was briefly swapped for สลิป) because Mod confirmed it's an
+    // open-the-app reason — not the same as the "เมนูลัด" tile on the
+    // dashboard, which is for surfacing it ON the home screen. Both
+    // surfaces co-exist; the redundancy is fine because the bottom-tab
+    // and the home-screen-tile target different muscle memories.
+    // สลิปของฉัน lives in the dashboard quick-menu + More panel "ของฉัน"
+    // group — once a month is fine for two-tap access.
     manager: [
-        { label: 'หน้าแรก',   href: '/portal/dashboard', icon: Home,     exact: true },
-        { label: 'เช็คอิน',   href: '/portal/checkin',   icon: MapPin },
-        { label: 'สลิปของฉัน', href: '/portal/payroll',   icon: FileText },
-        { label: 'โปรไฟล์',   href: '/portal/profile',   icon: UserRound },
+        { label: 'หน้าแรก', href: '/portal/dashboard', icon: Home,     exact: true },
+        { label: 'เช็คอิน', href: '/portal/checkin',   icon: MapPin },
+        { label: 'การลา',   href: '/portal/leave',     icon: Palmtree },
+        { label: 'โปรไฟล์', href: '/portal/profile',   icon: UserRound },
     ],
     employee: [
-        { label: 'หน้าแรก',   href: '/portal/dashboard', icon: Home,     exact: true },
-        { label: 'เช็คอิน',   href: '/portal/checkin',   icon: MapPin },
-        { label: 'สลิปของฉัน', href: '/portal/payroll',   icon: FileText },
-        { label: 'โปรไฟล์',   href: '/portal/profile',   icon: UserRound },
+        { label: 'หน้าแรก', href: '/portal/dashboard', icon: Home,     exact: true },
+        { label: 'เช็คอิน', href: '/portal/checkin',   icon: MapPin },
+        { label: 'การลา',   href: '/portal/leave',     icon: Palmtree },
+        { label: 'โปรไฟล์', href: '/portal/profile',   icon: UserRound },
     ],
 }
 
@@ -119,17 +118,16 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     employee: [
-        // Bottom tabs hold Home/เช็คอิน/สลิป/โปรไฟล์; everything else
+        // Bottom tabs hold Home/เช็คอิน/การลา/โปรไฟล์; everything else
         // lives here grouped by domain (sidebar parity).
-        // "ใบลาของฉัน" lives at the top of "การลาและ WFH" so the bottom
-        // tab change (การลา → สลิป) doesn't make leave-of-self harder
-        // to find — it's the first item under the most likely-expanded
-        // group.
+        // "ใบลาของฉัน" stays at the top of "การลาและ WFH" so opening the
+        // group lands on the most-used surface first.
         { label: 'ใบลาของฉัน',     desc: 'ยื่นและดูประวัติใบลา',    href: '/portal/leave',          icon: Palmtree,        groupLabel: 'การลาและ WFH' },
         { label: 'ขอ WFH',         desc: 'ส่งคำขอทำงานที่บ้าน',     href: '/portal/wfh',            icon: Home },
         { label: 'วันหยุดสะสม',   desc: 'แลกวันหยุดที่ทำงานล่วงเวลา', href: '/portal/comp-days',    icon: CalendarHeart },
         { label: 'ปฏิทิน',         desc: 'วันหยุด + WFH',           href: '/portal/calendar',       icon: CalendarDays },
         { label: 'นโยบายการลา', desc: 'ข้อกำหนดการลาของบริษัท',  href: '/portal/leave-policy',   icon: ScrollText },
+        { label: 'สลิปของฉัน',     desc: 'ดูสลิปเงินเดือน',         href: '/portal/payroll',        icon: FileText,        groupLabel: 'ของฉัน' },
         { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',   icon: Network,         groupLabel: 'บริษัท' },
         { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/portal/meeting-room',   icon: DoorOpen },
         { label: 'ประกาศข่าวสาร', desc: 'ฟีดประกาศจาก HR',         href: '/portal/announcements',  icon: Megaphone },
@@ -157,27 +155,32 @@ const UNGROUPED_LABEL = 'อื่น ๆ'
 interface MoreGroup {
     label: string
     items: MoreItem[]
+    /** Group icon = first child's icon. So the collapsed group header
+     *  visually matches a regular row (avatar circle + label) — Mod's
+     *  3 May feedback was that the header used to be tiny text-only
+     *  and looked nothing like the items below it. */
+    icon: React.ElementType
 }
 
 /**
  * Walk the moreItems array (which uses sentinel `groupLabel` markers
  * the same way the legacy flat renderer did) and produce an array of
- * groups: { label, items[] } in the original order. Items without a
- * group fall back to UNGROUPED_LABEL so nothing's ever orphaned.
+ * groups: { label, items[], icon } in the original order. Items without
+ * a group fall back to UNGROUPED_LABEL so nothing's ever orphaned.
  */
 function bucketIntoGroups(items: MoreItem[]): MoreGroup[] {
     const groups: MoreGroup[] = []
     let current: MoreGroup | null = null
     for (const item of items) {
         if (item.groupLabel) {
-            current = { label: item.groupLabel, items: [item] }
+            current = { label: item.groupLabel, items: [item], icon: item.icon }
             groups.push(current)
         } else if (current) {
             current.items.push(item)
         } else {
             // Pre-first-group items (rare; keeps the renderer safe even
             // if a config forgets a leading groupLabel).
-            current = { label: UNGROUPED_LABEL, items: [item] }
+            current = { label: UNGROUPED_LABEL, items: [item], icon: item.icon }
             groups.push(current)
         }
     }
@@ -304,44 +307,56 @@ export function PortalBottomNav({ canManagePayroll = false }: { canManagePayroll
                         {moreGroups.map((group) => {
                             const expanded = isGroupExpanded(group)
                             const groupActive = group.items.some(it => it.href && pathname?.startsWith(it.href))
+                            const GroupIcon = group.icon
                             return (
                                 <div key={group.label} className="mt-1 first:mt-0">
-                                    {/* Group header — clickable to toggle.
-                                        Background lightens when active so the
-                                        user can spot the group containing the
-                                        current route at a glance. Chevron
-                                        rotates with state. */}
+                                    {/* Group header — same row layout as the
+                                        items below it (avatar circle + label
+                                        + chevron) so collapsed groups don't
+                                        feel like a different style of element.
+                                        Mod's 3 May call: header was tiny text
+                                        + chevron only and looked nothing like
+                                        the regular rows below. */}
                                     <button
                                         type="button"
                                         onClick={() => toggleGroup(group.label)}
                                         className={cn(
-                                            'w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors',
+                                            'flex items-center gap-3 w-full px-3 py-3 min-h-[56px] rounded-xl transition-colors',
                                             groupActive
                                                 ? 'bg-white/10 hover:bg-white/15'
-                                                : 'hover:bg-white/5'
+                                                : 'hover:bg-white/10 active:bg-white/15'
                                         )}
                                         aria-expanded={expanded}
                                     >
-                                        <span className="text-[11px] font-black uppercase tracking-[0.18em] text-white/70">
-                                            {group.label}
-                                            <span className="ml-2 text-white/40 normal-case tracking-normal text-[10px] font-semibold">
-                                                ({group.items.length})
-                                            </span>
+                                        <span className="flex items-center justify-center w-9 h-9 rounded-full bg-white/10 shrink-0">
+                                            <GroupIcon size={18} className="text-white" />
                                         </span>
+                                        <div className="flex-1 min-w-0 text-left">
+                                            <p className="text-white font-semibold text-sm">
+                                                {group.label}
+                                                <span className="ml-1.5 text-white/45 font-medium text-xs">
+                                                    ({group.items.length})
+                                                </span>
+                                            </p>
+                                            <p className="text-xs text-white/45">
+                                                {expanded ? 'แตะเพื่อย่อเก็บ' : 'แตะเพื่อขยาย'}
+                                            </p>
+                                        </div>
                                         <ChevronDown
-                                            size={14}
+                                            size={16}
                                             className={cn(
-                                                'text-white/55 transition-transform',
+                                                'text-white/55 transition-transform shrink-0',
                                                 expanded ? 'rotate-0' : '-rotate-90'
                                             )}
                                         />
                                     </button>
 
                                     {/* Group children — only rendered when
-                                        expanded. Same row design as before
-                                        so the row-tap target stays familiar. */}
+                                        expanded. Inset by pl-3 + a left
+                                        border so they read as "nested under
+                                        the parent header", not as siblings. */}
                                     {expanded && (
-                                        <div className="mt-1 flex flex-col gap-1">
+                                        <div className="mt-1 flex flex-col gap-1 pl-3 border-l-2 border-white/10 ml-5">
                                             {group.items.map((item, idx) => {
                                                 if (item.danger) {
                                                     return (

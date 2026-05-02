@@ -7,7 +7,7 @@ import Autoplay from 'embla-carousel-autoplay'
 import {
     Calendar, MapPin, User, Bell, X, ChevronLeft, ChevronRight,
     AlertTriangle, AlertCircle, Info, Megaphone, UserCircle, Home, CalendarOff,
-    Palmtree, DoorOpen,
+    Palmtree, DoorOpen, FileText,
 } from 'lucide-react'
 import { DailyGreeting } from '@/components/daily-greeting'
 import type { AnnouncementItem, TodayCalendarEntry } from './page'
@@ -51,13 +51,18 @@ interface Props {
 // /portal/leave page — confusing duplicate. Merged into one "การลา" tile
 // that's the single entry point for everything leave-related, freeing a
 // slot for "จองห้องประชุม" so the new feature is reachable in one tap.
+//
+// "แจ้งเตือน" tile removed (3 May) because the bell icon in the topbar
+// already covers notifications — having a tile-sized shortcut to the
+// same destination was clutter. Slot reused for "สลิปของฉัน" which is
+// otherwise buried 3 taps deep (More → ของฉัน → สลิป).
 const SHORTCUTS = [
     { label: 'โปรไฟล์',       icon: User,     href: '/portal/profile' },
     { label: 'การลา',          icon: Palmtree,  href: '/portal/leave' },
     { label: 'ปฏิทิน',         icon: Calendar,  href: '/portal/calendar' },
     { label: 'เช็คอิน',        icon: MapPin,    href: '/portal/checkin' },
     { label: 'จองห้องประชุม', icon: DoorOpen,  href: '/portal/meeting-room' },
-    { label: 'แจ้งเตือน',     icon: Bell,      href: '/portal/notifications' },
+    { label: 'สลิปของฉัน',    icon: FileText,  href: '/portal/payroll' },
 ]
 
 const GENDER_LEAVE_LABEL: Record<string, string> = {
