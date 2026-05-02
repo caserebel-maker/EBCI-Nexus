@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
     Home, Users, Megaphone, MoreHorizontal, Clock, CalendarDays, Palmtree,
     ClipboardCheck, LogOut, FileText,
-    Settings, ChevronRight, X, UserRound, Network,
+    Settings, ChevronRight, ChevronDown, X, UserRound, Network,
     UserPlus, Activity, DoorOpen,
     MapPin, Briefcase, BarChart3, Wallet, ScrollText, ShieldCheck,
     CalendarHeart,
@@ -50,17 +50,26 @@ const HR_ADMIN_NAV_PORTAL: NavItem[] = [
 const NAV_CONFIG: Record<Role, NavItem[]> = {
     hr_admin: HR_ADMIN_NAV_PORTAL, // default; overridden dynamically in component
 
+    // Bottom-tab choice = "what does this user open daily, that ISN'T
+    // covered by another tab and ISN'T deep inside a group?"
+    //   หน้าแรก  — daily landing
+    //   เช็คอิน  — every workday
+    //   สลิป    — once a month (was 'การลา', but that duplicated
+    //              "การลาและ WFH" group inside the More panel — Mod
+    //              flagged the redundancy 3 May)
+    //   โปรไฟล์ — quick personal info access
+    // Leave + WFH still reachable in 1 tap via More → การลาและ WFH.
     manager: [
-        { label: 'หน้าแรก', href: '/portal/dashboard', icon: Home,        exact: true },
-        { label: 'เช็คอิน', href: '/portal/checkin',   icon: MapPin },
-        { label: 'การลา',   href: '/portal/leave',     icon: Palmtree },
-        { label: 'โปรไฟล์', href: '/portal/profile',   icon: UserRound },
+        { label: 'หน้าแรก',   href: '/portal/dashboard', icon: Home,     exact: true },
+        { label: 'เช็คอิน',   href: '/portal/checkin',   icon: MapPin },
+        { label: 'สลิปของฉัน', href: '/portal/payroll',   icon: FileText },
+        { label: 'โปรไฟล์',   href: '/portal/profile',   icon: UserRound },
     ],
     employee: [
-        { label: 'หน้าแรก', href: '/portal/dashboard', icon: Home,        exact: true },
-        { label: 'เช็คอิน', href: '/portal/checkin',   icon: MapPin },
-        { label: 'การลา',   href: '/portal/leave',     icon: Palmtree },
-        { label: 'โปรไฟล์', href: '/portal/profile',   icon: UserRound },
+        { label: 'หน้าแรก',   href: '/portal/dashboard', icon: Home,     exact: true },
+        { label: 'เช็คอิน',   href: '/portal/checkin',   icon: MapPin },
+        { label: 'สลิปของฉัน', href: '/portal/payroll',   icon: FileText },
+        { label: 'โปรไฟล์',   href: '/portal/profile',   icon: UserRound },
     ],
 }
 
@@ -94,10 +103,10 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     manager: [
-        // Manager desktop order matches the "การลาและ WFH" + "บริษัท"
-        // sidebar groups. First three (Home/เช็คอิน/การลา) live in the
-        // bottom tabs; everything else is in this More panel.
-        { label: 'ขอ WFH',         desc: 'ส่งคำขอทำงานที่บ้าน',     href: '/portal/wfh',             icon: Home,            groupLabel: 'การลาและ WFH' },
+        // Bottom tabs hold Home/เช็คอิน/สลิป/โปรไฟล์; everything else
+        // here grouped to match the desktop sidebar.
+        { label: 'ใบลาของฉัน',     desc: 'ยื่นและดูประวัติใบลา',    href: '/portal/leave',           icon: Palmtree,        groupLabel: 'การลาและ WFH' },
+        { label: 'ขอ WFH',         desc: 'ส่งคำขอทำงานที่บ้าน',     href: '/portal/wfh',             icon: Home },
         { label: 'อนุมัติการลา',   desc: 'พิจารณาคำขอลาลูกทีม',   href: '/portal/leave/inbox',     icon: ClipboardCheck },
         { label: 'อนุมัติ WFH',    desc: 'พิจารณาคำขอ WFH ลูกทีม',  href: '/portal/wfh/inbox',       icon: ClipboardCheck },
         { label: 'วันหยุดสะสม',   desc: 'แลกวันหยุดที่ทำงานล่วงเวลา', href: '/portal/comp-days',     icon: CalendarHeart },
@@ -110,14 +119,17 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     employee: [
-        // Employee desktop order matches the "การลาและ WFH" / "ของฉัน" /
-        // "บริษัท" sidebar groups. Bottom tabs hold Home/เช็คอิน/การลา/
-        // โปรไฟล์ — everything else belongs in More.
-        { label: 'ขอ WFH',         desc: 'ส่งคำขอทำงานที่บ้าน',     href: '/portal/wfh',            icon: Home,            groupLabel: 'การลาและ WFH' },
+        // Bottom tabs hold Home/เช็คอิน/สลิป/โปรไฟล์; everything else
+        // lives here grouped by domain (sidebar parity).
+        // "ใบลาของฉัน" lives at the top of "การลาและ WFH" so the bottom
+        // tab change (การลา → สลิป) doesn't make leave-of-self harder
+        // to find — it's the first item under the most likely-expanded
+        // group.
+        { label: 'ใบลาของฉัน',     desc: 'ยื่นและดูประวัติใบลา',    href: '/portal/leave',          icon: Palmtree,        groupLabel: 'การลาและ WFH' },
+        { label: 'ขอ WFH',         desc: 'ส่งคำขอทำงานที่บ้าน',     href: '/portal/wfh',            icon: Home },
         { label: 'วันหยุดสะสม',   desc: 'แลกวันหยุดที่ทำงานล่วงเวลา', href: '/portal/comp-days',    icon: CalendarHeart },
         { label: 'ปฏิทิน',         desc: 'วันหยุด + WFH',           href: '/portal/calendar',       icon: CalendarDays },
         { label: 'นโยบายการลา', desc: 'ข้อกำหนดการลาของบริษัท',  href: '/portal/leave-policy',   icon: ScrollText },
-        { label: 'สลิปของฉัน',     desc: 'ดูสลิปเงินเดือน',         href: '/portal/payroll',        icon: FileText,        groupLabel: 'ของฉัน' },
         { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',   icon: Network,         groupLabel: 'บริษัท' },
         { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/portal/meeting-room',   icon: DoorOpen },
         { label: 'ประกาศข่าวสาร', desc: 'ฟีดประกาศจาก HR',         href: '/portal/announcements',  icon: Megaphone },
@@ -131,10 +143,74 @@ async function handleLogout() {
     window.location.href = '/login'
 }
 
+/**
+ * localStorage key for the More-panel collapsed-group state. Versioned
+ * so we can break the schema later without leaving stale collapse
+ * states stuck on users' devices.
+ */
+const MORE_GROUPS_LS_KEY = 'nexus-mobile-more-groups-v1'
+
+/** Items without a groupLabel get auto-bucketed into this fallback so
+ *  the "ungrouped" section still renders predictably. */
+const UNGROUPED_LABEL = 'อื่น ๆ'
+
+interface MoreGroup {
+    label: string
+    items: MoreItem[]
+}
+
+/**
+ * Walk the moreItems array (which uses sentinel `groupLabel` markers
+ * the same way the legacy flat renderer did) and produce an array of
+ * groups: { label, items[] } in the original order. Items without a
+ * group fall back to UNGROUPED_LABEL so nothing's ever orphaned.
+ */
+function bucketIntoGroups(items: MoreItem[]): MoreGroup[] {
+    const groups: MoreGroup[] = []
+    let current: MoreGroup | null = null
+    for (const item of items) {
+        if (item.groupLabel) {
+            current = { label: item.groupLabel, items: [item] }
+            groups.push(current)
+        } else if (current) {
+            current.items.push(item)
+        } else {
+            // Pre-first-group items (rare; keeps the renderer safe even
+            // if a config forgets a leading groupLabel).
+            current = { label: UNGROUPED_LABEL, items: [item] }
+            groups.push(current)
+        }
+    }
+    return groups
+}
+
 export function PortalBottomNav({ canManagePayroll = false }: { canManagePayroll?: boolean }) {
     const role = useRole()
     const pathname = usePathname()
     const [moreOpen, setMoreOpen] = useState(false)
+    /**
+     * Per-group expand/collapse state. Default = all collapsed (Mod's
+     * request — "ทำเป็น เมนูซ่อนก่อน"). Persisted to localStorage so a
+     * user who always opens "การลาและ WFH" doesn't have to re-expand
+     * it every time.
+     */
+    const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
+    // Load on mount (next-tick so SSR doesn't fight with localStorage).
+    useEffect(() => {
+        try {
+            const raw = window.localStorage.getItem(MORE_GROUPS_LS_KEY)
+            if (raw) setExpandedGroups(JSON.parse(raw) as Record<string, boolean>)
+        } catch { /* localStorage disabled / private mode — ignore */ }
+    }, [])
+    const toggleGroup = useCallback((label: string) => {
+        setExpandedGroups(prev => {
+            const next = { ...prev, [label]: !prev[label] }
+            try {
+                window.localStorage.setItem(MORE_GROUPS_LS_KEY, JSON.stringify(next))
+            } catch { /* ignore */ }
+            return next
+        })
+    }, [])
 
     const isHrAdminMode = role === 'hr_admin' && pathname?.startsWith('/hradmin')
     const baseMoreItems = role === 'manager'
@@ -162,6 +238,22 @@ export function PortalBottomNav({ canManagePayroll = false }: { canManagePayroll
     const moreItems = isHrAdminMode
         ? MORE_CONFIG.hr_admin
         : [...payrollMoreItems, ...baseMoreItems]
+
+    // Pre-compute group buckets for the collapsible renderer. Memoized so
+    // we don't re-bucket on every keystroke into the route bar.
+    const moreGroups = useMemo(() => bucketIntoGroups(moreItems), [moreItems])
+
+    // Auto-expand groups that contain the active route — saves the user
+    // from "where did I just come from" confusion when reopening More
+    // after navigating somewhere via search/deep-link. Other groups
+    // honour the persisted state.
+    const isGroupExpanded = (group: MoreGroup): boolean => {
+        const explicit = expandedGroups[group.label]
+        if (typeof explicit === 'boolean') return explicit
+        // Default behaviour: expand if any child is the active route,
+        // otherwise collapsed (matches Mod's "ซ่อนก่อน" request).
+        return group.items.some(it => it.href && pathname?.startsWith(it.href))
+    }
 
     const isNavActive = (item: NavItem) =>
         item.exact ? pathname === item.href : pathname?.startsWith(item.href)
@@ -209,61 +301,93 @@ export function PortalBottomNav({ canManagePayroll = false }: { canManagePayroll
                         </button>
                     </div>
                     <div className="p-2 flex flex-col gap-1 max-h-[70vh] overflow-y-auto">
-                        {moreItems.map((item, idx) => {
-                            const header = item.groupLabel
-                                ? (
-                                    <div
-                                        key={`${idx}-header`}
-                                        className="px-3 pt-3 pb-1.5 mt-1 border-t border-white/10 first:border-t-0 first:mt-0 first:pt-1"
-                                    >
-                                        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/50">
-                                            {item.groupLabel}
-                                        </span>
-                                    </div>
-                                )
-                                : null
-
-                            if (item.danger) {
-                                return (
-                                    <div key={idx}>
-                                        {header}
-                                        <button
-                                            onClick={handleLogout}
-                                            className="flex items-center gap-3 w-full px-3 py-3 min-h-[56px] rounded-xl hover:bg-red-500/20 active:bg-red-500/30 transition-colors text-left"
-                                        >
-                                            <span className="flex items-center justify-center w-9 h-9 rounded-full bg-red-500/20">
-                                                <item.icon size={18} className="text-red-300" />
-                                            </span>
-                                            <span className="text-red-300 font-semibold text-sm flex-1">{item.label}</span>
-                                        </button>
-                                    </div>
-                                )
-                            }
-                            const accentClass = item.accent === 'blue'
-                                ? 'bg-blue-500/90 hover:bg-blue-500 active:bg-blue-600 ring-1 ring-blue-400/50 shadow-lg shadow-blue-500/20'
-                                : item.accent === 'amber'
-                                    ? 'bg-amber-500/90 hover:bg-amber-500 active:bg-amber-600 ring-1 ring-amber-400/50 shadow-lg shadow-amber-500/20'
-                                    : 'hover:bg-white/10 active:bg-white/15'
-                            const iconBgClass = item.accent
-                                ? 'bg-white/20'
-                                : 'bg-white/10'
+                        {moreGroups.map((group) => {
+                            const expanded = isGroupExpanded(group)
+                            const groupActive = group.items.some(it => it.href && pathname?.startsWith(it.href))
                             return (
-                                <div key={idx}>
-                                    {header}
-                                    <Link
-                                        href={item.href!}
-                                        onClick={() => setMoreOpen(false)}
-                                        className={cn("flex items-center gap-3 px-3 py-3 min-h-[56px] rounded-xl transition-colors", accentClass)}
+                                <div key={group.label} className="mt-1 first:mt-0">
+                                    {/* Group header — clickable to toggle.
+                                        Background lightens when active so the
+                                        user can spot the group containing the
+                                        current route at a glance. Chevron
+                                        rotates with state. */}
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleGroup(group.label)}
+                                        className={cn(
+                                            'w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors',
+                                            groupActive
+                                                ? 'bg-white/10 hover:bg-white/15'
+                                                : 'hover:bg-white/5'
+                                        )}
+                                        aria-expanded={expanded}
                                     >
-                                        <span className={cn("flex items-center justify-center w-9 h-9 rounded-full", iconBgClass)}>
-                                            <item.icon size={18} className="text-white" />
+                                        <span className="text-[11px] font-black uppercase tracking-[0.18em] text-white/70">
+                                            {group.label}
+                                            <span className="ml-2 text-white/40 normal-case tracking-normal text-[10px] font-semibold">
+                                                ({group.items.length})
+                                            </span>
                                         </span>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-white font-semibold text-sm">{item.label}</p>
-                                            {item.desc && <p className={cn("text-xs", item.accent ? "text-white/80" : "text-white/45")}>{item.desc}</p>}
+                                        <ChevronDown
+                                            size={14}
+                                            className={cn(
+                                                'text-white/55 transition-transform',
+                                                expanded ? 'rotate-0' : '-rotate-90'
+                                            )}
+                                        />
+                                    </button>
+
+                                    {/* Group children — only rendered when
+                                        expanded. Same row design as before
+                                        so the row-tap target stays familiar. */}
+                                    {expanded && (
+                                        <div className="mt-1 flex flex-col gap-1">
+                                            {group.items.map((item, idx) => {
+                                                if (item.danger) {
+                                                    return (
+                                                        <button
+                                                            key={`${group.label}-${idx}`}
+                                                            onClick={handleLogout}
+                                                            className="flex items-center gap-3 w-full px-3 py-3 min-h-[56px] rounded-xl hover:bg-red-500/20 active:bg-red-500/30 transition-colors text-left"
+                                                        >
+                                                            <span className="flex items-center justify-center w-9 h-9 rounded-full bg-red-500/20">
+                                                                <item.icon size={18} className="text-red-300" />
+                                                            </span>
+                                                            <span className="text-red-300 font-semibold text-sm flex-1">{item.label}</span>
+                                                        </button>
+                                                    )
+                                                }
+                                                const accentClass = item.accent === 'blue'
+                                                    ? 'bg-blue-500/90 hover:bg-blue-500 active:bg-blue-600 ring-1 ring-blue-400/50 shadow-lg shadow-blue-500/20'
+                                                    : item.accent === 'amber'
+                                                        ? 'bg-amber-500/90 hover:bg-amber-500 active:bg-amber-600 ring-1 ring-amber-400/50 shadow-lg shadow-amber-500/20'
+                                                        : 'hover:bg-white/10 active:bg-white/15'
+                                                const iconBgClass = item.accent ? 'bg-white/20' : 'bg-white/10'
+                                                const isItemActive = item.href ? pathname?.startsWith(item.href) : false
+                                                return (
+                                                    <Link
+                                                        key={`${group.label}-${idx}`}
+                                                        href={item.href!}
+                                                        onClick={() => setMoreOpen(false)}
+                                                        className={cn(
+                                                            'flex items-center gap-3 px-3 py-3 min-h-[56px] rounded-xl transition-colors',
+                                                            accentClass,
+                                                            !item.accent && isItemActive ? 'bg-white/10' : ''
+                                                        )}
+                                                    >
+                                                        <span className={cn('flex items-center justify-center w-9 h-9 rounded-full', iconBgClass)}>
+                                                            <item.icon size={18} className="text-white" />
+                                                        </span>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-white font-semibold text-sm">{item.label}</p>
+                                                            {item.desc && <p className={cn('text-xs', item.accent ? 'text-white/80' : 'text-white/45')}>{item.desc}</p>}
+                                                        </div>
+                                                        <ChevronRight size={14} className={item.accent ? 'text-white/70' : 'text-white/30'} />
+                                                    </Link>
+                                                )
+                                            })}
                                         </div>
-                                        <ChevronRight size={14} className={item.accent ? "text-white/70" : "text-white/30"} />
-                                    </Link>
+                                    )}
                                 </div>
                             )
                         })}
