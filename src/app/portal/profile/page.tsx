@@ -2,6 +2,7 @@ import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getStreakInfo } from '@/lib/streak'
 import { ProfileClient } from './profile-client'
 
 export const dynamic = 'force-dynamic'
@@ -172,6 +173,12 @@ export default async function ProfilePage() {
         }).catch(() => [])
         : []
 
+    // ── §2.3 Attendance streak ────────────────────────────────────────────────
+    // Months continuous "ไม่ลาป่วย ไม่ลากิจ ไม่สาย" — drives the new
+    // streak meter card that replaces the old "รอเชื่อมต่อระบบลงเวลา"
+    // placeholder. Computed server-side; see lib/streak.ts for rules.
+    const streak = emp ? await getStreakInfo(emp.id) : null
+
     // ── Derived values ────────────────────────────────────────────────────────
     const firstName   = emp?.first_name_th ?? session.name
     const lastName    = emp?.last_name_th  ?? ''
@@ -212,6 +219,7 @@ export default async function ProfilePage() {
                 totalDays: Number(r.totalDays),
                 status: r.status,
             }))}
+            streak={streak}
         />
     )
 }

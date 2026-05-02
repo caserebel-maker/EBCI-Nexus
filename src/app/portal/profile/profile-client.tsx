@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { Mail, Phone, User, Briefcase, Calendar, Award, AlertCircle } from 'lucide-react'
+import type { StreakInfo } from '@/lib/streak-shared'
+import { STREAK_TIERS } from '@/lib/streak-shared'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LEAVE_META: Record<string, { label: string; color: string }> = {
@@ -123,13 +125,109 @@ function Badge({ children, accent }: { children: React.ReactNode; accent?: boole
     )
 }
 
-// ─── Stat Card ────────────────────────────────────────────────────────────────
-function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
+// ─── Streak meter (§2.3) ──────────────────────────────────────────────────────
+/**
+ * Replaces the old "รอเชื่อมต่อระบบลงเวลา" placeholder. Shows months
+ * continuous + progress bar to next reward tier + earned tier badges +
+ * the event that broke the previous streak (or "fresh start" copy).
+ */
+function StreakCard({ streak }: { streak: StreakInfo }) {
+    const { months, days, totalDays, currentTier, nextTier, daysToNextTier, lastResetEvent, startedOn } = streak
+
+    // Progress bar fills toward the next tier — when maxed (12 mo), show
+    // a fully filled bar styled gold. When zero progress + no current
+    // tier, the bar is empty.
+    const progressTarget = nextTier?.months ?? STREAK_TIERS[STREAK_TIERS.length - 1].months
+    const progressFraction = Math.min(1, totalDays / (progressTarget * 30))
+
+    const startedThai = new Date(startedOn + 'T00:00:00')
+        .toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+
     return (
-        <div className="flex flex-col items-center justify-center py-4 px-2 rounded-2xl"
-            style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.20)' }}>
-            <span className="font-black leading-none" style={{ fontSize: '32px', color }}>{value}</span>
-            <span className="whitespace-nowrap" style={{ fontSize: '18px', color: 'rgba(255,255,255,0.55)', marginTop: 8 }}>{label}</span>
+        <div style={glass} className="p-5">
+            <p style={sectionTitle}>นับเดือนต่อเนื่อง — ไม่ลาป่วย ไม่ลากิจ ไม่สาย</p>
+
+            {/* Headline — months + days */}
+            <div className="text-center">
+                <div className="inline-flex items-baseline gap-2">
+                    <span style={{ fontSize: '56px', fontWeight: 800, color: 'rgba(255,255,255,0.95)', lineHeight: 1 }}>
+                        {months}
+                    </span>
+                    <span style={{ fontSize: '22px', color: 'rgba(255,255,255,0.55)' }}>เดือน</span>
+                    {days > 0 && (
+                        <>
+                            <span style={{ fontSize: '36px', fontWeight: 800, color: 'rgba(255,255,255,0.85)', marginLeft: 6 }}>
+                                {days}
+                            </span>
+                            <span style={{ fontSize: '20px', color: 'rgba(255,255,255,0.55)' }}>วัน</span>
+                        </>
+                    )}
+                </div>
+                {nextTier ? (
+                    <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.6)', marginTop: 6 }}>
+                        เป้าหมายถัดไป: <strong style={{ color: 'rgba(255,255,255,0.85)' }}>{nextTier.label}</strong>
+                        {' '}— อีก{' '}
+                        <strong style={{ color: '#FCD34D' }}>{daysToNextTier} วัน</strong>
+                    </p>
+                ) : (
+                    <p style={{ fontSize: '17px', color: '#FCD34D', marginTop: 6 }}>
+                        ✨ คุณถึงเป้าหมายสูงสุดแล้ว (12 เดือน) — เก่งมาก!
+                    </p>
+                )}
+            </div>
+
+            {/* Progress bar */}
+            <div className="mt-4 h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.10)' }}>
+                <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                        width: `${progressFraction * 100}%`,
+                        background: progressFraction >= 1
+                            ? 'linear-gradient(90deg, #FCD34D, #F59E0B)'
+                            : 'linear-gradient(90deg, #34D399, #FCD34D)',
+                    }}
+                />
+            </div>
+
+            {/* Tier badges row — earned ones are bright, future ones dimmed */}
+            <div className="mt-4 grid grid-cols-4 gap-2">
+                {STREAK_TIERS.map(tier => {
+                    const earned = !!currentTier && currentTier.months >= tier.months
+                    return (
+                        <div
+                            key={tier.months}
+                            className="flex flex-col items-center justify-center rounded-xl py-2.5"
+                            style={{
+                                background: earned ? 'rgba(252,211,77,0.18)' : 'rgba(255,255,255,0.06)',
+                                border: earned ? '1px solid rgba(252,211,77,0.5)' : '1px solid rgba(255,255,255,0.10)',
+                                opacity: earned ? 1 : 0.45,
+                            }}
+                        >
+                            <span style={{ fontSize: '22px' }}>{tier.emoji}</span>
+                            <span style={{
+                                fontSize: '14px',
+                                fontWeight: 700,
+                                color: earned ? '#FCD34D' : 'rgba(255,255,255,0.55)',
+                                marginTop: 2,
+                            }}>
+                                {tier.months} ด.
+                            </span>
+                        </div>
+                    )
+                })}
+            </div>
+
+            {/* Footnote — what reset the streak (or "fresh start" copy) */}
+            <p className="mt-4 text-center" style={{ fontSize: '15px', color: 'rgba(255,255,255,0.5)' }}>
+                {lastResetEvent ? (
+                    <>
+                        💡 เริ่มนับใหม่ตั้งแต่ <strong style={{ color: 'rgba(255,255,255,0.7)' }}>{startedThai}</strong>
+                        {' '}(ก่อนหน้า: <span style={{ color: '#FCA5A5' }}>{lastResetEvent.label}</span>)
+                    </>
+                ) : (
+                    <>🌱 เริ่มนับตั้งแต่เริ่มงาน <strong style={{ color: 'rgba(255,255,255,0.7)' }}>{startedThai}</strong> — ยังไม่เคย reset เลย</>
+                )}
+            </p>
         </div>
     )
 }
@@ -162,6 +260,9 @@ interface Props {
     managerName: string | null
     leaveBalances: { leaveType: string; entitledDays: number; usedDays: number }[]
     recentLeaves: { id: string; leaveType: string; startDate: string; endDate: string; totalDays: number; status: string }[]
+    /** §2.3 — Attendance streak info. Null when no employee row found
+     *  (rare edge case during account-link race). */
+    streak: StreakInfo | null
 }
 
 /** Map any gender value (English code or legacy Thai literal) to the
@@ -185,7 +286,7 @@ export function ProfileClient({
     position, department, secondaryDepartment,
     emergencyContactName, emergencyContactPhone, emergencyContactRelation,
     employeeCode, employmentType, tenure, startDate, email, phone,
-    managerName, leaveBalances, recentLeaves,
+    managerName, leaveBalances, recentLeaves, streak,
 }: Props) {
     const genderText = genderLabel(gender)
     // Concatenate title + gender into a single line so the meta block
@@ -321,18 +422,8 @@ export function ProfileClient({
                 )}
             </div>
 
-            {/* ── 3. สถิติการเข้างาน ─────────────────────────────────────── */}
-            <div style={glass} className="p-5">
-                <p style={sectionTitle}>สถิติการเข้างาน</p>
-                <div className="grid grid-cols-3 gap-3">
-                    <StatCard label="มาตรงเวลา" value={0} color="#34D399" />
-                    <StatCard label="มาสาย"     value={0} color="#F87171" />
-                    <StatCard label="ขาด"       value={0} color="rgba(255,255,255,0.35)" />
-                </div>
-                <p className="text-center mt-3" style={{ fontSize: '19px', color: 'rgba(255,255,255,0.55)' }}>
-                    รอเชื่อมต่อระบบลงเวลา
-                </p>
-            </div>
+            {/* ── 3. นับเดือนต่อเนื่อง (§2.3 streak meter) ────────────────── */}
+            {streak && <StreakCard streak={streak} />}
 
             {/* ── 4. ประวัติใบลาล่าสุด ───────────────────────────────────── */}
             <div style={glass} className="p-5">
