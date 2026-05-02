@@ -189,7 +189,7 @@ export async function POST(req: NextRequest) {
                     total_days: p.newTotal,
                     used_days: p.newUsed,
                     is_manually_adjusted: true,
-                    last_adjusted_by: actorId,
+                    last_adjusted_by: auth.session.id,
                     last_adjusted_at: nowIso,
                     notes: nextNotes,
                     updated_at: nowIso,
@@ -211,7 +211,7 @@ export async function POST(req: NextRequest) {
                     used_days: p.newUsed,
                     pending_days: 0,
                     is_manually_adjusted: true,
-                    last_adjusted_by: actorId,
+                    last_adjusted_by: auth.session.id,
                     last_adjusted_at: nowIso,
                     notes: audit,
                 })

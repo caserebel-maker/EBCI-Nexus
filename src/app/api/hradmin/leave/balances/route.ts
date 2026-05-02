@@ -117,7 +117,7 @@ export async function PATCH(req: NextRequest) {
                 total_days: newTotal,
                 ...(newUsed !== null ? { used_days: newUsed } : {}),
                 is_manually_adjusted: true,
-                last_adjusted_by: actorId,
+                last_adjusted_by: session.id,
                 last_adjusted_at: nowIso,
                 notes: nextNotes,
                 updated_at: nowIso,
@@ -141,7 +141,7 @@ export async function PATCH(req: NextRequest) {
                 used_days: newUsed ?? 0,
                 pending_days: 0,
                 is_manually_adjusted: true,
-                last_adjusted_by: actorId,
+                last_adjusted_by: session.id,
                 last_adjusted_at: nowIso,
                 notes: auditLine,
             })

@@ -85,19 +85,22 @@ export async function GET(req: NextRequest) {
     const typeMap = new Map(((typesRes.data ?? []) as Array<{ id: string; name_th: string }>).map(t => [t.id, t.name_th]))
     const empMap = new Map(employees.map(e => [e.id as string, e]))
 
-    // Resolve adjuster names
-    const adjusterIds = Array.from(new Set(
+    // Resolve adjuster names. `last_adjusted_by` references public."User".id
+    // (auth UUID), so we look up employees by user_id rather than employees.id —
+    // see balances/route.ts where the write side now stores session.id (= User.id)
+    // to satisfy the FK.
+    const adjusterUserIds = Array.from(new Set(
         balances.map(b => (b.last_adjusted_by as string | null)).filter((v): v is string => Boolean(v)),
     ))
     const adjusterMap = new Map<string, string>()
-    if (adjusterIds.length > 0) {
+    if (adjusterUserIds.length > 0) {
         const { data: adj } = await supabaseAdmin
             .from('employees')
-            .select('id, nickname, first_name_th, last_name_th')
-            .in('id', adjusterIds)
-        for (const a of (adj ?? []) as Array<{ id: string; nickname: string | null; first_name_th: string | null; last_name_th: string | null }>) {
+            .select('user_id, nickname, first_name_th, last_name_th')
+            .in('user_id', adjusterUserIds)
+        for (const a of (adj ?? []) as Array<{ user_id: string; nickname: string | null; first_name_th: string | null; last_name_th: string | null }>) {
             const full = `${a.first_name_th ?? ''} ${a.last_name_th ?? ''}`.trim()
-            adjusterMap.set(a.id, a.nickname ? `${full} (${a.nickname})` : full || a.id)
+            adjusterMap.set(a.user_id, a.nickname ? `${full} (${a.nickname})` : full || a.user_id)
         }
     }
 
