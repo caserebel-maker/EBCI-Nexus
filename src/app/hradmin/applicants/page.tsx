@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getAuth, isHrStaff } from '@/lib/route-auth'
-import { refreshSignedUrl } from '@/lib/applicant-files'
+import { signApplicantAsset } from '@/lib/applicant-files'
 import { ApplicantsListView } from './applicants-view'
 
 export const dynamic = 'force-dynamic'
@@ -36,14 +36,16 @@ export default async function HrApplicantsPage({
     const page = Math.max(1, parseInt(sp.page ?? '1', 10) || 1)
     const offset = (page - 1) * PAGE_SIZE
 
-    // Base query + filters
+    // Base query + filters. photo_path is the canonical source of truth
+    // (added 2026-05-03 migration); photo_url is selected only as a
+    // fallback for any pre-migration row that hasn't been backfilled.
     let query = supabaseAdmin
         .from('job_applications')
         .select(`
             id, reference_code, application_status, current_step,
             position_applied, expected_salary,
             first_name_th, last_name_th, nickname, email, phone_mobile,
-            photo_url, created_at, submitted_at, last_saved_at
+            photo_path, photo_url, created_at, submitted_at, last_saved_at
         `, { count: 'exact' })
 
     if (status !== 'all') query = query.eq('application_status', status)
@@ -88,18 +90,18 @@ export default async function HrApplicantsPage({
     const total = count ?? 0
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-    // Re-sign every applicant photo URL — uploads stamp a 7-day expiry
-    // into the saved URL, which goes 403 once the hiring cycle drifts
-    // past a week. /hradmin/applicants/[id] already does this for the
-    // detail view; here we do the same for the grid so cards stop
-    // rendering broken-image alt-text on older entries. Done in parallel
-    // because each call is one Supabase round-trip and PAGE_SIZE caps
-    // the fan-out at 20.
+    // Generate a fresh signed URL for each row's photo every render.
+    // photo_path is preferred (canonical, no expiry); photo_url falls
+    // back for legacy rows that haven't been backfilled. PAGE_SIZE caps
+    // the fan-out at 20, so the parallel sign calls stay cheap.
     const rowsWithFreshPhotos = await Promise.all(
-        (rows ?? []).map(async row => ({
-            ...row,
-            photo_url: await refreshSignedUrl((row as { photo_url?: string | null }).photo_url ?? null),
-        })),
+        (rows ?? []).map(async row => {
+            const r = row as { photo_path?: string | null; photo_url?: string | null }
+            return {
+                ...row,
+                photo_url: await signApplicantAsset(r.photo_path, r.photo_url),
+            }
+        }),
     )
 
     return (

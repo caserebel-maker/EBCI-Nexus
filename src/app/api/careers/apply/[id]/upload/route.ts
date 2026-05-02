@@ -58,42 +58,57 @@ export async function POST(
         return NextResponse.json({ error: upErr.message }, { status: 500 })
     }
 
-    // Signed URL (7 days) — admin-side will refresh as needed
+    // Signed URL (1 hour) — purely so the form can preview the file
+    // immediately after upload. The DB stores the PATH (canonical, no
+    // expiry); every subsequent read re-signs from the path. Cuts the
+    // TTL down from 7 days because nothing should be reading this
+    // particular URL after the upload completes — a fresh one will be
+    // signed on the next render.
     const { data: signed } = await supabaseAdmin.storage
         .from(BUCKET)
-        .createSignedUrl(path, 60 * 60 * 24 * 7)
-    const url = signed?.signedUrl ?? null
+        .createSignedUrl(path, 60 * 60)
+    const previewUrl = signed?.signedUrl ?? null
 
-    // Update the right column for each kind (other_documents is jsonb append)
-    const columnByKind: Record<string, string> = {
-        photo: 'photo_url',
-        cv: 'cv_url',
-        transcript: 'transcript_url',
-        id_card_copy: 'id_card_copy_url',
-        house_registration: 'house_registration_url',
+    // Save BOTH columns for each kind:
+    //   *_path = canonical storage path (read-side source of truth)
+    //   *_url  = signed URL (legacy column; safe to remove later once
+    //            no consumer reads from it)
+    // This avoids any "what if I forget to read from path" footgun —
+    // both columns stay populated until the migration's done.
+    const columnByKind: Record<string, { pathCol: string; urlCol: string }> = {
+        photo:              { pathCol: 'photo_path',              urlCol: 'photo_url' },
+        cv:                 { pathCol: 'cv_path',                 urlCol: 'cv_url' },
+        transcript:         { pathCol: 'transcript_path',         urlCol: 'transcript_url' },
+        id_card_copy:       { pathCol: 'id_card_copy_path',       urlCol: 'id_card_copy_url' },
+        house_registration: { pathCol: 'house_registration_path', urlCol: 'house_registration_url' },
     }
     if (kind === 'other') {
-        // Append to other_documents jsonb array
+        // Append to other_documents jsonb array. `path` is the canonical
+        // value; `url` is just a 1-hour preview the form can render.
         const { data: existing } = await supabaseAdmin
             .from('job_applications')
             .select('other_documents')
             .eq('id', id)
             .single()
         const list = Array.isArray(existing?.other_documents) ? existing!.other_documents : []
-        list.push({ name: file.name, path, url, kind: 'other', uploaded_at: new Date().toISOString() })
+        list.push({ name: file.name, path, url: previewUrl, kind: 'other', uploaded_at: new Date().toISOString() })
         await supabaseAdmin
             .from('job_applications')
             .update({ other_documents: list, last_saved_at: new Date().toISOString() })
             .eq('id', id)
     } else {
-        const col = columnByKind[kind]
-        if (col) {
+        const cols = columnByKind[kind]
+        if (cols) {
             await supabaseAdmin
                 .from('job_applications')
-                .update({ [col]: url, last_saved_at: new Date().toISOString() })
+                .update({
+                    [cols.pathCol]: path,
+                    [cols.urlCol]: previewUrl,
+                    last_saved_at: new Date().toISOString(),
+                })
                 .eq('id', id)
         }
     }
 
-    return NextResponse.json({ path, url, kind })
+    return NextResponse.json({ path, url: previewUrl, kind })
 }

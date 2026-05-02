@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getAuth, isHrStaff } from '@/lib/route-auth'
-import { refreshSignedUrl } from '@/lib/applicant-files'
+import { signApplicantAsset, signApplicantPath } from '@/lib/applicant-files'
 import type { SavedEvaluation } from '@/components/hradmin/applicants/InterviewEvaluation'
 import { ApplicantDetailView } from './detail-view'
 
@@ -26,22 +26,31 @@ export default async function ApplicantDetailPage({
         .maybeSingle()
     if (!a) notFound()
 
-    // Re-sign private bucket URLs (upload signed them for 7 days, which
-    // expires long before the average hiring cycle finishes).
+    // Re-sign every private-bucket URL on each render. *_path is the
+    // canonical source of truth post-2026-05-03 migration; *_url falls
+    // back for any pre-migration row that hasn't been backfilled.
+    // signApplicantAsset does the right thing for either input.
+    const row = a as Record<string, string | null>
     const [photo, cv, transcript, idCard, house] = await Promise.all([
-        refreshSignedUrl(a.photo_url as string | null),
-        refreshSignedUrl(a.cv_url as string | null),
-        refreshSignedUrl(a.transcript_url as string | null),
-        refreshSignedUrl(a.id_card_copy_url as string | null),
-        refreshSignedUrl(a.house_registration_url as string | null),
+        signApplicantAsset(row.photo_path, row.photo_url),
+        signApplicantAsset(row.cv_path, row.cv_url),
+        signApplicantAsset(row.transcript_path, row.transcript_url),
+        signApplicantAsset(row.id_card_copy_path, row.id_card_copy_url),
+        signApplicantAsset(row.house_registration_path, row.house_registration_url),
     ])
 
-    // Other documents too — array of { name, path, url, ... }
+    // Other documents too — array of { name, path, url, ... }. Path is
+    // the canonical key for re-signing; url is just the legacy preview
+    // value (1-hour) we wrote at upload time.
     const rawOthers = Array.isArray(a.other_documents) ? a.other_documents as Array<Record<string, unknown>> : []
-    const refreshedOthers = await Promise.all(rawOthers.map(async d => ({
-        name: typeof d.name === 'string' ? d.name : undefined,
-        url: await refreshSignedUrl(typeof d.url === 'string' ? d.url : null),
-    })))
+    const refreshedOthers = await Promise.all(rawOthers.map(async d => {
+        const path = typeof d.path === 'string' ? d.path : null
+        const legacyUrl = typeof d.url === 'string' ? d.url : null
+        return {
+            name: typeof d.name === 'string' ? d.name : undefined,
+            url: path ? await signApplicantPath(path) : await signApplicantAsset(null, legacyUrl),
+        }
+    }))
 
     const savedEvaluation =
         (a.interview_evaluation && typeof a.interview_evaluation === 'object')
