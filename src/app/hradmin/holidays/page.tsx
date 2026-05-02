@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Pencil, Trash2, X, CalendarDays, Loader2 } from 'lucide-react'
+import Link from 'next/link'
+import { Plus, Pencil, Trash2, X, CalendarDays, Loader2, Megaphone } from 'lucide-react'
 
 interface Holiday {
     id: string
@@ -123,13 +124,25 @@ export default function HolidaysPage() {
                         <p className="text-white/50 text-sm">วันหยุด · วันสำคัญ · WFH · {holidays.length} รายการ</p>
                     </div>
                 </div>
-                <button
-                    onClick={openAdd}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm text-white transition-all active:scale-95"
-                    style={{ background: 'linear-gradient(135deg, #882136, #c0392b)' }}
-                >
-                    <Plus size={16} /> เพิ่มรายการ
-                </button>
+                <div className="flex items-center gap-2">
+                    {/* Quick path for short-notice WFH announcements:
+                        bulk-create N days + send notifications + create
+                        announcement, all in one click. */}
+                    <Link
+                        href="/hradmin/holidays/wfh-announce"
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl font-semibold text-sm text-white transition-all active:scale-95 border border-blue-500/40"
+                        style={{ background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)' }}
+                    >
+                        <Megaphone size={16} /> ประกาศ WFH พิเศษ
+                    </Link>
+                    <button
+                        onClick={openAdd}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm text-white transition-all active:scale-95"
+                        style={{ background: 'linear-gradient(135deg, #882136, #c0392b)' }}
+                    >
+                        <Plus size={16} /> เพิ่มรายการ
+                    </button>
+                </div>
             </div>
 
             {/* Year filter */}
