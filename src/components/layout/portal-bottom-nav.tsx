@@ -50,25 +50,30 @@ const HR_ADMIN_NAV_PORTAL: NavItem[] = [
 const NAV_CONFIG: Record<Role, NavItem[]> = {
     hr_admin: HR_ADMIN_NAV_PORTAL, // default; overridden dynamically in component
 
-    // Bottom tabs = the 4 most-frequent destinations. การลา is back here
-    // (was briefly swapped for สลิป) because Mod confirmed it's an
-    // open-the-app reason — not the same as the "เมนูลัด" tile on the
-    // dashboard, which is for surfacing it ON the home screen. Both
-    // surfaces co-exist; the redundancy is fine because the bottom-tab
-    // and the home-screen-tile target different muscle memories.
-    // สลิปของฉัน lives in the dashboard quick-menu + More panel "ของฉัน"
-    // group — once a month is fine for two-tap access.
+    // Bottom tabs = the 4 most-frequent destinations. Slot choices:
+    //   หน้าแรก  — daily landing
+    //   เช็คอิน   — every workday
+    //   ลา/WFH    — open-the-app reason. Label says ลา/WFH (not just
+    //              "การลา") to match the desktop sidebar's
+    //              "การลาและ WFH" group; the destination is /portal/leave
+    //              and that page surfaces a chip-row to the WFH /
+    //              comp-day / calendar siblings so any leave-adjacent
+    //              action is reachable in 1 more tap.
+    //   ประกาศ   — high-frequency open reason (HR broadcasts). Replaces
+    //              "โปรไฟล์" on this row — Profile moves to the More
+    //              panel's "ส่วนตัว" group where it pairs naturally with
+    //              สลิปของฉัน.
     manager: [
-        { label: 'หน้าแรก', href: '/portal/dashboard', icon: Home,     exact: true },
-        { label: 'เช็คอิน', href: '/portal/checkin',   icon: MapPin },
-        { label: 'การลา',   href: '/portal/leave',     icon: Palmtree },
-        { label: 'โปรไฟล์', href: '/portal/profile',   icon: UserRound },
+        { label: 'หน้าแรก', href: '/portal/dashboard',     icon: Home,     exact: true },
+        { label: 'เช็คอิน', href: '/portal/checkin',       icon: MapPin },
+        { label: 'ลา/WFH',  href: '/portal/leave',         icon: Palmtree },
+        { label: 'ประกาศ',  href: '/portal/announcements', icon: Megaphone },
     ],
     employee: [
-        { label: 'หน้าแรก', href: '/portal/dashboard', icon: Home,     exact: true },
-        { label: 'เช็คอิน', href: '/portal/checkin',   icon: MapPin },
-        { label: 'การลา',   href: '/portal/leave',     icon: Palmtree },
-        { label: 'โปรไฟล์', href: '/portal/profile',   icon: UserRound },
+        { label: 'หน้าแรก', href: '/portal/dashboard',     icon: Home,     exact: true },
+        { label: 'เช็คอิน', href: '/portal/checkin',       icon: MapPin },
+        { label: 'ลา/WFH',  href: '/portal/leave',         icon: Palmtree },
+        { label: 'ประกาศ',  href: '/portal/announcements', icon: Megaphone },
     ],
 }
 
@@ -102,7 +107,7 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     manager: [
-        // Bottom tabs hold Home/เช็คอิน/สลิป/โปรไฟล์; everything else
+        // Bottom tabs hold Home/เช็คอิน/ลา-WFH/ประกาศ; everything else
         // here grouped to match the desktop sidebar.
         { label: 'ใบลาของฉัน',     desc: 'ยื่นและดูประวัติใบลา',    href: '/portal/leave',           icon: Palmtree,        groupLabel: 'การลาและ WFH' },
         { label: 'ขอ WFH',         desc: 'ส่งคำขอทำงานที่บ้าน',     href: '/portal/wfh',             icon: Home },
@@ -111,14 +116,16 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'วันหยุดสะสม',   desc: 'แลกวันหยุดที่ทำงานล่วงเวลา', href: '/portal/comp-days',     icon: CalendarHeart },
         { label: 'ปฏิทิน',         desc: 'วันหยุด + WFH',           href: '/portal/calendar',        icon: CalendarDays },
         { label: 'นโยบายการลา', desc: 'ข้อกำหนดการลาของบริษัท',  href: '/portal/leave-policy',    icon: ScrollText },
+        // "ส่วนตัว" group: same shape as employee. Manager's profile
+        // also moves out of the bottom row into here.
+        { label: 'โปรไฟล์',        desc: 'ข้อมูลส่วนตัวและตำแหน่ง',  href: '/portal/profile',         icon: UserRound,       groupLabel: 'ส่วนตัว' },
         { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',    icon: Network,         groupLabel: 'บริษัท' },
         { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/portal/meeting-room',    icon: DoorOpen },
-        { label: 'ประกาศข่าวสาร', desc: 'ฟีดประกาศจาก HR',         href: '/portal/announcements',   icon: Megaphone },
         { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',        icon: Settings,        groupLabel: 'อื่น ๆ' },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     employee: [
-        // Bottom tabs hold Home/เช็คอิน/การลา/โปรไฟล์; everything else
+        // Bottom tabs hold Home/เช็คอิน/ลา-WFH/ประกาศ; everything else
         // lives here grouped by domain (sidebar parity).
         // "ใบลาของฉัน" stays at the top of "การลาและ WFH" so opening the
         // group lands on the most-used surface first.
@@ -127,10 +134,15 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'วันหยุดสะสม',   desc: 'แลกวันหยุดที่ทำงานล่วงเวลา', href: '/portal/comp-days',    icon: CalendarHeart },
         { label: 'ปฏิทิน',         desc: 'วันหยุด + WFH',           href: '/portal/calendar',       icon: CalendarDays },
         { label: 'นโยบายการลา', desc: 'ข้อกำหนดการลาของบริษัท',  href: '/portal/leave-policy',   icon: ScrollText },
-        { label: 'สลิปของฉัน',     desc: 'ดูสลิปเงินเดือน',         href: '/portal/payroll',        icon: FileText,        groupLabel: 'ของฉัน' },
+        // "ส่วนตัว" group renamed from "ของฉัน" — Mod's call (ของฉัน
+        // sounded awkward). Profile moved in here from the bottom-tab
+        // row so it sits next to its only sibling (สลิป) in a coherent
+        // personal-data group.
+        { label: 'โปรไฟล์',        desc: 'ข้อมูลส่วนตัวและตำแหน่ง',  href: '/portal/profile',        icon: UserRound,       groupLabel: 'ส่วนตัว' },
+        { label: 'สลิปของฉัน',     desc: 'ดูสลิปเงินเดือน',         href: '/portal/payroll',        icon: FileText },
+        // "บริษัท" group: ประกาศข่าวสาร moved out (now a bottom tab).
         { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',   icon: Network,         groupLabel: 'บริษัท' },
         { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/portal/meeting-room',   icon: DoorOpen },
-        { label: 'ประกาศข่าวสาร', desc: 'ฟีดประกาศจาก HR',         href: '/portal/announcements',  icon: Megaphone },
         { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',       icon: Settings,        groupLabel: 'อื่น ๆ' },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],

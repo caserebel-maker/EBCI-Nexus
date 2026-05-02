@@ -2,6 +2,7 @@ import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import prisma from '@/lib/prisma'
+import { LeaveWfhSubNav } from '@/components/layout/leave-wfh-sub-nav'
 import { CalendarClient } from './calendar-client'
 
 export const dynamic = 'force-dynamic'
@@ -107,5 +108,12 @@ export default async function CalendarPage() {
         console.error('[calendar] room bookings fetch failed:', e)
     }
 
-    return <CalendarClient holidays={holidays} leaveDays={leaveDays} bookings={bookings} />
+    return (
+        <>
+            <div className="max-w-5xl mx-auto pb-3">
+                <LeaveWfhSubNav />
+            </div>
+            <CalendarClient holidays={holidays} leaveDays={leaveDays} bookings={bookings} />
+        </>
+    )
 }

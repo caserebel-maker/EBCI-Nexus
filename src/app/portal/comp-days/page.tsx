@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
+import { LeaveWfhSubNav } from '@/components/layout/leave-wfh-sub-nav'
 import { CompDaysView } from './comp-days-view'
 
 export const dynamic = 'force-dynamic'
@@ -7,5 +8,12 @@ export const dynamic = 'force-dynamic'
 export default async function PortalCompDaysPage() {
     const session = await getSession()
     if (!session) redirect('/login')
-    return <CompDaysView />
+    return (
+        <>
+            <div className="max-w-5xl mx-auto pb-3">
+                <LeaveWfhSubNav />
+            </div>
+            <CompDaysView />
+        </>
+    )
 }

@@ -160,11 +160,13 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
                 { label: 'นโยบายการลา',  href: '/portal/leave-policy',    icon: ScrollText },
             ],
         },
-        // "ของฉัน" group — personal data the employee owns / consults
-        // about themselves. Profile + payslip live here; settings stays
-        // separate at the bottom (system controls, not personal data).
+        // "ส่วนตัว" group (renamed from "ของฉัน" 3 May per Mod's call —
+        // ของฉัน sounded awkward standing alone). Personal data the
+        // employee owns / consults about themselves. Profile + payslip
+        // live here; settings stays separate at the bottom (system
+        // controls, not personal data).
         {
-            label: 'ของฉัน',
+            label: 'ส่วนตัว',
             icon: UserCircle,
             matchPrefix: ['/portal/profile', '/portal/payroll'],
             children: [
