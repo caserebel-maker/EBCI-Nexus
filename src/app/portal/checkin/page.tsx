@@ -4,6 +4,8 @@ import { getSession } from '@/lib/auth'
 import { resolveSessionEmployeeId } from '@/lib/session-employee'
 import { getLeaveTodayInfo } from '@/lib/leave-today'
 import { getCardScanTodayInfo } from '@/lib/card-scan-today'
+import { checkWfhEligibility } from '@/lib/wfh-eligibility'
+import { bangkokTodayIso } from '@/lib/leave-validations'
 import { CheckinView } from './checkin-view'
 import { getTodayCheckin } from './actions'
 
@@ -31,16 +33,19 @@ export default async function CheckinPage() {
     //
     // §3.1 (Phase 1) — when a card scan exists today (HIP card reader
     // → CSV import), suppress the in-app CTA so the user doesn't double
-    // check in. Realtime via webhook lands later (Tuesday office visit
-    // confirms HIP push capability). Either way card_scans is the same
-    // source of truth so this surface works for both batch + realtime.
+    // check in.
+    //
+    // §3.1 (Layer 3) — gate the WFH check-in button on actual eligibility
+    // (company-wide announcement OR personal approved request). Stops
+    // employees from self-checking-in WFH at random.
     const employeeId = await resolveSessionEmployeeId(session)
-    const [leaveToday, cardScanToday] = employeeId
+    const [leaveToday, cardScanToday, wfhEligibility] = employeeId
         ? await Promise.all([
             getLeaveTodayInfo(employeeId),
             getCardScanTodayInfo(employeeId),
+            checkWfhEligibility(employeeId, bangkokTodayIso()),
         ])
-        : [null, null]
+        : [null, null, { allowed: false, source: null } as const]
 
     return (
         <CheckinView
@@ -48,6 +53,7 @@ export default async function CheckinPage() {
             todayCheckin={todayCheckin}
             leaveToday={leaveToday}
             cardScanToday={cardScanToday}
+            wfhEligibility={wfhEligibility}
         />
     )
 }

@@ -6,6 +6,8 @@ import { haversineDistance } from '@/lib/geo'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { getLeaveTodayInfo } from '@/lib/leave-today'
+import { checkWfhEligibility } from '@/lib/wfh-eligibility'
+import { bangkokTodayIso } from '@/lib/leave-validations'
 
 // Helper: resolve employee_id from session (with email fallback for legacy users)
 async function getEmployeeId(): Promise<string | null> {
@@ -71,6 +73,21 @@ export async function checkIn(payload: CheckInPayload) {
         const typeName = leaveToday.leave_type_name ?? 'ลา'
         return {
             error: `วันนี้คุณ${typeName}อยู่ — ไม่ต้องเช็คอิน หากต้องการยกเลิกใบลาให้กดที่หน้า "การลา"`,
+        }
+    }
+
+    // ── §3.1 Layer 3: WFH eligibility enforcement ──────────────────────────
+    // The UI already disables the WFH button when the user isn't eligible,
+    // but the button could be bypassed via a tampered POST. Re-check
+    // server-side: WFH is allowed only when (a) HR has announced a
+    // company-wide WFH for today, OR (b) this employee has an approved
+    // personal request covering today.
+    if (payload.type === 'wfh') {
+        const eligibility = await checkWfhEligibility(employeeId, bangkokTodayIso())
+        if (!eligibility.allowed) {
+            return {
+                error: 'วันนี้ยังไม่ได้รับอนุมัติให้ WFH — กรุณาส่งคำขอ WFH ผ่าน /portal/wfh ก่อน',
+            }
         }
     }
 
