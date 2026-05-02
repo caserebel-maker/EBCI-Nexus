@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getAuth, isHrStaff } from '@/lib/route-auth'
+import { refreshSignedUrl } from '@/lib/applicant-files'
 import { ApplicantsListView } from './applicants-view'
 
 export const dynamic = 'force-dynamic'
@@ -87,9 +88,23 @@ export default async function HrApplicantsPage({
     const total = count ?? 0
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
+    // Re-sign every applicant photo URL — uploads stamp a 7-day expiry
+    // into the saved URL, which goes 403 once the hiring cycle drifts
+    // past a week. /hradmin/applicants/[id] already does this for the
+    // detail view; here we do the same for the grid so cards stop
+    // rendering broken-image alt-text on older entries. Done in parallel
+    // because each call is one Supabase round-trip and PAGE_SIZE caps
+    // the fan-out at 20.
+    const rowsWithFreshPhotos = await Promise.all(
+        (rows ?? []).map(async row => ({
+            ...row,
+            photo_url: await refreshSignedUrl((row as { photo_url?: string | null }).photo_url ?? null),
+        })),
+    )
+
     return (
         <ApplicantsListView
-            items={rows ?? []}
+            items={rowsWithFreshPhotos}
             total={total}
             page={Math.min(page, totalPages)}
             pageSize={PAGE_SIZE}
