@@ -9,6 +9,7 @@ import {
     Settings, ChevronRight, X, UserRound, Network,
     UserPlus, Activity, DoorOpen,
     MapPin, Briefcase, BarChart3, Wallet, ScrollText, ShieldCheck,
+    CalendarHeart,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRole, type Role } from '@/contexts/role-context'
@@ -93,29 +94,34 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     manager: [
-        // Manager desktop order: Home, เช็คอิน, การลา, อนุมัติการลา,
-        // ผังองค์กร, ปฏิทิน, ประกาศ, ตั้งค่า. First three live in the
-        // bottom tabs; the rest go here.
+        // Manager desktop order matches the "การลาและ WFH" + "บริษัท"
+        // sidebar groups. First three (Home/เช็คอิน/การลา) live in the
+        // bottom tabs; everything else is in this More panel.
+        { label: 'ขอ WFH',         desc: 'ส่งคำขอทำงานที่บ้าน',     href: '/portal/wfh',             icon: Home,            groupLabel: 'การลาและ WFH' },
         { label: 'อนุมัติการลา',   desc: 'พิจารณาคำขอลาลูกทีม',   href: '/portal/leave/inbox',     icon: ClipboardCheck },
-        { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',    icon: Network },
+        { label: 'อนุมัติ WFH',    desc: 'พิจารณาคำขอ WFH ลูกทีม',  href: '/portal/wfh/inbox',       icon: ClipboardCheck },
+        { label: 'วันหยุดสะสม',   desc: 'แลกวันหยุดที่ทำงานล่วงเวลา', href: '/portal/comp-days',     icon: CalendarHeart },
         { label: 'ปฏิทิน',         desc: 'วันหยุด + WFH',           href: '/portal/calendar',        icon: CalendarDays },
         { label: 'นโยบายการลา', desc: 'ข้อกำหนดการลาของบริษัท',  href: '/portal/leave-policy',    icon: ScrollText },
+        { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',    icon: Network,         groupLabel: 'บริษัท' },
         { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/portal/meeting-room',    icon: DoorOpen },
         { label: 'ประกาศข่าวสาร', desc: 'ฟีดประกาศจาก HR',         href: '/portal/announcements',   icon: Megaphone },
-        { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',        icon: Settings },
+        { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',        icon: Settings,        groupLabel: 'อื่น ๆ' },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     employee: [
-        // Employee desktop order: Home, เช็คอิน, ข้อมูลส่วนตัว, การลา,
-        // ผังองค์กร, ปฏิทิน, ประกาศ, สลิป, ตั้งค่า. The bottom tabs hold
-        // Home/เช็คอิน/การลา/โปรไฟล์ — the rest belong in More.
-        { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',   icon: Network },
+        // Employee desktop order matches the "การลาและ WFH" / "ของฉัน" /
+        // "บริษัท" sidebar groups. Bottom tabs hold Home/เช็คอิน/การลา/
+        // โปรไฟล์ — everything else belongs in More.
+        { label: 'ขอ WFH',         desc: 'ส่งคำขอทำงานที่บ้าน',     href: '/portal/wfh',            icon: Home,            groupLabel: 'การลาและ WFH' },
+        { label: 'วันหยุดสะสม',   desc: 'แลกวันหยุดที่ทำงานล่วงเวลา', href: '/portal/comp-days',    icon: CalendarHeart },
         { label: 'ปฏิทิน',         desc: 'วันหยุด + WFH',           href: '/portal/calendar',       icon: CalendarDays },
         { label: 'นโยบายการลา', desc: 'ข้อกำหนดการลาของบริษัท',  href: '/portal/leave-policy',   icon: ScrollText },
+        { label: 'สลิปของฉัน',     desc: 'ดูสลิปเงินเดือน',         href: '/portal/payroll',        icon: FileText,        groupLabel: 'ของฉัน' },
+        { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',   icon: Network,         groupLabel: 'บริษัท' },
         { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/portal/meeting-room',   icon: DoorOpen },
         { label: 'ประกาศข่าวสาร', desc: 'ฟีดประกาศจาก HR',         href: '/portal/announcements',  icon: Megaphone },
-        { label: 'สลิปของฉัน',     desc: 'ดูสลิปเงินเดือน',         href: '/portal/payroll',        icon: FileText },
-        { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',       icon: Settings },
+        { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',       icon: Settings,        groupLabel: 'อื่น ๆ' },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
 }
