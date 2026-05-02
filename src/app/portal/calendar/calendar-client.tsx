@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { ChevronLeft, ChevronRight, X, DoorOpen } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { ChevronLeft, ChevronRight, X, DoorOpen, Calendar as CalendarIcon } from 'lucide-react'
 import type { Holiday, LeaveDay, CalendarBooking } from './page'
 import { formatBangkokTime } from '@/lib/datetime'
 
@@ -12,54 +13,56 @@ interface Props {
 }
 
 const DAY_HEADERS = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
-
 const THAI_MONTHS = [
     'มกราคม','กุมภาพันธ์','มีนาคม','เมษายน',
     'พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม',
     'กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม',
 ]
+const THAI_DOWS = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์']
 
-const LEAVE_COLOR: Record<string, string> = {
-    annual:       '#60A5FA',
-    sick:         '#34D399',
-    personal:     '#FBBF24',
-    compensation: '#FB923C',
-    maternity:    '#F472B6',
-    ordination:   '#A78BFA',
+// Holiday/WFH types — same emojis as /hradmin/holidays for visual
+// continuity. If you change one side, sync the other.
+const HOLIDAY_CONFIG: Record<string, { label: string; color: string; emoji: string }> = {
+    public:    { label: 'นักขัตฤกษ์',      color: '#F87171', emoji: '🇹🇭' },
+    religious: { label: 'วันสำคัญทางศาสนา', color: '#F472B6', emoji: '🛕' },
+    company:   { label: 'บริษัทกำหนด',     color: '#60A5FA', emoji: '📌' },
+    wfh:       { label: 'WFH',             color: '#34D399', emoji: '🏠' },
 }
 
-const LEAVE_LABEL: Record<string, string> = {
-    annual:       'ลาพักร้อน',
-    sick:         'ลาป่วย',
-    personal:     'ลากิจ',
-    compensation: 'ลาหยุดชดเชย',
-    maternity:    'ลาคลอด',
-    ordination:   'ลาบวช',
+// Leave types — different palette from holidays so the user can scan
+// "this is my leave" vs "this is a company day-off" at a glance.
+const LEAVE_CONFIG: Record<string, { label: string; color: string; emoji: string }> = {
+    annual:       { label: 'ลาพักร้อน',  color: '#60A5FA', emoji: '🏖️' },
+    sick:         { label: 'ลาป่วย',     color: '#34D399', emoji: '🤒' },
+    personal:     { label: 'ลากิจ',      color: '#FBBF24', emoji: '📋' },
+    compensation: { label: 'ลาชดเชย',    color: '#FB923C', emoji: '🔄' },
+    maternity:    { label: 'ลาคลอด',     color: '#F472B6', emoji: '🤰' },
+    ordination:   { label: 'ลาบวช',      color: '#A78BFA', emoji: '🧘' },
+    marriage:     { label: 'ลาสมรส',     color: '#F9A8D4', emoji: '💍' },
+    bereavement:  { label: 'ลาพ่อ-แม่เสียชีวิต', color: '#9CA3AF', emoji: '🕯️' },
+    training:     { label: 'ลาพัฒนาความรู้', color: '#67E8F9', emoji: '🎓' },
 }
 
-// Friendly labels for the four `holidays.type` values HR can pick. Anything
-// outside this map falls through to "บริษัทกำหนด" so legacy/imported rows
-// still render with sensible copy.
-const HOLIDAY_TYPE_LABEL: Record<string, string> = {
-    public:    'นักขัตฤกษ์',
-    religious: 'วันสำคัญทางศาสนา',
-    company:   'บริษัทกำหนด',
-    wfh:       'WFH (ทำงานที่บ้าน)',
+const LEAVE_STATUS_LABEL: Record<string, string> = {
+    approved: 'อนุมัติแล้ว',
+    pending:  'รออนุมัติ',
 }
 
-const isWfhEntry = (h?: { type?: string } | null) => h?.type === 'wfh'
-
-const glass: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.14)',
-    backdropFilter: 'blur(14px)',
-    WebkitBackdropFilter: 'blur(14px)',
-    border: '1px solid rgba(255,255,255,0.22)',
-    borderRadius: '16px',
-    boxShadow: '0 8px 24px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.2)',
+function getHolidayConfig(type: string) {
+    return HOLIDAY_CONFIG[type] ?? HOLIDAY_CONFIG.company
+}
+function getLeaveConfig(type: string) {
+    return LEAVE_CONFIG[type] ?? { label: type, color: '#9CA3AF', emoji: '📅' }
 }
 
 function toDateStr(y: number, m: number, d: number): string {
     return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+}
+
+function formatThaiFull(iso: string): string {
+    const [y, m, d] = iso.split('-').map(Number)
+    const date = new Date(y, m - 1, d)
+    return `${THAI_DOWS[date.getDay()]} · ${d} ${THAI_MONTHS[m - 1]} ${y + 543}`
 }
 
 export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
@@ -68,344 +71,386 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
     const [viewMonth, setViewMonth] = useState(today.getMonth())
     const [selected, setSelected] = useState<string | null>(null)
 
-    // Build lookup maps
-    const holidayMap = new Map<string, Holiday>()
-    holidays.forEach(h => holidayMap.set(h.date, h))
+    // Build lookup maps once per render — small data so re-running is fine.
+    const holidayMap = useMemo(() => {
+        const m = new Map<string, Holiday[]>()
+        for (const h of holidays) {
+            const arr = m.get(h.date) ?? []
+            arr.push(h)
+            m.set(h.date, arr)
+        }
+        return m
+    }, [holidays])
 
-    const leaveDayMap = new Map<string, LeaveDay[]>()
-    leaveDays.forEach(l => {
-        const arr = leaveDayMap.get(l.date) ?? []
-        arr.push(l)
-        leaveDayMap.set(l.date, arr)
-    })
+    const leaveMap = useMemo(() => {
+        const m = new Map<string, LeaveDay[]>()
+        for (const l of leaveDays) {
+            const arr = m.get(l.date) ?? []
+            arr.push(l)
+            m.set(l.date, arr)
+        }
+        return m
+    }, [leaveDays])
 
-    const bookingMap = new Map<string, CalendarBooking[]>()
-    bookings.forEach(b => {
-        const arr = bookingMap.get(b.date) ?? []
-        arr.push(b)
-        bookingMap.set(b.date, arr)
-    })
+    const bookingMap = useMemo(() => {
+        const m = new Map<string, CalendarBooking[]>()
+        for (const b of bookings) {
+            const arr = m.get(b.date) ?? []
+            arr.push(b)
+            m.set(b.date, arr)
+        }
+        return m
+    }, [bookings])
 
-    // Month navigation
-    function prevMonth() {
-        if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1) }
-        else setViewMonth(m => m - 1)
-    }
-    function nextMonth() {
-        if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1) }
-        else setViewMonth(m => m + 1)
-    }
-
-    // Generate calendar grid
-    const firstDow = new Date(viewYear, viewMonth, 1).getDay() // 0=Sun
+    // Build the month grid (leading + trailing nulls so weeks line up).
+    const firstDow = new Date(viewYear, viewMonth, 1).getDay()
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
-    const cells: (number | null)[] = [
+    const cells: Array<number | null> = [
         ...Array(firstDow).fill(null),
         ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
     ]
-    // Pad to complete last row
     while (cells.length % 7 !== 0) cells.push(null)
 
     const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate())
 
-    // Selected day data
-    const selectedHoliday = selected ? holidayMap.get(selected) : null
-    const selectedLeaves = selected ? (leaveDayMap.get(selected) ?? []) : []
-    const selectedBookings = selected ? (bookingMap.get(selected) ?? []) : []
-
-    // Leave types present this month (for legend)
-    const leaveTypesInMonth = new Set<string>()
-    leaveDays.forEach(l => {
-        if (l.date.startsWith(`${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`)) {
-            leaveTypesInMonth.add(l.leaveType)
-        }
-    })
-
-    // Detect whether the visible month has any holiday/WFH entry — drives
-    // which legend chips render. Walking holidayMap is fine; the dataset
-    // is small (one year of company calendar).
-    const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`
-    let hasOffDayInMonth = false
-    let hasWfhDayInMonth = false
-    holidays.forEach(h => {
-        if (!h.date.startsWith(monthPrefix)) return
-        if (isWfhEntry(h)) hasWfhDayInMonth = true
-        else hasOffDayInMonth = true
-    })
-
-    const hasBookingInMonth = bookings.some(b => b.date.startsWith(monthPrefix))
+    const goPrev = () => {
+        if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11) }
+        else setViewMonth(m => m - 1)
+    }
+    const goNext = () => {
+        if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0) }
+        else setViewMonth(m => m + 1)
+    }
 
     return (
-        <div className="max-w-lg mx-auto space-y-4 pb-4">
-            {/* Calendar Card */}
-            <div style={glass} className="p-4">
+        <div className="max-w-5xl mx-auto space-y-5 pb-10">
+            {/* Header */}
+            <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-[#882136]/60 flex items-center justify-center text-[#ad5f6c] border border-[#ad5f6c]/20">
+                    <CalendarIcon size={20} />
+                </div>
+                <div>
+                    <h1 className="text-xl font-bold text-white">ปฏิทิน</h1>
+                    <p className="text-sm text-white/50">วันหยุดบริษัท · ใบลาของฉัน · ห้องประชุมที่จอง</p>
+                </div>
+            </div>
 
-                {/* Month/Year header */}
-                <div className="flex items-center justify-between mb-4">
-                    <button onClick={prevMonth}
-                        className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/15 transition-all active:scale-90">
-                        <ChevronLeft size={18} />
+            <div className="rounded-2xl p-3 sm:p-4 space-y-3"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)' }}>
+
+                {/* Month nav */}
+                <div className="flex items-center justify-between">
+                    <button
+                        onClick={goPrev}
+                        className="h-9 w-9 inline-flex items-center justify-center rounded-md bg-white/5 hover:bg-white/10 text-white"
+                        aria-label="เดือนก่อนหน้า"
+                    >
+                        <ChevronLeft size={16} />
                     </button>
-                    <div className="text-center">
-                        <p className="text-white font-bold" style={{ fontSize: '17px' }}>
-                            {THAI_MONTHS[viewMonth]}
-                        </p>
-                        <p className="text-white/75" style={{ fontSize: '13px' }}>
-                            {viewYear + 543}
-                        </p>
-                    </div>
-                    <button onClick={nextMonth}
-                        className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/15 transition-all active:scale-90">
-                        <ChevronRight size={18} />
+                    <p className="text-white font-bold text-base">
+                        {THAI_MONTHS[viewMonth]} {viewYear + 543}
+                    </p>
+                    <button
+                        onClick={goNext}
+                        className="h-9 w-9 inline-flex items-center justify-center rounded-md bg-white/5 hover:bg-white/10 text-white"
+                        aria-label="เดือนถัดไป"
+                    >
+                        <ChevronRight size={16} />
                     </button>
                 </div>
 
-                {/* Day headers */}
-                <div className="grid grid-cols-7 mb-1">
+                {/* Weekday headers */}
+                <div className="grid grid-cols-7 gap-1 text-center text-xs uppercase tracking-wider text-white/70 font-bold">
                     {DAY_HEADERS.map((d, i) => (
-                        <div key={d} className={`text-center py-1 text-xs font-semibold ${i === 0 ? 'text-red-300' : i === 6 ? 'text-blue-300' : 'text-white/70'}`}>
-                            {d}
-                        </div>
+                        <div key={i} className={`py-1.5 ${i === 0 || i === 6 ? 'text-amber-200' : ''}`}>{d}</div>
                     ))}
                 </div>
 
-                {/* Day cells */}
-                <div className="grid grid-cols-7 gap-y-1">
-                    {cells.map((day, idx) => {
-                        if (!day) return <div key={`empty-${idx}`} />
-
-                        const dateStr = toDateStr(viewYear, viewMonth, day)
-                        const holiday = holidayMap.get(dateStr)
-                        const isWfh = isWfhEntry(holiday)
-                        const isOffDay = !!holiday && !isWfh
-                        const leaves = leaveDayMap.get(dateStr) ?? []
+                {/* Cells */}
+                <div className="grid grid-cols-7 gap-1.5">
+                    {cells.map((d, i) => {
+                        if (d === null) {
+                            return <div key={i} className="min-h-[80px] rounded-md bg-white/[0.02]" />
+                        }
+                        const dateStr = toDateStr(viewYear, viewMonth, d)
+                        const dayHolidays = holidayMap.get(dateStr) ?? []
+                        const dayLeaves = leaveMap.get(dateStr) ?? []
                         const dayBookings = bookingMap.get(dateStr) ?? []
                         const isToday = dateStr === todayStr
-                        const isSelected = dateStr === selected
-                        const isSun = idx % 7 === 0
-                        const isSat = idx % 7 === 6
-                        const hasEvent = !!holiday || leaves.length > 0 || dayBookings.length > 0
+                        const dow = (firstDow + d - 1) % 7
+                        const isWeekend = dow === 0 || dow === 6
+                        const totalEvents = dayHolidays.length + dayLeaves.length + dayBookings.length
+                        const hasEvents = totalEvents > 0
+
+                        // Build the icon row — combine all three event types
+                        // in a single visual row, max 4 then collapse.
+                        const icons: Array<{ key: string; emoji: string; bg: string; border: string }> = []
+                        for (const h of dayHolidays) {
+                            const cfg = getHolidayConfig(h.type)
+                            icons.push({ key: `h-${h.id}`, emoji: cfg.emoji, bg: `${cfg.color}40`, border: `${cfg.color}80` })
+                        }
+                        for (let li = 0; li < dayLeaves.length; li++) {
+                            const cfg = getLeaveConfig(dayLeaves[li].leaveType)
+                            const isPending = dayLeaves[li].status === 'pending'
+                            icons.push({
+                                key: `l-${li}`,
+                                emoji: cfg.emoji,
+                                bg: `${cfg.color}40`,
+                                border: isPending ? '#FCD34D' : `${cfg.color}80`,
+                            })
+                        }
+                        for (const b of dayBookings) {
+                            icons.push({ key: `b-${b.id}`, emoji: '🚪', bg: '#A78BFA40', border: '#A78BFA80' })
+                        }
+
+                        const tooltip = [
+                            ...dayHolidays.map(h => `${getHolidayConfig(h.type).emoji} ${h.name}`),
+                            ...dayLeaves.map(l => `${getLeaveConfig(l.leaveType).emoji} ${getLeaveConfig(l.leaveType).label} (${LEAVE_STATUS_LABEL[l.status] ?? l.status})`),
+                            ...dayBookings.map(b => `🚪 ${b.title} ${formatBangkokTime(b.startsAt)}`),
+                        ].join('\n')
 
                         return (
                             <button
-                                key={dateStr}
-                                onClick={() => setSelected(isSelected ? null : dateStr)}
-                                className="relative flex flex-col items-center py-1 rounded-xl transition-all active:scale-95"
-                                style={{
-                                    // Off-day cells were rendering ~18% red
-                                    // over the maroon body — same hue family
-                                    // so the cell barely separated from the
-                                    // background. Use amber instead: completely
-                                    // different hue from the maroon page, still
-                                    // reads as "warning / non-working day" in
-                                    // Thai cultural conventions, and the
-                                    // amber/maroon contrast is the strongest
-                                    // pair we get without inventing a new
-                                    // colour. WFH stays green (already a
-                                    // distinct hue from the body); selected
-                                    // stays neutral white.
-                                    background: isSelected
-                                        ? 'rgba(255,255,255,0.22)'
-                                        : isOffDay
-                                            ? 'rgba(251,191,36,0.28)'
-                                            : isWfh
-                                                ? 'rgba(52,211,153,0.22)'
-                                                : hasEvent ? 'rgba(255,255,255,0.08)' : undefined,
-                                    border: isSelected
-                                        ? '1px solid rgba(255,255,255,0.45)'
-                                        : isOffDay
-                                            ? '1px solid rgba(251,191,36,0.55)'
-                                            : isWfh
-                                                ? '1px solid rgba(52,211,153,0.45)'
-                                                : undefined,
-                                    minHeight: 44,
-                                }}
+                                key={i}
+                                type="button"
+                                onClick={() => hasEvents && setSelected(dateStr)}
+                                title={tooltip || undefined}
+                                disabled={!hasEvents}
+                                className={`min-h-[80px] rounded-md p-2 flex flex-col gap-1.5 transition-all text-left ${
+                                    isToday
+                                        ? 'bg-amber-400/15 border border-amber-400/60'
+                                        : hasEvents
+                                            ? 'bg-white/[0.07] border border-white/15 hover:bg-white/[0.13] hover:border-white/30 cursor-pointer'
+                                            : 'bg-white/[0.04] border border-white/10 cursor-default'
+                                }`}
                             >
-                                {/* Day number — WFH days are still working days, so the
-                                    number stays neutral (only true off-days go red). The
-                                    "today" pill uses a bright amber rim so it stays
-                                    legible against the maroon body gradient. */}
-                                <span
-                                    className="w-7 h-7 flex items-center justify-center rounded-full font-bold text-sm"
-                                    style={{
-                                        // "Today" pill — switched from amber
-                                        // to white because amber now belongs
-                                        // to off-days (Mod's call: the two
-                                        // were too close in hue). White solid
-                                        // with dark maroon text reads as
-                                        // "current/active" and stands clear
-                                        // of every other cell tone (off-day
-                                        // amber, WFH green, weekday neutral,
-                                        // Sun red, Sat blue).
-                                        background: isToday ? '#ffffff' : undefined,
-                                        color: isToday
-                                            ? '#561e23'
-                                            : isOffDay
-                                                ? '#fde68a'
-                                                : isSun ? '#FCA5A5'
-                                                : isSat ? '#93C5FD' : '#ffffff',
-                                        boxShadow: isToday ? '0 0 0 2px rgba(255,255,255,0.45)' : undefined,
-                                    }}
-                                >
-                                    {day}
+                                <span className={`text-base font-bold tabular-nums leading-none ${
+                                    isToday ? 'text-amber-200'
+                                        : isWeekend ? 'text-amber-200'
+                                        : hasEvents ? 'text-white' : 'text-white/55'
+                                }`}>
+                                    {d}
                                 </span>
-
-                                {/* Holiday/WFH label (tiny). Bumped from 8 → 10px so the
-                                    truncated name is readable on a phone without zooming;
-                                    the cell footers were near-illegible before. Off-day
-                                    text now amber to match the cell bg. */}
-                                {holiday && (
-                                    <span className="leading-tight text-center px-0.5 truncate w-full font-semibold"
-                                        style={{
-                                            fontSize: '10px',
-                                            maxWidth: '100%',
-                                            color: isWfh ? '#A7F3D0' : '#fde68a',
-                                            marginTop: 2,
-                                        }}>
-                                        {isWfh ? `🏠 ${holiday.name}` : holiday.name}
-                                    </span>
-                                )}
-
-                                {/* Leave dots */}
-                                {leaves.length > 0 && (
-                                    <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center">
-                                        {[...new Set(leaves.map(l => l.leaveType))].slice(0, 3).map(lt => (
-                                            <span key={lt}
-                                                className="rounded-full"
-                                                style={{ width: 5, height: 5, background: LEAVE_COLOR[lt] ?? '#fff', opacity: leaves.find(l => l.leaveType === lt)?.status === 'pending' ? 0.5 : 1 }}
-                                            />
+                                {hasEvents && (
+                                    <div className="flex flex-wrap items-center gap-1 mt-auto">
+                                        {icons.slice(0, 4).map(it => (
+                                            <span
+                                                key={it.key}
+                                                className="inline-flex items-center justify-center h-6 w-6 rounded text-sm leading-none"
+                                                style={{ background: it.bg, border: `1px solid ${it.border}` }}
+                                            >
+                                                {it.emoji}
+                                            </span>
                                         ))}
+                                        {icons.length > 4 && (
+                                            <span className="text-xs font-semibold text-white/75 px-1">
+                                                +{icons.length - 4}
+                                            </span>
+                                        )}
                                     </div>
-                                )}
-
-                                {/* Room booking badge — distinct cyan/teal hue
-                                    so it doesn't collide with the leave dot
-                                    palette or the off-day amber. Number tells
-                                    you at a glance how many meetings are
-                                    queued for the room that day. */}
-                                {dayBookings.length > 0 && (
-                                    <span
-                                        className="absolute top-0.5 right-0.5 inline-flex items-center gap-0.5 rounded-full px-1 py-px font-bold"
-                                        style={{
-                                            background: 'rgba(34,211,238,0.22)',
-                                            border: '1px solid rgba(34,211,238,0.55)',
-                                            color: '#a5f3fc',
-                                            fontSize: '9px',
-                                            lineHeight: 1,
-                                        }}
-                                    >
-                                        <DoorOpen size={9} />
-                                        {dayBookings.length}
-                                    </span>
                                 )}
                             </button>
                         )
                     })}
                 </div>
+
+                {/* Legend */}
+                <div className="pt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                    {Object.entries(HOLIDAY_CONFIG).map(([t, cfg]) => (
+                        <span key={t} className="inline-flex items-center gap-1.5">
+                            <span className="text-base leading-none">{cfg.emoji}</span>
+                            <span className="text-white/85 font-medium">{cfg.label}</span>
+                        </span>
+                    ))}
+                    <span className="inline-flex items-center gap-1.5">
+                        <span className="text-base leading-none">🏖️</span>
+                        <span className="text-white/85 font-medium">ใบลา</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                        <span className="text-base leading-none">🚪</span>
+                        <span className="text-white/85 font-medium">จองห้องประชุม</span>
+                    </span>
+                </div>
             </div>
 
-            {/* Day detail popup */}
-            {selected && (selectedHoliday || selectedLeaves.length > 0 || selectedBookings.length > 0) && (
-                <div style={glass} className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                        <p className="text-white font-bold" style={{ fontSize: '16px' }}>
-                            {(() => {
-                                const [y, m, d] = selected.split('-')
-                                return `${parseInt(d)} ${THAI_MONTHS[parseInt(m) - 1]} ${parseInt(y) + 543}`
-                            })()}
-                        </p>
-                        <button onClick={() => setSelected(null)} className="text-white/65 hover:text-white transition-colors">
-                            <X size={16} />
-                        </button>
-                    </div>
-
-                    {selectedHoliday && (() => {
-                        const wfh = isWfhEntry(selectedHoliday)
-                        const tone = wfh
-                            ? { bg: 'rgba(52,211,153,0.22)', border: 'rgba(52,211,153,0.45)', text: '#A7F3D0', sub: '#6EE7B7', icon: '🏠' }
-                            : { bg: 'rgba(251,191,36,0.28)', border: 'rgba(251,191,36,0.55)', text: '#fde68a', sub: '#fcd34d', icon: '🎌' }
-                        return (
-                            <div className="flex items-center gap-2 mb-2 p-3 rounded-xl"
-                                style={{ background: tone.bg, border: `1px solid ${tone.border}` }}>
-                                <span className="text-xl" style={{ color: tone.text }}>{tone.icon}</span>
-                                <div>
-                                    <p className="font-bold text-sm" style={{ color: tone.text }}>{selectedHoliday.name}</p>
-                                    <p className="text-xs font-medium" style={{ color: tone.sub }}>
-                                        {HOLIDAY_TYPE_LABEL[selectedHoliday.type] ?? HOLIDAY_TYPE_LABEL.company}
-                                    </p>
-                                </div>
-                            </div>
-                        )
-                    })()}
-
-                    {selectedLeaves.map((l, i) => (
-                        <div key={i} className="flex items-center gap-2 mb-1.5 p-3 rounded-xl"
-                            style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.18)' }}>
-                            <span className="w-3 h-3 rounded-full shrink-0"
-                                style={{ background: LEAVE_COLOR[l.leaveType] ?? '#fff', opacity: l.status === 'pending' ? 0.6 : 1 }} />
-                            <p className="text-white text-sm font-medium">{LEAVE_LABEL[l.leaveType] ?? l.leaveType}</p>
-                            <span className="ml-auto text-xs font-semibold"
-                                style={{ color: l.status === 'approved' ? '#6EE7B7' : '#FCD34D' }}>
-                                {l.status === 'approved' ? 'อนุมัติแล้ว' : 'รอการอนุมัติ'}
-                            </span>
-                        </div>
-                    ))}
-
-                    {selectedBookings.length > 0 && (
-                        <div className="mt-2 space-y-1.5">
-                            <p className="text-cyan-200/85 font-semibold flex items-center gap-1.5" style={{ fontSize: '12px' }}>
-                                <DoorOpen size={12} /> ห้องประชุมชั้น 2
-                            </p>
-                            {selectedBookings.map((b) => (
-                                <div key={b.id} className="flex items-start gap-2 p-3 rounded-xl"
-                                    style={{ background: 'rgba(34,211,238,0.14)', border: '1px solid rgba(34,211,238,0.35)' }}>
-                                    <div className="shrink-0 text-xs font-bold text-cyan-100 w-[78px]">
-                                        {formatBangkokTime(b.startsAt)}–{formatBangkokTime(b.endsAt)}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-white text-sm font-medium truncate">{b.title}</p>
-                                        <p className="text-white/65 text-xs truncate">โดย {b.bookedByName}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
+            {selected && (
+                <DayDetailModal
+                    dateIso={selected}
+                    holidays={holidayMap.get(selected) ?? []}
+                    leaves={leaveMap.get(selected) ?? []}
+                    bookings={bookingMap.get(selected) ?? []}
+                    onClose={() => setSelected(null)}
+                />
             )}
+        </div>
+    )
+}
 
-            {/* Legend */}
-            <div style={glass} className="p-3">
-                <div className="flex flex-wrap gap-x-4 gap-y-2">
-                    {hasOffDayInMonth && (
-                        <div className="flex items-center gap-1.5">
-                            <span className="w-3 h-3 rounded-sm" style={{ background: 'rgba(251,191,36,0.5)', border: '1px solid #fbbf24' }} />
-                            <span className="text-white/85 font-medium" style={{ fontSize: '12px' }}>วันหยุด</span>
-                        </div>
+/**
+ * Read-only modal showing every event on the picked date — holidays at
+ * the top (org-level), leaves in the middle (personal), bookings at the
+ * bottom (room schedule). Each section deep-links to the source page so
+ * the user can act there without us duplicating the edit UI here.
+ */
+function DayDetailModal({
+    dateIso, holidays, leaves, bookings, onClose,
+}: {
+    dateIso: string
+    holidays: Holiday[]
+    leaves: LeaveDay[]
+    bookings: CalendarBooking[]
+    onClose: () => void
+}) {
+    const headline = useMemo(() => formatThaiFull(dateIso), [dateIso])
+
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+        window.addEventListener('keydown', onKey)
+        const prev = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        return () => {
+            window.removeEventListener('keydown', onKey)
+            document.body.style.overflow = prev
+        }
+    }, [onClose])
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+            onClick={onClose}
+        >
+            <div
+                className="w-full max-w-lg rounded-2xl overflow-hidden"
+                style={{ background: 'rgba(20,5,8,0.96)', border: '1px solid rgba(255,255,255,0.15)' }}
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                    <h2 className="text-white font-bold text-base">{headline}</h2>
+                    <button onClick={onClose} className="text-white/40 hover:text-white" aria-label="ปิด">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="px-5 py-4 max-h-[70vh] overflow-y-auto space-y-4">
+                    {/* Holidays / WFH */}
+                    {holidays.length > 0 && (
+                        <Section title="วันหยุด / WFH">
+                            {holidays.map(h => {
+                                const cfg = getHolidayConfig(h.type)
+                                return (
+                                    <EventCard
+                                        key={`h-${h.id}`}
+                                        emoji={cfg.emoji}
+                                        chipLabel={cfg.label}
+                                        chipColor={cfg.color}
+                                        title={h.name}
+                                    />
+                                )
+                            })}
+                        </Section>
                     )}
-                    {hasWfhDayInMonth && (
-                        <div className="flex items-center gap-1.5">
-                            <span className="w-3 h-3 rounded-sm" style={{ background: 'rgba(52,211,153,0.5)', border: '1px solid #34D399' }} />
-                            <span className="text-white/85 font-medium" style={{ fontSize: '12px' }}>WFH</span>
-                        </div>
+
+                    {/* Leaves */}
+                    {leaves.length > 0 && (
+                        <Section title="ใบลาของฉัน">
+                            {leaves.map((l, idx) => {
+                                const cfg = getLeaveConfig(l.leaveType)
+                                const isPending = l.status === 'pending'
+                                return (
+                                    <EventCard
+                                        key={`l-${idx}`}
+                                        emoji={cfg.emoji}
+                                        chipLabel={cfg.label}
+                                        chipColor={cfg.color}
+                                        title={LEAVE_STATUS_LABEL[l.status] ?? l.status}
+                                        statusBadge={isPending
+                                            ? { label: 'รออนุมัติ', color: '#FCD34D' }
+                                            : { label: 'อนุมัติแล้ว', color: '#34D399' }}
+                                        link={{ href: '/portal/leave', label: 'ดูใบลาของฉัน' }}
+                                    />
+                                )
+                            })}
+                        </Section>
                     )}
-                    <div className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 rounded-full" style={{ background: '#ffffff', boxShadow: '0 0 0 2px rgba(255,255,255,0.35)' }} />
-                        <span className="text-white/85 font-medium" style={{ fontSize: '12px' }}>วันนี้</span>
-                    </div>
-                    {hasBookingInMonth && (
-                        <div className="flex items-center gap-1.5">
-                            <span className="w-3 h-3 rounded-sm" style={{ background: 'rgba(34,211,238,0.35)', border: '1px solid rgba(34,211,238,0.7)' }} />
-                            <span className="text-white/85 font-medium" style={{ fontSize: '12px' }}>ห้องประชุม</span>
-                        </div>
+
+                    {/* Bookings */}
+                    {bookings.length > 0 && (
+                        <Section title="ห้องประชุมที่จอง">
+                            {bookings.map(b => (
+                                <EventCard
+                                    key={`b-${b.id}`}
+                                    emoji="🚪"
+                                    chipLabel="จองห้องประชุม"
+                                    chipColor="#A78BFA"
+                                    title={b.title}
+                                    subtitle={`${formatBangkokTime(b.startsAt)} – ${formatBangkokTime(b.endsAt)} · จองโดย ${b.bookedByName}`}
+                                    link={{ href: '/portal/meeting-room', label: 'ดูตารางห้องประชุม' }}
+                                />
+                            ))}
+                        </Section>
                     )}
-                    {Object.entries(LEAVE_LABEL).filter(([k]) => leaveTypesInMonth.has(k)).map(([k, label]) => (
-                        <div key={k} className="flex items-center gap-1.5">
-                            <span className="w-3 h-3 rounded-full" style={{ background: LEAVE_COLOR[k] }} />
-                            <span className="text-white/85 font-medium" style={{ fontSize: '12px' }}>{label}</span>
-                        </div>
-                    ))}
                 </div>
             </div>
         </div>
     )
 }
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+    return (
+        <div>
+            <p className="text-[11px] uppercase tracking-wider text-white/55 font-bold mb-2">{title}</p>
+            <div className="space-y-2">{children}</div>
+        </div>
+    )
+}
+
+function EventCard({
+    emoji, chipLabel, chipColor, title, subtitle, statusBadge, link,
+}: {
+    emoji: string
+    chipLabel: string
+    chipColor: string
+    title: string
+    subtitle?: string
+    statusBadge?: { label: string; color: string }
+    link?: { href: string; label: string }
+}) {
+    return (
+        <div
+            className="rounded-xl p-3.5 border"
+            style={{ background: `${chipColor}1a`, borderColor: `${chipColor}55` }}
+        >
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                <span className="text-lg leading-none">{emoji}</span>
+                <span
+                    className="text-xs font-bold px-2 py-0.5 rounded"
+                    style={{ background: `${chipColor}30`, color: chipColor }}
+                >
+                    {chipLabel}
+                </span>
+                {statusBadge && (
+                    <span
+                        className="text-xs font-bold px-2 py-0.5 rounded"
+                        style={{ background: `${statusBadge.color}25`, color: statusBadge.color }}
+                    >
+                        {statusBadge.label}
+                    </span>
+                )}
+            </div>
+            <p className="text-base font-semibold text-white leading-snug">{title}</p>
+            {subtitle && <p className="text-sm text-white/60 mt-0.5">{subtitle}</p>}
+            {link && (
+                <Link
+                    href={link.href}
+                    className="inline-flex items-center gap-1 text-xs font-semibold mt-2 text-white/70 hover:text-white"
+                >
+                    {link.label} →
+                </Link>
+            )}
+        </div>
+    )
+}
+
+// Re-export for any consumer that imports the old icon (keeps build green).
+export { DoorOpen }
