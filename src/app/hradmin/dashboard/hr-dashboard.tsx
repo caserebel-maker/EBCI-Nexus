@@ -525,8 +525,19 @@ export function HRDashboard({
 
                     {/* Metric Cards */}
                     <div className="grid grid-cols-2 2xl:grid-cols-4 gap-3 lg:gap-4">
-                        <MetricCard title="พนักงานทั้งหมด" value={metrics.totalEmployees}
-                            sub={`ปฏิบัติงาน ${metrics.activeEmployees} คน`} icon={Users} accent="bg-gradient-to-br from-blue-500 to-blue-700"
+                        {/* Headline = active count (the actionable number — HR
+                            decisions are about people who are still here).
+                            Inactive count goes to the subtitle so the data
+                            isn't lost, and only renders when there's at least
+                            one inactive row to keep the card clean for fresh
+                            companies. */}
+                        <MetricCard title="พนักงาน" value={metrics.activeEmployees}
+                            sub={
+                                metrics.totalEmployees > metrics.activeEmployees
+                                    ? `พ้นสภาพ ${metrics.totalEmployees - metrics.activeEmployees} คน`
+                                    : 'ปฏิบัติงานทุกคน'
+                            }
+                            icon={Users} accent="bg-gradient-to-br from-blue-500 to-blue-700"
                             href="/hradmin/employees" />
                         <MetricCard title="ลาวันนี้" value={metrics.leavingToday}
                             sub="ได้รับอนุมัติแล้ว" icon={CalendarDays} accent="bg-gradient-to-br from-emerald-500 to-emerald-700"
@@ -570,7 +581,7 @@ export function HRDashboard({
                         {/* Donut – dept distribution */}
                         <div style={glassStyle} className="p-6">
                             <SectionHeader title="สัดส่วนพนักงานแยกฝ่าย" icon={Building2} />
-                            <DeptDonut data={deptData} total={metrics.totalEmployees} />
+                            <DeptDonut data={deptData} total={metrics.activeEmployees} />
                         </div>
 
                         {/* Line chart – weekly attendance */}

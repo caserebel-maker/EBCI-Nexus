@@ -99,9 +99,14 @@ export default async function AdminDashboard() {
     )
 
     // ─── Build dept distribution for donut chart ───
+    // Active employees only — the donut answers "ตอนนี้ใครอยู่แผนกไหน",
+    // so counting people who have already left would inflate departments
+    // that had high turnover. Matches the headline metric card which now
+    // also uses the active count as its main number.
     const deptMap: Record<string, number> = {}
     for (const e of employees ?? []) {
         if (!e.department) continue
+        if (e.status !== 'active') continue
         deptMap[e.department] = (deptMap[e.department] ?? 0) + 1
     }
     const deptData = Object.entries(deptMap)
