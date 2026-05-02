@@ -1312,7 +1312,13 @@ function NewLeaveModal({
                     </div>
                 </div>
 
-                <div className="p-5 sm:p-6 space-y-5">
+                {/* pb-32 keeps the bottom of the form clear of the
+                    sticky footer (back / draft / next buttons + autosave
+                    chip + half-day toggle). Without this padding, the
+                    last visible field on tall steps (เหตุผล on step 2,
+                    file picker on step 3) sat under the footer and the
+                    user couldn't reach it without rubber-band scrolling. */}
+                <div className="p-5 sm:p-6 pb-32 space-y-5">
                     {step === 1 && (
                         <Step1TypePicker
                             balances={balances}
@@ -1391,7 +1397,16 @@ function NewLeaveModal({
                     </div>
                 )}
 
-                <div className="sticky bottom-0 bg-gradient-to-t from-[#15040a] to-transparent p-4 sm:p-5 border-t border-white/10 flex items-center justify-between gap-2 flex-wrap">
+                {/* Sticky footer — fully opaque so it cleanly covers the
+                    content scrolling underneath. Was a top-transparent
+                    gradient; that meant input fields scrolled into the
+                    "see-through" band and looked like they were poking
+                    through the footer (Mod's "wobble"). Solid maroon
+                    panel + top border line reads as a separate band. */}
+                <div
+                    className="sticky bottom-0 p-4 sm:p-5 border-t border-white/15 flex items-center justify-between gap-2 flex-wrap"
+                    style={{ background: 'rgba(15,4,10,0.95)', backdropFilter: 'blur(8px)' }}
+                >
                     <button
                         type="button"
                         onClick={() => setStep((s) => (s > 1 ? ((s - 1) as NewLeaveStep) : s))}

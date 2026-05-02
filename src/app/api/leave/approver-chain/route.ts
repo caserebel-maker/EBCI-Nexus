@@ -49,9 +49,20 @@ export async function GET() {
 
     const level = (me.approval_level as number | null) ?? 1
 
-    // HR contact — we look up by users.role first, fall back to
-    // employees with the can_edit_employees flag if no hr_admin user
-    // is linked. Either way, the first match wins.
+    // HR contact — pick the actual HR staff, not just "anyone with HR
+    // permissions". Mod's 4 May report: chain showed จิม (กรรมการผู้
+    // จัดการ) at the HR step instead of มด (รองหัวหน้าแผนกบริหาร
+    // งานบุคคล). Both have role='hr_admin' + can_edit_employees=true
+    // because the system uses those flags for permissions, not job
+    // function — so the previous "first match wins" picked whoever
+    // happened to come back first from the OR query (กรรมการผู้
+    // จัดการ in this case, which is wrong).
+    //
+    // New strategy: filter the HR-permission set DOWN to people whose
+    // department or position contains "บุคคล" (= HR domain). If at
+    // least one matches, use that; otherwise fall back to the original
+    // "any HR-permission staffer" so we never end up with a null HR
+    // step on misconfigured data.
     async function fetchHr(): Promise<EmpLite | null> {
         const { data: hrUsers } = await supabaseAdmin
             .from('User')
@@ -59,15 +70,32 @@ export async function GET() {
             .or('role.eq.hr_admin,can_edit_employees.eq.true,can_manage_system.eq.true')
         const ids = (hrUsers ?? []).map((u) => u.id as string).filter(Boolean)
         if (!ids.length) return null
-        const { data: hrEmp } = await supabaseAdmin
+
+        // First try: someone who actually works in the HR department
+        // (department or position contains "บุคคล").
+        const { data: realHr } = await supabaseAdmin
+            .from('employees')
+            .select('id, first_name_th, last_name_th, department, position')
+            .in('user_id', ids)
+            .eq('status', 'active')
+            .or('department.ilike.%บุคคล%,position.ilike.%บุคคล%')
+            .limit(1)
+            .maybeSingle()
+        if (realHr) {
+            return { id: realHr.id as string, name: empName(realHr) }
+        }
+
+        // Fallback: any active HR-permission staffer — keeps the chain
+        // populated even when nobody in HR has the flags yet.
+        const { data: anyHr } = await supabaseAdmin
             .from('employees')
             .select('id, first_name_th, last_name_th')
             .in('user_id', ids)
             .eq('status', 'active')
             .limit(1)
             .maybeSingle()
-        return hrEmp
-            ? { id: hrEmp.id as string, name: empName(hrEmp) }
+        return anyHr
+            ? { id: anyHr.id as string, name: empName(anyHr) }
             : null
     }
 
