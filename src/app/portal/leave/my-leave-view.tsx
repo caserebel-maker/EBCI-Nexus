@@ -5,6 +5,7 @@ import {
     CalendarDays, Plus, CheckCircle2, XCircle, Clock, Ban, Loader2, AlertCircle,
     X, ChevronRight, ChevronLeft, UploadCloud, Paperclip, Info,
     Palmtree, User, Heart, GraduationCap, Cross, Send,
+    FileEdit, Save, Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ValidationToast } from '@/components/ui/validation-toast'
@@ -83,6 +84,33 @@ interface LeaveRequest {
 
 type StatusFilter = 'all' | LeaveRequest['status']
 
+/**
+ * §2.4 BETA_FEEDBACK — Draft autosave shape. Mirror of the server-side
+ * `DraftPayload` in /api/leave/draft so the form can serialize itself
+ * into a draft and restore from it without losing precision.
+ *
+ * Attachment File can't survive a reload, so it's excluded — the user
+ * re-attaches on resume. is_half_day defaults to false so half-day
+ * checkbox doesn't false-positive on restore.
+ */
+interface LeaveDraftPayload {
+    leave_type_id?: string | null
+    start_date?: string | null
+    end_date?: string | null
+    is_half_day?: boolean
+    half_day_period?: 'morning' | 'afternoon' | null
+    reason?: string | null
+    contact_during_leave?: string | null
+    step?: number
+}
+
+interface LeaveDraft {
+    id: string
+    payload: LeaveDraftPayload
+    created_at: string
+    updated_at: string
+}
+
 // ── Leave-type icon map (DB.icon is just a hint; we use Lucide by id) ─────────
 const LEAVE_ICON: Record<string, typeof Palmtree> = {
     annual: Palmtree,
@@ -158,11 +186,18 @@ interface Props {
 export function MyLeaveView({ year }: Props) {
     const [balances, setBalances] = useState<BalanceEntry[]>([])
     const [requests, setRequests] = useState<LeaveRequest[]>([])
+    const [drafts, setDrafts] = useState<LeaveDraft[]>([])
     const [loading, setLoading] = useState(true)
     const [err, setErr] = useState<string | null>(null)
     const [tab, setTab] = useState<StatusFilter>('all')
     const [filterType, setFilterType] = useState<string | null>(null)
-    const [formOpen, setFormOpen] = useState(false)
+    /**
+     * §2.4 — formOpen is `false`, `'new'` (blank form), or a LeaveDraft to
+     * resume. NewLeaveModal hydrates initial state from the draft if present
+     * and restores `currentDraftId` so subsequent autosaves update the same
+     * row instead of creating duplicates.
+     */
+    const [formOpen, setFormOpen] = useState<false | 'new' | LeaveDraft>(false)
     const [detail, setDetail] = useState<LeaveRequest | null>(null)
     const [toast, setToast] = useState<string | null>(null)
 
@@ -170,22 +205,38 @@ export function MyLeaveView({ year }: Props) {
         setErr(null)
         setLoading(true)
         try {
-            const [balRes, reqRes] = await Promise.all([
+            const [balRes, reqRes, draftRes] = await Promise.all([
                 fetch(`/api/leave/balance/${year}`, { cache: 'no-store' }),
                 fetch('/api/leave/my', { cache: 'no-store' }),
+                fetch('/api/leave/draft', { cache: 'no-store' }),
             ])
             if (!balRes.ok) throw new Error('โหลดยอดวันลาไม่สำเร็จ')
             if (!reqRes.ok) throw new Error('โหลดประวัติการลาไม่สำเร็จ')
             const balJson = await balRes.json()
             const reqJson = await reqRes.json()
+            // Drafts are best-effort — a failure to load drafts shouldn't
+            // block the page (user can still file a fresh leave).
+            const draftJson = draftRes.ok ? await draftRes.json() : { items: [] }
             setBalances((balJson.balances ?? []).sort((a: BalanceEntry, b: BalanceEntry) => a.display_order - b.display_order))
             setRequests(reqJson.items ?? [])
+            setDrafts(draftJson.items ?? [])
         } catch (e) {
             setErr(e instanceof Error ? e.message : 'เกิดข้อผิดพลาด')
         } finally {
             setLoading(false)
         }
     }, [year])
+
+    const handleDeleteDraft = useCallback(async (draftId: string) => {
+        if (!confirm('ลบฉบับร่างนี้?')) return
+        try {
+            const res = await fetch(`/api/leave/draft?id=${encodeURIComponent(draftId)}`, { method: 'DELETE' })
+            if (!res.ok) throw new Error('ลบไม่สำเร็จ')
+            setDrafts(prev => prev.filter(d => d.id !== draftId))
+        } catch (e) {
+            setErr(e instanceof Error ? e.message : 'ลบฉบับร่างไม่สำเร็จ')
+        }
+    }, [])
 
     useEffect(() => { void loadAll() }, [loadAll])
 
@@ -241,7 +292,7 @@ export function MyLeaveView({ year }: Props) {
             {/* Action button */}
             <button
                 type="button"
-                onClick={() => setFormOpen(true)}
+                onClick={() => setFormOpen('new')}
                 disabled={loading || balances.length === 0}
                 className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 rounded-xl text-white font-bold shadow-lg shadow-[#882136]/40 transition-all active:scale-95"
                 style={{ background: 'linear-gradient(135deg,#561e23 0%,#ad5f6c 100%)' }}
@@ -249,6 +300,18 @@ export function MyLeaveView({ year }: Props) {
                 <Plus size={17} />
                 ยื่นใบลาใหม่
             </button>
+
+            {/* §2.4 — Drafts section. Only renders when there's at least
+                one autosaved draft. Resume opens NewLeaveModal hydrated
+                from the draft payload; Delete removes the row. */}
+            {drafts.length > 0 && (
+                <DraftsSection
+                    drafts={drafts}
+                    balances={balances}
+                    onResume={(d) => setFormOpen(d)}
+                    onDelete={handleDeleteDraft}
+                />
+            )}
 
             {/* Status tabs */}
             <StatusTabs tab={tab} onChange={setTab} counts={counts} filterTypeName={filterTypeName} onClearType={() => setFilterType(null)} />
@@ -264,7 +327,9 @@ export function MyLeaveView({ year }: Props) {
             {formOpen && (
                 <NewLeaveModal
                     balances={balances}
+                    initialDraft={formOpen === 'new' ? null : formOpen}
                     onClose={() => setFormOpen(false)}
+                    onDraftChange={() => { void loadAll() }}
                     onSuccess={(msg) => {
                         setFormOpen(false)
                         setToast(msg)
@@ -298,6 +363,97 @@ export function MyLeaveView({ year }: Props) {
                 </div>
             )}
         </div>
+    )
+}
+
+// ── Drafts section (§2.4) ────────────────────────────────────────────────────
+/**
+ * Card list of autosaved leave-form drafts. Each card summarizes the
+ * picked fields so the user can identify the draft at a glance, then
+ * "ดำเนินการต่อ" reopens NewLeaveModal hydrated from the payload.
+ *
+ * Empty list = component doesn't render at all (parent gates on
+ * drafts.length > 0). Heuristic for "what to show" mirrors the form's
+ * own field order: type → dates → reason. If nothing's filled we
+ * still show "ฉบับร่าง (ยังว่าง)" rather than hide the row.
+ */
+function DraftsSection({
+    drafts, balances, onResume, onDelete,
+}: {
+    drafts: LeaveDraft[]
+    balances: BalanceEntry[]
+    onResume: (d: LeaveDraft) => void
+    onDelete: (id: string) => void
+}) {
+    return (
+        <div className="rounded-xl border border-amber-400/30 bg-amber-400/5 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+                <FileEdit size={16} className="text-amber-300" />
+                <h2 className="text-sm font-bold text-white">ฉบับร่าง ({drafts.length})</h2>
+                <span className="text-[11px] text-white/55">— เขียนค้างไว้ กลับมาทำต่อได้</span>
+            </div>
+            <ul className="space-y-2">
+                {drafts.map(d => (
+                    <DraftRow
+                        key={d.id}
+                        draft={d}
+                        balances={balances}
+                        onResume={() => onResume(d)}
+                        onDelete={() => onDelete(d.id)}
+                    />
+                ))}
+            </ul>
+        </div>
+    )
+}
+
+function DraftRow({
+    draft, balances, onResume, onDelete,
+}: {
+    draft: LeaveDraft
+    balances: BalanceEntry[]
+    onResume: () => void
+    onDelete: () => void
+}) {
+    const p = draft.payload
+    const typeName = p.leave_type_id
+        ? (balances.find(b => b.leave_type_id === p.leave_type_id)?.name_th ?? p.leave_type_id)
+        : null
+    const dateStr = p.start_date && p.end_date
+        ? formatThaiDateRange(p.start_date, p.end_date)
+        : (p.start_date ? formatThaiDate(p.start_date) : null)
+    const summary = [typeName, dateStr].filter(Boolean).join(' · ') || 'ฉบับร่าง (ยังว่าง)'
+    return (
+        <li className="rounded-lg bg-black/25 border border-white/10 p-3 flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white truncate">{summary}</p>
+                {p.reason && (
+                    <p className="text-[11px] text-white/55 truncate mt-0.5">{p.reason}</p>
+                )}
+                <p className="text-[10px] text-white/40 mt-1">
+                    บันทึกล่าสุด {formatThaiDateTime(draft.updated_at)}
+                </p>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                    type="button"
+                    onClick={onResume}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-amber-400 hover:bg-amber-300 text-black text-xs font-bold active:scale-95"
+                >
+                    ดำเนินการต่อ
+                    <ChevronRight size={12} />
+                </button>
+                <button
+                    type="button"
+                    onClick={onDelete}
+                    className="h-8 w-8 rounded-md bg-white/5 hover:bg-red-500/20 text-white/60 hover:text-red-300 flex items-center justify-center transition-colors"
+                    title="ลบฉบับร่าง"
+                    aria-label="ลบฉบับร่าง"
+                >
+                    <Trash2 size={13} />
+                </button>
+            </div>
+        </li>
     )
 }
 
@@ -778,23 +934,47 @@ interface ApproverChainStep {
 }
 
 function NewLeaveModal({
-    balances, onClose, onSuccess,
+    balances, onClose, onSuccess, initialDraft, onDraftChange,
 }: {
     balances: BalanceEntry[]
     onClose: () => void
     onSuccess: (msg: string) => void
+    /** §2.4 — when set, hydrate state from this draft and update the
+     *  same draft row on autosave (instead of creating new ones). */
+    initialDraft: LeaveDraft | null
+    /** Called after a draft is saved/deleted so the parent list refreshes. */
+    onDraftChange: () => void
 }) {
-    const [step, setStep] = useState<NewLeaveStep>(1)
-    const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null)
-    const [startDate, setStartDate] = useState('')
-    const [endDate, setEndDate] = useState('')
-    const [isHalfDay, setIsHalfDay] = useState(false)
-    const [halfDayPeriod, setHalfDayPeriod] = useState<'morning' | 'afternoon'>('morning')
-    const [reason, setReason] = useState('')
-    const [contact, setContact] = useState('')
+    // Hydrate from draft if resuming. We pull each field defensively so a
+    // draft saved with an older form shape doesn't blow up on restore.
+    const dp = initialDraft?.payload ?? {}
+    const [step, setStep] = useState<NewLeaveStep>(
+        (dp.step && dp.step >= 1 && dp.step <= 4 ? dp.step : 1) as NewLeaveStep,
+    )
+    const [selectedTypeId, setSelectedTypeId] = useState<string | null>(dp.leave_type_id ?? null)
+    const [startDate, setStartDate] = useState(dp.start_date ?? '')
+    const [endDate, setEndDate] = useState(dp.end_date ?? '')
+    const [isHalfDay, setIsHalfDay] = useState(dp.is_half_day ?? false)
+    const [halfDayPeriod, setHalfDayPeriod] = useState<'morning' | 'afternoon'>(
+        dp.half_day_period ?? 'morning',
+    )
+    const [reason, setReason] = useState(dp.reason ?? '')
+    const [contact, setContact] = useState(dp.contact_during_leave ?? '')
     const [attachment, setAttachment] = useState<File | null>(null)
     const [submitting, startSubmitTransition] = useTransition()
     const [err, setErr] = useState<string | null>(null)
+
+    // §2.4 — Track the draft row id once we've saved at least once. Initial
+    // value comes from initialDraft (resume case) so further autosaves
+    // upsert into the same row.
+    const draftIdRef = useRef<string | null>(initialDraft?.id ?? null)
+    const [draftStatus, setDraftStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+    const [draftSavedAt, setDraftSavedAt] = useState<number | null>(
+        initialDraft ? Date.parse(initialDraft.updated_at) : null,
+    )
+    // Skip the first autosave fire — it would otherwise create an empty
+    // draft row immediately on modal mount before the user types anything.
+    const autosaveSkipRef = useRef(true)
 
     // Client-side validation state. errorFields drives the red border on
     // individual inputs; missingFields + validationOpen drive the centred
@@ -841,6 +1021,73 @@ function NewLeaveModal({
             document.body.style.overflow = prev
         }
     }, [onClose])
+
+    /**
+     * §2.4 — Build the current form state into a draft payload.
+     * Pure function; never includes the File attachment because it
+     * can't be JSON-serialized. (User re-attaches on resume.)
+     */
+    const currentPayload = useCallback((): LeaveDraftPayload => ({
+        leave_type_id: selectedTypeId,
+        start_date: startDate || null,
+        end_date: endDate || null,
+        is_half_day: isHalfDay,
+        half_day_period: isHalfDay ? halfDayPeriod : null,
+        reason: reason || null,
+        contact_during_leave: contact || null,
+        step,
+    }), [selectedTypeId, startDate, endDate, isHalfDay, halfDayPeriod, reason, contact, step])
+
+    /** §2.4 — Skip autosave if every field is empty (avoids creating a
+     *  ghost draft when the user opens then immediately closes). */
+    const hasContent = useCallback((p: LeaveDraftPayload): boolean => {
+        return Boolean(p.leave_type_id || p.start_date || p.end_date
+            || (p.reason && p.reason.trim())
+            || (p.contact_during_leave && p.contact_during_leave.trim()))
+    }, [])
+
+    /**
+     * §2.4 — Save the current draft. `mode='auto'` skips the user toast
+     * but still updates the parent list. `mode='manual'` is invoked by
+     * the "บันทึกฉบับร่าง" button and surfaces errors inline.
+     */
+    const saveDraft = useCallback(async (mode: 'auto' | 'manual'): Promise<boolean> => {
+        const payload = currentPayload()
+        if (!hasContent(payload)) return false
+        setDraftStatus('saving')
+        try {
+            const res = await fetch('/api/leave/draft', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ id: draftIdRef.current, payload }),
+            })
+            const json = await res.json().catch(() => ({}))
+            if (!res.ok) throw new Error(json?.error ?? 'บันทึกฉบับร่างไม่สำเร็จ')
+            if (json?.id) draftIdRef.current = json.id
+            setDraftStatus('saved')
+            setDraftSavedAt(Date.now())
+            onDraftChange()
+            return true
+        } catch (e) {
+            setDraftStatus('error')
+            if (mode === 'manual') {
+                setErr(e instanceof Error ? e.message : 'บันทึกฉบับร่างไม่สำเร็จ')
+            }
+            return false
+        }
+    }, [currentPayload, hasContent, onDraftChange])
+
+    // Autosave with a 10s debounce. Fires whenever any tracked field
+    // changes, EXCEPT the first render (autosaveSkipRef) so opening a
+    // blank modal doesn't immediately create an empty row.
+    useEffect(() => {
+        if (autosaveSkipRef.current) {
+            autosaveSkipRef.current = false
+            return
+        }
+        const handle = window.setTimeout(() => { void saveDraft('auto') }, 10_000)
+        return () => window.clearTimeout(handle)
+    }, [selectedTypeId, startDate, endDate, isHalfDay, halfDayPeriod, reason, contact, step, saveDraft])
 
     const selectedType = balances.find(b => b.leave_type_id === selectedTypeId) ?? null
     const totalDays = startDate && endDate ? daysInclusive(startDate, endDate, isHalfDay) : 0
@@ -978,12 +1225,34 @@ function NewLeaveModal({
                 const res = await fetch('/api/leave/submit', { method: 'POST', body: form })
                 const json = await res.json()
                 if (!res.ok) throw new Error(json?.error ?? 'บันทึกใบลาไม่สำเร็จ')
+                // §2.4 — Submission succeeded → clean up the draft. Best-effort:
+                // if delete fails the next page reload will still show it
+                // pending, but the parent's loadAll() will re-fetch anyway.
+                if (draftIdRef.current) {
+                    try {
+                        await fetch(`/api/leave/draft?id=${encodeURIComponent(draftIdRef.current)}`, { method: 'DELETE' })
+                    } catch { /* ignore — non-fatal */ }
+                    draftIdRef.current = null
+                }
                 onSuccess(`ยื่นใบลาเรียบร้อย · รหัส ${json.reference_code}`)
             } catch (e) {
                 setErr(e instanceof Error ? e.message : 'บันทึกใบลาไม่สำเร็จ')
             }
         })
     }
+
+    /** §2.4 — Save draft + close modal. Used by the "บันทึกฉบับร่าง"
+     *  button in the footer. If there's nothing to save we silently
+     *  close (avoids "ฉบับร่างว่าง" false errors). */
+    const handleSaveDraftAndClose = useCallback(async () => {
+        const payload = currentPayload()
+        if (!hasContent(payload)) {
+            onClose()
+            return
+        }
+        const ok = await saveDraft('manual')
+        if (ok) onClose()
+    }, [currentPayload, hasContent, saveDraft, onClose])
 
     return (
         <div
@@ -1071,44 +1340,87 @@ function NewLeaveModal({
                     )}
                 </div>
 
-                <div className="sticky bottom-0 bg-gradient-to-t from-[#15040a] to-transparent p-4 sm:p-5 border-t border-white/10 flex items-center justify-between gap-3">
+                {/* §2.4 — Autosave status strip. Quiet by default; only
+                    shows when actively saving / just saved / errored. */}
+                {draftStatus !== 'idle' && (
+                    <div className="px-5 sm:px-6 pb-2 -mt-2 text-[11px] flex items-center gap-1.5">
+                        {draftStatus === 'saving' && (
+                            <span className="text-white/55 inline-flex items-center gap-1">
+                                <Loader2 size={11} className="animate-spin" />
+                                กำลังบันทึกฉบับร่าง…
+                            </span>
+                        )}
+                        {draftStatus === 'saved' && draftSavedAt && (
+                            <span className="text-emerald-300/80 inline-flex items-center gap-1">
+                                <CheckCircle2 size={11} />
+                                บันทึกฉบับร่างแล้ว · {new Date(draftSavedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                        )}
+                        {draftStatus === 'error' && (
+                            <span className="text-red-300/80 inline-flex items-center gap-1">
+                                <AlertCircle size={11} />
+                                บันทึกฉบับร่างไม่สำเร็จ
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                <div className="sticky bottom-0 bg-gradient-to-t from-[#15040a] to-transparent p-4 sm:p-5 border-t border-white/10 flex items-center justify-between gap-2 flex-wrap">
                     <button
                         type="button"
                         onClick={() => setStep((s) => (s > 1 ? ((s - 1) as NewLeaveStep) : s))}
                         disabled={step === 1 || submitting}
-                        className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-40 text-white text-sm font-semibold"
+                        className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-40 text-white text-sm font-semibold"
                     >
                         <ChevronLeft size={14} />
                         ย้อนกลับ
                     </button>
-                    {step < 4 ? (
+
+                    <div className="flex items-center gap-2 ml-auto">
+                        {/* §2.4 — Manual save-as-draft. Pure escape hatch so the
+                            user can stop and resume later without waiting for
+                            the 10s autosave debounce. */}
                         <button
                             type="button"
-                            // No `disabled` here — the validate-on-click flow
-                            // surfaces a toast with the missing fields, which
-                            // is far clearer than a silently disabled button
-                            // (the original ปุ๊ bug).
-                            onClick={handleNext}
-                            disabled={submitting}
-                            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-black text-sm font-bold active:scale-95"
+                            onClick={() => { void handleSaveDraftAndClose() }}
+                            disabled={submitting || draftStatus === 'saving'}
+                            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-40 text-white text-sm font-semibold"
+                            title="บันทึกฉบับร่างแล้วปิด — กลับมาเขียนต่อได้ทีหลัง"
                         >
-                            ถัดไป
-                            <ChevronRight size={14} />
+                            <Save size={14} />
+                            <span className="hidden sm:inline">บันทึกฉบับร่าง</span>
+                            <span className="sm:hidden">ฉบับร่าง</span>
                         </button>
-                    ) : (
-                        <button
-                            type="button"
-                            onClick={handleSubmit}
-                            // Same reasoning as the ถัดไป button: keep the
-                            // submit clickable so validate() can run and tell
-                            // the user exactly what's missing.
-                            disabled={submitting}
-                            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-black text-sm font-bold active:scale-95"
-                        >
-                            {submitting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                            ยื่นใบลา
-                        </button>
-                    )}
+
+                        {step < 4 ? (
+                            <button
+                                type="button"
+                                // No `disabled` here — the validate-on-click flow
+                                // surfaces a toast with the missing fields, which
+                                // is far clearer than a silently disabled button
+                                // (the original ปุ๊ bug).
+                                onClick={handleNext}
+                                disabled={submitting}
+                                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-black text-sm font-bold active:scale-95"
+                            >
+                                ถัดไป
+                                <ChevronRight size={14} />
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={handleSubmit}
+                                // Same reasoning as the ถัดไป button: keep the
+                                // submit clickable so validate() can run and tell
+                                // the user exactly what's missing.
+                                disabled={submitting}
+                                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-black text-sm font-bold active:scale-95"
+                            >
+                                {submitting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                                ยื่นใบลา
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
