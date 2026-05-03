@@ -107,17 +107,15 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     manager: [
-        // Bottom tabs hold Home/เช็คอิน/ลา-WFH/ประกาศ; everything else
-        // here grouped to match the desktop sidebar.
-        { label: 'ใบลาของฉัน',     desc: 'ยื่นและดูประวัติใบลา',    href: '/portal/leave',           icon: Palmtree,        groupLabel: 'การลาและ WFH' },
-        { label: 'ขอ WFH',         desc: 'ส่งคำขอทำงานที่บ้าน',     href: '/portal/wfh',             icon: Home },
-        { label: 'อนุมัติการลา',   desc: 'พิจารณาคำขอลาลูกทีม',   href: '/portal/leave/inbox',     icon: ClipboardCheck },
-        { label: 'อนุมัติ WFH',    desc: 'พิจารณาคำขอ WFH ลูกทีม',  href: '/portal/wfh/inbox',       icon: ClipboardCheck },
-        { label: 'วันหยุดสะสม',   desc: 'แลกวันหยุดที่ทำงานล่วงเวลา', href: '/portal/comp-days',     icon: CalendarHeart },
-        { label: 'ปฏิทิน',         desc: 'วันหยุด + WFH',           href: '/portal/calendar',        icon: CalendarDays },
-        { label: 'นโยบายการลา', desc: 'ข้อกำหนดการลาของบริษัท',  href: '/portal/leave-policy',    icon: ScrollText },
-        // "ส่วนตัว" group: same shape as employee. Manager's profile
-        // also moves out of the bottom row into here.
+        // Same shape as employee — leave-and-WFH submit surfaces are all
+        // reachable via the bottom-tab "ลา/WFH" + chip-row sub-nav.
+        // What stays here from the leave domain is the APPROVER inboxes,
+        // since those don't appear in the chip row (chip row = submit,
+        // inbox = approve). They sit as top-level items so the manager
+        // can reach them in one tap from More.
+        { label: 'อนุมัติการลา', desc: 'พิจารณาคำขอลาลูกทีม',     href: '/portal/leave/inbox',     icon: ClipboardCheck,  groupLabel: 'การอนุมัติ' },
+        { label: 'อนุมัติ WFH',  desc: 'พิจารณาคำขอ WFH ลูกทีม',  href: '/portal/wfh/inbox',       icon: ClipboardCheck },
+        // "ส่วนตัว" group: profile + (manager has no payroll mgmt by default).
         { label: 'โปรไฟล์',        desc: 'ข้อมูลส่วนตัวและตำแหน่ง',  href: '/portal/profile',         icon: UserRound,       groupLabel: 'ส่วนตัว' },
         { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',    icon: Network,         groupLabel: 'บริษัท' },
         { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/portal/meeting-room',    icon: DoorOpen },
@@ -125,22 +123,17 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     employee: [
-        // Bottom tabs hold Home/เช็คอิน/ลา-WFH/ประกาศ; everything else
-        // lives here grouped by domain (sidebar parity).
-        // "ใบลาของฉัน" stays at the top of "การลาและ WFH" so opening the
-        // group lands on the most-used surface first.
-        { label: 'ใบลาของฉัน',     desc: 'ยื่นและดูประวัติใบลา',    href: '/portal/leave',          icon: Palmtree,        groupLabel: 'การลาและ WFH' },
-        { label: 'ขอ WFH',         desc: 'ส่งคำขอทำงานที่บ้าน',     href: '/portal/wfh',            icon: Home },
-        { label: 'วันหยุดสะสม',   desc: 'แลกวันหยุดที่ทำงานล่วงเวลา', href: '/portal/comp-days',    icon: CalendarHeart },
-        { label: 'ปฏิทิน',         desc: 'วันหยุด + WFH',           href: '/portal/calendar',       icon: CalendarDays },
-        { label: 'นโยบายการลา', desc: 'ข้อกำหนดการลาของบริษัท',  href: '/portal/leave-policy',   icon: ScrollText },
-        // "ส่วนตัว" group renamed from "ของฉัน" — Mod's call (ของฉัน
-        // sounded awkward). Profile moved in here from the bottom-tab
-        // row so it sits next to its only sibling (สลิป) in a coherent
-        // personal-data group.
+        // Bottom tabs hold Home/เช็คอิน/ลา-WFH/ประกาศ; the leave-and-WFH
+        // hub is reachable in 1 tap from the bottom-tab "ลา/WFH" + the
+        // chip-row sub-nav on the leave page covers all the sub-pages
+        // (ใบลา · ขอ WFH · วันหยุดสะสม · ปฏิทิน · นโยบาย). Mod's call:
+        // "ลา/WFH" group ใน More เป็นทางที่ 3 ที่ทำเรื่องเดิม → drop it.
+        // Approver inboxes inject as top-level items via shell.tsx
+        // when employees.is_approver = true.
+        // "ส่วนตัว" group — personal data only (profile + slip).
         { label: 'โปรไฟล์',        desc: 'ข้อมูลส่วนตัวและตำแหน่ง',  href: '/portal/profile',        icon: UserRound,       groupLabel: 'ส่วนตัว' },
         { label: 'สลิปของฉัน',     desc: 'ดูสลิปเงินเดือน',         href: '/portal/payroll',        icon: FileText },
-        // "บริษัท" group: ประกาศข่าวสาร moved out (now a bottom tab).
+        // "บริษัท" group — read-only org-wide info.
         { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',   icon: Network,         groupLabel: 'บริษัท' },
         { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/portal/meeting-room',   icon: DoorOpen },
         { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',       icon: Settings,        groupLabel: 'อื่น ๆ' },
@@ -199,7 +192,17 @@ function bucketIntoGroups(items: MoreItem[]): MoreGroup[] {
     return groups
 }
 
-export function PortalBottomNav({ canManagePayroll = false }: { canManagePayroll?: boolean }) {
+export function PortalBottomNav({
+    canManagePayroll = false,
+    isApprover = false,
+}: {
+    canManagePayroll?: boolean
+    /** True when employees.is_approver is set on the signed-in user.
+     *  Drives the dynamic injection of approver inbox items at the top
+     *  of the More panel so employee-role approvers can act on requests
+     *  from mobile (matches the desktop sidebar injection in shell.tsx). */
+    isApprover?: boolean
+}) {
     const role = useRole()
     const pathname = usePathname()
     const [moreOpen, setMoreOpen] = useState(false)
@@ -243,6 +246,30 @@ export function PortalBottomNav({ canManagePayroll = false }: { canManagePayroll
             },
         ]
         : []
+    // Approver inboxes — injected only when an EMPLOYEE-role user has
+    // employees.is_approver=true. Manager role already has these baked
+    // into MORE_CONFIG.manager; HR admins have them in their hr_admin
+    // mobile menu. So this branch covers exactly the gap: employees who
+    // are also approvers (e.g. หัวหน้าแผนกที่อยู่ใน role 'employee'
+    // เพราะไม่ได้ถูกตั้ง role manager). Sits at the top of the More
+    // panel so they can act on requests in 1 tap.
+    const approverMoreItems: MoreItem[] = (role === 'employee' && isApprover)
+        ? [
+            {
+                label: 'อนุมัติการลา',
+                desc: 'พิจารณาคำขอลาลูกทีม',
+                href: '/portal/leave/inbox',
+                icon: ClipboardCheck,
+                groupLabel: 'การอนุมัติ',
+            },
+            {
+                label: 'อนุมัติ WFH',
+                desc: 'พิจารณาคำขอ WFH ลูกทีม',
+                href: '/portal/wfh/inbox',
+                icon: ClipboardCheck,
+            },
+        ]
+        : []
 
     const navItems = isHrAdminMode
         ? HR_ADMIN_NAV_HRADMIN
@@ -252,7 +279,7 @@ export function PortalBottomNav({ canManagePayroll = false }: { canManagePayroll
     // nav should remain a normal employee nav with one extra payroll item.
     const moreItems = isHrAdminMode
         ? MORE_CONFIG.hr_admin
-        : [...payrollMoreItems, ...baseMoreItems]
+        : [...payrollMoreItems, ...approverMoreItems, ...baseMoreItems]
 
     // Pre-compute group buckets for the collapsible renderer. Memoized so
     // we don't re-bucket on every keystroke into the route bar.

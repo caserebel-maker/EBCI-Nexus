@@ -435,7 +435,10 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                 reason as the spacer above. */}
             {showBottomNav && (
                 <div className="print:hidden">
-                    <PortalBottomNav canManagePayroll={perms.can_manage_payroll && !inPortalPreview} />
+                    <PortalBottomNav
+                        canManagePayroll={perms.can_manage_payroll && !inPortalPreview}
+                        isApprover={!!profile?.isApprover}
+                    />
                 </div>
             )}
         </div>
