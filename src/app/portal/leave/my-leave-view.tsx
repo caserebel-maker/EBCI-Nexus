@@ -1287,17 +1287,18 @@ function NewLeaveModal({
             onClick={onClose}
         >
             <div
-                className="w-full sm:max-w-2xl max-h-[95vh] overflow-y-auto relative"
+                className="w-full sm:max-w-2xl max-h-[95vh] overflow-y-auto overflow-x-hidden relative"
                 style={{ background: 'rgba(86,30,35,0.77)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '20px' }}
                 onClick={e => e.stopPropagation()}
             >
-                {/* Header bar — was solid black-maroon (#15040a), which
-                    Mod called "ตันและหนัก". Switched to a softer maroon
-                    (#561e23) with backdrop-blur so it reads as part of
-                    the modal's brand palette instead of a hard divider. */}
+                {/* Header bar — slightly darker than the modal panel so
+                    it reads as a separate band (Mod 4 May: "เฮดเดอร์
+                    กับ bottom กลืนไปนิด" — earlier softer-maroon was
+                    too close to the panel bg). Same shade as the
+                    footer below for symmetry. */}
                 <div
                     className="sticky top-0 z-10 px-5 sm:px-6 py-4 border-b border-white/15 flex items-center justify-between"
-                    style={{ background: 'rgba(86,30,35,0.92)', backdropFilter: 'blur(8px)' }}
+                    style={{ background: 'rgba(50,15,20,0.96)', backdropFilter: 'blur(8px)' }}
                 >
                     <div>
                         <p className="text-xs font-semibold text-white/70">ใบลาใหม่ · ขั้นตอน {step} / 4</p>
@@ -1404,50 +1405,52 @@ function NewLeaveModal({
                     </div>
                 )}
 
-                {/* Sticky footer — fully opaque so it cleanly covers the
-                    content scrolling underneath. Same softer maroon as
-                    the header above (was rgba(15,4,10,0.95) — too dark
-                    per Mod's "ตันและหนัก" feedback). */}
+                {/* Sticky footer — single row, no wrap (Mod's 4 May:
+                    "ปุ่มไม่ควรปีนกัน"). Compact paddings + icon-only
+                    "ฉบับร่าง" on phones so all 3 buttons fit on one
+                    line even on a 360px-wide viewport. Background
+                    darker than the modal panel so the footer reads
+                    as a separate band, not a continuation of the
+                    body (Mod: "เฮดเดอร์กับ bottom กลืนไปนิด"). */}
                 <div
-                    className="sticky bottom-0 p-4 sm:p-5 border-t border-white/15 flex items-center justify-between gap-2 flex-wrap"
-                    style={{ background: 'rgba(86,30,35,0.92)', backdropFilter: 'blur(8px)' }}
+                    className="sticky bottom-0 px-3 sm:px-5 py-3 border-t border-white/15 flex items-center gap-2"
+                    style={{ background: 'rgba(50,15,20,0.96)', backdropFilter: 'blur(8px)' }}
                 >
                     <button
                         type="button"
                         onClick={() => setStep((s) => (s > 1 ? ((s - 1) as NewLeaveStep) : s))}
                         disabled={step === 1 || submitting}
-                        className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-40 text-white text-sm font-semibold"
+                        className="inline-flex items-center gap-1 px-3 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-40 text-white text-sm font-semibold shrink-0"
+                        aria-label="ย้อนกลับ"
                     >
                         <ChevronLeft size={14} />
-                        ย้อนกลับ
+                        <span className="hidden sm:inline">ย้อนกลับ</span>
                     </button>
 
-                    <div className="flex items-center gap-2 ml-auto">
-                        {/* §2.4 — Manual save-as-draft. Pure escape hatch so the
-                            user can stop and resume later without waiting for
-                            the 10s autosave debounce. */}
+                    <div className="flex items-center gap-1.5 ml-auto shrink-0">
+                        {/* §2.4 — Manual save-as-draft. Icon-only on
+                            phones (button is just the floppy icon) so
+                            the row never wraps; "บันทึกฉบับร่าง" label
+                            shows again at sm: breakpoint where there's
+                            room. */}
                         <button
                             type="button"
                             onClick={() => { void handleSaveDraftAndClose() }}
                             disabled={submitting || draftStatus === 'saving'}
-                            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-40 text-white text-sm font-semibold"
+                            className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-40 text-white text-sm font-semibold shrink-0"
                             title="บันทึกฉบับร่างแล้วปิด — กลับมาเขียนต่อได้ทีหลัง"
+                            aria-label="บันทึกฉบับร่าง"
                         >
                             <Save size={14} />
-                            <span className="hidden sm:inline">บันทึกฉบับร่าง</span>
-                            <span className="sm:hidden">ฉบับร่าง</span>
+                            <span className="hidden sm:inline">ฉบับร่าง</span>
                         </button>
 
                         {step < 4 ? (
                             <button
                                 type="button"
-                                // No `disabled` here — the validate-on-click flow
-                                // surfaces a toast with the missing fields, which
-                                // is far clearer than a silently disabled button
-                                // (the original ปุ๊ bug).
                                 onClick={handleNext}
                                 disabled={submitting}
-                                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-black text-sm font-bold active:scale-95"
+                                className="inline-flex items-center gap-1 px-4 py-2.5 rounded-lg bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-black text-sm font-bold active:scale-95 shrink-0"
                             >
                                 ถัดไป
                                 <ChevronRight size={14} />
@@ -1456,11 +1459,8 @@ function NewLeaveModal({
                             <button
                                 type="button"
                                 onClick={handleSubmit}
-                                // Same reasoning as the ถัดไป button: keep the
-                                // submit clickable so validate() can run and tell
-                                // the user exactly what's missing.
                                 disabled={submitting}
-                                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-black text-sm font-bold active:scale-95"
+                                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-black text-sm font-bold active:scale-95 shrink-0"
                             >
                                 {submitting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                                 ยื่นใบลา
