@@ -393,23 +393,28 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                     {emergencyBanner && <div className="mb-4 print:hidden">{emergencyBanner}</div>}
 
                     {/* Mobile daily greeting — birthday / payday / dated
-                        salutations. The full identity card (photo + name +
-                        position + tenure + email) lived here too; that
-                        content moved into the topbar user-menu dropdown so
-                        it only appears when explicitly requested rather than
-                        eating space at the top of every page.
-
-                        `lg:hidden` because desktop has the sidebar profile
-                        card; `print:hidden` because the print engine fakes
-                        a narrow viewport which would otherwise leak the
-                        greeting into every PDF export. */}
-                    <div className="lg:hidden mb-3 pb-3 border-b border-white/10 print:hidden">
-                        <DailyGreeting
-                            variant="mobile"
-                            nickname={profile?.nickname}
-                            dateOfBirth={profile?.dateOfBirth}
-                        />
-                    </div>
+                        salutations. Mod's 4 May call: only show this on the
+                        dashboard landing pages, not on every screen (it
+                        was eating screen real-estate at the top of every
+                        sub-page). The desktop dashboard has its own
+                        greeting block in dashboard-client; mobile uses
+                        this one because the desktop sidebar profile card
+                        isn't visible on phones. */}
+                    {(() => {
+                        const isDashboardLanding = pathname === '/portal'
+                            || pathname === '/portal/dashboard'
+                            || pathname === '/hradmin/dashboard'
+                        if (!isDashboardLanding) return null
+                        return (
+                            <div className="lg:hidden mb-3 pb-3 border-b border-white/10 print:hidden">
+                                <DailyGreeting
+                                    variant="mobile"
+                                    nickname={profile?.nickname}
+                                    dateOfBirth={profile?.dateOfBirth}
+                                />
+                            </div>
+                        )
+                    })()}
 
                     {children}
                     {/* Mobile bottom nav spacer — height = nav bar + iPhone safe area.
