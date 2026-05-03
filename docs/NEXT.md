@@ -5,40 +5,40 @@
 
 ---
 
-## 🔁 ที่เครื่องถัดไป — **Office · อังคาร 5 พ.ค. (HIP Ci100S admin panel check)**
+## 🔁 ที่เครื่องถัดไป — **Home Mac · เย็น 3 พ.ค. (~21:00 หลังถึงบ้าน)**
 
-> **อ่านเฉพาะตอนเปิด Claude Code ที่ office Mac mini**
+> **อ่านเฉพาะตอนเปิด Claude Code ที่ home Mac**
 
 **Step 1 — Pull ก่อน:**
 ```bash
-cd <office-path>/EBCI-Nexus && git pull origin main --ff-only
+cd ~/C1TB/EB-CI/EBCI-Nexus && git pull origin main --ff-only
 ```
 
-**Step 2 — Tuesday office task (~30 นาที):**
-1. เปิด HIP Ci100S admin panel ที่ `http://192.168.1.40` (login admin)
-2. หา section **Webhook / Push URL / Event notification / Cloud sync** — ถ้ามี:
-   - Set URL = `https://nexus.ebcitrade.com/api/webhooks/card-scan`
-   - Set header `X-Webhook-Secret: <secret>` (gen ผ่าน `openssl rand -hex 32` ก่อน)
-   - Add same secret เข้า Vercel env vars เป็น `CARD_SCAN_WEBHOOK_SECRET`
-   - Test: ทาบบัตรจริง → ดู Vercel logs ว่ามี `[webhooks/card-scan] inserted`
-3. ถ้าไม่มี webhook section → fall back **Option B**: เขียน Python agent บน office Mac poll HIP TCP port 5005 → POST ไปยัง webhook ตัวเดียวกัน (endpoint flexible อยู่แล้ว)
-
-**Step 3 — Verify 3 tests ที่ค้างมาตั้งแต่ APR30:**
-1. `/portal/announcements` → กดประกาศรูปแนวตั้ง → เห็นเต็มไม่ crop (`2bc77df`)
-2. login พนักงานที่ลา approved วันนี้ → `/portal/checkin` แสดง "วันนี้คุณลาอยู่" (`66be09f`)
-3. login approver → `/portal/leave/inbox` เห็น "ขอยกเลิก" badge (`cc84d12`)
-
-**Step 4 — พิมพ์บอก Claude:**
+**Step 2 — พิมพ์บอก Claude:**
 ```
-อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ office. ทำ Tuesday HIP webhook check ก่อน
-แล้ว report กลับ: HIP Ci100S admin panel มี webhook config มั้ย? ถ้ามี → set URL,
-ถ้าไม่มี → ลุย Option B (Python agent)
+อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ home. session laptop เพิ่งจบไป 19:38
+ส่ง QUESTIONS_FOR_MOD.md ไปแล้ว (commit 97ec199) รอ ม๊อด ตอบ.
+ระหว่างรอให้ทำงานที่ไม่ blocked: §3.4 bulk salary slip e2e test (~20 นาที)
+หรือ verify §1.3 + §1.4 + §3.16p2 บน prod (เปิด /portal/checkin / /portal/leave/inbox / /hradmin/attendance/reconcile)
 ```
 
-**ล่าสุดเสร็จ (home · APR30 evening):**
-- `2862fd1` — §3.1 Phase 1A: smart suppression `/portal/checkin` (card scan วันนี้ → ซ่อน CTA แสดง "บัตร scan แล้ว XX:XX")
-- `1108af6` — §3.1 Phase 1B: `POST /api/webhooks/card-scan` endpoint (HMAC + shared-secret auth, idempotent, batch ≤500)
-- `a27c3b1` — fix FK: `leave_balances.last_adjusted_by` เขียน User.id (ไม่ใช่ employees.id) — sweep แล้วทุก FK→User.id ทั้ง 9 column ถูกต้อง
+**Step 3 — ตอบ Claude:** "อยู่ home"
+
+**📌 Beta status ตอนนี้: ~89% complete**
+- ✅ Code ship แล้ว 15/17 items ใน BETA_FEEDBACK
+- 🚧 รอ ม๊อด ตอบ 12 คำถามใน `docs/QUESTIONS_FOR_MOD.md`
+- 🔧 Tuesday office task: HIP webhook config (เลื่อนไปทำที่ office จริง)
+
+**📅 Reminder:** มี GCal event + Claude scheduled-task รออยู่ พร้อม prompt ด้านบน
+
+**ล่าสุดเสร็จ (laptop · 3 พ.ค. afternoon-evening):**
+- `97ec199` — `docs/QUESTIONS_FOR_MOD.md` 12 คำถามจัด priority + multiple choice — ส่งให้ ม๊อด unblock backlog
+
+**ก่อนหน้านั้น (laptop · APR30 afternoon):**
+- `cc84d12` — §1.4 cancel/withdraw approved leave w/ approver sign-off
+- `66be09f` — §1.3 leave-day check-in suppression + ลา in reconcile
+- `fd2ef5f` — §2.5 remember-me 30-day signed session
+- `96a4fb6` — §3.14 XSS sweep + harden notification action_url
 
 ---
 
