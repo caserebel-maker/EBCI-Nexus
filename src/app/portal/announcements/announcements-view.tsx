@@ -216,7 +216,10 @@ function AnnouncementModal({ a, onClose }: { a: Announcement; onClose: () => voi
                         <UserCircle size={14} />
                         โพสโดย: <span className="text-white/80 font-medium">{a.creator_name ?? 'ระบบ'}</span>
                     </p>
-                    <p className="text-white/80 leading-relaxed whitespace-pre-wrap" style={{ fontSize: '15px' }}>
+                    {/* Body bumped 15px → 17px (Mod's 4 May call: ทุก
+                        ประกาศควรอ่านง่ายกว่านี้). White text already
+                        bright; the +2px is what made the difference. */}
+                    <p className="text-white/85 leading-relaxed whitespace-pre-wrap" style={{ fontSize: '17px' }}>
                         {a.content}
                     </p>
                 </div>

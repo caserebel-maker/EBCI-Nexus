@@ -252,7 +252,7 @@ function AnnouncementModal({ ann, onClose }: { ann: AnnouncementItem; onClose: (
                         <UserCircle size={13} />
                         โพสโดย: <span className="text-white/75 font-medium">{ann.creatorName ?? 'ระบบ'}</span>
                     </p>
-                    <p className="text-white/75 leading-relaxed whitespace-pre-wrap" style={{ fontSize: '14px' }}>
+                    <p className="text-white/85 leading-relaxed whitespace-pre-wrap" style={{ fontSize: '16px' }}>
                         {ann.content}
                     </p>
                 </div>
