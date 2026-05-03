@@ -815,13 +815,13 @@ function LeaveDetailModal({
                     </dl>
 
                     <div>
-                        <p className="text-[11px] uppercase tracking-wider text-white/50 font-bold mb-1">เหตุผล</p>
+                        <p className="text-sm font-bold text-white/85 mb-1">เหตุผล</p>
                         <p className="text-sm text-white/85 whitespace-pre-wrap">{request.reason}</p>
                     </div>
 
                     {request.attachment_url && (
                         <div>
-                            <p className="text-[11px] uppercase tracking-wider text-white/50 font-bold mb-1.5">เอกสารแนบ</p>
+                            <p className="text-sm font-bold text-white/85 mb-1.5">เอกสารแนบ</p>
                             <a
                                 href={request.attachment_url}
                                 target="_blank"
@@ -881,7 +881,7 @@ function LeaveDetailModal({
 
                     {canCancel && (
                         <div className="pt-3 border-t border-white/10 space-y-2">
-                            <label className="block text-[11px] uppercase tracking-wider text-white/55 font-bold">
+                            <label className="block text-sm font-bold text-white/85">
                                 เหตุผลยกเลิก (ถ้ามี)
                             </label>
                             <textarea
@@ -908,7 +908,7 @@ function LeaveDetailModal({
                         approver, not to instant cancellation. */}
                     {canRequestCancellation && (
                         <div className="pt-3 border-t border-white/10 space-y-2">
-                            <label className="block text-[11px] uppercase tracking-wider text-white/55 font-bold">
+                            <label className="block text-sm font-bold text-white/85">
                                 เหตุผลในการขอยกเลิก <span className="text-red-300">*</span>
                             </label>
                             <textarea
@@ -943,7 +943,7 @@ function LeaveDetailModal({
 function Field({ label, value }: { label: string; value: string }) {
     return (
         <div>
-            <dt className="text-[11px] uppercase tracking-wider text-white/50 font-bold">{label}</dt>
+            <dt className="text-sm font-bold text-white/85">{label}</dt>
             <dd className="text-sm text-white mt-0.5">{value}</dd>
         </div>
     )
@@ -1291,9 +1291,16 @@ function NewLeaveModal({
                 style={{ background: 'rgba(86,30,35,0.77)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '20px' }}
                 onClick={e => e.stopPropagation()}
             >
-                <div className="sticky top-0 z-10 bg-gradient-to-b from-[#15040a] to-[#15040aee] px-5 sm:px-6 py-4 border-b border-white/10 flex items-center justify-between">
+                {/* Header bar — was solid black-maroon (#15040a), which
+                    Mod called "ตันและหนัก". Switched to a softer maroon
+                    (#561e23) with backdrop-blur so it reads as part of
+                    the modal's brand palette instead of a hard divider. */}
+                <div
+                    className="sticky top-0 z-10 px-5 sm:px-6 py-4 border-b border-white/15 flex items-center justify-between"
+                    style={{ background: 'rgba(86,30,35,0.92)', backdropFilter: 'blur(8px)' }}
+                >
                     <div>
-                        <p className="text-[10px] uppercase tracking-wider text-white/50 font-bold">ใบลาใหม่ · ขั้นตอน {step} / 4</p>
+                        <p className="text-xs font-semibold text-white/70">ใบลาใหม่ · ขั้นตอน {step} / 4</p>
                         <h2 className="text-lg font-bold text-white">
                             {step === 1 && 'เลือกประเภทการลา'}
                             {step === 2 && 'วันที่และรายละเอียด'}
@@ -1398,14 +1405,12 @@ function NewLeaveModal({
                 )}
 
                 {/* Sticky footer — fully opaque so it cleanly covers the
-                    content scrolling underneath. Was a top-transparent
-                    gradient; that meant input fields scrolled into the
-                    "see-through" band and looked like they were poking
-                    through the footer (Mod's "wobble"). Solid maroon
-                    panel + top border line reads as a separate band. */}
+                    content scrolling underneath. Same softer maroon as
+                    the header above (was rgba(15,4,10,0.95) — too dark
+                    per Mod's "ตันและหนัก" feedback). */}
                 <div
                     className="sticky bottom-0 p-4 sm:p-5 border-t border-white/15 flex items-center justify-between gap-2 flex-wrap"
-                    style={{ background: 'rgba(15,4,10,0.95)', backdropFilter: 'blur(8px)' }}
+                    style={{ background: 'rgba(86,30,35,0.92)', backdropFilter: 'blur(8px)' }}
                 >
                     <button
                         type="button"
@@ -1497,7 +1502,7 @@ function Step1TypePicker({
     return (
         <div className="space-y-3">
             <label className="block">
-                <span className="text-[11px] uppercase tracking-wider text-white/55 font-bold">
+                <span className="text-sm font-bold text-white/85">
                     ประเภทการลา <span className="text-red-300">*</span>
                 </span>
                 <select
@@ -1582,18 +1587,18 @@ function Step1TypePicker({
                     </div>
                     <div className="mt-2.5 space-y-1">
                         {selected.advance_notice_days > 0 && (
-                            <p className="text-[11px] text-amber-200">ขอล่วงหน้า ≥ {selected.advance_notice_days} วัน</p>
+                            <p className="text-sm text-amber-200">ขอล่วงหน้า ≥ {selected.advance_notice_days} วัน</p>
                         )}
                         {!selected.same_day_allowed && selected.leave_type_id === 'sick' && (
-                            <p className="text-[11px] text-rose-200">ต้องเป็นวันที่ผ่านไปแล้ว</p>
+                            <p className="text-sm text-rose-200">ต้องเป็นวันที่ผ่านไปแล้ว</p>
                         )}
                         {selected.leave_type_id === 'sick' ? (
-                            <p className="text-[11px] text-sky-200 inline-flex items-center gap-1">
-                                <Paperclip size={10} /> ใบรับรองแพทย์เมื่อป่วย ≥ 3 วัน
+                            <p className="text-sm text-sky-200 inline-flex items-center gap-1.5">
+                                <Paperclip size={12} /> ใบรับรองแพทย์เมื่อป่วย ≥ 3 วัน
                             </p>
                         ) : selected.requires_attachment && (
-                            <p className="text-[11px] text-sky-200 inline-flex items-center gap-1">
-                                <Paperclip size={10} /> ต้องแนบเอกสาร
+                            <p className="text-sm text-sky-200 inline-flex items-center gap-1.5">
+                                <Paperclip size={12} /> ต้องแนบเอกสาร
                             </p>
                         )}
                     </div>
@@ -1736,7 +1741,7 @@ function Step2Dates({
             </div>
 
             <label className="block">
-                <span className="text-[11px] uppercase tracking-wider text-white/55 font-bold">
+                <span className="text-sm font-bold text-white/85">
                     เหตุผลในการลา <span className="text-red-300">*</span>
                 </span>
                 <textarea
@@ -1756,7 +1761,7 @@ function Step2Dates({
             </label>
 
             <label className="block">
-                <span className="text-[11px] uppercase tracking-wider text-white/55 font-bold">
+                <span className="text-sm font-bold text-white/85">
                     ช่องทางติดต่อระหว่างลา (ถ้ามี)
                 </span>
                 <input
@@ -1807,28 +1812,28 @@ function ApproverChainBox({ chain, errored }: { chain: ApproverChainStep[] | nul
 
     return (
         <div className="p-3 rounded-lg bg-emerald-500/8 border border-emerald-500/25">
-            <p className="text-[11px] uppercase tracking-wider text-emerald-200/85 font-bold mb-2 inline-flex items-center gap-1.5">
-                <Send size={11} />
+            <p className="text-sm font-bold text-emerald-200/95 mb-2 inline-flex items-center gap-1.5">
+                <Send size={13} />
                 ใบลานี้จะส่งไปที่
             </p>
             <ol className="space-y-1.5">
                 {chain.map((step, i) => (
                     <li
                         key={step.id}
-                        className="flex items-center gap-2.5 text-[0.85rem]"
+                        className="flex items-center gap-2.5 text-sm"
                     >
                         <span className="shrink-0 h-5 w-5 inline-flex items-center justify-center rounded-full bg-emerald-500/20 text-emerald-200 text-[10px] font-bold">
                             {i + 1}
                         </span>
                         <span className="text-white font-semibold">{step.name}</span>
-                        <span className="text-white/55 text-[0.78rem]">· {step.role_label}</span>
+                        <span className="text-white/70 text-xs">· {step.role_label}</span>
                     </li>
                 ))}
             </ol>
-            <p className="mt-2.5 text-[11px] text-white/45 leading-relaxed">
+            <p className="mt-2.5 text-sm text-white/70 leading-relaxed">
                 หากผู้อนุมัติคนแรกอนุมัติ ระบบจะส่งต่อไปยังคนถัดไปอัตโนมัติ — ใบลาจะถือว่าสมบูรณ์เมื่อ HR อนุมัติเป็นขั้นสุดท้าย
             </p>
-            <p className="mt-1 text-[11px] text-white/40">
+            <p className="mt-1 text-sm text-white/60">
                 * หากชื่อนี้ไม่ถูกต้อง กรุณาแจ้งฝ่ายบุคคลให้แก้ไขผู้บังคับบัญชาในโปรไฟล์
             </p>
         </div>
@@ -1849,7 +1854,7 @@ function DateField({
 }) {
     return (
         <label className="block">
-            <span className="text-[11px] uppercase tracking-wider text-white/55 font-bold">{label}</span>
+            <span className="text-sm font-bold text-white/85">{label}</span>
             <input
                 type="date"
                 data-field={fieldId}
