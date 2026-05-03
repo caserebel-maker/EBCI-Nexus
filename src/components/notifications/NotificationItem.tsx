@@ -81,12 +81,17 @@ export function NotificationItem({
                     )}
                     <span className="truncate">{n.title}</span>
                 </p>
+                {/* Body text was text-xs white/70 — Mod's 4 May call:
+                    "อ่านยากมาก". Bumped to text-sm full-white medium-
+                    weight so it reads as actual content, not as muted
+                    secondary copy. Footer (sender + time) bumped one
+                    notch too so it's still subordinate but legible. */}
                 {n.body && (
-                    <p className="mt-0.5 text-xs text-white/70 line-clamp-2 leading-relaxed">
+                    <p className="mt-1 text-sm text-white font-medium line-clamp-2 leading-relaxed">
                         {n.body}
                     </p>
                 )}
-                <p className="mt-1 text-[11px] text-white/45">
+                <p className="mt-1.5 text-xs text-white/70">
                     {n.sender_name && <span>โดย {n.sender_name} · </span>}
                     {formatRelative(n.created_at)}
                 </p>
