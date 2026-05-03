@@ -468,7 +468,7 @@ function CalendarMonthView({
                 <div className="grid grid-cols-7 gap-1.5">
                     {cells.map((d, i) => {
                         if (d === null) {
-                            return <div key={i} className="min-h-[60px] rounded-md bg-white/[0.02]" />
+                            return <div key={i} className="aspect-square rounded-lg bg-white/[0.02]" />
                         }
                         const key = monthKey(d)
                         const events = byDate.get(key) ?? []
@@ -482,7 +482,8 @@ function CalendarMonthView({
 
                         // Pick dominant cell colour by priority — every other
                         // type on the same date renders as a small accent dot
-                        // in the bottom-right corner.
+                        // in the bottom-right corner. Cell is square so every
+                        // row matches height regardless of week count.
                         const kindsSet = new Set<CellKind>()
                         for (const e of events) kindsSet.add(holidayTypeToCellKind(e.type))
                         const kindsByPriority = CELL_PRIORITY.filter(k => kindsSet.has(k))
@@ -494,8 +495,8 @@ function CalendarMonthView({
                             ? { background: palette.bg, color: palette.text }
                             : {}
                         const cellClass = palette
-                            ? 'min-h-[60px] rounded-md p-2 flex flex-col gap-1 transition-all text-left cursor-pointer hover:brightness-110'
-                            : `min-h-[60px] rounded-md p-2 flex flex-col gap-1 transition-all text-left ${
+                            ? 'aspect-square rounded-lg flex items-center justify-center transition-all cursor-pointer hover:brightness-110 relative'
+                            : `aspect-square rounded-lg flex items-center justify-center transition-all relative ${
                                 isToday
                                     ? 'bg-amber-400/15 border border-amber-400/60'
                                     : 'bg-white/[0.04] border border-white/10 cursor-default'
@@ -526,11 +527,11 @@ function CalendarMonthView({
                                     {d}
                                 </span>
                                 {accentKinds.length > 0 && (
-                                    <div className="flex items-center gap-0.5 mt-auto self-end">
+                                    <div className="absolute bottom-1 right-1 flex items-center gap-0.5">
                                         {accentKinds.slice(0, 3).map(k => (
                                             <span
                                                 key={k}
-                                                className="block h-2 w-2 rounded-full ring-1 ring-black/20"
+                                                className="block h-1.5 w-1.5 rounded-full ring-1 ring-black/20"
                                                 style={{ background: CELL_PALETTE[k].bg }}
                                             />
                                         ))}

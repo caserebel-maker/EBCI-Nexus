@@ -208,7 +208,7 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                 <div className="grid grid-cols-7 gap-1.5">
                     {cells.map((d, i) => {
                         if (d === null) {
-                            return <div key={i} className="min-h-[80px] rounded-md bg-white/[0.02]" />
+                            return <div key={i} className="aspect-square rounded-lg bg-white/[0.02]" />
                         }
                         const dateStr = toDateStr(viewYear, viewMonth, d)
                         const dayHolidays = holidayMap.get(dateStr) ?? []
@@ -242,23 +242,26 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                             ...dayBookings.map(b => `🚪 ${b.title} ${formatBangkokTime(b.startsAt)}`),
                         ].join('\n')
 
-                        // Resolve cell colours — solid bg + matching day-number
-                        // colour from CELL_PALETTE. Empty cells stay translucent
-                        // glass so the grid keeps its rhythm.
+                        // Cell = square (1:1 aspect) — Mod's 4 May call:
+                        // rectangular cells made the top + bottom rows look
+                        // taller than the middle ones (because adjacent
+                        // months have different number of weeks). Square
+                        // forces every row to the same height.
+                        // Day number is centered inside the cell; accent
+                        // dots overlay absolutely at the bottom-right so
+                        // they don't push the number off-center.
                         const palette = dominantKind ? CELL_PALETTE[dominantKind] : null
                         const cellStyle: React.CSSProperties = palette
                             ? { background: palette.bg, color: palette.text }
                             : {}
                         const cellClass = palette
-                            ? 'min-h-[60px] rounded-md p-2 flex flex-col gap-1 transition-all text-left cursor-pointer hover:brightness-110'
-                            : `min-h-[60px] rounded-md p-2 flex flex-col gap-1 transition-all text-left ${
+                            ? 'aspect-square rounded-lg flex items-center justify-center transition-all cursor-pointer hover:brightness-110 relative'
+                            : `aspect-square rounded-lg flex items-center justify-center transition-all relative ${
                                 isToday
                                     ? 'bg-amber-400/15 border border-amber-400/60'
                                     : 'bg-white/[0.04] border border-white/10 cursor-default'
                             }`
 
-                        // Today ring overlays whatever bg the cell already has —
-                        // amber outline so it survives any palette colour.
                         const dayNumberColor = palette
                             ? palette.text
                             : isToday ? '#FCD34D'
@@ -285,22 +288,14 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                                     {d}
                                 </span>
                                 {accentKinds.length > 0 && (
-                                    <div className="flex items-center gap-0.5 mt-auto self-end">
+                                    <div className="absolute bottom-1 right-1 flex items-center gap-0.5">
                                         {accentKinds.slice(0, 3).map(k => (
                                             <span
                                                 key={k}
-                                                className="block h-2 w-2 rounded-full ring-1 ring-black/20"
+                                                className="block h-1.5 w-1.5 rounded-full ring-1 ring-black/20"
                                                 style={{ background: CELL_PALETTE[k].bg }}
                                             />
                                         ))}
-                                        {accentKinds.length > 3 && (
-                                            <span
-                                                className="text-[9px] font-bold ml-0.5"
-                                                style={{ color: dayNumberColor }}
-                                            >
-                                                +{accentKinds.length - 3}
-                                            </span>
-                                        )}
                                     </div>
                                 )}
                             </button>
