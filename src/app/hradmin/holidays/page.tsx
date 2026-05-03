@@ -18,16 +18,30 @@ interface Holiday {
 const CURRENT_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - 1 + i)
 
-// Calendar entry types — these are the four `holidays.type` values the UI
-// renders today. Display label + chip color + emoji per type. Emoji shows
-// in the calendar grid (1 per event) so the user can scan a month at a
-// glance without reading text. Anything outside this map falls through to
-// the "company" preset so legacy/imported data still shows up gracefully.
+// Calendar entry types. TYPE_CONFIG kept for the day-detail modal
+// (chip + label + emoji). The grid itself uses CELL_PALETTE below
+// (Mod's 4 May call: solid bg + day# is more legible than emoji-row).
 const TYPE_CONFIG: Record<string, { label: string; color: string; emoji: string }> = {
     public:    { label: 'นักขัตฤกษ์',      color: '#F87171', emoji: '🇹🇭' },
     religious: { label: 'วันสำคัญทางศาสนา', color: '#F472B6', emoji: '🛕' },
     company:   { label: 'บริษัทกำหนด',     color: '#60A5FA', emoji: '📌' },
     wfh:       { label: 'WFH',             color: '#34D399', emoji: '🏠' },
+}
+
+// Cell-bg palette for the GRID. Same scheme as the portal calendar
+// (sync if you change one — they're conceptually the same legend
+// even though the data sources differ; HR sees only holidays/WFH).
+type CellKind = 'public' | 'religious' | 'company' | 'wfh'
+const CELL_PALETTE: Record<CellKind, { bg: string; text: string; label: string }> = {
+    public:    { bg: '#F4F4F5', text: '#000000', label: 'นักขัตฤกษ์' },
+    religious: { bg: '#FBBF24', text: '#000000', label: 'วันสำคัญทางศาสนา' },
+    company:   { bg: '#FB923C', text: '#000000', label: 'บริษัทกำหนด' },
+    wfh:       { bg: '#3B82F6', text: '#FFFFFF', label: 'WFH' },
+}
+const CELL_PRIORITY: CellKind[] = ['public', 'religious', 'company', 'wfh']
+function holidayTypeToCellKind(t: string): CellKind {
+    if (t === 'public' || t === 'religious' || t === 'company' || t === 'wfh') return t
+    return 'company'  // unknown → fall back so it still paints something
 }
 const TYPE_OPTIONS: Array<{ value: string; label: string }> = [
     { value: 'public',    label: 'นักขัตฤกษ์ (วันหยุด)' },
@@ -454,7 +468,7 @@ function CalendarMonthView({
                 <div className="grid grid-cols-7 gap-1.5">
                     {cells.map((d, i) => {
                         if (d === null) {
-                            return <div key={i} className="min-h-[80px] rounded-md bg-white/[0.02]" />
+                            return <div key={i} className="min-h-[60px] rounded-md bg-white/[0.02]" />
                         }
                         const key = monthKey(d)
                         const events = byDate.get(key) ?? []
@@ -462,11 +476,36 @@ function CalendarMonthView({
                         const dow = (firstDow + d - 1) % 7
                         const isWeekend = dow === 0 || dow === 6
                         const hasEvents = events.length > 0
-                        // Tooltip: list all event names so desktop hover shows
-                        // every entry on the day without opening the modal.
                         const tooltip = hasEvents
                             ? events.map(e => `${(TYPE_CONFIG[e.type] ?? TYPE_CONFIG.company).emoji} ${e.name}`).join('\n')
                             : undefined
+
+                        // Pick dominant cell colour by priority — every other
+                        // type on the same date renders as a small accent dot
+                        // in the bottom-right corner.
+                        const kindsSet = new Set<CellKind>()
+                        for (const e of events) kindsSet.add(holidayTypeToCellKind(e.type))
+                        const kindsByPriority = CELL_PRIORITY.filter(k => kindsSet.has(k))
+                        const dominantKind = kindsByPriority[0] ?? null
+                        const accentKinds = kindsByPriority.slice(1)
+                        const palette = dominantKind ? CELL_PALETTE[dominantKind] : null
+
+                        const cellStyle: React.CSSProperties = palette
+                            ? { background: palette.bg, color: palette.text }
+                            : {}
+                        const cellClass = palette
+                            ? 'min-h-[60px] rounded-md p-2 flex flex-col gap-1 transition-all text-left cursor-pointer hover:brightness-110'
+                            : `min-h-[60px] rounded-md p-2 flex flex-col gap-1 transition-all text-left ${
+                                isToday
+                                    ? 'bg-amber-400/15 border border-amber-400/60'
+                                    : 'bg-white/[0.04] border border-white/10 cursor-default'
+                            }`
+                        const dayNumberColor = palette
+                            ? palette.text
+                            : isToday ? '#FCD34D'
+                            : isWeekend ? '#FCD34D'
+                            : 'rgba(255,255,255,0.55)'
+
                         return (
                             <button
                                 key={i}
@@ -474,43 +513,27 @@ function CalendarMonthView({
                                 onClick={() => hasEvents && setSelectedDate(key)}
                                 title={tooltip}
                                 disabled={!hasEvents}
-                                className={`min-h-[80px] rounded-md p-2 flex flex-col gap-1.5 transition-all text-left ${
-                                    isToday
-                                        ? 'bg-amber-400/15 border border-amber-400/60'
-                                        : hasEvents
-                                            ? 'bg-white/[0.07] border border-white/15 hover:bg-white/[0.13] hover:border-white/30 cursor-pointer'
-                                            : 'bg-white/[0.04] border border-white/10 cursor-default'
-                                }`}
+                                className={cellClass}
+                                style={{
+                                    ...cellStyle,
+                                    ...(isToday ? { boxShadow: 'inset 0 0 0 2px #FCD34D' } : {}),
+                                }}
                             >
-                                <span className={`text-base font-bold tabular-nums leading-none ${
-                                    isToday ? 'text-amber-200'
-                                        : isWeekend ? 'text-amber-200'
-                                        : hasEvents ? 'text-white' : 'text-white/55'
-                                }`}>
+                                <span
+                                    className="text-base font-bold tabular-nums leading-none"
+                                    style={{ color: dayNumberColor }}
+                                >
                                     {d}
                                 </span>
-                                {hasEvents && (
-                                    <div className="flex flex-wrap items-center gap-1 mt-auto">
-                                        {events.slice(0, 4).map(h => {
-                                            const cfg = TYPE_CONFIG[h.type] ?? TYPE_CONFIG.company
-                                            return (
-                                                <span
-                                                    key={h.id}
-                                                    className="inline-flex items-center justify-center h-6 w-6 rounded text-sm leading-none"
-                                                    style={{
-                                                        background: `${cfg.color}40`,
-                                                        border: `1px solid ${cfg.color}80`,
-                                                    }}
-                                                >
-                                                    {cfg.emoji}
-                                                </span>
-                                            )
-                                        })}
-                                        {events.length > 4 && (
-                                            <span className="text-xs font-semibold text-white/75 px-1">
-                                                +{events.length - 4}
-                                            </span>
-                                        )}
+                                {accentKinds.length > 0 && (
+                                    <div className="flex items-center gap-0.5 mt-auto self-end">
+                                        {accentKinds.slice(0, 3).map(k => (
+                                            <span
+                                                key={k}
+                                                className="block h-2 w-2 rounded-full ring-1 ring-black/20"
+                                                style={{ background: CELL_PALETTE[k].bg }}
+                                            />
+                                        ))}
                                     </div>
                                 )}
                             </button>
@@ -519,14 +542,21 @@ function CalendarMonthView({
                 </div>
             )}
 
-            {/* Legend */}
-            <div className="pt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                {Object.entries(TYPE_CONFIG).map(([t, cfg]) => (
-                    <span key={t} className="inline-flex items-center gap-1.5">
-                        <span className="text-base leading-none">{cfg.emoji}</span>
-                        <span className="text-white/85 font-medium">{cfg.label}</span>
-                    </span>
-                ))}
+            {/* Legend — color swatches, ordered by CELL_PRIORITY so the
+                dominant colour reads first. */}
+            <div className="pt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+                {CELL_PRIORITY.map(k => {
+                    const c = CELL_PALETTE[k]
+                    return (
+                        <span key={k} className="inline-flex items-center gap-1.5">
+                            <span
+                                className="block h-3.5 w-3.5 rounded ring-1 ring-black/20"
+                                style={{ background: c.bg }}
+                            />
+                            <span className="text-white/85 font-medium">{c.label}</span>
+                        </span>
+                    )
+                })}
             </div>
 
             {/* Day detail modal — opens when user clicks a cell with events */}

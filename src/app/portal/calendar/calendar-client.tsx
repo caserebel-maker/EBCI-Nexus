@@ -20,8 +20,11 @@ const THAI_MONTHS = [
 ]
 const THAI_DOWS = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์']
 
-// Holiday/WFH types — same emojis as /hradmin/holidays for visual
-// continuity. If you change one side, sync the other.
+// Holiday/WFH types — kept for the day-detail modal (chips + labels).
+// The CALENDAR GRID itself no longer uses these; cells get a solid
+// bg color from CELL_PALETTE below (Mod's 4 May call: emoji-row was
+// hard to scan because some emojis blend into the maroon page bg
+// and the icons stretched cell heights inconsistently).
 const HOLIDAY_CONFIG: Record<string, { label: string; color: string; emoji: string }> = {
     public:    { label: 'นักขัตฤกษ์',      color: '#F87171', emoji: '🇹🇭' },
     religious: { label: 'วันสำคัญทางศาสนา', color: '#F472B6', emoji: '🛕' },
@@ -29,8 +32,7 @@ const HOLIDAY_CONFIG: Record<string, { label: string; color: string; emoji: stri
     wfh:       { label: 'WFH',             color: '#34D399', emoji: '🏠' },
 }
 
-// Leave types — different palette from holidays so the user can scan
-// "this is my leave" vs "this is a company day-off" at a glance.
+// Leave types — same as above, used by the modal not the grid.
 const LEAVE_CONFIG: Record<string, { label: string; color: string; emoji: string }> = {
     annual:       { label: 'ลาพักร้อน',  color: '#60A5FA', emoji: '🏖️' },
     sick:         { label: 'ลาป่วย',     color: '#34D399', emoji: '🤒' },
@@ -41,6 +43,42 @@ const LEAVE_CONFIG: Record<string, { label: string; color: string; emoji: string
     marriage:     { label: 'ลาสมรส',     color: '#F9A8D4', emoji: '💍' },
     bereavement:  { label: 'ลาพ่อ-แม่เสียชีวิต', color: '#9CA3AF', emoji: '🕯️' },
     training:     { label: 'ลาพัฒนาความรู้', color: '#67E8F9', emoji: '🎓' },
+}
+
+// CELL palette — what shows in the calendar GRID (cell bg color).
+// Mod-defined colour scheme:
+//   public    → ขาว     (highest priority, all-company off day)
+//   religious → เหลือง
+//   company   → ส้ม
+//   wfh       → น้ำเงิน
+//   leave     → เขียว    (any leave type the user has)
+//   booking   → ชมพู
+//
+// Priority: when a cell has multiple kinds, the FIRST one in
+// CELL_PRIORITY wins as the bg. The others render as small accent
+// dots in the cell's bottom-right corner so the user still sees
+// "this day has multiple things going on".
+type CellKind = 'public' | 'religious' | 'company' | 'wfh' | 'leave' | 'booking'
+
+const CELL_PALETTE: Record<CellKind, { bg: string; text: string; label: string }> = {
+    public:    { bg: '#F4F4F5', text: '#000000', label: 'นักขัตฤกษ์' },     // white / black
+    religious: { bg: '#FBBF24', text: '#000000', label: 'วันสำคัญทางศาสนา' }, // yellow / black
+    company:   { bg: '#FB923C', text: '#000000', label: 'บริษัทกำหนด' },     // orange / black
+    wfh:       { bg: '#3B82F6', text: '#FFFFFF', label: 'WFH' },             // blue / white
+    leave:     { bg: '#10B981', text: '#FFFFFF', label: 'ใบลา' },            // green / white
+    booking:   { bg: '#EC4899', text: '#FFFFFF', label: 'จองห้องประชุม' },   // pink / white
+}
+
+const CELL_PRIORITY: CellKind[] = ['public', 'religious', 'company', 'wfh', 'leave', 'booking']
+
+/** Map a holidays.type value to a CellKind (or null if not a calendar
+ *  bg-painter — defensive for legacy/imported types we don't render). */
+function holidayTypeToCellKind(holidayType: string): CellKind | null {
+    if (holidayType === 'public') return 'public'
+    if (holidayType === 'religious') return 'religious'
+    if (holidayType === 'company') return 'company'
+    if (holidayType === 'wfh') return 'wfh'
+    return 'company'  // unknown → treat as "company-set" so it still paints
 }
 
 const LEAVE_STATUS_LABEL: Record<string, string> = {
@@ -179,35 +217,53 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                         const isToday = dateStr === todayStr
                         const dow = (firstDow + d - 1) % 7
                         const isWeekend = dow === 0 || dow === 6
-                        const totalEvents = dayHolidays.length + dayLeaves.length + dayBookings.length
-                        const hasEvents = totalEvents > 0
 
-                        // Build the icon row — combine all three event types
-                        // in a single visual row, max 4 then collapse.
-                        const icons: Array<{ key: string; emoji: string; bg: string; border: string }> = []
+                        // Collect every CellKind present on this day (deduped).
+                        // Grid bg = highest-priority kind in CELL_PRIORITY order;
+                        // remaining kinds render as accent dots in the bottom-
+                        // right corner so multi-event days are still legible at
+                        // a glance.
+                        const kindsSet = new Set<CellKind>()
                         for (const h of dayHolidays) {
-                            const cfg = getHolidayConfig(h.type)
-                            icons.push({ key: `h-${h.id}`, emoji: cfg.emoji, bg: `${cfg.color}40`, border: `${cfg.color}80` })
+                            const k = holidayTypeToCellKind(h.type)
+                            if (k) kindsSet.add(k)
                         }
-                        for (let li = 0; li < dayLeaves.length; li++) {
-                            const cfg = getLeaveConfig(dayLeaves[li].leaveType)
-                            const isPending = dayLeaves[li].status === 'pending'
-                            icons.push({
-                                key: `l-${li}`,
-                                emoji: cfg.emoji,
-                                bg: `${cfg.color}40`,
-                                border: isPending ? '#FCD34D' : `${cfg.color}80`,
-                            })
-                        }
-                        for (const b of dayBookings) {
-                            icons.push({ key: `b-${b.id}`, emoji: '🚪', bg: '#A78BFA40', border: '#A78BFA80' })
-                        }
+                        if (dayLeaves.length > 0) kindsSet.add('leave')
+                        if (dayBookings.length > 0) kindsSet.add('booking')
+
+                        const kindsByPriority = CELL_PRIORITY.filter(k => kindsSet.has(k))
+                        const dominantKind = kindsByPriority[0] ?? null
+                        const accentKinds = kindsByPriority.slice(1)
+                        const hasEvents = dominantKind !== null
 
                         const tooltip = [
                             ...dayHolidays.map(h => `${getHolidayConfig(h.type).emoji} ${h.name}`),
                             ...dayLeaves.map(l => `${getLeaveConfig(l.leaveType).emoji} ${getLeaveConfig(l.leaveType).label} (${LEAVE_STATUS_LABEL[l.status] ?? l.status})`),
                             ...dayBookings.map(b => `🚪 ${b.title} ${formatBangkokTime(b.startsAt)}`),
                         ].join('\n')
+
+                        // Resolve cell colours — solid bg + matching day-number
+                        // colour from CELL_PALETTE. Empty cells stay translucent
+                        // glass so the grid keeps its rhythm.
+                        const palette = dominantKind ? CELL_PALETTE[dominantKind] : null
+                        const cellStyle: React.CSSProperties = palette
+                            ? { background: palette.bg, color: palette.text }
+                            : {}
+                        const cellClass = palette
+                            ? 'min-h-[60px] rounded-md p-2 flex flex-col gap-1 transition-all text-left cursor-pointer hover:brightness-110'
+                            : `min-h-[60px] rounded-md p-2 flex flex-col gap-1 transition-all text-left ${
+                                isToday
+                                    ? 'bg-amber-400/15 border border-amber-400/60'
+                                    : 'bg-white/[0.04] border border-white/10 cursor-default'
+                            }`
+
+                        // Today ring overlays whatever bg the cell already has —
+                        // amber outline so it survives any palette colour.
+                        const dayNumberColor = palette
+                            ? palette.text
+                            : isToday ? '#FCD34D'
+                            : isWeekend ? '#FCD34D'
+                            : 'rgba(255,255,255,0.55)'
 
                         return (
                             <button
@@ -216,35 +272,33 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                                 onClick={() => hasEvents && setSelected(dateStr)}
                                 title={tooltip || undefined}
                                 disabled={!hasEvents}
-                                className={`min-h-[80px] rounded-md p-2 flex flex-col gap-1.5 transition-all text-left ${
-                                    isToday
-                                        ? 'bg-amber-400/15 border border-amber-400/60'
-                                        : hasEvents
-                                            ? 'bg-white/[0.07] border border-white/15 hover:bg-white/[0.13] hover:border-white/30 cursor-pointer'
-                                            : 'bg-white/[0.04] border border-white/10 cursor-default'
-                                }`}
+                                className={cellClass}
+                                style={{
+                                    ...cellStyle,
+                                    ...(isToday ? { boxShadow: 'inset 0 0 0 2px #FCD34D' } : {}),
+                                }}
                             >
-                                <span className={`text-base font-bold tabular-nums leading-none ${
-                                    isToday ? 'text-amber-200'
-                                        : isWeekend ? 'text-amber-200'
-                                        : hasEvents ? 'text-white' : 'text-white/55'
-                                }`}>
+                                <span
+                                    className="text-base font-bold tabular-nums leading-none"
+                                    style={{ color: dayNumberColor }}
+                                >
                                     {d}
                                 </span>
-                                {hasEvents && (
-                                    <div className="flex flex-wrap items-center gap-1 mt-auto">
-                                        {icons.slice(0, 4).map(it => (
+                                {accentKinds.length > 0 && (
+                                    <div className="flex items-center gap-0.5 mt-auto self-end">
+                                        {accentKinds.slice(0, 3).map(k => (
                                             <span
-                                                key={it.key}
-                                                className="inline-flex items-center justify-center h-6 w-6 rounded text-sm leading-none"
-                                                style={{ background: it.bg, border: `1px solid ${it.border}` }}
-                                            >
-                                                {it.emoji}
-                                            </span>
+                                                key={k}
+                                                className="block h-2 w-2 rounded-full ring-1 ring-black/20"
+                                                style={{ background: CELL_PALETTE[k].bg }}
+                                            />
                                         ))}
-                                        {icons.length > 4 && (
-                                            <span className="text-xs font-semibold text-white/75 px-1">
-                                                +{icons.length - 4}
+                                        {accentKinds.length > 3 && (
+                                            <span
+                                                className="text-[9px] font-bold ml-0.5"
+                                                style={{ color: dayNumberColor }}
+                                            >
+                                                +{accentKinds.length - 3}
                                             </span>
                                         )}
                                     </div>
@@ -254,22 +308,23 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                     })}
                 </div>
 
-                {/* Legend */}
-                <div className="pt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                    {Object.entries(HOLIDAY_CONFIG).map(([t, cfg]) => (
-                        <span key={t} className="inline-flex items-center gap-1.5">
-                            <span className="text-base leading-none">{cfg.emoji}</span>
-                            <span className="text-white/85 font-medium">{cfg.label}</span>
-                        </span>
-                    ))}
-                    <span className="inline-flex items-center gap-1.5">
-                        <span className="text-base leading-none">🏖️</span>
-                        <span className="text-white/85 font-medium">ใบลา</span>
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                        <span className="text-base leading-none">🚪</span>
-                        <span className="text-white/85 font-medium">จองห้องประชุม</span>
-                    </span>
+                {/* Legend — color swatches mirror the cell-bg palette so
+                    the user can read "yellow square = วันสำคัญทางศาสนา"
+                    by glance, not by hovering for tooltips. Order matches
+                    CELL_PRIORITY so the most-dominant colour reads first. */}
+                <div className="pt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+                    {CELL_PRIORITY.map(k => {
+                        const c = CELL_PALETTE[k]
+                        return (
+                            <span key={k} className="inline-flex items-center gap-1.5">
+                                <span
+                                    className="block h-3.5 w-3.5 rounded ring-1 ring-black/20"
+                                    style={{ background: c.bg }}
+                                />
+                                <span className="text-white/85 font-medium">{c.label}</span>
+                            </span>
+                        )
+                    })}
                 </div>
             </div>
 
