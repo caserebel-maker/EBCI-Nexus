@@ -140,8 +140,14 @@ function StreakCard({ streak }: { streak: StreakInfo }) {
     const progressTarget = nextTier?.months ?? STREAK_TIERS[STREAK_TIERS.length - 1].months
     const progressFraction = Math.min(1, totalDays / (progressTarget * 30))
 
-    const startedThai = new Date(startedOn + 'T00:00:00')
-        .toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+    // Defensive slice — server returns YYYY-MM-DD now, but if anyone
+    // hands us a timestamp ("YYYY-MM-DD HH:MM:SS") the `+ 'T00:00:00'`
+    // concat would form an invalid date string (Mod's 4 May NaN bug).
+    const startedDateOnly = (startedOn ?? '').slice(0, 10)
+    const startedThai = startedDateOnly
+        ? new Date(startedDateOnly + 'T00:00:00')
+            .toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+        : '—'
 
     return (
         <div style={glass} className="p-5">
@@ -189,7 +195,10 @@ function StreakCard({ streak }: { streak: StreakInfo }) {
                 />
             </div>
 
-            {/* Tier badges row — earned ones are bright, future ones dimmed */}
+            {/* Tier badges row — earned tiles glow gold, unearned tiles
+                stay readable (white emoji + white label). Earlier dim
+                styling (opacity 0.45) made the medals look broken on
+                phones (Mod's 4 May feedback: "อีโมจิเหรียญจางไป ดูยาก"). */}
             <div className="mt-4 grid grid-cols-4 gap-2">
                 {STREAK_TIERS.map(tier => {
                     const earned = !!currentTier && currentTier.months >= tier.months
@@ -198,16 +207,15 @@ function StreakCard({ streak }: { streak: StreakInfo }) {
                             key={tier.months}
                             className="flex flex-col items-center justify-center rounded-xl py-2.5"
                             style={{
-                                background: earned ? 'rgba(252,211,77,0.18)' : 'rgba(255,255,255,0.06)',
-                                border: earned ? '1px solid rgba(252,211,77,0.5)' : '1px solid rgba(255,255,255,0.10)',
-                                opacity: earned ? 1 : 0.45,
+                                background: earned ? 'rgba(252,211,77,0.20)' : 'rgba(255,255,255,0.10)',
+                                border: earned ? '1px solid rgba(252,211,77,0.55)' : '1px solid rgba(255,255,255,0.18)',
                             }}
                         >
-                            <span style={{ fontSize: '22px' }}>{tier.emoji}</span>
+                            <span style={{ fontSize: '22px', opacity: 1 }}>{tier.emoji}</span>
                             <span style={{
                                 fontSize: '14px',
                                 fontWeight: 700,
-                                color: earned ? '#FCD34D' : 'rgba(255,255,255,0.55)',
+                                color: earned ? '#FCD34D' : '#ffffff',
                                 marginTop: 2,
                             }}>
                                 {tier.months} ด.
@@ -437,7 +445,7 @@ export function ProfileClient({
                 </div>
 
                 {recentLeaves.length === 0 ? (
-                    <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.30)' }}>ยังไม่มีประวัติใบลา</p>
+                    <p style={{ fontSize: '18px', color: '#ffffff' }}>ยังไม่มีประวัติใบลา</p>
                 ) : (
                     <div className="space-y-2">
                         {recentLeaves.map(req => {

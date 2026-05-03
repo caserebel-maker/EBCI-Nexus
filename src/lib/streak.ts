@@ -175,12 +175,22 @@ export async function getStreakInfo(employeeId: string): Promise<StreakInfo> {
 
     // Employee start_date floors the streak — can't be longer than
     // tenure. New hires start with a fresh streak from day 1.
+    //
+    // employees.start_date is `timestamp without time zone` (legacy;
+    // should arguably be DATE), so Postgrest hands it back as
+    // "YYYY-MM-DD HH:MM:SS" with a SPACE — not the ISO "T" separator
+    // that `new Date(...)` likes. Slice the first 10 chars so every
+    // downstream consumer (daysBetween, the UI's toLocaleDateString)
+    // gets a clean YYYY-MM-DD. Without this slice we get NaN months
+    // and "Invalid Date" in the StreakCard footnote (Mod's 4 May
+    // screenshot).
     const { data: emp } = await supabaseAdmin
         .from('employees')
         .select('start_date')
         .eq('id', employeeId)
         .maybeSingle()
-    const startDate = (emp as { start_date: string | null } | null)?.start_date ?? today
+    const rawStart = (emp as { start_date: string | null } | null)?.start_date
+    const startDate = rawStart ? rawStart.slice(0, 10) : today
 
     // Look back from the employee's start_date for any reset event.
     // (We never look further back than start_date because anything
