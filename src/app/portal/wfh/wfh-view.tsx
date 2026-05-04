@@ -303,7 +303,7 @@ function NewWfhModal({
             onClick={onClose}
         >
             <div
-                className="w-full sm:max-w-lg max-h-[95vh] overflow-y-auto"
+                className="w-full sm:max-w-lg max-h-[95vh] overflow-y-auto overflow-x-hidden"
                 style={{ background: 'rgba(86,30,35,0.77)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '20px' }}
                 onClick={e => e.stopPropagation()}
             >
@@ -314,9 +314,9 @@ function NewWfhModal({
                     </button>
                 </div>
 
-                <div className="p-5 space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                        <label className="block">
+                <div className="p-5 space-y-4 min-w-0">
+                    <div className="grid grid-cols-2 gap-3 min-w-0">
+                        <label className="block min-w-0">
                             <span className="text-sm font-bold text-white/85">
                                 วันที่เริ่ม <span className="text-red-300">*</span>
                             </span>
@@ -328,10 +328,10 @@ function NewWfhModal({
                                     setStartDate(e.target.value)
                                     if (e.target.value > endDate) setEndDate(e.target.value)
                                 }}
-                                className="mt-1.5 w-full h-11 px-3 rounded-lg bg-black/35 text-white text-sm focus:outline-none border border-white/10 focus:border-amber-400"
+                                className="mt-1.5 w-full min-w-0 h-11 px-3 rounded-lg bg-black/35 text-white text-sm focus:outline-none border border-white/10 focus:border-amber-400"
                             />
                         </label>
-                        <label className="block">
+                        <label className="block min-w-0">
                             <span className="text-sm font-bold text-white/85">
                                 วันที่สิ้นสุด <span className="text-red-300">*</span>
                             </span>
@@ -340,7 +340,7 @@ function NewWfhModal({
                                 value={endDate}
                                 min={startDate}
                                 onChange={(e) => setEndDate(e.target.value)}
-                                className="mt-1.5 w-full h-11 px-3 rounded-lg bg-black/35 text-white text-sm focus:outline-none border border-white/10 focus:border-amber-400"
+                                className="mt-1.5 w-full min-w-0 h-11 px-3 rounded-lg bg-black/35 text-white text-sm focus:outline-none border border-white/10 focus:border-amber-400"
                             />
                         </label>
                     </div>
