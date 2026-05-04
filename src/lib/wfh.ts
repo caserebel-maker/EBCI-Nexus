@@ -2,6 +2,14 @@ import 'server-only'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { resolveLeaveApprover } from '@/lib/leave-approval'
 import { bangkokTodayIso } from '@/lib/leave-validations'
+import { createNotification, getEmployeeUserId } from '@/lib/notifications'
+import { findHrNotifyTargets } from '@/lib/hr-notify'
+import {
+    sendWfhSubmittedToEmployee,
+    sendWfhSubmittedToApprover,
+    sendWfhSubmittedToHrFyi,
+    sendWfhDecidedToEmployee,
+} from '@/lib/email-wfh'
 import type { WfhRequest } from '@/lib/wfh-shared'
 
 /**
@@ -72,6 +80,7 @@ export async function submitWfhRequest(
     }
     const referenceCode = String(refData)
 
+    const contact = input.contactDuringWfh?.trim() || null
     const { data: inserted, error: insErr } = await supabaseAdmin
         .from('wfh_requests')
         .insert({
@@ -81,7 +90,7 @@ export async function submitWfhRequest(
             end_date: input.endDate,
             total_days: totalDays,
             reason,
-            contact_during_wfh: input.contactDuringWfh?.trim() || null,
+            contact_during_wfh: contact,
             status: 'pending',
             approver_id: approver.id,
         })
@@ -94,6 +103,124 @@ export async function submitWfhRequest(
 
     const approverName = [approver.first_name_th, approver.last_name_th]
         .filter(Boolean).join(' ').trim() || 'ผู้อนุมัติ'
+    const approverEmail = approver.email ?? null
+
+    // ── Notification fan-out ────────────────────────────────────────────
+    // Best-effort: every notification path is wrapped in try/catch so a
+    // single channel failing never bubbles up as a submit failure. The
+    // DB row is the authoritative signal that the request exists; emails
+    // and in-app toasts are convenience.
+    //
+    // Recipients:
+    //   - Applicant: confirmation email
+    //   - Approver:  email + in-app 🔔 (the person who needs to act)
+    //   - HR (มด et al.): email + in-app 🔔, FYI only — Mod's 4 May
+    //                     call: HR doesn't approve WFH, just stays
+    //                     informed.
+    const applicantRow = await supabaseAdmin
+        .from('employees')
+        .select('first_name_th, last_name_th, nickname, email, user_id')
+        .eq('id', input.employeeId)
+        .maybeSingle()
+    const applicant = (applicantRow.data ?? null) as {
+        first_name_th: string | null
+        last_name_th: string | null
+        nickname: string | null
+        email: string | null
+        user_id: string | null
+    } | null
+    const applicantName = applicant
+        ? (`${applicant.first_name_th ?? ''} ${applicant.last_name_th ?? ''}`.trim()
+            || applicant.nickname || 'พนักงาน')
+        : 'พนักงาน'
+    const applicantNick = applicant?.nickname ?? applicantName
+
+    const emailCtx = {
+        referenceCode,
+        employeeName: applicantName,
+        employeeEmail: applicant?.email ?? '',
+        approverName,
+        approverEmail,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        totalDays,
+        reason,
+        contactDuringWfh: contact,
+    }
+
+    // Fire all email + notification jobs in parallel; we only `await`
+    // the Promise.allSettled so a slow Resend call doesn't block the
+    // response unreasonably long. Each job logs its own errors.
+    const jobs: Array<Promise<unknown>> = []
+
+    // 1. Applicant confirmation email
+    if (applicant?.email && applicant.email.includes('@')) {
+        jobs.push(sendWfhSubmittedToEmployee(emailCtx)
+            .catch(err => console.error('[wfh] applicant email failed:', err)))
+    }
+
+    // 2. Approver email + in-app
+    if (approverEmail && approverEmail.includes('@')) {
+        jobs.push(sendWfhSubmittedToApprover(emailCtx)
+            .catch(err => console.error('[wfh] approver email failed:', err)))
+    }
+    jobs.push((async () => {
+        try {
+            const approverUserId = await getEmployeeUserId(approver.id)
+            if (!approverUserId) return
+            await createNotification({
+                recipient_user_id: approverUserId,
+                type: 'wfh_request_pending',
+                title: `${applicantNick} ขอ WFH`,
+                body: `${input.startDate === input.endDate ? input.startDate : `${input.startDate} → ${input.endDate}`} (${totalDays} วัน) — ${reason}`,
+                action_url: '/portal/wfh/inbox',
+                action_label: 'ดูรายละเอียด',
+                entity_type: 'wfh_request',
+                entity_id: inserted.id as string,
+                reference_code: referenceCode,
+                icon: 'Home',
+                color: 'amber',
+                sender_name: applicantNick,
+            })
+        } catch (err) {
+            console.error('[wfh] approver in-app notif failed:', err)
+        }
+    })())
+
+    // 3. HR FYI — email batch + per-person in-app 🔔
+    jobs.push((async () => {
+        try {
+            const hrTargets = await findHrNotifyTargets()
+            if (hrTargets.length === 0) return
+            const hrEmails = hrTargets.map(t => t.email).filter((e): e is string => !!e && e.includes('@'))
+            if (hrEmails.length > 0) {
+                await sendWfhSubmittedToHrFyi(emailCtx, hrEmails)
+                    .catch(err => console.error('[wfh] HR FYI email failed:', err))
+            }
+            // In-app: one per HR user (createNotification is per-recipient)
+            for (const t of hrTargets) {
+                if (!t.userId) continue
+                await createNotification({
+                    recipient_user_id: t.userId,
+                    type: 'wfh_request_fyi',
+                    title: `[FYI] ${applicantNick} ขอ WFH`,
+                    body: `${input.startDate === input.endDate ? input.startDate : `${input.startDate} → ${input.endDate}`} (${totalDays} วัน) — รอ ${approverName} อนุมัติ`,
+                    action_url: '/portal/wfh',
+                    action_label: 'ดูรายการ',
+                    entity_type: 'wfh_request',
+                    entity_id: inserted.id as string,
+                    reference_code: referenceCode,
+                    icon: 'Home',
+                    color: 'blue',
+                    sender_name: applicantNick,
+                }).catch(err => console.error('[wfh] HR in-app notif failed:', err))
+            }
+        } catch (err) {
+            console.error('[wfh] HR FYI fan-out failed:', err)
+        }
+    })())
+
+    await Promise.allSettled(jobs)
 
     return {
         id: inserted.id as string,
@@ -214,6 +341,65 @@ export async function decideWfhRequest(input: {
         console.error('[wfh] decision error:', updErr)
         return { error: 'บันทึกการตัดสินใจไม่สำเร็จ' }
     }
+
+    // ── Notify the applicant of the decision ───────────────────────────
+    // Best-effort. We need to re-fetch the row to pull dates/reason for
+    // the email template (decision endpoint only knows the id + new
+    // status). Failure here doesn't undo the decision.
+    try {
+        const { data: r } = await supabaseAdmin
+            .from('wfh_requests')
+            .select('reference_code, employee_id, start_date, end_date, total_days, reason, contact_during_wfh')
+            .eq('id', input.id)
+            .maybeSingle()
+        if (r) {
+            const { data: emp } = await supabaseAdmin
+                .from('employees')
+                .select('first_name_th, last_name_th, nickname, email, user_id')
+                .eq('id', r.employee_id as string)
+                .maybeSingle()
+            const empRow = emp as { first_name_th: string | null; last_name_th: string | null; nickname: string | null; email: string | null; user_id: string | null } | null
+            const empName = empRow
+                ? (`${empRow.first_name_th ?? ''} ${empRow.last_name_th ?? ''}`.trim() || empRow.nickname || 'พนักงาน')
+                : 'พนักงาน'
+            // Email
+            if (empRow?.email && empRow.email.includes('@')) {
+                await sendWfhDecidedToEmployee({
+                    referenceCode: r.reference_code as string,
+                    employeeName: empName,
+                    employeeEmail: empRow.email,
+                    startDate: r.start_date as string,
+                    endDate: r.end_date as string,
+                    totalDays: Number(r.total_days),
+                    reason: r.reason as string,
+                    contactDuringWfh: r.contact_during_wfh as string | null,
+                    decision: input.decision,
+                    note,
+                }).catch(err => console.error('[wfh] decision email failed:', err))
+            }
+            // In-app
+            if (empRow?.user_id) {
+                await createNotification({
+                    recipient_user_id: empRow.user_id,
+                    type: input.decision === 'approve' ? 'wfh_request_approved' : 'wfh_request_rejected',
+                    title: input.decision === 'approve'
+                        ? 'คำขอ WFH ได้รับการอนุมัติ'
+                        : 'คำขอ WFH ถูกปฏิเสธ',
+                    body: note ?? (input.decision === 'approve' ? 'อนุมัติแล้ว' : 'ถูกปฏิเสธ'),
+                    action_url: '/portal/wfh',
+                    action_label: 'ดูรายละเอียด',
+                    entity_type: 'wfh_request',
+                    entity_id: input.id,
+                    reference_code: r.reference_code as string,
+                    icon: 'Home',
+                    color: input.decision === 'approve' ? 'green' : 'red',
+                }).catch(err => console.error('[wfh] decision in-app notif failed:', err))
+            }
+        }
+    } catch (err) {
+        console.error('[wfh] decision notify fan-out failed:', err)
+    }
+
     return { ok: true }
 }
 

@@ -273,6 +273,39 @@ export async function sendLeaveSubmittedToApprover(c: LeaveEmailContext) {
     })
 }
 
+/** 2.5 / 5 — FYI to HR (รับทราบ — no action). HR is not in the approval
+ *  chain itself; this is purely so the HR team has visibility on every
+ *  leave being filed. Mod's 4 May call: "HR ไม่มีสิทธิไม่อนุมัติ
+ *  เพียงแต่ที่ต้องให้ส่งไป HR admin ด้วย เพราะ HR admin ต้องรู้ว่ามีใคร
+ *  ลาบ้าง". Recipients are resolved by lib/hr-notify.findHrNotifyTargets. */
+export async function sendLeaveSubmittedToHrFyi(
+    c: LeaveEmailContext,
+    hrTo: string | string[],
+) {
+    const html = wrap({
+        title: 'แจ้งเพื่อทราบ: มีใบลาใหม่',
+        subhead: 'Leave · For HR Awareness',
+        bodyHtml: `
+            ${paragraph('แจ้งเพื่อทราบ — ไม่ต้องดำเนินการ ใบลานี้ถูกส่งให้ผู้บังคับบัญชาสายงานโดยตรง')}
+            ${referenceBlock(c.referenceCode)}
+            ${summaryRows([
+                ['ผู้ลา',      `<strong>${escapeHtml(c.employeeName)}</strong>`],
+                ['ประเภท',    `<strong>${escapeHtml(c.leaveTypeTh)}</strong>`],
+                ['วันที่ลา',  escapeHtml(formatThaiDateRange(c.startDate, c.endDate))],
+                ['จำนวนวัน',  `${c.totalDays} วัน`],
+                ['เหตุผล',    `<span style="white-space:pre-wrap;">${escapeHtml(c.reason)}</span>`],
+                ['ผู้อนุมัติ', escapeHtml(c.approverName ?? '—')],
+            ])}
+            ${paragraph('คุณได้รับเมลฉบับนี้เพราะอยู่ในฝ่ายบุคคล และมีหน้าที่รับทราบความเคลื่อนไหวการลา/WFH', { small: true, muted: true })}
+        `,
+    })
+    return sendLeaveEmail({
+        to: hrTo,
+        subject: `[FYI] ใบลา: ${c.employeeName} — ${c.leaveTypeTh} (${formatThaiDateRange(c.startDate, c.endDate)})`,
+        html,
+    })
+}
+
 /** 3 / 5 — to the employee when approved */
 export async function sendLeaveApproved(c: LeaveEmailContext & { approvalNotes?: string | null }) {
     const portalUrl = `${BASE_URL}/portal/leave`

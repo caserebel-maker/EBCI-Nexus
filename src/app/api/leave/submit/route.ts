@@ -13,8 +13,9 @@ import {
     type LeaveType,
 } from '@/lib/leave-balance'
 import { resolveLeaveApprover, displayApproverName } from '@/lib/leave-approval'
-import { sendLeaveSubmittedToEmployee, sendLeaveSubmittedToApprover } from '@/lib/email-leave'
+import { sendLeaveSubmittedToEmployee, sendLeaveSubmittedToApprover, sendLeaveSubmittedToHrFyi } from '@/lib/email-leave'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
+import { findHrNotifyTargets } from '@/lib/hr-notify'
 import { resolveApproverInboxUrl } from '@/lib/leave-inbox-url'
 
 export const dynamic = 'force-dynamic'
@@ -350,6 +351,44 @@ export async function POST(req: NextRequest) {
         }
     } catch (err) {
         console.error('[leave/submit] notification error:', err)
+    }
+
+    // ── HR FYI fan-out — Mod's 4 May call: HR ต้องรับทราบทุกใบลา ──────
+    // No approval power; this is a CC. findHrNotifyTargets() filters
+    // hr_admin users to the ones actually working in ฝ่ายบุคคล (so we
+    // don't blast the whole permissions set). Email batch + per-person
+    // in-app 🔔. Failures here never affect the submit response — the
+    // approver chain is the authoritative path.
+    try {
+        const hrTargets = await findHrNotifyTargets()
+        if (hrTargets.length > 0) {
+            const hrEmails = hrTargets.map(t => t.email).filter((e): e is string => !!e && e.includes('@'))
+            if (hrEmails.length > 0) {
+                await sendLeaveSubmittedToHrFyi(emailCtx, hrEmails)
+                    .catch(err => console.error('[leave/submit] HR FYI email failed:', err))
+            }
+            const dateLabel = startDate === endDate ? startDate : `${startDate} → ${endDate}`
+            const applicantNick = (employeeRow.data?.nickname as string | null) ?? employeeName
+            for (const t of hrTargets) {
+                if (!t.userId) continue
+                await createNotification({
+                    recipient_user_id: t.userId,
+                    type: 'leave_request_fyi',
+                    title: `[FYI] ${applicantNick} ${leaveType.name_th ?? 'ลา'}`,
+                    body: `${dateLabel} (${totalDays} วัน) — รอ ${approver.first_name_th ?? 'ผู้บังคับบัญชา'} อนุมัติ`,
+                    action_url: '/hradmin/leave?tab=requests',
+                    action_label: 'ดูรายการใบลา',
+                    entity_type: 'leave_request',
+                    entity_id: leaveRequestId,
+                    reference_code: referenceCode,
+                    icon: 'Calendar',
+                    color: 'blue',
+                    sender_name: applicantNick,
+                }).catch(err => console.error('[leave/submit] HR in-app notif failed:', err))
+            }
+        }
+    } catch (err) {
+        console.error('[leave/submit] HR FYI fan-out failed:', err)
     }
 
     return NextResponse.json({
