@@ -2,7 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
-      "comment": "Daily nudge for pending leave + WFH requests > 24h old. Per-row cooldown of 24h prevents spam.",
       "path": "/api/cron/leave-reminders",
       "schedule": "0 2 * * *"
     }
