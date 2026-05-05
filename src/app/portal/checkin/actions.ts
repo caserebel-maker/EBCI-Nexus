@@ -8,6 +8,8 @@ import { headers } from 'next/headers'
 import { getLeaveTodayInfo } from '@/lib/leave-today'
 import { checkWfhEligibility } from '@/lib/wfh-eligibility'
 import { bangkokTodayIso } from '@/lib/leave-validations'
+import { resolveLeaveApprover } from '@/lib/leave-approval'
+import { createNotification, getEmployeeUserId } from '@/lib/notifications'
 
 // Helper: resolve employee_id from session (with email fallback for legacy users)
 async function getEmployeeId(): Promise<string | null> {
@@ -49,7 +51,22 @@ export interface CheckInPayload {
     longitude: number | null
     accuracy: number | null
     notes?: string
+    /**
+     * Optional explanation when arriving late (>0 min past 08:30 BKK).
+     * UI prompts but doesn't block: tier 1 (1-30 min) is optional,
+     * tier 2 (31-60 min) is "please explain", tier 3 (>60 min)
+     * triggers a notification to the direct manager regardless of
+     * whether reason is provided.
+     */
+    lateReason?: string
 }
+
+// Official workday start (Bangkok wall-clock minutes from midnight).
+// 08:30 = 8*60 + 30 = 510. Anything past this counts as late.
+const OFFICIAL_START_MIN = 8 * 60 + 30
+// Tier thresholds for late-check-in UX (minutes past OFFICIAL_START_MIN).
+const LATE_TIER2_MIN = 30   // > 30 min = "please explain"
+const LATE_TIER3_MIN = 60   // > 60 min = manager notified
 
 /** Minimum character count enforced on the field-checkin note. Long
  *  enough to make typing a placeholder ("ก") feel obviously lazy in
@@ -91,16 +108,31 @@ export async function checkIn(payload: CheckInPayload) {
         }
     }
 
-    // ── Anti-Trick #1: Time restriction (7:00-9:30 Bangkok time) ───────────
+    // ── Time window: 7:00 → end of day (Bangkok) ─────────────────────────
     // Vercel serverless runs in UTC — shift +7h then read as UTC to get
     // the Bangkok wall clock without depending on the process timezone.
+    //
+    // Pre-04 May: hard-blocked past 09:30 (refused fallback for the very
+    // case Mod surfaced in the audit — employee forgets card tap and can't
+    // recover via web). Now: still anti-trick-gated below 07:00 (no one
+    // legitimately checks in before then; pre-7am attempts are clock
+    // manipulation), but late check-ins are allowed all day with the
+    // late_minutes column recording exactly when the punch happened.
     const nowBkk = new Date(Date.now() + 7 * 60 * 60 * 1000)
     const minutesOfDay = nowBkk.getUTCHours() * 60 + nowBkk.getUTCMinutes()
     const START_TIME = 7 * 60       // 7:00 = 420 minutes
-    const END_TIME = 9 * 60 + 30    // 9:30 = 570 minutes
-    if (minutesOfDay < START_TIME || minutesOfDay > END_TIME) {
-        return { error: 'เช็คอินได้เฉพาะเวลา 7:00-9:30 น. เท่านั้น' }
+    if (minutesOfDay < START_TIME) {
+        return { error: 'เช็คอินได้ตั้งแต่ 7:00 น. เป็นต้นไป' }
     }
+    // Compute lateness for record-keeping (NULL when on time).
+    const lateMinutesRaw = minutesOfDay - OFFICIAL_START_MIN
+    const lateMinutes = lateMinutesRaw > 0 ? lateMinutesRaw : null
+
+    // Validate late-reason input. Tier 1 (1-30 min): optional.
+    // Tier 2/3: still optional in the API (UI prompts but doesn't block —
+    // forcing a reason just teaches employees to type "...") but if
+    // provided, sanitize to fit the column.
+    const trimmedLateReason = (payload.lateReason ?? '').trim().slice(0, 500) || null
 
     // Office check-in requires accurate GPS — WFH skips the check entirely.
     // Field check-in requires GPS too (the whole point is to capture where
@@ -190,6 +222,8 @@ export async function checkIn(payload: CheckInPayload) {
             notes: trimmedNote || null,
             ip_address: ipAddress,
             source: 'web',
+            late_minutes: lateMinutes,
+            late_reason: lateMinutes !== null ? trimmedLateReason : null,
         })
         .select('id, checked_in_at, type')
         .single()
@@ -199,6 +233,47 @@ export async function checkIn(payload: CheckInPayload) {
         return { error: error.message }
     }
 
+    // ── Tier 3: ping the direct manager when arrival > 60 min late ────────
+    // Best-effort fan-out — failure to notify must NOT roll back the
+    // check-in. The check-in itself is the source of truth; the
+    // notification is just a heads-up.
+    if (lateMinutes !== null && lateMinutes > LATE_TIER3_MIN) {
+        try {
+            const approver = await resolveLeaveApprover(employeeId)
+            const approverUserId = approver
+                ? await getEmployeeUserId(approver.id)
+                : null
+            if (approverUserId) {
+                // Look up the late employee's display name for the title.
+                const { data: emp } = await supabaseAdmin
+                    .from('employees')
+                    .select('first_name_th, nickname')
+                    .eq('id', employeeId)
+                    .maybeSingle()
+                const empName = emp?.nickname?.trim()
+                    || (emp?.first_name_th ?? '').trim()
+                    || 'พนักงาน'
+                const arrivalH = String(nowBkk.getUTCHours()).padStart(2, '0')
+                const arrivalM = String(nowBkk.getUTCMinutes()).padStart(2, '0')
+                await createNotification({
+                    recipient_user_id: approverUserId,
+                    type: 'late_checkin_alert',
+                    title: `${empName} เช็คอินสาย ${lateMinutes} นาที`,
+                    body: trimmedLateReason
+                        ? `เวลาเช็คอิน ${arrivalH}:${arrivalM} · เหตุผล: ${trimmedLateReason}`
+                        : `เวลาเช็คอิน ${arrivalH}:${arrivalM} · ไม่ได้ระบุเหตุผล`,
+                    color: 'red',
+                    icon: 'AlertTriangle',
+                    entity_type: 'checkin',
+                    entity_id: data.id,
+                    action_url: '/hradmin/attendance',
+                })
+            }
+        } catch (e) {
+            console.error('[checkin] tier-3 manager notify failed (non-blocking):', e)
+        }
+    }
+
     revalidatePath('/portal/checkin')
     return {
         success: true,
@@ -206,6 +281,7 @@ export async function checkIn(payload: CheckInPayload) {
         type: data.type,
         checked_in_at: data.checked_in_at,
         distance_meters: distance !== null ? Math.round(distance) : null,
+        late_minutes: lateMinutes,
     }
 }
 
