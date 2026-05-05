@@ -73,6 +73,16 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
     const [fieldNote, setFieldNote] = useState('')
     const FIELD_NOTE_MIN = 5
 
+    // Late check-in tracking — declarations live here, but the actual
+    // late-minutes value is computed BELOW after `isCheckedIn` is in
+    // scope (Temporal Dead Zone — can't reference isCheckedIn yet).
+    const [lateReason, setLateReason] = useState('')
+    const [now, setNow] = useState<Date>(() => new Date())
+    useEffect(() => {
+        const id = setInterval(() => setNow(new Date()), 30_000)  // refresh every 30s
+        return () => clearInterval(id)
+    }, [])
+
     const isCheckedIn = !!todayCheckin && !todayCheckin.checked_out_at
     const isFullyCheckedOut = !!todayCheckin && !!todayCheckin.checked_out_at
     // §3.1 Phase 1 — show card-scan ack when:
@@ -86,6 +96,26 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
     const cardScanSuppressed = !!cardScanToday && !isCheckedIn && !isFullyCheckedOut
         && !(leaveToday?.blocksCheckin)
     const [showManualOverride, setShowManualOverride] = useState(false)
+
+    // Late check-in computation. Bangkok wall-clock minutes from midnight,
+    // computed without TZ libs (matches the math in checkin/actions.ts).
+    // Server is the authoritative clock; this client-side value drives
+    // the badge + reason-prompt UX only.
+    const minutesOfDayBkk = (() => {
+        const bkk = new Date(now.getTime() + 7 * 60 * 60 * 1000)
+        return bkk.getUTCHours() * 60 + bkk.getUTCMinutes()
+    })()
+    const OFFICIAL_START_MIN = 8 * 60 + 30   // 08:30
+    const LATE_TIER2_MIN = 30                // tier 2: > 30 min = please explain
+    const LATE_TIER3_MIN = 60                // tier 3: > 60 min = manager auto-notified
+    const lateMinutes = !isCheckedIn && minutesOfDayBkk > OFFICIAL_START_MIN
+        ? minutesOfDayBkk - OFFICIAL_START_MIN
+        : 0
+    const lateTier: 0 | 1 | 2 | 3 =
+        lateMinutes === 0 ? 0
+        : lateMinutes <= LATE_TIER2_MIN ? 1
+        : lateMinutes <= LATE_TIER3_MIN ? 2
+        : 3
 
     // Auto-request GPS on mount (if not already checked in)
     useEffect(() => {
@@ -146,6 +176,8 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
             longitude: gps?.lng ?? null,
             accuracy: gps?.accuracy ?? null,
             notes,
+            // lateReason is undefined when on-time; server stores NULL.
+            lateReason: lateMinutes > 0 ? lateReason.trim() || undefined : undefined,
         })
         setLoading(false)
         if (result.error) {
@@ -540,6 +572,48 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
                         </div>
                     ) : (
                         <>
+                            {/* Late banner — visible whenever it's past 08:30 BKK
+                                and the user hasn't checked in yet. Three tiers:
+                                  1 (1-30 min): amber chip, no input
+                                  2 (31-60 min): amber chip + reason textarea (optional)
+                                  3 (>60 min):   red chip + reason textarea + warning
+                                                 that the manager will be notified.
+                                Server still stores the late_minutes regardless of
+                                whether the reason is filled in. */}
+                            {lateTier > 0 && (
+                                <div className={cn(
+                                    'rounded-xl border p-3 space-y-2',
+                                    lateTier === 3
+                                        ? 'bg-rose-500/10 border-rose-500/40 text-rose-100'
+                                        : 'bg-amber-500/10 border-amber-500/40 text-amber-100',
+                                )}>
+                                    <div className="flex items-start gap-2 text-sm font-bold">
+                                        <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                                        <span>
+                                            มาสาย {lateMinutes} นาที (เริ่มงาน 08:30)
+                                            {lateTier === 3 && ' — หัวหน้าจะได้รับแจ้งเตือน'}
+                                        </span>
+                                    </div>
+                                    {lateTier >= 2 && (
+                                        <div>
+                                            <textarea
+                                                value={lateReason}
+                                                onChange={e => setLateReason(e.target.value)}
+                                                placeholder={lateTier === 3
+                                                    ? 'เหตุผลที่มาสาย (เช่น รถติดมาก, ลูกป่วยต้องส่งหมอ)'
+                                                    : 'เหตุผล (ไม่บังคับ)'}
+                                                maxLength={500}
+                                                rows={2}
+                                                className="w-full px-3 py-2 rounded-lg bg-black/30 text-white text-sm placeholder-white/30 border border-white/10 focus:outline-none focus:border-amber-400 resize-none"
+                                            />
+                                            <p className="text-[11px] text-white/55 mt-1">
+                                                เหตุผลนี้จะถูกบันทึกใน HR (ไม่จำเป็นต้องมีหลักฐาน)
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Office checkin button */}
                             <button
                                 onClick={() => handleCheckin('office')}
