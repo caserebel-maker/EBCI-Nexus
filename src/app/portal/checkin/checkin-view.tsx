@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic'
 
 const CheckinMap = dynamic(() => import('@/components/checkin/checkin-map').then(m => m.CheckinMap), { ssr: false, loading: () => <div className="h-64 rounded-2xl bg-white/5 animate-pulse flex items-center justify-center text-white/40 text-sm">กำลังโหลดแผนที่...</div> })
 
-import { useState, useEffect } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut, X, Briefcase, Palmtree, IdCard } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { checkIn, checkOut } from './actions'
@@ -117,12 +117,7 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
         : lateMinutes <= LATE_TIER3_MIN ? 2
         : 3
 
-    // Auto-request GPS on mount (if not already checked in)
-    useEffect(() => {
-        if (!isCheckedIn) requestGPS()
-    }, [isCheckedIn])
-
-    function requestGPS() {
+    const requestGPS = useCallback(() => {
         if (!navigator.geolocation) {
             setGpsState('error')
             setGpsError('เบราว์เซอร์ไม่รองรับ GPS')
@@ -150,7 +145,14 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
             },
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
         )
-    }
+    }, [])
+
+    // Auto-request GPS on mount (if not already checked in)
+    useEffect(() => {
+        if (isCheckedIn) return
+        const id = window.setTimeout(requestGPS, 0)
+        return () => window.clearTimeout(id)
+    }, [isCheckedIn, requestGPS])
 
     const distance = gps && office
         ? haversineDistance(gps.lat, gps.lng, office.latitude, office.longitude)
@@ -443,7 +445,7 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
                                     {leaveToday.is_half_day
                                         ? leaveToday.half_day_period === 'morning'
                                             ? `เช็คอินตอนบ่ายได้ตั้งแต่ ${WORK_SCHEDULE.afternoonStart} น. (ก่อน ${HALF_DAY_RULES.afternoonCheckinDeadline} น.)`
-                                            : `เช็คอินตอนเช้าตามปกติ ก่อน ${WORK_SCHEDULE.morningEnd} น. · ลาได้ตั้งแต่ ${WORK_SCHEDULE.afternoonStart} น.`
+                                            : `เช็คอินตอนเช้าตามปกติ ก่อน ${HALF_DAY_RULES.morningCheckinDeadline} น. · ลาได้ตั้งแต่ ${WORK_SCHEDULE.afternoonStart} น.`
                                         : 'ถ้าใบลาได้รับอนุมัติก่อนสิ้นวัน ระบบจะไม่นับว่าขาดงาน'}
                                 </p>
                             </div>

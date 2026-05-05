@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-    Upload, FileText, AlertTriangle, CheckCircle2, XCircle,
+    Upload, AlertTriangle,
     Loader2, Wallet, Eye, ArrowLeft,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -377,13 +377,13 @@ function OutcomeTable({ outcomes }: { outcomes: Outcome[] }) {
 }
 
 function StatusPill({ status, error }: { status: Outcome['status']; error?: string }) {
-    const map: Record<Outcome['status'], { label: string; tone: 'green' | 'amber' | 'red' | 'sky'; icon: any }> = {
-        ok:           { label: '✓ บันทึกแล้ว', tone: 'green', icon: CheckCircle2 },
-        matched:      { label: '✓ จับคู่ได้',  tone: 'sky',   icon: FileText },
-        no_match:     { label: 'หารหัสไม่เจอ', tone: 'amber', icon: AlertTriangle },
-        invalid_type: { label: 'ประเภทไฟล์',   tone: 'red',   icon: XCircle },
-        too_large:    { label: 'ใหญ่เกิน',     tone: 'red',   icon: XCircle },
-        error:        { label: 'error',        tone: 'red',   icon: XCircle },
+    const map: Record<Outcome['status'], { label: string; tone: 'green' | 'amber' | 'red' | 'sky' }> = {
+        ok:           { label: '✓ บันทึกแล้ว', tone: 'green' },
+        matched:      { label: '✓ จับคู่ได้',  tone: 'sky' },
+        no_match:     { label: 'หารหัสไม่เจอ', tone: 'amber' },
+        invalid_type: { label: 'ประเภทไฟล์',   tone: 'red' },
+        too_large:    { label: 'ใหญ่เกิน',     tone: 'red' },
+        error:        { label: 'error',        tone: 'red' },
     }
     const m = map[status]
     const tone = {

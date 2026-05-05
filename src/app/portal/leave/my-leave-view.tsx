@@ -1118,10 +1118,7 @@ function NewLeaveModal({
     const selectedType = balances.find(b => b.leave_type_id === selectedTypeId) ?? null
     const totalDays = startDate && endDate ? daysInclusive(startDate, endDate, isHalfDay) : 0
 
-    const canGoStep2 = !!selectedType && (selectedType.is_unlimited || selectedType.remaining_days > 0)
-    const canGoStep3 = !!startDate && !!endDate && !!reason.trim() && totalDays > 0
     const attachmentRequired = requiresAttachmentForSelection(selectedType, totalDays)
-    const canSubmit = canGoStep3 && (!attachmentRequired || !!attachment)
 
     /**
      * Run validation across the fields owned by `scope`.
@@ -1732,7 +1729,7 @@ function Step2Dates({
                             <span>
                                 {halfDayPeriod === 'morning'
                                     ? `ลาเช้า (${WORK_SCHEDULE.morningStart}-${WORK_SCHEDULE.morningEnd}) — ไม่ต้องเช็คอินตอนเช้า แต่ต้องเช็คอินตอนบ่ายก่อน ${HALF_DAY_RULES.afternoonCheckinDeadline} น.`
-                                    : `ลาบ่าย (${WORK_SCHEDULE.afternoonStart}-${WORK_SCHEDULE.afternoonEnd}) — เช็คอินตอนเช้าตามปกติ ไม่ต้องเช็คอินตอนบ่าย`
+                                    : `ลาบ่าย (${WORK_SCHEDULE.afternoonStart}-${WORK_SCHEDULE.afternoonEnd}) — เช็คอินตอนเช้าก่อน ${HALF_DAY_RULES.morningCheckinDeadline} น. ไม่ต้องเช็คอินตอนบ่าย`
                                 }
                             </span>
                         </div>
