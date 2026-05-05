@@ -4,6 +4,14 @@
     {
       "path": "/api/cron/leave-reminders",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/wfh-checkin-nudge",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/auto-checkout",
+      "schedule": "30 11 * * *"
     }
   ]
 }
