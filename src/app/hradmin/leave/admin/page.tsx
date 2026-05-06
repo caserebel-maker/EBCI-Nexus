@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { approveLeaveAsCurrentUser, rejectLeaveAsCurrentUser } from '@/lib/leave-approval-actions'
 import { cn } from '@/lib/utils'
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog'
 
 // ---- Types ----
 interface LeaveRequest {
@@ -295,6 +296,7 @@ function HrRejectModal({
 
 // ---- Main Page ----
 export default function LeaveAdminPage() {
+    const confirm = useConfirmDialog()
     const [requests, setRequests] = useState<LeaveRequest[]>([])
     const [loading, setLoading] = useState(true)
     const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -365,9 +367,25 @@ export default function LeaveAdminPage() {
         })
     }
 
-    function handleHrRejectConfirm(comment: string) {
+    async function handleHrRejectConfirm(comment: string) {
         if (!hrRejectTarget) return
-        const id = hrRejectTarget.id
+        const target = hrRejectTarget
+        const ok = await confirm({
+            title: 'ยืนยันปฏิเสธใบลา (HR)?',
+            body: 'พนักงานจะได้รับแจ้งผล (email + 🔔) และระบบจะคืนวันลาที่จองไว้ในสถานะ pending',
+            summary: (
+                <div className="space-y-1">
+                    <p>👤 {target.employee.first_name_th} {target.employee.last_name_th}</p>
+                    <p>🌴 {LEAVE_TYPE_LABELS[target.leave_type] ?? target.leave_type} · {formatDate(target.start_date)} – {formatDate(target.end_date)}</p>
+                    <p>📝 {comment.length > 90 ? `${comment.slice(0, 90)}…` : comment}</p>
+                </div>
+            ),
+            confirmLabel: 'ปฏิเสธ',
+            variant: 'destructive',
+        })
+        if (!ok) return
+
+        const id = target.id
         setHrActionId(id)
         startHrTransition(async () => {
             const result = await rejectLeaveAsCurrentUser(id, comment)
@@ -394,9 +412,25 @@ export default function LeaveAdminPage() {
 
     async function handleRejectConfirm(reason: string) {
         if (!rejectTarget) return
-        setActionLoading(rejectTarget.id)
+        const target = rejectTarget
+        const ok = await confirm({
+            title: 'ยืนยันปฏิเสธใบลา?',
+            body: 'พนักงานจะได้รับ email แจ้งผล และระบบจะคืนวันลาที่จองไว้ในสถานะ pending',
+            summary: (
+                <div className="space-y-1">
+                    <p>👤 {target.employee.firstNameTH} {target.employee.lastNameTH}</p>
+                    <p>🌴 {LEAVE_TYPE_LABELS[target.leaveType] ?? target.leaveType} · {formatDate(target.startDate)} – {formatDate(target.endDate)}</p>
+                    <p>📝 {reason.length > 90 ? `${reason.slice(0, 90)}…` : reason}</p>
+                </div>
+            ),
+            confirmLabel: 'ปฏิเสธ',
+            variant: 'destructive',
+        })
+        if (!ok) return
+
+        setActionLoading(target.id)
         try {
-            const res = await fetch(`/api/leave/requests/${rejectTarget.id}/reject`, {
+            const res = await fetch(`/api/leave/requests/${target.id}/reject`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ rejectionReason: reason }),

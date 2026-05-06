@@ -74,9 +74,9 @@ These break correct behaviour. Must ship before expanding beta beyond current 4 
 **Shipped scope**:
 - Reusable `ConfirmDialog` + `useConfirmDialog` provider
 - WFH / Office / Field check-out ต้องกดยืนยันก่อน
-- Reject leave / reject cancellation request ต้องกดยืนยันหลังกรอกเหตุผล
+- Reject leave / reject cancellation request ต้องกดยืนยันหลังกรอกเหตุผล (employee inbox + HR admin override pages — `/hradmin/leave/admin` + `/hradmin/leave/approve`)
 - Reject WFH request ต้องกดยืนยันหลังกรอกเหตุผล
-**Not included**: reset password, delete employee, delete announcement, meeting-room cancel — แยก Tier 2 รอบถัดไป
+**Not included** (Tier 2): reset password, delete employee, delete announcement, meeting-room cancel — แยกรอบถัดไป
 
 ---
 

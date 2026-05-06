@@ -5,6 +5,7 @@ import {
     ClipboardCheck, CheckCircle2, XCircle, Clock, AlertCircle,
     CalendarDays, User, Loader2, X, ChevronDown
 } from 'lucide-react'
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog'
 
 // ---- Types ----
 interface LeaveRequest {
@@ -324,6 +325,7 @@ function TeamCalendar({ requests }: { requests: LeaveRequest[] }) {
 
 // ---- Main Page ----
 export default function ApproveLeavePage() {
+    const confirm = useConfirmDialog()
     const [requests, setRequests] = useState<LeaveRequest[]>([])
     const [loading, setLoading] = useState(true)
     const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -368,9 +370,25 @@ export default function ApproveLeavePage() {
 
     async function handleRejectConfirm(reason: string) {
         if (!rejectTarget) return
-        setActionLoading(rejectTarget.id)
+        const target = rejectTarget
+        const ok = await confirm({
+            title: 'ยืนยันปฏิเสธใบลา?',
+            body: 'พนักงานจะได้รับ email แจ้งผล และระบบจะคืนวันลาที่จองไว้ในสถานะ pending',
+            summary: (
+                <div className="space-y-1">
+                    <p>👤 {target.employee.firstNameTH} {target.employee.lastNameTH}</p>
+                    <p>🌴 {LEAVE_TYPE_LABELS[target.leaveType] ?? target.leaveType} · {formatDate(target.startDate)} – {formatDate(target.endDate)}</p>
+                    <p>📝 {reason.length > 90 ? `${reason.slice(0, 90)}…` : reason}</p>
+                </div>
+            ),
+            confirmLabel: 'ปฏิเสธ',
+            variant: 'destructive',
+        })
+        if (!ok) return
+
+        setActionLoading(target.id)
         try {
-            const res = await fetch(`/api/leave/requests/${rejectTarget.id}/reject`, {
+            const res = await fetch(`/api/leave/requests/${target.id}/reject`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ rejectionReason: reason }),
