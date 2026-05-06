@@ -15,6 +15,7 @@ import { formatScanClock, type CardScanTodayInfo } from '@/lib/card-scan-shared'
 import type { WfhEligibility } from '@/lib/wfh-eligibility-shared'
 import { WORK_SCHEDULE, HALF_DAY_RULES } from '@/lib/leave-constants'
 import Link from 'next/link'
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog'
 
 interface Office {
     name: string
@@ -61,6 +62,7 @@ interface Props {
 type GPSState = 'idle' | 'requesting' | 'success' | 'error'
 
 export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, wfhEligibility }: Props) {
+    const confirm = useConfirmDialog()
     const [gpsState, setGpsState] = useState<GPSState>('idle')
     const [gps, setGps] = useState<{ lat: number; lng: number; accuracy: number } | null>(null)
     const [gpsError, setGpsError] = useState<string | null>(null)
@@ -204,6 +206,26 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
     }
 
     const handleCheckout = async () => {
+        if (!todayCheckin) return
+        const checkinLabel =
+            todayCheckin.type === 'office' ? 'ออฟฟิศ'
+          : todayCheckin.type === 'field' ? 'ภาคสนาม'
+          : 'WFH'
+        const ok = await confirm({
+            title: `ยืนยันเช็คเอาท์${checkinLabel}?`,
+            body: 'หากเช็คเอาท์ตอนนี้ จะไม่สามารถเช็คอินซ้ำในวันเดียวกัน',
+            summary: (
+                <div className="space-y-1">
+                    <p>⏱ เช็คอินเวลา {formatBangkokTime(todayCheckin.checked_in_at)} น.</p>
+                    <p>📍 ประเภท: {checkinLabel}</p>
+                    <p>⌛ ระยะเวลา: {formatWorkDuration(todayCheckin.checked_in_at)}</p>
+                </div>
+            ),
+            confirmLabel: 'ยืนยันเช็คเอาท์',
+            variant: 'destructive',
+        })
+        if (!ok) return
+
         setLoading(true)
         const result = await checkOut()
         setLoading(false)
@@ -711,4 +733,15 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
             )}
         </div>
     )
+}
+
+function formatWorkDuration(checkedInAt: string): string {
+    const start = new Date(checkedInAt).getTime()
+    if (!Number.isFinite(start)) return '—'
+    const totalMinutes = Math.max(0, Math.floor((Date.now() - start) / 60000))
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+    if (hours <= 0) return `${minutes} นาที`
+    if (minutes <= 0) return `${hours} ชม.`
+    return `${hours} ชม. ${minutes} นาที`
 }
