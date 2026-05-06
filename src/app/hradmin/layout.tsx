@@ -5,6 +5,7 @@ import { PriorityAlerts } from '@/components/dashboard/priority-alerts'
 import { fetchPriorityAlerts } from '@/lib/priority-alerts-fetch'
 import { getEmployeeProfile } from '@/lib/employee-profile'
 import { getCurrentPermissions } from '@/lib/permissions-server'
+import { ConfirmDialogProvider } from '@/hooks/use-confirm-dialog'
 
 export default async function AdminLayout({
     children,
@@ -41,15 +42,17 @@ export default async function AdminLayout({
     ])
 
     return (
-        <DashboardShell
-            role={session.role as 'hr_admin' | 'manager' | 'employee'}
-            userName={session.name}
-            profile={profile}
-            permissions={permissions}
-            showBottomNav
-            emergencyBanner={alerts.length > 0 ? <PriorityAlerts alerts={alerts} /> : null}
-        >
-            {children}
-        </DashboardShell>
+        <ConfirmDialogProvider>
+            <DashboardShell
+                role={session.role as 'hr_admin' | 'manager' | 'employee'}
+                userName={session.name}
+                profile={profile}
+                permissions={permissions}
+                showBottomNav
+                emergencyBanner={alerts.length > 0 ? <PriorityAlerts alerts={alerts} /> : null}
+            >
+                {children}
+            </DashboardShell>
+        </ConfirmDialogProvider>
     )
 }
