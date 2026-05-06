@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { WfhRequest } from '@/lib/wfh-shared'
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog'
 
 interface EnrichedWfh extends WfhRequest {
     applicant_name: string
@@ -144,15 +145,32 @@ function DecisionModal({
     onError: (msg: string) => void
     onDecided: (id: string, msg: string) => void
 }) {
+    const confirm = useConfirmDialog()
     const [decision, setDecision] = useState<'approve' | 'reject'>(initialDecision)
     const [note, setNote] = useState('')
     const [submitting, startTransition] = useTransition()
     const [err, setErr] = useState<string | null>(null)
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (decision === 'reject' && !note.trim()) {
             setErr('กรุณาระบุเหตุผลที่ปฏิเสธ')
             return
+        }
+        if (decision === 'reject') {
+            const ok = await confirm({
+                title: 'ยืนยันปฏิเสธคำขอ WFH?',
+                body: 'ผู้ขอจะได้รับแจ้งผล และจะไม่สามารถเช็คอิน WFH ในช่วงวันที่ขอนี้',
+                summary: (
+                    <div className="space-y-1">
+                        <p>👤 {r.applicant_name}{r.applicant_nickname ? ` (${r.applicant_nickname})` : ''}</p>
+                        <p>🏠 WFH · {formatThaiRange(r.start_date, r.end_date)}</p>
+                        <p>📝 {r.reason.length > 90 ? `${r.reason.slice(0, 90)}…` : r.reason}</p>
+                    </div>
+                ),
+                confirmLabel: 'ปฏิเสธ',
+                variant: 'destructive',
+            })
+            if (!ok) return
         }
         setErr(null)
         startTransition(async () => {

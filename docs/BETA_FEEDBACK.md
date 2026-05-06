@@ -69,6 +69,15 @@ These break correct behaviour. Must ship before expanding beta beyond current 4 
 - ลาบ่าย → check-out by 12:00? Or normal 17:00?
 **Priority**: P0 — bundle with §1.1
 
+### §1.6 ✅ Confirm destructive actions — SHIPPED 6 พ.ค.
+**Problem**: ปุ่ม destructive สำคัญบางจุดเป็น direct action กดครั้งเดียวแล้วเกิดผลทันที เช่นเช็คเอาท์ WFH หลังเพิ่งเช็คอิน
+**Shipped scope**:
+- Reusable `ConfirmDialog` + `useConfirmDialog` provider
+- WFH / Office / Field check-out ต้องกดยืนยันก่อน
+- Reject leave / reject cancellation request ต้องกดยืนยันหลังกรอกเหตุผล
+- Reject WFH request ต้องกดยืนยันหลังกรอกเหตุผล
+**Not included**: reset password, delete employee, delete announcement, meeting-room cancel — แยก Tier 2 รอบถัดไป
+
 ---
 
 ## §2 P1 — High-value New Features

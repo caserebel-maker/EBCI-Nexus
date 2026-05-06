@@ -7,6 +7,7 @@ import {
     Sparkles, X, Ban,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog'
 
 // ── Types (match /api/leave/inbox response) ───────────────────────────────
 interface InboxItem {
@@ -667,6 +668,7 @@ function RejectDialog({
     onClose: () => void
     onDone: () => void
 }) {
+    const confirm = useConfirmDialog()
     const [reason, setReason] = useState('')
     const [pending, startTransition] = useTransition()
     const [err, setErr] = useState<string | null>(null)
@@ -681,11 +683,28 @@ function RejectDialog({
 
     const tooShort = reason.trim().length < 10
     const isCancelReq = item.status === 'cancellation_requested'
-    const submit = () => {
+    const submit = async () => {
         if (tooShort) {
             setErr('กรุณาระบุเหตุผลอย่างน้อย 10 ตัวอักษร')
             return
         }
+        const ok = await confirm({
+            title: isCancelReq ? 'ยืนยันปฏิเสธคำขอยกเลิกใบลา?' : 'ยืนยันปฏิเสธใบลา?',
+            body: isCancelReq
+                ? 'ใบลาจะยังคงสถานะอนุมัติเดิม และผู้ขอจะได้รับแจ้งผล'
+                : 'ผู้ขอลาจะได้รับ email แจ้งผล และระบบจะคืนวันลาที่จองไว้ในสถานะ pending',
+            summary: (
+                <div className="space-y-1">
+                    <p>👤 {fullApplicantName(item)}</p>
+                    <p>🌴 {item.leave_type?.name_th ?? item.leave_type_id} · {formatThaiDateRange(item.start_date, item.end_date)}</p>
+                    <p>📝 {item.reason.length > 90 ? `${item.reason.slice(0, 90)}…` : item.reason}</p>
+                </div>
+            ),
+            confirmLabel: 'ปฏิเสธ',
+            variant: 'destructive',
+        })
+        if (!ok) return
+
         setErr(null)
         startTransition(async () => {
             try {
@@ -814,4 +833,3 @@ function DialogShell({
         </div>
     )
 }
-
