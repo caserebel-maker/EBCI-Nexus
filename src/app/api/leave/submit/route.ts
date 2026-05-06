@@ -13,7 +13,6 @@ import {
     type LeaveType,
 } from '@/lib/leave-balance'
 import { resolveLeaveApprover, displayApproverName } from '@/lib/leave-approval'
-import { sendLeaveSubmittedToEmployee, sendLeaveSubmittedToApprover, sendLeaveSubmittedToHrFyi } from '@/lib/email-leave'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
 import { findHrNotifyTargets } from '@/lib/hr-notify'
 import { resolveApproverInboxUrl } from '@/lib/leave-inbox-url'
@@ -263,10 +262,9 @@ export async function POST(req: NextRequest) {
         // job can re-sum pending_days from leave_requests.
     }
 
-    // Emails — awaited so Vercel's Lambda doesn't tear the function
-    // down mid-send. Both failures are non-fatal: the DB row is the
-    // authoritative record, delivery status is logged + returned as
-    // flags for the client to surface if it wants to.
+    // Resolve names + URLs for in-app notifications. Email is intentionally
+    // reserved for decision/result events (approve/reject) to avoid noisy
+    // submit-time mail.
     const employeeRow = await supabaseAdmin
         .from('employees')
         .select('first_name_th, last_name_th, nickname, email')
@@ -276,59 +274,21 @@ export async function POST(req: NextRequest) {
         ? `${employeeRow.data.first_name_th ?? ''} ${employeeRow.data.last_name_th ?? ''}`.trim()
           + (employeeRow.data.nickname ? ` (${employeeRow.data.nickname})` : '')
         : session.name
-    const employeeEmail = (employeeRow.data?.email as string | null) ?? session.name
     const approverName = displayApproverName(approver)
-    const approverEmail = approver.email
 
-    const emailSent = { employee: false, approver: false }
+    const emailSent = { employee: false, approver: false, hr_fyi: false }
 
-    // Resolve approver's inbox URL once and pass it into both the email
-    // (so the "ไปที่กล่องอนุมัติ" button is role-correct) and the bell
-    // notification below. Best-effort: returns /portal/leave/inbox on
-    // any failure, which works for every role.
+    // Resolve approver's inbox URL once for the bell notification below.
+    // Best-effort: returns /portal/leave/inbox on any failure, which
+    // works for every role.
     const approverUserIdForUrl = await getEmployeeUserId(approver.id)
     const approverInboxUrl = approverUserIdForUrl
         ? await resolveApproverInboxUrl(approverUserIdForUrl)
         : '/portal/leave/inbox'
 
-    const emailCtx = {
-        referenceCode,
-        employeeName,
-        employeeEmail,
-        approverName,
-        approverEmail,
-        approverInboxUrl,
-        leaveTypeTh: leaveType.name_th,
-        startDate,
-        endDate,
-        totalDays,
-        reason,
-    }
-    try {
-        const jobs: Array<Promise<unknown>> = []
-        if (employeeEmail && employeeEmail.includes('@')) {
-            jobs.push(
-                sendLeaveSubmittedToEmployee(emailCtx)
-                    .then(r => { emailSent.employee = Boolean(r && 'success' in r && r.success) })
-                    .catch(err => console.error('[leave/submit] employee email threw:', err)),
-            )
-        }
-        if (approverEmail && approverEmail.includes('@')) {
-            jobs.push(
-                sendLeaveSubmittedToApprover(emailCtx)
-                    .then(r => { emailSent.approver = Boolean(r && 'success' in r && r.success) })
-                    .catch(err => console.error('[leave/submit] approver email threw:', err)),
-            )
-        }
-        await Promise.allSettled(jobs)
-    } catch (err) {
-        console.error('[leave/submit] unexpected email error:', err)
-    }
-
     // In-app notification for the approver. Best-effort: failure here
-    // never interrupts the response — the DB row + email are the
-    // authoritative signals. Reuses the approverUserId + URL resolved
-    // above for the email (one round-trip, role-aware deep link).
+    // never interrupts the response — the DB row is the authoritative
+    // signal, and email is reserved for approve/reject decisions.
     try {
         if (approverUserIdForUrl) {
             const applicantNick = (employeeRow.data?.nickname as string | null) ?? employeeName
@@ -356,17 +316,11 @@ export async function POST(req: NextRequest) {
     // ── HR FYI fan-out — Mod's 4 May call: HR ต้องรับทราบทุกใบลา ──────
     // No approval power; this is a CC. findHrNotifyTargets() filters
     // hr_admin users to the ones actually working in ฝ่ายบุคคล (so we
-    // don't blast the whole permissions set). Email batch + per-person
-    // in-app 🔔. Failures here never affect the submit response — the
-    // approver chain is the authoritative path.
+    // don't blast the whole permissions set). In-app only: email is
+    // intentionally limited to approve/reject decisions.
     try {
         const hrTargets = await findHrNotifyTargets()
         if (hrTargets.length > 0) {
-            const hrEmails = hrTargets.map(t => t.email).filter((e): e is string => !!e && e.includes('@'))
-            if (hrEmails.length > 0) {
-                await sendLeaveSubmittedToHrFyi(emailCtx, hrEmails)
-                    .catch(err => console.error('[leave/submit] HR FYI email failed:', err))
-            }
             const dateLabel = startDate === endDate ? startDate : `${startDate} → ${endDate}`
             const applicantNick = (employeeRow.data?.nickname as string | null) ?? employeeName
             for (const t of hrTargets) {

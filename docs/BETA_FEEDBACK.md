@@ -174,21 +174,27 @@ These are not technical questions — they're business/UX choices ม๊อด m
 **Decision needed**: A, B, or C?
 **Dependency**: ถ้า A หรือ C → ต้องสร้าง Telegram bot, แจก chat_id, store mapping `employee → telegram_chat_id`
 
-### §3.3 ⚠️ Notify approval ทาง email — เปลี่ยน timing?
+### §3.3 ✅ Notify approval ทาง email — SHIPPED 6 พ.ค.
 
 **Proposal**: อนุมัติลาก่อน → แล้วค่อยส่ง notify ทางเมล (ลด spam risk)
 
-**Current behaviour** (ต้อง verify): ส่ง email ทันทีตอน submit ใบลา + ตอนอนุมัติ + ตอนปฏิเสธ = 2-3 emails per request
-**Proposed behaviour**: ส่ง email เฉพาะ "approved" และ "rejected" — ตอน submit ไม่ส่ง
+**Shipped behaviour**:
+- ส่ง email เฉพาะผลลัพธ์ที่พนักงานต้องรับทราบ: approved / rejected ของใบลาและ WFH
+- ตอน submit ใบลา/WFH: แจ้งผู้อนุมัติด้วย in-app notification เท่านั้น
+- HR FYI: in-app notification เท่านั้น
+- Cron reminder ใบลา/WFH ค้างอนุมัติ: in-app notification เท่านั้น
+- WFH check-in nudge ตอน 10:00: in-app notification เท่านั้น
+
+**Kept email outside this policy**: payroll slip, careers/applicant workflow, และประกาศ WFH ทั้งบริษัทที่ HR เลือกเปิด notifyEmail
 
 **Trade-offs**:
 | Option | Pros | Cons |
 |---|---|---|
-| A. Email after decision only | ลด spam, ไม่กระทบ approval flow | Approver ไม่ได้ email reminder ตอน submit — ต้องเปิดแอปเช็คเอง |
+| A. Email after decision only | ลด spam, ไม่กระทบ approval flow | Approver ต้องดู bell/in-app ตอน submit |
 | B. Status quo (email ทุก step) | Approver ไม่พลาด | Email เยอะ, เสี่ยง spam folder |
 | C. Email approver ตอน submit + email requester ตอน decision | สมดุล | Logic ซับซ้อน |
 
-**Decision needed**: A, B, or C?
+**Decision**: A — email after decision only
 **Note**: Resend (production email) มี deliverability ดี แต่ถ้า volume สูง user mark spam → domain reputation drop
 
 ---
@@ -238,7 +244,7 @@ No new logic — just config or data changes.
 ## §5 Recommended Sequence
 
 1. **NOW (on laptop)** — Commit this file. Don't start coding.
-2. **NEXT 24h** — ม๊อด decide §3.1, §3.2, §3.3 (P2 strategic)
+2. **NEXT 24h** — ม๊อด decide §3.1, §3.2 (P2 strategic; §3.3 shipped)
 3. **NEXT 24h** — ม๊อด fill in §4.1 missing values + §4.3 hours
 4. **THEN at office** — Update this file with decisions, then prompt Claude Code:
    ```
@@ -264,7 +270,7 @@ No new logic — just config or data changes.
 - [ ] §3.1 เช็คอินออฟฟิศ — keep / drop / optional?
 - [ ] §3.1 ถ้า drop → ระบบบัตร sync เข้า DB ได้ยังไง?
 - [ ] §3.2 WFH notification — Telegram / in-app / both?
-- [ ] §3.3 Email timing — A / B / C?
+- [x] §3.3 Email timing — A / email after decision only
 - [ ] §4.1 จำนวนวัน + เงื่อนไข ของ ลาคลอด, ลารับราชการทหาร, ลาเกณฑ์ทหาร, ลาพัฒนาความรู้, ลาอุปสมบท, ลาสมรส, ลาพ่อ/แม่เสียชีวิต
 - [ ] §4.3 ลากิจ ขั้นต่ำกี่ชั่วโมง?
 

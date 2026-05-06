@@ -2,9 +2,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
-import { sendLeaveRequestNotification, sendLeaveDecisionNotification } from '@/lib/leave-email'
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
+import { sendLeaveDecisionNotification } from '@/lib/leave-email'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface ApprovalStep {
@@ -20,6 +18,10 @@ interface EmployeeRow {
     approval_level: number | null
     manager_id: string | null
     department: string | null
+}
+
+function errorMessage(err: unknown): string {
+    return err instanceof Error ? err.message : 'เกิดข้อผิดพลาด'
 }
 
 // ─── DB helpers ───────────────────────────────────────────────────────────────
@@ -115,25 +117,6 @@ async function buildApprovalChain(employee: EmployeeRow): Promise<ApprovalStep[]
     return chain
 }
 
-async function notifyApprover(
-    approver: EmployeeRow,
-    employee: EmployeeRow,
-    lr: { leave_type: string; start_date: string; end_date: string; total_days: number; reason?: string | null }
-) {
-    if (!approver.email) return
-    sendLeaveRequestNotification({
-        managerEmail: approver.email,
-        managerName: `${approver.first_name_th} ${approver.last_name_th}`,
-        employeeName: `${employee.first_name_th} ${employee.last_name_th}`,
-        leaveType: lr.leave_type,
-        startDate: lr.start_date,
-        endDate: lr.end_date,
-        totalDays: lr.total_days,
-        reason: lr.reason ?? '',
-        approveUrl: `${APP_URL}/hradmin/leave/admin`,
-    }).catch(console.error)
-}
-
 // ─── 1. submitLeaveRequest ────────────────────────────────────────────────────
 export async function submitLeaveRequest(
     employeeId: string,
@@ -174,7 +157,8 @@ export async function submitLeaveRequest(
 
         if (lrErr) throw new Error(lrErr.message)
 
-        // Insert step-1 approval record + email approver
+        // Insert step-1 approval record. Email is reserved for final
+        // approve/reject decisions to keep inbox noise down.
         if (firstStep) {
             await supabaseAdmin.from('leave_approvals').insert({
                 leave_request_id: lr.id,
@@ -183,16 +167,13 @@ export async function submitLeaveRequest(
                 status: 'pending',
                 created_at: now,
             })
-
-            const approver = await fetchEmployee(firstStep.approver_id)
-            if (approver) await notifyApprover(approver, employee, lr)
         }
 
         return { success: true, leaveRequestId: lr.id }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error('submitLeaveRequest error:', err)
-        return { error: err.message ?? 'เกิดข้อผิดพลาด' }
+        return { error: errorMessage(err) }
     }
 }
 
@@ -256,9 +237,6 @@ export async function approveLeave(
                 })
                 .eq('id', leaveRequestId)
 
-            const nextApprover = await fetchEmployee(nextStep.approver_id)
-            if (nextApprover) await notifyApprover(nextApprover, employee, lr)
-
             return { success: true, fullyApproved: false }
 
         } else {
@@ -287,9 +265,9 @@ export async function approveLeave(
             return { success: true, fullyApproved: true }
         }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error('approveLeave error:', err)
-        return { error: err.message ?? 'เกิดข้อผิดพลาด' }
+        return { error: errorMessage(err) }
     }
 }
 
@@ -353,9 +331,9 @@ export async function rejectLeave(
 
         return { success: true }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error('rejectLeave error:', err)
-        return { error: err.message ?? 'เกิดข้อผิดพลาด' }
+        return { error: errorMessage(err) }
     }
 }
 

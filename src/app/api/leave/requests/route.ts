@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
-import { sendLeaveRequestNotification } from '@/lib/leave-email'
 
 const VALID_LEAVE_TYPES = ['sick', 'personal', 'annual', 'maternity', 'ordination']
 
@@ -124,9 +123,6 @@ export async function POST(req: NextRequest) {
 
         const employee = await prisma.employee.findFirst({
             where: { userId: session.id },
-            include: {
-                manager: { include: { user: true } },
-            },
         })
         if (!employee) return NextResponse.json({ error: 'ไม่พบข้อมูลพนักงาน' }, { status: 404 })
 
@@ -158,24 +154,6 @@ export async function POST(req: NextRequest) {
                 notifiedAt: new Date(),
             },
         })
-
-        // Notify manager via email
-        const manager = employee.manager
-        const managerUser = manager?.user
-        if (managerUser?.name) {
-            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
-            await sendLeaveRequestNotification({
-                managerEmail: manager!.email,
-                managerName: managerUser.name,
-                employeeName: `${employee.firstNameTH} ${employee.lastNameTH}`,
-                leaveType,
-                startDate: start,
-                endDate: end,
-                totalDays,
-                reason,
-                approveUrl: `${appUrl}/hradmin/leave/approve`,
-            }).catch(console.error)
-        }
 
         return NextResponse.json({ data: leaveRequest }, { status: 201 })
     } catch (err) {

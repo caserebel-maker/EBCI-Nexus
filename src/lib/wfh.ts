@@ -5,9 +5,6 @@ import { bangkokTodayIso } from '@/lib/leave-validations'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
 import { findHrNotifyTargets } from '@/lib/hr-notify'
 import {
-    sendWfhSubmittedToEmployee,
-    sendWfhSubmittedToApprover,
-    sendWfhSubmittedToHrFyi,
     sendWfhDecidedToEmployee,
 } from '@/lib/email-wfh'
 import type { WfhRequest } from '@/lib/wfh-shared'
@@ -103,31 +100,27 @@ export async function submitWfhRequest(
 
     const approverName = [approver.first_name_th, approver.last_name_th]
         .filter(Boolean).join(' ').trim() || 'ผู้อนุมัติ'
-    const approverEmail = approver.email ?? null
 
     // ── Notification fan-out ────────────────────────────────────────────
     // Best-effort: every notification path is wrapped in try/catch so a
     // single channel failing never bubbles up as a submit failure. The
-    // DB row is the authoritative signal that the request exists; emails
-    // and in-app toasts are convenience.
+    // DB row is the authoritative signal that the request exists. Email
+    // is reserved for approve/reject decisions, so submit-time fan-out is
+    // in-app only.
     //
     // Recipients:
-    //   - Applicant: confirmation email
-    //   - Approver:  email + in-app 🔔 (the person who needs to act)
-    //   - HR (มด et al.): email + in-app 🔔, FYI only — Mod's 4 May
-    //                     call: HR doesn't approve WFH, just stays
-    //                     informed.
+    //   - Approver:  in-app 🔔 (the person who needs to act)
+    //   - HR (มด et al.): in-app 🔔, FYI only — Mod's 4 May call:
+    //                     HR doesn't approve WFH, just stays informed.
     const applicantRow = await supabaseAdmin
         .from('employees')
-        .select('first_name_th, last_name_th, nickname, email, user_id')
+        .select('first_name_th, last_name_th, nickname')
         .eq('id', input.employeeId)
         .maybeSingle()
     const applicant = (applicantRow.data ?? null) as {
         first_name_th: string | null
         last_name_th: string | null
         nickname: string | null
-        email: string | null
-        user_id: string | null
     } | null
     const applicantName = applicant
         ? (`${applicant.first_name_th ?? ''} ${applicant.last_name_th ?? ''}`.trim()
@@ -135,35 +128,10 @@ export async function submitWfhRequest(
         : 'พนักงาน'
     const applicantNick = applicant?.nickname ?? applicantName
 
-    const emailCtx = {
-        referenceCode,
-        employeeName: applicantName,
-        employeeEmail: applicant?.email ?? '',
-        approverName,
-        approverEmail,
-        startDate: input.startDate,
-        endDate: input.endDate,
-        totalDays,
-        reason,
-        contactDuringWfh: contact,
-    }
-
-    // Fire all email + notification jobs in parallel; we only `await`
-    // the Promise.allSettled so a slow Resend call doesn't block the
-    // response unreasonably long. Each job logs its own errors.
+    // Fire notification jobs in parallel. Each job logs its own errors.
     const jobs: Array<Promise<unknown>> = []
 
-    // 1. Applicant confirmation email
-    if (applicant?.email && applicant.email.includes('@')) {
-        jobs.push(sendWfhSubmittedToEmployee(emailCtx)
-            .catch(err => console.error('[wfh] applicant email failed:', err)))
-    }
-
-    // 2. Approver email + in-app
-    if (approverEmail && approverEmail.includes('@')) {
-        jobs.push(sendWfhSubmittedToApprover(emailCtx)
-            .catch(err => console.error('[wfh] approver email failed:', err)))
-    }
+    // 1. Approver in-app
     jobs.push((async () => {
         try {
             const approverUserId = await getEmployeeUserId(approver.id)
@@ -187,17 +155,11 @@ export async function submitWfhRequest(
         }
     })())
 
-    // 3. HR FYI — email batch + per-person in-app 🔔
+    // 2. HR FYI — per-person in-app 🔔
     jobs.push((async () => {
         try {
             const hrTargets = await findHrNotifyTargets()
             if (hrTargets.length === 0) return
-            const hrEmails = hrTargets.map(t => t.email).filter((e): e is string => !!e && e.includes('@'))
-            if (hrEmails.length > 0) {
-                await sendWfhSubmittedToHrFyi(emailCtx, hrEmails)
-                    .catch(err => console.error('[wfh] HR FYI email failed:', err))
-            }
-            // In-app: one per HR user (createNotification is per-recipient)
             for (const t of hrTargets) {
                 if (!t.userId) continue
                 await createNotification({

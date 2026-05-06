@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
-import { sendEmail } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -11,7 +10,7 @@ export const maxDuration = 60
  *
  * Daily cron (vercel.json: 03:00 UTC = 10:00 BKK) that finds employees
  * with an APPROVED WFH covering today who haven't checked in yet, and
- * sends them a nudge (in-app 🔔 + email).
+ * sends them an in-app nudge.
  *
  * Mod's 4 May audit Scenario 3: "อนุมัติ WFH แต่ลืมเช็คอิน" — without
  * this cron, the day silently lands as `status='absent'` in
@@ -108,7 +107,7 @@ export async function GET(req: NextRequest) {
                 summary.alreadyCheckedIn++
                 continue
             }
-            const ok = await nudgeEmployee(row, todayBkkIso)
+            const ok = await nudgeEmployee(row)
             if (ok) {
                 summary.nudged++
                 await supabaseAdmin
@@ -125,10 +124,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, summary })
 }
 
-async function nudgeEmployee(row: WfhRow, todayBkkIso: string): Promise<boolean> {
+async function nudgeEmployee(row: WfhRow): Promise<boolean> {
     const { data: emp } = await supabaseAdmin
         .from('employees')
-        .select('first_name_th, last_name_th, nickname, email, user_id')
+        .select('first_name_th, last_name_th, nickname, user_id')
         .eq('id', row.employee_id)
         .maybeSingle()
 
@@ -136,14 +135,9 @@ async function nudgeEmployee(row: WfhRow, todayBkkIso: string): Promise<boolean>
         first_name_th: string | null
         last_name_th: string | null
         nickname: string | null
-        email: string | null
         user_id: string | null
     } | null
     if (!e) return false
-
-    const displayName = e.nickname?.trim()
-        || `${(e.first_name_th ?? '').trim()} ${(e.last_name_th ?? '').trim()}`.trim()
-        || 'พนักงาน'
 
     // ── In-app 🔔 ─────────────────────────────────────────────────────
     const userId = e.user_id ?? await getEmployeeUserId(row.employee_id)
@@ -163,51 +157,5 @@ async function nudgeEmployee(row: WfhRow, todayBkkIso: string): Promise<boolean>
         }).catch(err => console.error('[cron/wfh-nudge] notif failed:', err))
     }
 
-    // ── Email ─────────────────────────────────────────────────────────
-    if (e.email) {
-        await sendEmail({
-            to: e.email,
-            subject: `[เตือน] อย่าลืมเช็คอิน WFH วันนี้ (${todayBkkIso})`,
-            html: buildNudgeEmailHtml(displayName, row.reference_code, todayBkkIso),
-        }).catch(err => console.error('[cron/wfh-nudge] email failed:', err))
-    }
-
     return true
-}
-
-function buildNudgeEmailHtml(displayName: string, refCode: string, todayBkkIso: string): string {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://nexus.ebci-cargo.com'
-    return `
-<!DOCTYPE html>
-<html lang="th">
-  <head><meta charset="utf-8"><title>เตือนเช็คอิน WFH</title></head>
-  <body style="margin:0;padding:0;background:#1a0a0e;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;color:#fff">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#1a0a0e">
-      <tr><td align="center" style="padding:32px 16px">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;background:rgba(86,30,35,0.92);border-radius:16px;overflow:hidden">
-          <tr><td style="padding:24px 28px;background:rgba(50,15,20,0.96)">
-            <h1 style="margin:0;font-size:18px;font-weight:700;color:#fff">⏰ อย่าลืมเช็คอิน WFH วันนี้</h1>
-            <p style="margin:4px 0 0;font-size:13px;color:rgba(255,255,255,0.7)">${todayBkkIso} · รหัสคำขอ ${refCode}</p>
-          </td></tr>
-          <tr><td style="padding:24px 28px">
-            <p style="margin:0 0 12px;font-size:15px;line-height:1.6">สวัสดีคุณ <strong>${escapeHtml(displayName)}</strong>,</p>
-            <p style="margin:0 0 16px;font-size:15px;line-height:1.6">วันนี้คุณได้รับอนุมัติ WFH แล้ว แต่ระบบยังไม่ได้รับการเช็คอินจากคุณ — กรุณาเปิดแอปและกดเช็คอินเพื่อให้ระบบบันทึกว่าวันนี้คุณมาทำงาน (ไม่ทำจะถูก mark ว่าขาดงาน)</p>
-            <p style="margin:24px 0 0;text-align:center">
-              <a href="${appUrl}/portal/checkin" style="display:inline-block;padding:12px 28px;border-radius:10px;background:#f59e0b;color:#1a0a0e;font-weight:700;font-size:15px;text-decoration:none">เช็คอิน WFH ตอนนี้</a>
-            </p>
-          </td></tr>
-          <tr><td style="padding:16px 28px;background:rgba(50,15,20,0.96);font-size:12px;color:rgba(255,255,255,0.55)">
-            EBCI Nexus · เตือนอัตโนมัติทุก 10:00 น. หากเช็คอินแล้วก่อนเวลานี้จะไม่มี email ฉบับนี้
-          </td></tr>
-        </table>
-      </td></tr>
-    </table>
-  </body>
-</html>`.trim()
-}
-
-function escapeHtml(s: string): string {
-    return s.replace(/[&<>"']/g, c => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-    }[c]!))
 }

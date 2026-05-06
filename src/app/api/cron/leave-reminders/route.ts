@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { sendLeaveSubmittedToApprover } from '@/lib/email-leave'
-import { sendWfhSubmittedToApprover } from '@/lib/email-wfh'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
 
 export const dynamic = 'force-dynamic'
@@ -12,9 +10,9 @@ export const maxDuration = 60  // give the fan-out room
  *
  * Daily cron (configured in vercel.json) that finds leave_requests +
  * wfh_requests that have been `pending` for > 24h AND haven't been
- * reminded in the last 24h, then re-pings the approver via email +
- * in-app 🔔. Stamps `last_reminded_at` so the next run only catches
- * brand-new offenders.
+ * reminded in the last 24h, then re-pings the approver via in-app 🔔.
+ * Stamps `last_reminded_at` so the next run only catches brand-new
+ * offenders. Email is intentionally reserved for approve/reject results.
  *
  * Auth: Vercel Cron sends `Authorization: Bearer <CRON_SECRET>`.
  * We accept that, OR — for local testing — accept a `?key=<secret>`
@@ -122,37 +120,13 @@ export async function GET(req: NextRequest) {
 async function remindLeave(row: Record<string, unknown>): Promise<boolean> {
     const approverId = row.approver_id as string | null
     if (!approverId) return false
-    const [{ data: approverEmp }, { data: applicantEmp }, { data: leaveType }] = await Promise.all([
-        supabaseAdmin.from('employees').select('first_name_th, last_name_th, email').eq('id', approverId).maybeSingle(),
+    const [{ data: applicantEmp }] = await Promise.all([
         supabaseAdmin.from('employees').select('first_name_th, last_name_th, nickname, email').eq('id', row.employee_id as string).maybeSingle(),
-        supabaseAdmin.from('leave_types').select('name_th').eq('id', row.leave_type_id as string).maybeSingle(),
     ])
-    const a = approverEmp as { first_name_th: string | null; last_name_th: string | null; email: string | null } | null
     const e = applicantEmp as { first_name_th: string | null; last_name_th: string | null; nickname: string | null; email: string | null } | null
-    if (!a?.email) return false  // no email = nothing to remind to
 
-    const approverName = `${a.first_name_th ?? ''} ${a.last_name_th ?? ''}`.trim() || 'ผู้อนุมัติ'
     const employeeName = `${e?.first_name_th ?? ''} ${e?.last_name_th ?? ''}`.trim() || e?.nickname || 'พนักงาน'
-    const ctx = {
-        referenceCode: row.reference_code as string,
-        employeeName,
-        employeeEmail: e?.email ?? '',
-        approverName,
-        approverEmail: a.email,
-        leaveTypeTh: (leaveType as { name_th: string } | null)?.name_th ?? 'ลา',
-        startDate: row.start_date as string,
-        endDate: row.end_date as string,
-        totalDays: Number(row.total_days),
-        reason: row.reason as string,
-    }
-    // Reuse the submit-to-approver template with a "[Reminder]" subject
-    // prefix — the email body content doesn't change between submit and
-    // reminder, just the urgency framing.
-    const orig = sendLeaveSubmittedToApprover
-    // Light wrapper: send the same template but mutate subject post-hoc.
-    // Cleanest path: call orig and accept the duplicate body — Resend
-    // doesn't dedupe.
-    await orig(ctx).catch(err => console.error('[cron/reminders] leave email failed:', err))
+    const totalDays = Number(row.total_days)
     // In-app 🔔 — labelled as a reminder so the approver knows it's a re-ping.
     const approverUserId = await getEmployeeUserId(approverId)
     if (approverUserId) {
@@ -160,12 +134,12 @@ async function remindLeave(row: Record<string, unknown>): Promise<boolean> {
             recipient_user_id: approverUserId,
             type: 'leave_request_reminder',
             title: `[เตือน] ${e?.nickname ?? employeeName} รออนุมัติใบลา`,
-            body: `${row.start_date} → ${row.end_date} (${ctx.totalDays} วัน) — ค้างมาเกิน 24 ชม.`,
+            body: `${row.start_date} → ${row.end_date} (${totalDays} วัน) — ค้างมาเกิน 24 ชม.`,
             action_url: '/portal/leave/inbox',
             action_label: 'ไปอนุมัติ',
             entity_type: 'leave_request',
             entity_id: row.id as string,
-            reference_code: ctx.referenceCode,
+            reference_code: row.reference_code as string,
             icon: 'Calendar',
             color: 'red',
             sender_name: e?.nickname ?? employeeName,
@@ -177,42 +151,25 @@ async function remindLeave(row: Record<string, unknown>): Promise<boolean> {
 async function remindWfh(row: Record<string, unknown>): Promise<boolean> {
     const approverId = row.approver_id as string | null
     if (!approverId) return false
-    const [{ data: approverEmp }, { data: applicantEmp }] = await Promise.all([
-        supabaseAdmin.from('employees').select('first_name_th, last_name_th, email').eq('id', approverId).maybeSingle(),
+    const [{ data: applicantEmp }] = await Promise.all([
         supabaseAdmin.from('employees').select('first_name_th, last_name_th, nickname, email').eq('id', row.employee_id as string).maybeSingle(),
     ])
-    const a = approverEmp as { first_name_th: string | null; last_name_th: string | null; email: string | null } | null
     const e = applicantEmp as { first_name_th: string | null; last_name_th: string | null; nickname: string | null; email: string | null } | null
-    if (!a?.email) return false
 
-    const approverName = `${a.first_name_th ?? ''} ${a.last_name_th ?? ''}`.trim() || 'ผู้อนุมัติ'
     const employeeName = `${e?.first_name_th ?? ''} ${e?.last_name_th ?? ''}`.trim() || e?.nickname || 'พนักงาน'
-    const ctx = {
-        referenceCode: row.reference_code as string,
-        employeeName,
-        employeeEmail: e?.email ?? '',
-        approverName,
-        approverEmail: a.email,
-        startDate: row.start_date as string,
-        endDate: row.end_date as string,
-        totalDays: Number(row.total_days),
-        reason: row.reason as string,
-        contactDuringWfh: (row.contact_during_wfh as string | null) ?? null,
-    }
-    await sendWfhSubmittedToApprover(ctx)
-        .catch(err => console.error('[cron/reminders] wfh email failed:', err))
+    const totalDays = Number(row.total_days)
     const approverUserId = await getEmployeeUserId(approverId)
     if (approverUserId) {
         await createNotification({
             recipient_user_id: approverUserId,
             type: 'wfh_request_reminder',
             title: `[เตือน] ${e?.nickname ?? employeeName} รออนุมัติ WFH`,
-            body: `${row.start_date} → ${row.end_date} (${ctx.totalDays} วัน) — ค้างมาเกิน 24 ชม.`,
+            body: `${row.start_date} → ${row.end_date} (${totalDays} วัน) — ค้างมาเกิน 24 ชม.`,
             action_url: '/portal/wfh/inbox',
             action_label: 'ไปอนุมัติ',
             entity_type: 'wfh_request',
             entity_id: row.id as string,
-            reference_code: ctx.referenceCode,
+            reference_code: row.reference_code as string,
             icon: 'Home',
             color: 'red',
             sender_name: e?.nickname ?? employeeName,
