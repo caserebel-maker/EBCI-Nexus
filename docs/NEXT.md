@@ -5,9 +5,9 @@
 
 ---
 
-## 🔁 ที่เครื่องถัดไป — **Home Mac · เย็น 3 พ.ค. (~21:00 หลังถึงบ้าน)**
+## 🔁 ที่เครื่องถัดไป — **Laptop · 7 พ.ค. ค่ำ → พรุ่งนี้เช้า 8 พ.ค. 07:00**
 
-> **อ่านเฉพาะตอนเปิด Claude Code ที่ home Mac**
+> **อ่านเฉพาะตอนเปิด Claude Code ที่ laptop หรือ home Mac**
 
 **Step 1 — Pull ก่อน:**
 ```bash
@@ -16,20 +16,20 @@ cd ~/C1TB/EB-CI/EBCI-Nexus && git pull origin main --ff-only
 
 **Step 2 — พิมพ์บอก Claude:**
 ```
-อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ home. session laptop เพิ่งจบไป 19:38
-ส่ง QUESTIONS_FOR_MOD.md ไปแล้ว (commit 97ec199) รอ ม๊อด ตอบ.
-ระหว่างรอให้ทำงานที่ไม่ blocked: §3.4 bulk salary slip e2e test (~20 นาที)
-หรือ verify §1.3 + §1.4 + §3.16p2 บน prod (เปิด /portal/checkin / /portal/leave/inbox / /hradmin/attendance/reconcile)
+อ่าน docs/NEXT.md + docs/HIP_WEBHOOK_TODO.md แล้วทำต่อ — กำลังตอบ Q1-Q4 เกี่ยวกับ office server
+ที่จะใช้รัน HIP webhook relay agent. ปอนด์เพิ่งกลับจาก office วันนี้, เจอ HIP IP 192.168.1.40
+แล้วแต่ HIP Ci100S ส่งได้แค่ TCP raw protocol ไม่ใช่ HTTP webhook → ต้อง relay agent บน vlan
+1.x. รอ Q1-Q4 (OS / IP / access / current services ของ server) แล้วเขียน agent ให้ตรง OS.
 ```
 
-**Step 3 — ตอบ Claude:** "อยู่ home"
+**Step 3 — ตอบ Claude:** "อยู่ laptop" หรือ "อยู่ home"
 
-**📌 Beta status ตอนนี้: ~89% complete**
+**📌 Beta status ตอนนี้: ~89% complete + HIP relay Phase 1B half-done**
 - ✅ Code ship แล้ว 15/17 items ใน BETA_FEEDBACK
 - 🚧 รอ ม๊อด ตอบ 12 คำถามใน `docs/QUESTIONS_FOR_MOD.md`
-- 🔧 Tuesday office task: HIP webhook config (เลื่อนไปทำที่ office จริง)
+- 🔧 HIP webhook: endpoint live, secret ยังไม่ set, agent ยังไม่เขียน — รอ server info
 
-**📅 Reminder:** มี GCal event + Claude scheduled-task รออยู่ พร้อม prompt ด้านบน
+**📅 Reminder ตอน 7 โมงเช้า 8 พ.ค.:** มี GCal event + Claude scheduled-task รออยู่
 
 **ล่าสุดเสร็จ (laptop · 3 พ.ค. afternoon-evening):**
 - `97ec199` — `docs/QUESTIONS_FOR_MOD.md` 12 คำถามจัด priority + multiple choice — ส่งให้ ม๊อด unblock backlog
