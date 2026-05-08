@@ -108,21 +108,24 @@ export async function checkIn(payload: CheckInPayload) {
         }
     }
 
-    // ── Time window: 7:00 → end of day (Bangkok) ─────────────────────────
+    // ── Time window: 6:00 → end of day (Bangkok) ─────────────────────────
     // Vercel serverless runs in UTC — shift +7h then read as UTC to get
     // the Bangkok wall clock without depending on the process timezone.
     //
     // Pre-04 May: hard-blocked past 09:30 (refused fallback for the very
     // case Mod surfaced in the audit — employee forgets card tap and can't
-    // recover via web). Now: still anti-trick-gated below 07:00 (no one
-    // legitimately checks in before then; pre-7am attempts are clock
-    // manipulation), but late check-ins are allowed all day with the
-    // late_minutes column recording exactly when the punch happened.
+    // recover via web).
+    // Pre-08 May: window was 07:00 → end-of-day. Mod reported some staff
+    // arrive before 7:00 (early-shift / customs office) and got blocked
+    // — pushed start to 06:00. Anti-trick concern is small at 6 AM (no
+    // one legitimately checks in before sunrise except known shifts) and
+    // the late_minutes column still records the exact punch time so HR
+    // can spot anomalies post-hoc.
     const nowBkk = new Date(Date.now() + 7 * 60 * 60 * 1000)
     const minutesOfDay = nowBkk.getUTCHours() * 60 + nowBkk.getUTCMinutes()
-    const START_TIME = 7 * 60       // 7:00 = 420 minutes
+    const START_TIME = 6 * 60       // 6:00 = 360 minutes
     if (minutesOfDay < START_TIME) {
-        return { error: 'เช็คอินได้ตั้งแต่ 7:00 น. เป็นต้นไป' }
+        return { error: 'เช็คอินได้ตั้งแต่ 6:00 น. เป็นต้นไป' }
     }
     // Compute lateness for record-keeping (NULL when on time).
     const lateMinutesRaw = minutesOfDay - OFFICIAL_START_MIN

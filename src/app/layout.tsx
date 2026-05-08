@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 import type { Metadata, Viewport } from 'next'
 import { IBM_Plex_Sans_Thai } from 'next/font/google'
 import './globals.css'
@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { ThemeProvider } from "@/components/theme-provider"
 import { Providers } from "@/components/providers"
 import { RoleProvider } from '@/contexts/role-context'
+import { RouteProgress } from '@/components/ui/route-progress'
 import { getSession } from '@/lib/auth'
 
 const ibmPlexSansThai = IBM_Plex_Sans_Thai({
@@ -64,6 +65,13 @@ export default async function RootLayout({
         >
           <Providers>
             <RoleProvider role={session?.role ?? 'employee'}>
+              {/* Top progress bar — fires on every internal link click so
+                  beta testers stop tapping links twice when the route
+                  swap is mid-fetch. Lives outside RoleProvider would also
+                  work; placed here so it inherits the theme classes. */}
+              <Suspense fallback={null}>
+                <RouteProgress />
+              </Suspense>
               {children}
             </RoleProvider>
           </Providers>
