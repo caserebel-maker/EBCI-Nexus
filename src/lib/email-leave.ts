@@ -306,6 +306,52 @@ export async function sendLeaveSubmittedToHrFyi(
     })
 }
 
+/** 2.6 / 5 — FYI to MD for annual leave (ลาพักร้อน) only.
+ *
+ *  ม๊อด's 8 พ.ค. spec: MD wants to know about every annual leave so the
+ *  company can plan around it, but only needs to ACT (approve/reject)
+ *  when > 3 วัน. For ≤ 3 วัน this FYI goes out alongside the in-app 🔔
+ *  while the line manager handles the actual approval.
+ *
+ *  When > 3 วัน the submit flow routes the request directly to MD as
+ *  the approver — in that case this FYI is intentionally skipped (the
+ *  approver email is the canonical one).
+ */
+export async function sendLeaveSubmittedToMdFyi(c: {
+    referenceCode: string
+    employeeName: string
+    mdEmail: string
+    approverName: string
+    leaveTypeTh: string
+    startDate: string
+    endDate: string
+    totalDays: number
+    reason: string
+}) {
+    const html = wrap({
+        title: 'แจ้งเพื่อทราบ: มีใบลาพักร้อน',
+        subhead: 'Annual Leave · For MD Awareness',
+        bodyHtml: `
+            ${paragraph('แจ้งเพื่อทราบ — ไม่ต้องดำเนินการ ใบลาพักร้อนนี้อยู่ในเกณฑ์ที่หัวหน้าสายงานอนุมัติได้เอง')}
+            ${referenceBlock(c.referenceCode)}
+            ${summaryRows([
+                ['ผู้ลา',       `<strong>${escapeHtml(c.employeeName)}</strong>`],
+                ['ประเภท',     `<strong>${escapeHtml(c.leaveTypeTh)}</strong>`],
+                ['วันที่ลา',   escapeHtml(formatThaiDateRange(c.startDate, c.endDate))],
+                ['จำนวนวัน',   `${c.totalDays} วัน`],
+                ['เหตุผล',     `<span style="white-space:pre-wrap;">${escapeHtml(c.reason)}</span>`],
+                ['ผู้อนุมัติ', `<strong>${escapeHtml(c.approverName)}</strong>`],
+            ])}
+            ${paragraph('คุณได้รับเมลฉบับนี้เพราะระบบกำหนดให้ MD รับทราบทุกใบลาพักร้อน เพื่อใช้ในการวางแผนกำลังคน', { small: true, muted: true })}
+        `,
+    })
+    return sendLeaveEmail({
+        to: c.mdEmail,
+        subject: `[FYI · MD] ลาพักร้อน: ${c.employeeName} (${c.totalDays} วัน · ${formatThaiDateRange(c.startDate, c.endDate)})`,
+        html,
+    })
+}
+
 /** 3 / 5 — to the employee when approved */
 export async function sendLeaveApproved(c: LeaveEmailContext & { approvalNotes?: string | null }) {
     const portalUrl = `${BASE_URL}/portal/leave`

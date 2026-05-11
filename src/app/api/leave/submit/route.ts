@@ -12,7 +12,13 @@ import {
     adjustPendingDays,
     type LeaveType,
 } from '@/lib/leave-balance'
-import { resolveLeaveApprover, displayApproverName } from '@/lib/leave-approval'
+import {
+    resolveLeaveApprover,
+    findMdEmployee,
+    displayApproverName,
+    ANNUAL_LEAVE_MD_THRESHOLD_DAYS,
+} from '@/lib/leave-approval'
+import { sendLeaveSubmittedToMdFyi } from '@/lib/email-leave'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
 import { findHrNotifyTargets } from '@/lib/hr-notify'
 import { resolveApproverInboxUrl } from '@/lib/leave-inbox-url'
@@ -157,7 +163,20 @@ export async function POST(req: NextRequest) {
     const totalDays = validation.totalDays
 
     // Resolve approver (logged even if null so HR can see orphans in Session 2)
-    const approver = await resolveLeaveApprover(employeeId)
+    //
+    // §8 พ.ค. — ม๊อด's escalation rule: ลาพักร้อนเกิน 3 วัน → MD เป็นคน
+    // อนุมัติ ไม่ใช่หัวหน้าสายงาน. ≤ 3 วัน → หัวหน้าอนุมัติตามปกติ + MD
+    // ได้แค่ FYI (handled in the email + notification fan-out below).
+    //
+    // Identification: MD = active employee with approval_level=4. If no
+    // MD exists (org bootstrapping, vacancy, etc.) we fall back silently
+    // to the line manager — never block the submission just because the
+    // MD seat is empty. HR sees the chain via the audit dashboard.
+    const lineManager = await resolveLeaveApprover(employeeId)
+    const needsMdApproval =
+        leaveTypeId === 'annual' && totalDays > ANNUAL_LEAVE_MD_THRESHOLD_DAYS
+    const md = (leaveTypeId === 'annual') ? await findMdEmployee() : null
+    const approver = needsMdApproval && md ? md : lineManager
     if (!approver) {
         return NextResponse.json({
             error: 'ไม่พบผู้อนุมัติตามสายงาน — กรุณาแจ้ง HR เพื่อตั้งค่าผู้อนุมัติ',
@@ -311,6 +330,51 @@ export async function POST(req: NextRequest) {
         }
     } catch (err) {
         console.error('[leave/submit] notification error:', err)
+    }
+
+    // ── MD FYI fan-out — ม๊อด's 8 พ.ค. call: MD ต้องเห็นทุกใบลาพักร้อน ───
+    // For annual leave only. When the request is short (≤ 3 วัน) MD is
+    // notify-only — both in-app 🔔 AND email (ม๊อด's preference: she
+    // wants MD to never miss an annual leave). When the request is > 3
+    // วัน MD is already the approver, so this block becomes a no-op
+    // (md.id === approver.id check).
+    if (leaveTypeId === 'annual' && md && md.id !== approver.id) {
+        try {
+            const mdUserId = await getEmployeeUserId(md.id)
+            const applicantNick = (employeeRow.data?.nickname as string | null) ?? employeeName
+            const dateLabel = startDate === endDate ? startDate : `${startDate} → ${endDate}`
+            if (mdUserId) {
+                await createNotification({
+                    recipient_user_id: mdUserId,
+                    type: 'leave_request_fyi',
+                    title: `[FYI] ${applicantNick} ลาพักร้อน`,
+                    body: `${dateLabel} (${totalDays} วัน) — รอ ${approver.first_name_th ?? 'ผู้บังคับบัญชา'} อนุมัติ (ไม่ต้องอนุมัติ)`,
+                    action_url: '/hradmin/leave?tab=requests',
+                    action_label: 'ดูรายการใบลา',
+                    entity_type: 'leave_request',
+                    entity_id: leaveRequestId,
+                    reference_code: referenceCode,
+                    icon: 'Calendar',
+                    color: 'blue',
+                    sender_name: applicantNick,
+                }).catch(err => console.error('[leave/submit] MD in-app FYI failed:', err))
+            }
+            if (md.email && md.email.includes('@')) {
+                await sendLeaveSubmittedToMdFyi({
+                    referenceCode,
+                    employeeName,
+                    mdEmail: md.email,
+                    approverName,
+                    leaveTypeTh: leaveType.name_th ?? 'ลาพักร้อน',
+                    startDate,
+                    endDate,
+                    totalDays,
+                    reason,
+                }).catch(err => console.error('[leave/submit] MD email FYI failed:', err))
+            }
+        } catch (err) {
+            console.error('[leave/submit] MD FYI fan-out failed:', err)
+        }
     }
 
     // ── HR FYI fan-out — Mod's 4 May call: HR ต้องรับทราบทุกใบลา ──────

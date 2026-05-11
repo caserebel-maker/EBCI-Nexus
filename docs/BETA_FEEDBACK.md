@@ -78,6 +78,28 @@ These break correct behaviour. Must ship before expanding beta beyond current 4 
 - Reject WFH request ต้องกดยืนยันหลังกรอกเหตุผล
 **Not included** (Tier 2): reset password, delete employee, delete announcement, meeting-room cancel — แยกรอบถัดไป
 
+### §1.7 ✅ ลาพักร้อน > 3 วัน ต้อง MD อนุมัติ — SHIPPED 8 พ.ค.
+**Problem**: ม๊อด ต้องการให้ใบลาพักร้อนเกิน 3 วันต้องผ่าน MD ก่อนอนุมัติ และ MD ต้องเห็นทุกใบลาพักร้อน (แม้น้อยกว่าหรือเท่ากับ 3 วัน) เพื่อวางแผนกำลังคน
+**Shipped scope**:
+- **≤ 3 วัน:** หัวหน้าสายงานอนุมัติตามปกติ + MD ได้ FYI (in-app 🔔 + email)
+- **> 3 วัน:** routes ตรงไป MD ทันที ไม่ผ่านหัวหน้าสายงาน (`approver_id = MD`)
+- MD = active employee with `approval_level = 4` (ม๊อด's identity: ฐานวัฒน์ จิม)
+- ใบลาประเภทอื่นไม่กระทบ — เฉพาะ `leaveTypeId === 'annual'`
+- Fallback ปลอดภัย: ถ้า MD seat ว่าง → กลับไปใช้หัวหน้าสายงาน (ไม่ block submission)
+**Files**: `src/lib/leave-approval.ts` (findMdEmployee + threshold const) · `src/app/api/leave/submit/route.ts` (escalation + FYI fan-out) · `src/lib/email-leave.ts` (sendLeaveSubmittedToMdFyi)
+
+### §1.8 ✅ Consolidate departments — SHIPPED 8 พ.ค.
+**Problem**: ม๊อด ต้องการปรับโครงสร้างแผนกตาม org structure ใหม่ (ก.ค. 2569)
+**Shipped scope**:
+- +แผนกเอกสารนำเข้า, +แผนกเอกสารส่งออก
+- แผนก IT → แผนก MIS
+- หน่วยขนส่ง → LSC logistics and supply chain
+- แผนกบัญชี + แผนกการเงิน → แผนกบัญชีและการเงิน (8 คนรวมเข้า)
+- แผนกบริหารงานบุคคล + แผนกธุรการ-แม่บ้าน → Human Resources and Purchasing (2 คนรวมเข้า)
+- แผนกรับ-ส่งเอกสาร → แผนกเอกสารนำเข้า (1 คนย้าย)
+- ลบ: โครงการJOHNSON, โครงการเฉพาะกิจ → ย้ายไป Unassigned (2 คน รอ HR re-assign)
+**SQL migration**: `20260508_consolidate_departments.sql` — applied to prod, 16 employees moved
+
 ---
 
 ## §2 P1 — High-value New Features

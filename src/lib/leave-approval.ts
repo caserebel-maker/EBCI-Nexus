@@ -111,3 +111,41 @@ export async function canApproveLeaveFor(
     const resolved = await resolveLeaveApprover(applicantId)
     return !!resolved && resolved.id === approverId
 }
+
+/**
+ * Find the active MD (กรรมการผู้จัดการ) — the employee at approval_level=4.
+ *
+ * Used by:
+ *   • /api/leave/submit  — escalates annual leave > 3 วัน straight to MD
+ *     instead of routing through the line manager (ม๊อด's 8 พ.ค. spec)
+ *   • Annual-leave notification fan-out — MD always gets a FYI when
+ *     someone submits annual leave, regardless of who approves
+ *
+ * Returns null if no Level-4 employee exists. Caller should fall back to
+ * the regular resolveLeaveApprover() path in that case — never block the
+ * submission just because MD is unset.
+ *
+ * If there are multiple Level-4 employees (org has multiple MDs), the
+ * one with the smallest employee_code wins. Stable across runs.
+ */
+export async function findMdEmployee(): Promise<ApproverEmployee | null> {
+    const { data, error } = await supabaseAdmin
+        .from('employees')
+        .select(APPROVER_SELECT)
+        .eq('status', 'active')
+        .eq('approval_level', 4)
+        .order('employee_code', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+    if (error) {
+        console.error('[leave-approval] findMdEmployee error:', error)
+        return null
+    }
+    return (data as ApproverEmployee | null) ?? null
+}
+
+/**
+ * Annual leave that crosses this threshold requires MD sign-off,
+ * not just the line manager. ม๊อด 8 พ.ค. 2026.
+ */
+export const ANNUAL_LEAVE_MD_THRESHOLD_DAYS = 3
