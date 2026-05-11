@@ -18,7 +18,11 @@ import {
     displayApproverName,
     ANNUAL_LEAVE_MD_THRESHOLD_DAYS,
 } from '@/lib/leave-approval'
-import { sendLeaveSubmittedToMdFyi } from '@/lib/email-leave'
+import {
+    sendLeaveSubmittedToApprover,
+    sendLeaveSubmittedToEmployee,
+    sendLeaveSubmittedToMdFyi,
+} from '@/lib/email-leave'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
 import { findHrNotifyTargets } from '@/lib/hr-notify'
 import { resolveApproverInboxUrl } from '@/lib/leave-inbox-url'
@@ -281,9 +285,10 @@ export async function POST(req: NextRequest) {
         // job can re-sum pending_days from leave_requests.
     }
 
-    // Resolve names + URLs for in-app notifications. Email is intentionally
-    // reserved for decision/result events (approve/reject) to avoid noisy
-    // submit-time mail.
+    // Resolve names + URLs. ม๊อด's 8 พ.ค. spec: send email to BOTH the
+    // approver (so they know there's something to act on) AND the
+    // applicant (confirmation receipt with reference code). HR is in-app
+    // only — they have a dashboard.
     const employeeRow = await supabaseAdmin
         .from('employees')
         .select('first_name_th, last_name_th, nickname, email')
@@ -293,9 +298,11 @@ export async function POST(req: NextRequest) {
         ? `${employeeRow.data.first_name_th ?? ''} ${employeeRow.data.last_name_th ?? ''}`.trim()
           + (employeeRow.data.nickname ? ` (${employeeRow.data.nickname})` : '')
         : session.name
+    const employeeEmail = (employeeRow.data?.email as string | null) ?? null
     const approverName = displayApproverName(approver)
+    const approverEmail = approver.email ?? null
 
-    const emailSent = { employee: false, approver: false, hr_fyi: false }
+    const emailSent = { employee: false, approver: false, md_fyi: false }
 
     // Resolve approver's inbox URL once for the bell notification below.
     // Best-effort: returns /portal/leave/inbox on any failure, which
@@ -304,6 +311,42 @@ export async function POST(req: NextRequest) {
     const approverInboxUrl = approverUserIdForUrl
         ? await resolveApproverInboxUrl(approverUserIdForUrl)
         : '/portal/leave/inbox'
+
+    // ── Submit-time emails (approver + applicant) ──────────────────────────
+    // Best-effort + parallel. Each job logs its own errors. Result flags
+    // surface back to the client in case the UI wants to show "email
+    // failed, please contact HR" inline.
+    {
+        const emailCtx = {
+            referenceCode,
+            employeeName,
+            employeeEmail: employeeEmail ?? '',
+            approverName,
+            approverEmail: approverEmail ?? '',
+            approverInboxUrl,
+            leaveTypeTh: leaveType.name_th ?? 'ลา',
+            startDate,
+            endDate,
+            totalDays,
+            reason,
+        }
+        const jobs: Array<Promise<unknown>> = []
+        if (employeeEmail && employeeEmail.includes('@')) {
+            jobs.push(
+                sendLeaveSubmittedToEmployee(emailCtx)
+                    .then(r => { emailSent.employee = Boolean(r && 'success' in r && r.success) })
+                    .catch(err => console.error('[leave/submit] employee email threw:', err)),
+            )
+        }
+        if (approverEmail && approverEmail.includes('@')) {
+            jobs.push(
+                sendLeaveSubmittedToApprover(emailCtx)
+                    .then(r => { emailSent.approver = Boolean(r && 'success' in r && r.success) })
+                    .catch(err => console.error('[leave/submit] approver email threw:', err)),
+            )
+        }
+        await Promise.allSettled(jobs)
+    }
 
     // In-app notification for the approver. Best-effort: failure here
     // never interrupts the response — the DB row is the authoritative
@@ -360,7 +403,7 @@ export async function POST(req: NextRequest) {
                 }).catch(err => console.error('[leave/submit] MD in-app FYI failed:', err))
             }
             if (md.email && md.email.includes('@')) {
-                await sendLeaveSubmittedToMdFyi({
+                const r = await sendLeaveSubmittedToMdFyi({
                     referenceCode,
                     employeeName,
                     mdEmail: md.email,
@@ -370,7 +413,11 @@ export async function POST(req: NextRequest) {
                     endDate,
                     totalDays,
                     reason,
-                }).catch(err => console.error('[leave/submit] MD email FYI failed:', err))
+                }).catch(err => {
+                    console.error('[leave/submit] MD email FYI failed:', err)
+                    return null
+                })
+                emailSent.md_fyi = Boolean(r && 'success' in r && r.success)
             }
         } catch (err) {
             console.error('[leave/submit] MD FYI fan-out failed:', err)

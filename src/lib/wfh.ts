@@ -6,6 +6,8 @@ import { createNotification, getEmployeeUserId } from '@/lib/notifications'
 import { findHrNotifyTargets } from '@/lib/hr-notify'
 import {
     sendWfhDecidedToEmployee,
+    sendWfhSubmittedToEmployee,
+    sendWfhSubmittedToApprover,
 } from '@/lib/email-wfh'
 import type { WfhRequest } from '@/lib/wfh-shared'
 
@@ -114,22 +116,56 @@ export async function submitWfhRequest(
     //                     HR doesn't approve WFH, just stays informed.
     const applicantRow = await supabaseAdmin
         .from('employees')
-        .select('first_name_th, last_name_th, nickname')
+        .select('first_name_th, last_name_th, nickname, email')
         .eq('id', input.employeeId)
         .maybeSingle()
     const applicant = (applicantRow.data ?? null) as {
         first_name_th: string | null
         last_name_th: string | null
         nickname: string | null
+        email: string | null
     } | null
     const applicantName = applicant
         ? (`${applicant.first_name_th ?? ''} ${applicant.last_name_th ?? ''}`.trim()
             || applicant.nickname || 'พนักงาน')
         : 'พนักงาน'
     const applicantNick = applicant?.nickname ?? applicantName
+    const applicantEmail = applicant?.email ?? null
+    const approverEmail = approver.email ?? null
+
+    // ── Submit-time emails — ม๊อด's 8 พ.ค. spec: applicant + approver get
+    // email at submit. HR is in-app only (they have a dashboard). Each
+    // job is best-effort + parallel — never blocks the response.
+    const emailCtx = {
+        referenceCode,
+        employeeName: applicantName,
+        employeeEmail: applicantEmail ?? '',
+        approverName,
+        approverEmail,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        totalDays,
+        reason,
+        contactDuringWfh: contact,
+    }
 
     // Fire notification jobs in parallel. Each job logs its own errors.
     const jobs: Array<Promise<unknown>> = []
+
+    // 0a. Applicant confirmation email
+    if (applicantEmail && applicantEmail.includes('@')) {
+        jobs.push(
+            sendWfhSubmittedToEmployee(emailCtx)
+                .catch(err => console.error('[wfh] applicant email failed:', err)),
+        )
+    }
+    // 0b. Approver action-needed email
+    if (approverEmail && approverEmail.includes('@')) {
+        jobs.push(
+            sendWfhSubmittedToApprover(emailCtx)
+                .catch(err => console.error('[wfh] approver email failed:', err)),
+        )
+    }
 
     // 1. Approver in-app
     jobs.push((async () => {

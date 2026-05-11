@@ -196,28 +196,30 @@ These are not technical questions — they're business/UX choices ม๊อด m
 **Decision needed**: A, B, or C?
 **Dependency**: ถ้า A หรือ C → ต้องสร้าง Telegram bot, แจก chat_id, store mapping `employee → telegram_chat_id`
 
-### §3.3 ✅ Notify approval ทาง email — SHIPPED 6 พ.ค.
+### §3.3 ✅ Notify approval ทาง email — REVISED 8 พ.ค. (Option C)
 
-**Proposal**: อนุมัติลาก่อน → แล้วค่อยส่ง notify ทางเมล (ลด spam risk)
+**Original ship (6 พ.ค.)**: Option A — email after decision only
 
-**Shipped behaviour**:
-- ส่ง email เฉพาะผลลัพธ์ที่พนักงานต้องรับทราบ: approved / rejected ของใบลาและ WFH
-- ตอน submit ใบลา/WFH: แจ้งผู้อนุมัติด้วย in-app notification เท่านั้น
-- HR FYI: in-app notification เท่านั้น
-- Cron reminder ใบลา/WFH ค้างอนุมัติ: in-app notification เท่านั้น
-- WFH check-in nudge ตอน 10:00: in-app notification เท่านั้น
+**MD's revised spec (8 พ.ค.)**: Option C — email at submit AND decision
+> "ถ้าใครสร้างใบลา ให้ notify ด้วยเมลด้วย นอกจาก bell noti — สำหรับ
+> ผู้อนุมัติการลาทุกคน หากคนในสายงานของตนยื่นใบลา ให้ส่งอีเมลแจ้งเตือน
+> ว่ามีการยื่นใบลาเข้ามาในระบบ และหากอนุมัติหรือไม่ ก็ให้ notify
+> ด้วยเมลกลับไป"
 
-**Kept email outside this policy**: payroll slip, careers/applicant workflow, และประกาศ WFH ทั้งบริษัทที่ HR เลือกเปิด notifyEmail
+**Shipped behaviour (8 พ.ค.)**:
+- **Submit ใบลา/WFH** → email ถึง **approver** (action needed) + **applicant** (confirmation w/ reference code)
+- **Approve/Reject** → email ถึง applicant (decision result)
+- **MD FYI** สำหรับใบลาพักร้อนทุกใบ (§1.7) — in-app 🔔 + email
+- **HR FYI** ยังคงเป็น in-app only (HR มี dashboard อยู่แล้ว — `/hradmin/leave?tab=requests`)
+- **Cron reminder** สำหรับใบค้างอนุมัตินาน: in-app only
+- **WFH check-in nudge** ตอน 10:00: in-app only
 
-**Trade-offs**:
-| Option | Pros | Cons |
-|---|---|---|
-| A. Email after decision only | ลด spam, ไม่กระทบ approval flow | Approver ต้องดู bell/in-app ตอน submit |
-| B. Status quo (email ทุก step) | Approver ไม่พลาด | Email เยอะ, เสี่ยง spam folder |
-| C. Email approver ตอน submit + email requester ตอน decision | สมดุล | Logic ซับซ้อน |
+**Volume estimate per submission**: 2-3 emails (approver + applicant, +MD FYI for annual)
+ลดจาก original ~4 emails/submission แต่เพิ่มจาก Option A's 0 emails/submission
 
-**Decision**: A — email after decision only
-**Note**: Resend (production email) มี deliverability ดี แต่ถ้า volume สูง user mark spam → domain reputation drop
+**Files**: `src/app/api/leave/submit/route.ts` · `src/lib/wfh.ts`
+
+**Note**: Resend deliverability OK at this volume. ถ้า user mark spam เยอะ → consider Option C-lite (email approver only, skip applicant confirmation)
 
 ---
 
