@@ -5,40 +5,41 @@
 
 ---
 
-## 🔁 ที่เครื่องถัดไป — **Laptop · 7 พ.ค. ค่ำ → พรุ่งนี้เช้า 8 พ.ค. 07:00**
+## 🔁 ที่เครื่องถัดไป — **Office Mac mini · อังคาร 12 พ.ค. เช้า 08:00**
 
-> **อ่านเฉพาะตอนเปิด Claude Code ที่ laptop หรือ home Mac**
+> **อ่านเฉพาะตอนเปิด Claude Code ที่ office Mac mini**
 
-**Step 1 — Pull ก่อน:**
+**Step 1 — Pull ก่อน** (laptop เพิ่ง push 3 commits ตอน 22:38 จันทร์):
 ```bash
-cd ~/C1TB/EB-CI/EBCI-Nexus && git pull origin main --ff-only
+cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff-only
 ```
 
 **Step 2 — พิมพ์บอก Claude:**
 ```
-อ่าน docs/NEXT.md + docs/HIP_WEBHOOK_TODO.md แล้วทำต่อ — กำลังตอบ Q1-Q4 เกี่ยวกับ office server
-ที่จะใช้รัน HIP webhook relay agent. ปอนด์เพิ่งกลับจาก office วันนี้, เจอ HIP IP 192.168.1.40
-แล้วแต่ HIP Ci100S ส่งได้แค่ TCP raw protocol ไม่ใช่ HTTP webhook → ต้อง relay agent บน vlan
-1.x. รอ Q1-Q4 (OS / IP / access / current services ของ server) แล้วเขียน agent ให้ตรง OS.
+อ่าน docs/NEXT.md + docs/HIP_WEBHOOK_TODO.md แล้วทำต่อ — อยู่ office. งานหลักวันนี้:
+1) ทำ HIP webhook relay agent (Q1-Q4 office server) ให้ครบ
+2) Verify commits จาก laptop เมื่อคืน บน prod (§1.7 MD escalation + §1.8 departments + §3.3 emails revised)
+3) ตอบ ม๊อด Q1.5/Q2.3/Q4.1/Q4.3 ถ้าพร้อม → ผม config ให้
 ```
 
-**Step 3 — ตอบ Claude:** "อยู่ laptop" หรือ "อยู่ home"
+**Step 3 — ตอบ Claude:** "อยู่ office"
 
-**📌 Beta status ตอนนี้: ~89% complete + HIP relay Phase 1B half-done**
-- ✅ Code ship แล้ว 15/17 items ใน BETA_FEEDBACK
-- 🚧 รอ ม๊อด ตอบ 12 คำถามใน `docs/QUESTIONS_FOR_MOD.md`
-- 🔧 HIP webhook: endpoint live, secret ยังไม่ set, agent ยังไม่เขียน — รอ server info
+**📌 Beta status: ~94% complete**
+- ✅ 18/20 items ใน BETA_FEEDBACK ship แล้ว (เพิ่ม §1.7 MD escalation, §1.8 departments, §3.3 revised today)
+- 🚧 รอ ม๊อด ตอบ 12 คำถามใน `docs/QUESTIONS_FOR_MOD.md` (Welfare = ใหญ่สุด 6-8 ชม)
+- 🔧 HIP webhook: endpoint live, agent ยังไม่เขียน — รอ Q1-Q4 office server
 
-**📅 Reminder ตอน 7 โมงเช้า 8 พ.ค.:** มี GCal event + Claude scheduled-task รออยู่
+**📅 Reminder ตอน 08:00 อังคาร 12 พ.ค.:** มี GCal event + Claude scheduled-task รออยู่
 
-**ล่าสุดเสร็จ (laptop · 3 พ.ค. afternoon-evening):**
-- `97ec199` — `docs/QUESTIONS_FOR_MOD.md` 12 คำถามจัด priority + multiple choice — ส่งให้ ม๊อด unblock backlog
+**ล่าสุดเสร็จ (laptop · จันทร์ 11 พ.ค. ค่ำ):**
+- `2e5711e` — §3.3 revised: restore submit-time emails (approver + applicant) per MD's 8 พ.ค. spec
+- `11e84ea` — §1.7 ลาพักร้อน > 3 วัน → MD อนุมัติ + MD FYI ทุกใบลาพักร้อน
+- `0970ced` — §1.8 consolidate departments (org structure ใหม่, 16 employees migrated)
 
-**ก่อนหน้านั้น (laptop · APR30 afternoon):**
-- `cc84d12` — §1.4 cancel/withdraw approved leave w/ approver sign-off
-- `66be09f` — §1.3 leave-day check-in suppression + ลา in reconcile
-- `fd2ef5f` — §2.5 remember-me 30-day signed session
-- `96a4fb6` — §3.14 XSS sweep + harden notification action_url
+**ก่อนหน้านั้น:**
+- `97ec199` — `docs/QUESTIONS_FOR_MOD.md` 12 คำถามรอ ม๊อด ตอบ
+- `2862fd1` + `1108af6` — §3.1 Phase 1 card scan webhook endpoint
+- `cc84d12` — §1.4 cancel/withdraw approved leave
 
 ---
 
