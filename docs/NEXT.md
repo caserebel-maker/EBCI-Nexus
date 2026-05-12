@@ -5,33 +5,39 @@
 
 ---
 
-## 🔁 ที่เครื่องถัดไป — **Office Mac mini · อังคาร 12 พ.ค. เช้า 08:00**
+## 🔁 ที่เครื่องถัดไป — **Home Mac · อังคาร 12 พ.ค. เย็น (~19:00 Bangkok)**
 
-> **อ่านเฉพาะตอนเปิด Claude Code ที่ office Mac mini**
+> **อ่านเฉพาะตอนเปิด Claude Code ที่ home Mac**
 
-**Step 1 — Pull ก่อน** (laptop เพิ่ง push 3 commits ตอน 22:38 จันทร์):
+**Step 1 — Pull ก่อน:**
 ```bash
-cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff-only
+cd ~/C1TB/EB-CI/EBCI-Nexus && git pull origin main --ff-only
 ```
+*(ถ้า path ที่บ้านต่างไป ให้ `cd` ไป repo `EBCI-Nexus` ตัวจริงก่อน pull)*
 
 **Step 2 — พิมพ์บอก Claude:**
 ```
-อ่าน docs/NEXT.md + docs/HIP_WEBHOOK_TODO.md แล้วทำต่อ — อยู่ office. งานหลักวันนี้:
-1) ทำ HIP webhook relay agent (Q1-Q4 office server) ให้ครบ
-2) Verify commits จาก laptop เมื่อคืน บน prod (§1.7 MD escalation + §1.8 departments + §3.3 emails revised)
-3) ตอบ ม๊อด Q1.5/Q2.3/Q4.1/Q4.3 ถ้าพร้อม → ผม config ให้
+อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ home. office session เพิ่งจบ — ม๊อด ถามเรื่อง company-wide rollout (login ด้วยรหัสพนักงาน + password เริ่มต้น) แต่ยังไม่เลือก strategy. ตัวเลือก:
+- A. รหัสเดียวกันหมด `000000` + force-change-on-first-login (~1.5 ชม รวม onboard 21 คน)
+- B. employee_code = password (no force-change, 30 นาที onboard 21 คน)
+ถาม ปอนด์ ก่อนเริ่ม แล้วลุยตามที่ตอบ.
 ```
 
-**Step 3 — ตอบ Claude:** "อยู่ office"
+**Step 3 — ตอบ Claude:** "อยู่ home"
 
 **📌 Beta status: ~94% complete**
-- ✅ 18/20 items ใน BETA_FEEDBACK ship แล้ว (เพิ่ม §1.7 MD escalation, §1.8 departments, §3.3 revised today)
+- ✅ 18/20 items ใน BETA_FEEDBACK ship แล้ว
 - 🚧 รอ ม๊อด ตอบ 12 คำถามใน `docs/QUESTIONS_FOR_MOD.md` (Welfare = ใหญ่สุด 6-8 ชม)
-- 🔧 HIP webhook: endpoint live, agent ยังไม่เขียน — รอ Q1-Q4 office server
+- 🔧 HIP webhook: endpoint live, agent ยังไม่เขียน — รอข้อมูล office server (OS + IP + access)
+- 🚀 **NEW: Company-wide rollout** — 26/47 มี account, ยังเหลือ 21 คน รอ ปอนด์ ตัดสินใจ A vs B
 
-**📅 Reminder ตอน 08:00 อังคาร 12 พ.ค.:** มี GCal event + Claude scheduled-task รออยู่
+**📅 Reminder ตอน 19:00 คืนนี้ (Bangkok):** มี GCal event + Claude scheduled-task รออยู่
 
-**ล่าสุดเสร็จ (laptop · จันทร์ 11 พ.ค. ค่ำ):**
+**ล่าสุดเสร็จ (office · อังคาร 12 พ.ค. ช่วงบ่าย — DB-only, no commits):**
+- ✅ สร้าง account ทดสอบ อ.ปราโมท พงษ์ทอง (`056-47`) — role=employee, password=`000000`, ตำแหน่งที่ปรึกษา
+- ✅ Verify B-path completed (§1.7 + §1.8 + §3.3 commits จาก laptop)
+
+**ก่อนหน้านั้น (laptop · จันทร์ 11 พ.ค. ค่ำ):**
 - `2e5711e` — §3.3 revised: restore submit-time emails (approver + applicant) per MD's 8 พ.ค. spec
 - `11e84ea` — §1.7 ลาพักร้อน > 3 วัน → MD อนุมัติ + MD FYI ทุกใบลาพักร้อน
 - `0970ced` — §1.8 consolidate departments (org structure ใหม่, 16 employees migrated)
