@@ -189,7 +189,6 @@ interface FormState {
     manager_id: string
     leave_approver_id: string
     is_approver: boolean
-    approval_department_scope: string
     // Home location for the inline map preview. Stored as strings in
     // the form to match the date-of-birth pattern; coerced to numeric
     // (or null) before sending to the server action.
@@ -388,9 +387,6 @@ export function EmployeeProfileView({
         manager_id: employee.manager_id ?? '',
         leave_approver_id: employee.leave_approver_id ?? '',
         is_approver: Boolean(employee.is_approver),
-        approval_department_scope: Array.isArray(employee.approval_department_scope)
-            ? (employee.approval_department_scope[0] ?? '')
-            : '',
         home_latitude: employee.home_latitude != null ? String(employee.home_latitude) : '',
         home_longitude: employee.home_longitude != null ? String(employee.home_longitude) : '',
         home_location_label: employee.home_location_label ?? '',
@@ -536,7 +532,7 @@ export function EmployeeProfileView({
                 is_approver: form.is_approver,
                 approval_scopes: form.is_approver ? ['leave'] : [],
                 approval_department_scope: form.is_approver
-                    ? [form.approval_department_scope || form.department || 'all']
+                    ? [form.department || 'all']
                     : null,
                 emergency_contact_name:     form.emergency_contact_name     || null,
                 emergency_contact_phone:    form.emergency_contact_phone    || null,
@@ -1125,26 +1121,15 @@ export function EmployeeProfileView({
                                             onChange={e => setForm(prev => ({
                                                 ...prev,
                                                 is_approver: e.target.checked,
-                                                approval_department_scope: e.target.checked
-                                                    ? (prev.approval_department_scope || prev.department || 'all')
-                                                    : '',
                                             }))}
                                             className="h-4 w-4 accent-[#ad5f6c]"
                                         />
                                         ให้คนนี้อนุมัติใบลาได้
                                     </label>
                                     {form.is_approver && (
-                                        <select
-                                            className={sel}
-                                            style={SEL_CHEVRON}
-                                            value={form.approval_department_scope || form.department || 'all'}
-                                            onChange={set('approval_department_scope')}
-                                        >
-                                            <option value="all">ทุกแผนก</option>
-                                            {DEPARTMENTS.map(dept => (
-                                                <option key={dept} value={dept}>{dept}</option>
-                                            ))}
-                                        </select>
+                                        <p className="rounded-xl bg-white/8 border border-white/12 px-3 py-2 text-sm text-white/80">
+                                            ขอบเขต: {form.department || 'ทุกแผนก'}
+                                        </p>
                                     )}
                                 </div>
                             }
