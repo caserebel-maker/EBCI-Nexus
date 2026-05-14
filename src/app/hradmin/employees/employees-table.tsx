@@ -139,6 +139,7 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
     const [deptFilter, setDeptFilter] = useState<string>("all")
     const [levelFilter, setLevelFilter] = useState<string>("all")
     const [sortKey, setSortKey] = useState<SortKey>("name_asc")
+    const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
     // Inactive-tab specific filters — only rendered when activeTab='inactive'.
     const [yearFilter, setYearFilter] = useState<string>("all")
     const [reasonFilter, setReasonFilter] = useState<string>("all")
@@ -193,6 +194,13 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
         // Default sort differs per tab — inactive tab is almost always
         // browsed by "who left most recently?" so newest quit_date wins.
         setSortKey(tab === 'inactive' ? 'quit_date_desc' : 'name_asc')
+    }
+
+    const openEmployee = (employeeCode: string) => {
+        if (navigatingTo) return
+        setNavigatingTo(employeeCode)
+        window.dispatchEvent(new Event('nexus:route-progress:start'))
+        router.push(`/hradmin/employees/${employeeCode}`)
     }
 
     return (
@@ -355,8 +363,13 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                                     displayData.map((employee, idx) => (
                                         <tr
                                             key={employee.id}
-                                            onClick={() => router.push(`/hradmin/employees/${employee.employeeCode}`)}
-                                            className="hover:bg-white/5 transition-colors cursor-pointer text-white/90"
+                                            onClick={() => openEmployee(employee.employeeCode)}
+                                            aria-busy={navigatingTo === employee.employeeCode}
+                                            className={cn(
+                                                "hover:bg-white/5 transition-colors cursor-pointer text-white/90",
+                                                navigatingTo && navigatingTo !== employee.employeeCode && "pointer-events-none opacity-65",
+                                                navigatingTo === employee.employeeCode && "bg-amber-400/10"
+                                            )}
                                         >
                                             <td className="px-4 py-4 text-center text-white/35 font-mono text-xs select-none">
                                                 {idx + 1}
@@ -397,8 +410,13 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                                     displayData.map((employee, idx) => (
                                         <tr
                                             key={employee.id}
-                                            onClick={() => router.push(`/hradmin/employees/${employee.employeeCode}`)}
-                                            className="hover:bg-white/5 transition-colors cursor-pointer text-white/90"
+                                            onClick={() => openEmployee(employee.employeeCode)}
+                                            aria-busy={navigatingTo === employee.employeeCode}
+                                            className={cn(
+                                                "hover:bg-white/5 transition-colors cursor-pointer text-white/90",
+                                                navigatingTo && navigatingTo !== employee.employeeCode && "pointer-events-none opacity-65",
+                                                navigatingTo === employee.employeeCode && "bg-amber-400/10"
+                                            )}
                                         >
                                             <td className="px-4 py-4 text-center text-white/35 font-mono text-xs select-none">
                                                 {idx + 1}

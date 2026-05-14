@@ -51,10 +51,30 @@ export function RouteProgress() {
         }
     }, [pathname, searchParams])
 
+    const startProgress = () => {
+        if (intervalRef.current) clearInterval(intervalRef.current)
+        if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current)
+        setProgress(20)
+        intervalRef.current = setInterval(() => {
+            setProgress((p) => {
+                if (p >= 90) {
+                    if (intervalRef.current) clearInterval(intervalRef.current)
+                    return p
+                }
+                // Logarithmic creep — fast at first, slow near 90 so it
+                // never hits 100 until the route actually loads.
+                const remaining = 90 - p
+                return Math.min(p + Math.max(remaining * 0.15, 1), 90)
+            })
+        }, 120)
+    }
+
     // Click listener — fires the bar as soon as the user taps an
     // internal link. Capture phase so we run before Next.js's own
-    // <Link> click handler.
+    // <Link> click handler. Also listens for a custom event so client
+    // components that navigate with router.push() can opt in.
     useEffect(() => {
+        const manualStart = () => startProgress()
         const handler = (e: MouseEvent) => {
             // Bail out on modified clicks (open in new tab, copy link, etc.)
             if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
@@ -80,27 +100,14 @@ export function RouteProgress() {
                 return
             }
 
-            // Start the bar.
-            if (intervalRef.current) clearInterval(intervalRef.current)
-            if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current)
-            setProgress(20)
-            intervalRef.current = setInterval(() => {
-                setProgress((p) => {
-                    if (p >= 90) {
-                        if (intervalRef.current) clearInterval(intervalRef.current)
-                        return p
-                    }
-                    // Logarithmic creep — fast at first, slow near 90 so it
-                    // never hits 100 until the route actually loads.
-                    const remaining = 90 - p
-                    return Math.min(p + Math.max(remaining * 0.15, 1), 90)
-                })
-            }, 120)
+            startProgress()
         }
 
         document.addEventListener('click', handler, true)
+        window.addEventListener('nexus:route-progress:start', manualStart)
         return () => {
             document.removeEventListener('click', handler, true)
+            window.removeEventListener('nexus:route-progress:start', manualStart)
             if (intervalRef.current) clearInterval(intervalRef.current)
             if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current)
         }
@@ -110,11 +117,11 @@ export function RouteProgress() {
 
     return (
         <div
-            className="fixed inset-x-0 top-0 z-[200] h-[3px] pointer-events-none"
+            className="fixed inset-x-0 top-0 z-[200] h-1 pointer-events-none bg-black/20"
             aria-hidden="true"
         >
             <div
-                className="h-full"
+                className="h-full relative overflow-hidden"
                 style={{
                     width: `${progress}%`,
                     background: '#fbbf24',
@@ -122,7 +129,14 @@ export function RouteProgress() {
                     transition: 'width 180ms ease-out, opacity 250ms ease-out',
                     opacity: progress >= 100 ? 0 : 1,
                 }}
-            />
+            >
+                <div
+                    className="absolute inset-y-0 right-0 w-20"
+                    style={{
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.65))',
+                    }}
+                />
+            </div>
         </div>
     )
 }
