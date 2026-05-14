@@ -27,6 +27,9 @@ export interface UpdateEmployeePayload {
     approval_level?: number
     manager_id?: string | null
     leave_approver_id?: string | null
+    is_approver?: boolean
+    approval_scopes?: string[] | null
+    approval_department_scope?: string[] | null
     // Emergency contact (stored directly on employees, not applicants)
     emergency_contact_name?: string | null
     emergency_contact_phone?: string | null
@@ -57,7 +60,7 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
     // knows whether to push the new email into Supabase Auth too.
     const { data: before } = await supabaseAdmin
         .from('employees')
-        .select('employee_code, first_name_th, last_name_th, first_name_en, last_name_en, nickname, position, department, secondary_department, phone, email, employment_type, status, start_date, probation_end_date, date_of_birth, gender, quit_date, quit_reason, approval_level, manager_id, leave_approver_id, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, emergency_contact_address, home_latitude, home_longitude, home_location_label, home_location_note, user_id')
+        .select('employee_code, first_name_th, last_name_th, first_name_en, last_name_en, nickname, position, department, secondary_department, phone, email, employment_type, status, start_date, probation_end_date, date_of_birth, gender, quit_date, quit_reason, approval_level, manager_id, leave_approver_id, is_approver, approval_scopes, approval_department_scope, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, emergency_contact_address, home_latitude, home_longitude, home_location_label, home_location_note, user_id')
         .eq('id', employeeId)
         .maybeSingle()
 
@@ -141,6 +144,9 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
             ...(employeeFields.approval_level !== undefined && { approval_level: employeeFields.approval_level }),
             manager_id: employeeFields.manager_id ?? null,
             leave_approver_id: employeeFields.leave_approver_id ?? null,
+            ...(employeeFields.is_approver !== undefined && { is_approver: employeeFields.is_approver }),
+            ...(employeeFields.approval_scopes !== undefined && { approval_scopes: employeeFields.approval_scopes ?? [] }),
+            ...(employeeFields.approval_department_scope !== undefined && { approval_department_scope: employeeFields.approval_department_scope ?? null }),
             emergency_contact_name:     employeeFields.emergency_contact_name     ?? null,
             emergency_contact_phone:    employeeFields.emergency_contact_phone    ?? null,
             emergency_contact_relation: employeeFields.emergency_contact_relation ?? null,
