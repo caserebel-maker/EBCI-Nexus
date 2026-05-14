@@ -188,7 +188,6 @@ interface FormState {
     approval_level: number
     manager_id: string
     leave_approver_id: string
-    is_approver: boolean
     // Home location for the inline map preview. Stored as strings in
     // the form to match the date-of-birth pattern; coerced to numeric
     // (or null) before sending to the server action.
@@ -386,7 +385,6 @@ export function EmployeeProfileView({
         approval_level: employee.approval_level ?? 1,
         manager_id: employee.manager_id ?? '',
         leave_approver_id: employee.leave_approver_id ?? '',
-        is_approver: Boolean(employee.is_approver),
         home_latitude: employee.home_latitude != null ? String(employee.home_latitude) : '',
         home_longitude: employee.home_longitude != null ? String(employee.home_longitude) : '',
         home_location_label: employee.home_location_label ?? '',
@@ -529,11 +527,6 @@ export function EmployeeProfileView({
                 applicant_phone: form.emergency_contact,
                 manager_id: form.manager_id || null,
                 leave_approver_id: form.leave_approver_id || null,
-                is_approver: form.is_approver,
-                approval_scopes: form.is_approver ? ['leave'] : [],
-                approval_department_scope: form.is_approver
-                    ? [form.department || 'all']
-                    : null,
                 emergency_contact_name:     form.emergency_contact_name     || null,
                 emergency_contact_phone:    form.emergency_contact_phone    || null,
                 emergency_contact_relation: form.emergency_contact_relation || null,
@@ -569,15 +562,6 @@ export function EmployeeProfileView({
     const lvl = employee.approval_level ?? 1
     const levelColor = LEVEL_BADGE_COLORS[lvl] ?? LEVEL_BADGE_COLORS[1]
     const levelLabel = EMPLOYEE_LEVELS[lvl]?.label.split('—')[0].trim() ?? `Level ${lvl}`
-    const approvalDeptScope = Array.isArray(employee.approval_department_scope)
-        ? employee.approval_department_scope
-        : []
-    const approverScopeLabel = employee.is_approver
-        ? (approvalDeptScope.includes('all')
-            ? 'อนุมัติใบลาได้ทุกแผนก'
-            : `อนุมัติใบลา: ${approvalDeptScope.join(', ') || 'ยังไม่กำหนดแผนก'}`)
-        : 'ไม่ได้เป็นผู้อนุมัติใบลา'
-
     // ── Leave chart data — primary: leave_balances, fallback: leave_requests ──
     const chartData = (() => {
         if (leaveBalances.length > 0) {
@@ -1107,31 +1091,6 @@ export function EmployeeProfileView({
                                         </option>
                                     ))}
                                 </select>
-                            }
-                        />
-                        <InfoRow label="สิทธิ์อนุมัติใบลา" icon={CheckCircle2}
-                            value={approverScopeLabel}
-                            editing={isEditing && isHrAdmin}
-                            editNode={
-                                <div className="space-y-2">
-                                    <label className="flex items-center gap-2 text-white/90 text-sm font-semibold">
-                                        <input
-                                            type="checkbox"
-                                            checked={form.is_approver}
-                                            onChange={e => setForm(prev => ({
-                                                ...prev,
-                                                is_approver: e.target.checked,
-                                            }))}
-                                            className="h-4 w-4 accent-[#ad5f6c]"
-                                        />
-                                        ให้คนนี้อนุมัติใบลาได้
-                                    </label>
-                                    {form.is_approver && (
-                                        <p className="rounded-xl bg-white/8 border border-white/12 px-3 py-2 text-sm text-white/80">
-                                            ขอบเขต: {form.department || 'ทุกแผนก'}
-                                        </p>
-                                    )}
-                                </div>
                             }
                         />
                     </div>
