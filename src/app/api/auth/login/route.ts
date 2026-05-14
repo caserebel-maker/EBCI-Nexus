@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cookies, headers } from 'next/headers'
+import { createClient } from '@supabase/supabase-js'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { ROLE_CONFIG, type UserRole } from '@/config/roles'
 import {
@@ -20,6 +21,19 @@ const RL_WINDOW_MIN = 5
 const RL_BLOCK_MIN  = 15
 const RL_EMAIL_MAX  = 5
 const RL_IP_MAX     = 20
+
+function createAuthClient() {
+    return createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false,
+            },
+        },
+    )
+}
 
 interface RateLimitDecision {
     blocked: boolean
@@ -255,8 +269,14 @@ export async function POST(request: Request) {
             )
         }
 
-        // Use supabaseAdmin.auth.signInWithPassword — zero Prisma / DATABASE_URL dependency
-        const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+        // Use a short-lived anon auth client for password sign-in.
+        // Do NOT call signInWithPassword on supabaseAdmin: the Supabase
+        // JS client keeps auth state in memory, and Vercel can reuse the
+        // module instance between requests. If the admin client gets
+        // polluted with an employee access token, the next employee-code
+        // lookup may run as the previous user instead of service-role.
+        const authClient = createAuthClient()
+        const { data, error } = await authClient.auth.signInWithPassword({
             email: emailLower,
             password,
         })
