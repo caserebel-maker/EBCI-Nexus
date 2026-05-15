@@ -5,7 +5,7 @@ import {
     ArrowLeft, User, Phone, Mail, MapPin, Building, Briefcase,
     Calendar, Shield, ChevronRight, Pencil, X, Check,
     AlertCircle, CheckCircle2, Camera, Trash2, Clock, FileText,
-    Lock, LogOut, Printer,
+    Lock, LogOut, Printer, Send,
 } from "lucide-react"
 import type { LucideIcon } from 'lucide-react'
 import Link from "next/link"
@@ -188,6 +188,7 @@ interface FormState {
     approval_level: number
     manager_id: string
     leave_approver_id: string
+    telegram_chat_id: string
     // Home location for the inline map preview. Stored as strings in
     // the form to match the date-of-birth pattern; coerced to numeric
     // (or null) before sending to the server action.
@@ -385,6 +386,7 @@ export function EmployeeProfileView({
         approval_level: employee.approval_level ?? 1,
         manager_id: employee.manager_id ?? '',
         leave_approver_id: employee.leave_approver_id ?? '',
+        telegram_chat_id: employee.telegram_chat_id ?? '',
         home_latitude: employee.home_latitude != null ? String(employee.home_latitude) : '',
         home_longitude: employee.home_longitude != null ? String(employee.home_longitude) : '',
         home_location_label: employee.home_location_label ?? '',
@@ -527,6 +529,7 @@ export function EmployeeProfileView({
                 applicant_phone: form.emergency_contact,
                 manager_id: form.manager_id || null,
                 leave_approver_id: form.leave_approver_id || null,
+                telegram_chat_id: form.telegram_chat_id.trim() || null,
                 emergency_contact_name:     form.emergency_contact_name     || null,
                 emergency_contact_phone:    form.emergency_contact_phone    || null,
                 emergency_contact_relation: form.emergency_contact_relation || null,
@@ -963,6 +966,26 @@ export function EmployeeProfileView({
                             editing={isEditing}
                             editNode={<input className={inp} value={form.phone} onChange={set('phone')} placeholder="เบอร์โทร" />}
                         />
+                        {isHrAdmin && (
+                            <InfoRow label="Telegram chat ID" icon={Send}
+                                value={employee.telegram_chat_id || 'ยังไม่ได้ผูก'}
+                                editing={isEditing}
+                                editNode={
+                                    <div className="flex flex-col gap-1">
+                                        <input
+                                            inputMode="numeric"
+                                            className={inp}
+                                            value={form.telegram_chat_id}
+                                            onChange={set('telegram_chat_id')}
+                                            placeholder="เช่น 123456789"
+                                        />
+                                        <p className="text-[10px] text-white/60 leading-snug px-1">
+                                            ให้พนักงานกด /start ที่ EBCINexusBot ก่อน แล้วนำ chat ID มาใส่ช่องนี้
+                                        </p>
+                                    </div>
+                                }
+                            />
+                        )}
                         <div className="pt-3 mt-1 border-t border-white/8 px-3">
                             <p className="text-[0.75rem] font-bold text-white/65 uppercase tracking-widest mb-2 flex items-center gap-1.5">
                                 <AlertCircle size={13} className="text-rose-300" />

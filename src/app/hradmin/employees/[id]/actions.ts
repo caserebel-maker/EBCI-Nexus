@@ -27,6 +27,7 @@ export interface UpdateEmployeePayload {
     approval_level?: number
     manager_id?: string | null
     leave_approver_id?: string | null
+    telegram_chat_id?: string | null
     // Emergency contact (stored directly on employees, not applicants)
     emergency_contact_name?: string | null
     emergency_contact_phone?: string | null
@@ -57,7 +58,7 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
     // knows whether to push the new email into Supabase Auth too.
     const { data: before } = await supabaseAdmin
         .from('employees')
-        .select('employee_code, first_name_th, last_name_th, first_name_en, last_name_en, nickname, position, department, secondary_department, phone, email, employment_type, status, start_date, probation_end_date, date_of_birth, gender, quit_date, quit_reason, approval_level, manager_id, leave_approver_id, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, emergency_contact_address, home_latitude, home_longitude, home_location_label, home_location_note, user_id')
+        .select('employee_code, first_name_th, last_name_th, first_name_en, last_name_en, nickname, position, department, secondary_department, phone, email, employment_type, status, start_date, probation_end_date, date_of_birth, gender, quit_date, quit_reason, approval_level, manager_id, leave_approver_id, telegram_chat_id, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, emergency_contact_address, home_latitude, home_longitude, home_location_label, home_location_note, user_id')
         .eq('id', employeeId)
         .maybeSingle()
 
@@ -93,6 +94,13 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
     // employee_code is display-only (not an FK target — `employees.id` is)
     // so editing it is safe, but uniqueness is still enforced for sanity.
     const newCode = (employeeFields.employee_code ?? '').trim()
+    const telegramChatId = (employeeFields.telegram_chat_id ?? '').trim()
+    if (telegramChatId && !/^-?\d{5,20}$/.test(telegramChatId)) {
+        return { error: 'Telegram chat ID ต้องเป็นตัวเลขเท่านั้น เช่น 123456789 หรือ -1001234567890' }
+    }
+    const beforeTelegramChatId = ((before?.telegram_chat_id as string | null) ?? '').trim()
+    const telegramChanged = telegramChatId !== beforeTelegramChatId
+
     if (newCode) {
         if (before?.employee_code !== newCode) {
             const { data: clash } = await supabaseAdmin
@@ -141,6 +149,8 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
             ...(employeeFields.approval_level !== undefined && { approval_level: employeeFields.approval_level }),
             manager_id: employeeFields.manager_id ?? null,
             leave_approver_id: employeeFields.leave_approver_id ?? null,
+            telegram_chat_id: telegramChatId || null,
+            ...(telegramChanged && { telegram_registered_at: telegramChatId ? new Date().toISOString() : null }),
             emergency_contact_name:     employeeFields.emergency_contact_name     ?? null,
             emergency_contact_phone:    employeeFields.emergency_contact_phone    ?? null,
             emergency_contact_relation: employeeFields.emergency_contact_relation ?? null,
