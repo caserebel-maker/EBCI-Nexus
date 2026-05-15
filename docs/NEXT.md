@@ -72,17 +72,28 @@ cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff
 **ตอบเครื่อง:** "อยู่ office"
 
 **ทำก่อนทุกอย่าง (5 นาที verify ที่ office):**
-1. Logout → login ด้วยรหัสพนักงานและ password `2000Ebc!`
+1. รัน account health-check:
+   ```bash
+   npm run verify:accounts
+   npm run verify:accounts:smoke
+   ```
+2. Logout → login ด้วยรหัสพนักงานและ password `2000Ebc!`
    - Employee smoke: `009-35` และ `00935` → ต้องเข้า `/portal`
    - Newly-created smoke: `048-45` และ `04845` → ต้องเข้า `/portal`
    - Advisor smoke: `056-47` และ `05647` → ต้องเข้า `/portal`
    - HR/admin smoke: `506-69` และ `50669` → ต้องเข้า `/hradmin/dashboard`
-2. เปิด `/hradmin/employees` แล้วคลิกชื่อพนักงาน 1 คน — แถบ progress ด้านบนต้องขึ้นทันทีและแถวที่กดต้อง highlight กันกดซ้ำ
-3. เปิด `/hradmin/leave/approval-audit` — ถ้าขึ้น critical เหลือเฉพาะประธาน/ที่ปรึกษาที่ตั้งใจไม่มีสาย ถือว่า ok; ถ้ามีพนักงานปกติ NO_APPROVER ให้แก้ก่อนให้ beta ใช้ลา
-4. ทดสอบยื่นใบลา 1 ใบกับ tester ที่รู้ approver — submit success ต้องมี bell notification + email ถึง approver
-5. Salary slip bulk upload ยังต้อง e2e กับไฟล์จริง ถ้าจะเปิด payroll ในรอบเดียวกัน
+3. เปิด `/hradmin/employees` แล้วคลิกชื่อพนักงาน 1 คน — แถบ progress ด้านบนต้องขึ้นทันทีและแถวที่กดต้อง highlight กันกดซ้ำ
+4. เปิด `/hradmin/leave/approval-audit` — ถ้าขึ้น critical เหลือเฉพาะประธาน/ที่ปรึกษาที่ตั้งใจไม่มีสาย ถือว่า ok; ถ้ามีพนักงานปกติ NO_APPROVER ให้แก้ก่อนให้ beta ใช้ลา
+5. ทดสอบยื่นใบลา 1 ใบกับ tester ที่รู้ approver — submit success ต้องมี bell notification + email ถึง approver
+6. Salary slip bulk upload ยังต้อง e2e กับไฟล์จริง ถ้าจะเปิด payroll ในรอบเดียวกัน
 
 ⚠️ **Beta password `2000Ebc!` เป็นรหัสชั่วคราวสำหรับทดสอบเท่านั้น** — หลัง launch จริงควร force reset/change password ต่อคน.
+
+**Verified 15 พ.ค. office (Codex):**
+- `npm run verify:accounts` equivalent check: active employees `48`, healthy `48`, issues `0`; role counts `hr_admin=4`, `employee=44`
+- Production API smoke login passed for `009-35/00935`, `048-45/04845`, `056-47/05647`, `506-69/50669`
+- HIP webhook GET probe returns `auth: NOT CONFIGURED` → still need `CARD_SCAN_WEBHOOK_SECRET` in Vercel before realtime card relay can post
+- Office Mac IP is `192.168.20.240`; TCP to HIP `192.168.1.40` ports `5005/7005/80` timeout → relay agent must run on a machine in `192.168.1.x` or network routing/firewall must change
 
 ---
 
@@ -522,6 +533,7 @@ CARD_SCAN_WEBHOOK_SECRET   # gen ผ่าน `openssl rand -hex 32` — ใส�
 **Login/account state (อัปเดต 15 พ.ค.):**
 
 - ✅ ทุก active employee มี account พร้อมล็อกอินแล้ว (DB-only จาก home session คืน 14→15 พ.ค.)
+- ✅ เพิ่ม repeatable check: `npm run verify:accounts` และ `npm run verify:accounts:smoke`
 - ก่อนส่ง credentials list ให้ HR/พนักงาน ยังต้องรัน health-check SQL ใน §11 เพื่อกันเคส orphaned auth/user row
 - Password policy บังคับแล้ว; ถ้าจะ reset password กลุ่มใหญ่ ให้ใช้ flow ที่ไม่เก็บ plaintext password ใน docs
 

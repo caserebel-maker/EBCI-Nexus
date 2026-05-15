@@ -3254,3 +3254,43 @@ User corrected that the home session on the night of May 14→15 completed the D
 2. Continue HIP Ci100S relay/agent work.
 3. Test salary slip bulk upload end-to-end as สุชาติ/payroll manager.
 4. Have HR clean remaining approver-chain audit rows in `/hradmin/leave/approval-audit`.
+
+---
+
+# §23 — May 15 Office Verification
+
+## Account/login health-check
+
+Added a repeatable checker:
+
+- `npm run verify:accounts` — validates every active employee has `employees.user_id`, Supabase Auth user, and public `User` row linked consistently.
+- `npm run verify:accounts:smoke` — runs the same linkage check plus production login smoke tests for representative employee/admin codes.
+
+Result on office Mac:
+
+- Active employees: `48`
+- Healthy employees: `48`
+- Issue employees: `0`
+- Role counts: `hr_admin=4`, `employee=44`
+- Production login smoke passed for:
+  - `009-35` and `00935` → `/portal`
+  - `048-45` and `04845` → `/portal`
+  - `056-47` and `05647` → `/portal`
+  - `506-69` and `50669` → `/hradmin/dashboard`
+
+## HIP relay status
+
+Production webhook endpoint responds, but Vercel still lacks `CARD_SCAN_WEBHOOK_SECRET`:
+
+```text
+GET /api/webhooks/card-scan
+auth: NOT CONFIGURED — set CARD_SCAN_WEBHOOK_SECRET env var first
+```
+
+Office Mac network check:
+
+- Office Mac IP: `192.168.20.240`
+- HIP target: `192.168.1.40`
+- TCP to `192.168.1.40:5005`, `:7005`, and `:80` all timeout
+
+Conclusion: this Office Mac cannot be the HIP relay host as-is. Need a machine in `192.168.1.x` or a network/routing change before writing/installing the final relay agent.

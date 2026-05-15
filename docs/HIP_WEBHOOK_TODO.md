@@ -1,7 +1,7 @@
 # HIP Ci100S Webhook Setup — TODO
 
-> **Status:** ปอนด์เริ่มที่ออฟฟิศ 7 พ.ค. 2569 — **stuck รอข้อมูล server ออฟฟิศ**
-> **Pickup:** ตอบ Q1-Q4 ด้านล่าง แล้วผมเขียน agent ให้ทันที.
+> **Status:** ปอนด์เริ่มที่ออฟฟิศ 7 พ.ค. 2569 — **stuck รอเครื่อง/server ที่อยู่ VLAN 192.168.1.x**
+> **Pickup:** เลือกเครื่องที่จะรัน relay agent ในวง `192.168.1.x`, ตั้ง `CARD_SCAN_WEBHOOK_SECRET` บน Vercel, แล้วค่อย capture packet จริงจาก HIP.
 
 ---
 
@@ -60,6 +60,20 @@ HIP Ci100S ──TCP/7005──▶  Relay Agent (Office)  ──HTTPS──▶  
 - Idempotent on `(employee_id, scan_time)`
 - GET probe: `curl https://ebci-nexus.vercel.app/api/webhooks/card-scan` → confirms `CARD_SCAN_WEBHOOK_SECRET` configured?
 - ⚠️ **ตอนนี้ secret ยังไม่ได้ตั้งบน Vercel** (`auth: NOT CONFIGURED`)
+
+### ✅ Re-check จาก Office Mac — 15 พ.ค. 2569
+
+- Office Mac IP: `192.168.20.240` (interface `en1`)
+- Route to HIP `192.168.1.40` goes via gateway `192.168.20.1`
+- TCP checks from Office Mac:
+  - `192.168.1.40:5005` → timeout
+  - `192.168.1.40:7005` → timeout
+  - `192.168.1.40:80` → timeout
+- Production endpoint probe:
+  - `GET https://ebci-nexus.vercel.app/api/webhooks/card-scan` works
+  - response still says `auth: NOT CONFIGURED`
+
+**Conclusion:** current Office Mac is also not a valid relay host yet. Relay must run on a machine with IP `192.168.1.x` that HIP can push TCP/7005 to, or networking must be changed so this Mac can receive from HIP.
 
 ---
 
