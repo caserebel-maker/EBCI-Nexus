@@ -9,7 +9,7 @@ import {
     Settings, ChevronRight, ChevronDown, X, UserRound, Network,
     UserPlus, Activity, DoorOpen,
     MapPin, Briefcase, BarChart3, Wallet, ScrollText, ShieldCheck,
-    CalendarHeart,
+    CalendarHeart, UserMinus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRole, type Role } from '@/contexts/role-context'
@@ -117,7 +117,8 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'อนุมัติ WFH',  desc: 'พิจารณาคำขอ WFH ลูกทีม',  href: '/portal/wfh/inbox',       icon: ClipboardCheck },
         // "ส่วนตัว" group: profile + (manager has no payroll mgmt by default).
         { label: 'โปรไฟล์',        desc: 'ข้อมูลส่วนตัวและตำแหน่ง',  href: '/portal/profile',         icon: UserRound,       groupLabel: 'ส่วนตัว' },
-        { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',    icon: Network,         groupLabel: 'บริษัท' },
+        { label: 'ใครไม่อยู่วันนี้', desc: 'ลา · WFH · ออกพื้นที่',      href: '/portal/who-is-out',      icon: UserMinus,       groupLabel: 'บริษัท' },
+        { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',    icon: Network },
         { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/portal/meeting-room',    icon: DoorOpen },
         { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',        icon: Settings,        groupLabel: 'อื่น ๆ' },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
@@ -134,7 +135,8 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'โปรไฟล์',        desc: 'ข้อมูลส่วนตัวและตำแหน่ง',  href: '/portal/profile',        icon: UserRound,       groupLabel: 'ส่วนตัว' },
         { label: 'สลิปของฉัน',     desc: 'ดูสลิปเงินเดือน',         href: '/portal/payroll',        icon: FileText },
         // "บริษัท" group — read-only org-wide info.
-        { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',   icon: Network,         groupLabel: 'บริษัท' },
+        { label: 'ใครไม่อยู่วันนี้', desc: 'ลา · WFH · ออกพื้นที่',     href: '/portal/who-is-out',     icon: UserMinus,       groupLabel: 'บริษัท' },
+        { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',   icon: Network },
         { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/portal/meeting-room',   icon: DoorOpen },
         { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',       icon: Settings,        groupLabel: 'อื่น ๆ' },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },

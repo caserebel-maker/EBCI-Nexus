@@ -10,6 +10,7 @@ import {
     Palmtree, DoorOpen, FileText,
 } from 'lucide-react'
 import { DailyGreeting } from '@/components/daily-greeting'
+import { WhoIsOutWidget } from '@/components/who-is-out-widget'
 import type { AnnouncementItem, TodayCalendarEntry } from './page'
 
 interface Employee {
@@ -601,6 +602,12 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
                    `holidays` table has a row for today. Sits above announcements
                    so a "today is WFH" notice is the first thing staff see. */}
             {todayCalendarEntry && <TodayCalendarBanner entry={todayCalendarEntry} />}
+
+            {/* 1c. "ใครไม่อยู่วันนี้" widget — self-fetches, auto-hides when zero.
+                   Two beta-tester ask (4 May): "ก่อนเดินไปหา/โทรหา ขอเช็คก่อน".
+                   Sits above announcements so the most actionable today-context
+                   ("Som is on leave, don't bother walking down") shows first. */}
+            <WhoIsOutWidget />
 
             {/* 2. Announcement Carousel (top 5 active, hides when empty) */}
             {announcements.length > 0 && (
