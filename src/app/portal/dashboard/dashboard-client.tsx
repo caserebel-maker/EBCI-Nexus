@@ -603,12 +603,6 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
                    so a "today is WFH" notice is the first thing staff see. */}
             {todayCalendarEntry && <TodayCalendarBanner entry={todayCalendarEntry} />}
 
-            {/* 1c. "ใครไม่อยู่วันนี้" widget — self-fetches, auto-hides when zero.
-                   Two beta-tester ask (4 May): "ก่อนเดินไปหา/โทรหา ขอเช็คก่อน".
-                   Sits above announcements so the most actionable today-context
-                   ("Som is on leave, don't bother walking down") shows first. */}
-            <WhoIsOutWidget />
-
             {/* 2. Announcement Carousel (top 5 active, hides when empty) */}
             {announcements.length > 0 && (
                 <AnnouncementsCarousel announcements={announcements} />
@@ -676,6 +670,12 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
                     </div>
                 )}
             </div>
+
+            {/* 3b. "ใครไม่อยู่วันนี้" widget — self-fetches, auto-hides when zero.
+                    Two beta-tester ask (4 May): "ก่อนเดินไปหา/โทรหา ขอเช็คก่อน".
+                    Mod's 16 May tweak: ย้ายลงล่างก่อนถึงเมนูลัด + เปิด popup
+                    แทน navigate ออกหน้า — เพื่อให้ flow ของ dashboard ไม่ขาด. */}
+            <WhoIsOutWidget />
 
             {/* 4. เมนูลัด */}
             <div style={glass} className="p-4">
