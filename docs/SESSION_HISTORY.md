@@ -3315,3 +3315,41 @@ Conclusion: this Office Mac cannot be the HIP relay host as-is. Need a machine i
 
 - `npx eslint src/app/hradmin/payroll/bulk/bulk-upload-view.tsx src/app/api/hradmin/payroll/bulk-upload/route.ts src/lib/salary-slip-persist.ts`
 - `npx tsc --noEmit`
+
+---
+
+# §25 — May 15 Telegram Phase 1 Office Pickup
+
+## Context
+
+Laptop pushed Telegram Phase 1 in `351d3f2` and handoff docs in `a94910f`. Office Mac pulled both.
+
+## Findings
+
+- Production DB has the new columns.
+- มด (`153-59`) currently has `telegram_chat_id = null` and `telegram_registered_at = null`.
+- `findHrNotifyTargets()` still includes มด because her position contains `บุคคล`, even though her department is now `Human Resources and Purchasing`.
+- Vercel/Supabase config blocker remains: no `TELEGRAM_BOT_TOKEN` available in this office session yet.
+
+## Tooling added
+
+Added `scripts/telegram-mod-setup.mjs` and package script:
+
+```bash
+npm run telegram:mod -- --list
+npm run telegram:mod -- --latest-private --update --test
+```
+
+After @BotFather creates the bot and มด sends `/start`, run:
+
+```bash
+TELEGRAM_BOT_TOKEN='...' npm run telegram:mod -- --latest-private --update --test
+```
+
+This calls `getUpdates`, chooses the latest private chat, updates employee `153-59`, and sends a Telegram test message.
+
+## Verify
+
+- `npm run verify:accounts` ✅ `48/48`
+- `npx eslint src/lib/telegram.ts src/lib/hr-notify.ts src/app/api/leave/submit/route.ts src/lib/wfh.ts scripts/telegram-mod-setup.mjs` ✅
+- `npm run telegram:mod -- --list` fails cleanly with `Missing TELEGRAM_BOT_TOKEN` until the token is supplied.

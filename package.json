@@ -12,6 +12,7 @@
     "lint": "eslint",
     "verify:accounts": "node scripts/verify-beta-logins.mjs",
     "verify:accounts:smoke": "node scripts/verify-beta-logins.mjs --smoke",
+    "telegram:mod": "node scripts/telegram-mod-setup.mjs",
     "postinstall": "prisma generate --no-engine"
   },
   "dependencies": {

@@ -36,6 +36,7 @@ cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff
 - ✅ **Login identifier:** รหัสพนักงานได้ทั้งมีขีด/ไม่มีขีด, หรือ email
 - ✅ **Telegram Phase 1 code (351d3f2):** lib/telegram.ts + DB column + leave/WFH submit wired
 - 🔧 **Telegram config pending:** TELEGRAM_BOT_TOKEN ใน Vercel + มด chat_id ใน DB
+- ✅ **Telegram helper added:** `npm run telegram:mod -- --latest-private --update --test` หลังมดกด `/start` จะหา chat ล่าสุด, update `153-59`, และส่ง test message
 - 🔧 HIP webhook: endpoint live, agent ยังไม่เขียน — รอข้อมูล office server
 - 🚧 รอ policy บางอย่างใน `docs/QUESTIONS_FOR_MOD.md` (welfare, leave category details)
 
@@ -48,6 +49,18 @@ cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff
   - HrNotifyTarget gains telegramChatId
   - leave + WFH submit fan-out adds Telegram channel when chat_id set
   - Fail-safe: works silently until TELEGRAM_BOT_TOKEN + chat_id are configured
+
+**ล่าสุดเสร็จ (office · ศุกร์ 15 พ.ค. เย็น):**
+- ✅ Pull ถึง `a94910f` แล้ว
+- ✅ Verified DB column: มด `153-59` มี `telegram_chat_id=null`, `telegram_registered_at=null` รอ opt-in
+- ✅ Added helper script:
+  ```bash
+  # หลังสร้าง bot + มดกด /start:
+  TELEGRAM_BOT_TOKEN='...' npm run telegram:mod -- --latest-private --update --test
+  ```
+- ✅ Verified `npm run verify:accounts` ยังผ่าน `48/48`
+- ✅ `npx eslint src/lib/telegram.ts src/lib/hr-notify.ts src/app/api/leave/submit/route.ts src/lib/wfh.ts scripts/telegram-mod-setup.mjs` ผ่าน
+- ⛔ ยังทำ config จริงไม่ได้จนกว่าจะมี `TELEGRAM_BOT_TOKEN` จาก @BotFather และตั้ง env บน Vercel
 
 **ล่าสุดเสร็จ (Codex · คืน 14→15 พ.ค. + เช้า 15 พ.ค.):**
 - ✅ Payroll bulk upload mobile/file picker fix (`สุชาติ`): ปุ่มเลือกไฟล์เป็นพื้นที่แตะใหญ่ขึ้น, accept `.pdf/.jpg/.png/.webp/.heic/.heif`, server ยอมรับ MIME เพี้ยนจากมือถือถ้านามสกุลถูก, และ match ชื่อไฟล์ได้ทั้ง `060-01`/`06001`
