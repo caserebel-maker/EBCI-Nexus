@@ -36,7 +36,7 @@ export async function GET(
         return NextResponse.json({ error: 'ปีไม่ถูกต้อง' }, { status: 400 })
     }
 
-    const [types, balances, employeeRow] = await Promise.all([
+    const [types, yearBalances, employeeRow] = await Promise.all([
         fetchActiveLeaveTypes(),
         fetchBalancesForEmployee(employeeId, year),
         supabaseAdmin
@@ -46,6 +46,19 @@ export async function GET(
             .maybeSingle(),
     ])
 
+    // Lifetime types (อุปสมบท, สมรส, เกณฑ์ทหาร) live at the employee's
+    // start_date year — querying year=2026 wouldn't see a row pinned to
+    // 2021. Fetch them separately, year-agnostic, and let them override
+    // any (unlikely) yearly row of the same type.
+    const lifetimeTypeIds = types.filter(t => t.is_lifetime).map(t => t.id)
+    const lifetimeBalancesRes = lifetimeTypeIds.length > 0
+        ? await supabaseAdmin
+            .from('leave_balances')
+            .select('*')
+            .eq('employee_id', employeeId)
+            .in('leave_type_id', lifetimeTypeIds)
+        : { data: [] }
+
     // Filter out gender-restricted types so a male employee never sees
     // ลาคลอด in the dropdown, and a female employee never sees
     // ลาเกณฑ์ทหาร / ลาอุปสมบท. Unknown gender → show everything (we'd
@@ -53,7 +66,11 @@ export async function GET(
     const employeeGender = normalizeGender(employeeRow.data?.gender ?? null)
     const visibleTypes = types.filter(t => leaveTypeVisibleForGender(t, employeeGender))
 
-    const balanceByType = new Map(balances.map(b => [b.leave_type_id, b]))
+    const balanceByType = new Map(yearBalances.map(b => [b.leave_type_id, b]))
+    // Lifetime overrides — use the start-year row regardless of `year` param.
+    for (const b of (lifetimeBalancesRes.data ?? [])) {
+        balanceByType.set(b.leave_type_id as string, b as typeof yearBalances[number])
+    }
     const enriched = visibleTypes.map(t => {
         const row = balanceByType.get(t.id) ?? null
         const total = Number(row?.total_days ?? 0)
@@ -66,6 +83,7 @@ export async function GET(
             icon: t.icon,
             color: t.color,
             is_unlimited: !!t.is_unlimited,
+            is_lifetime: !!t.is_lifetime,
             requires_attachment: !!t.requires_attachment,
             attachment_description: t.attachment_description,
             advance_notice_days: t.advance_notice_days ?? 0,

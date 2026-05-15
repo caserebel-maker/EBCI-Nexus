@@ -42,6 +42,10 @@ interface BalanceEntry {
     icon: string | null
     color: string | null
     is_unlimited: boolean
+    /** true = once-per-employee benefit (อุปสมบท, สมรส, เกณฑ์ทหาร).
+     *  When true, UI shows "ตลอดอายุงาน" suffix instead of "/ ปี" so
+     *  the employee understands the quota doesn't reset. */
+    is_lifetime: boolean
     requires_attachment: boolean
     attachment_description: string | null
     advance_notice_days: number
@@ -1654,7 +1658,7 @@ function Step2Dates({
                     <strong>{type.name_th}</strong>
                     {type.advance_notice_days > 0 && ` · ขอล่วงหน้าอย่างน้อย ${type.advance_notice_days} วัน`}
                     {type.leave_type_id === 'sick' && ' · ต้องเป็นวันที่ผ่านไปแล้ว'}
-                    {!type.is_unlimited && ` · คงเหลือ ${type.remaining_days} / ${type.total_days} วัน`}
+                    {!type.is_unlimited && ` · คงเหลือ ${type.remaining_days} / ${type.total_days} วัน${type.is_lifetime ? ' (ตลอดอายุงาน)' : ''}`}
                 </span>
             </div>
 
@@ -1981,7 +1985,7 @@ function Step4Review({
                     </span>
                     <div>
                         <p className="text-white font-bold">{type.name_th}</p>
-                        <p className="text-xs text-white/55">{type.is_unlimited ? 'ไม่จำกัดวัน' : `คงเหลือ ${type.remaining_days} / ${type.total_days} วัน`}</p>
+                        <p className="text-xs text-white/55">{type.is_unlimited ? 'ไม่จำกัดวัน' : `คงเหลือ ${type.remaining_days} / ${type.total_days} วัน${type.is_lifetime ? ' · ตลอดอายุงาน' : ''}`}</p>
                     </div>
                 </div>
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">

@@ -21,6 +21,10 @@ export interface LeaveType {
      *  only, ลาเกณฑ์ทหาร / ลาอุปสมบท are male-only). NULL = visible
      *  to everyone. */
     gender_restriction: string | null
+    /** true = once-per-employee lifetime benefit (อุปสมบท, สมรส, เกณฑ์
+     *  ทหาร) — quota does NOT reset each year. UI should show
+     *  "ตลอดอายุงาน" instead of "ต่อปี". false = annual quota. */
+    is_lifetime: boolean | null
 }
 
 /** Map any historical gender literal (English code or legacy Thai) to
