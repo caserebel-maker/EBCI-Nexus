@@ -5,34 +5,49 @@
 
 ---
 
-## 🔁 สถานะล่าสุด — **Office · ศุกร์ 15 พ.ค. 2569**
+## 🔁 ที่เครื่องถัดไป — **Office Mac mini · ศุกร์ 15 พ.ค. ~16:00 (laptop handoff)**
 
-> เครื่องออฟฟิศต้อง pull ถึง `origin/main` ล่าสุดก่อนทำงาน. ข้อมูล company-wide rollout ด้านล่างคือสถานะ production ล่าสุดหลังงาน Codex คืน 14→15 พ.ค. และ docs update เช้า 15 พ.ค.
+> Laptop session เพิ่ง push 351d3f2 ที่ 15:09 — Telegram Phase 1 code พร้อม
+> ยังเหลือ config 2 ชิ้น (bot token + มด chat_id) ที่ต้องทำต่อที่ office
 
-**Step 1 — Pull ก่อนทุกเครื่อง:**
+**Step 1 — Pull ก่อน:**
 ```bash
 cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff-only
 ```
-*(ถ้าอยู่บ้านใช้ `cd ~/C1TB/EB-CI/EBCI-Nexus && git pull origin main --ff-only`; ถ้า path ต่างไป ให้ `cd` ไป repo ตัวจริงก่อน pull)*
 
-**Step 2 — พิมพ์บอก Claude/Codex:**
+**Step 2 — พิมพ์บอก Claude:**
 ```
-อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ office. ทุก active employee 48/48 มี account login แล้ว, password beta คือ 2000Ebc!, login ด้วยรหัสพนักงานได้ทั้งมีขีด/ไม่มีขีด. อย่าย้อนกลับไปใช้สถานะเก่า 26/47. งานถัดไปคือ beta office verification, HIP relay/เครื่องแตะบัตร, salary slip upload e2e, approval-audit cleanup และนโยบายการลา.
+อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ office. งานวันนี้ที่เหลือจาก laptop:
+1) Telegram Phase 1 — code ship แล้ว (351d3f2) เหลือ:
+   - สร้าง bot ผ่าน @BotFather (~3 นาที) → ได้ TELEGRAM_BOT_TOKEN
+   - ใส่ token เข้า Vercel env
+   - มด เปิด bot กด /start → ผมหา chat_id ผ่าน Supabase MCP getUpdates
+   - UPDATE employees SET telegram_chat_id='...' WHERE employee_code='153-59'
+   - Test: ส่งใบลาทดสอบ → มด ควรได้ทั้ง bell 🔔 + Telegram message
+2) HIP webhook relay agent (Q1-Q4 office server) — TCP 7005 listener
+3) Verify Telegram + recent commits บน prod
 ```
 
-**Step 3 — ตอบเครื่อง:** "อยู่ office" หรือ "อยู่ home"
+**Step 3 — ตอบเครื่อง:** "อยู่ office"
 
-**📌 Beta status: ~94-95% complete สำหรับ office beta**
-- ✅ 18/20 items ใน BETA_FEEDBACK ship แล้ว
-- ✅ **Company-wide rollout accounts** — active employees `48/48` มี Supabase Auth + public `User` + `employees.user_id` ครบ
-- ✅ **Beta password:** ทุก active employee ถูกตั้งรหัสเริ่มต้นเป็น `2000Ebc!`
-- ✅ **Login identifier:** ใช้รหัสพนักงานได้ทั้งแบบมีขีดและไม่มีขีด เช่น `009-35` / `00935`
-- ✅ **Production login smoke test ผ่าน:** employee (`009-35`, `048-45`, `056-47`, `436-62`, `TEST-ANT`) และ HR/admin (`506-69`, `153-59`, `457-63`) เข้าได้
-- ✅ **Role metadata sync แล้ว:** HR/admin 4 คนยังเข้า `/hradmin/dashboard` ได้ ไม่ถูกลดเป็น employee
-- 🔧 HIP webhook: endpoint live, agent ยังไม่เขียน — รอข้อมูล office server (OS + IP + access)
-- 🚧 รอ policy/decision บางรายการใน `docs/QUESTIONS_FOR_MOD.md` โดยเฉพาะนโยบายลา/leave category details/welfare
+**📌 Beta status: ~95% complete สำหรับ office beta**
+- ✅ 18/20 items ใน BETA_FEEDBACK ship แล้ว + Telegram Phase 1 code
+- ✅ **Company-wide rollout accounts** — active employees `48/48` พร้อม password `2000Ebc!`
+- ✅ **Login identifier:** รหัสพนักงานได้ทั้งมีขีด/ไม่มีขีด, หรือ email
+- ✅ **Telegram Phase 1 code (351d3f2):** lib/telegram.ts + DB column + leave/WFH submit wired
+- 🔧 **Telegram config pending:** TELEGRAM_BOT_TOKEN ใน Vercel + มด chat_id ใน DB
+- 🔧 HIP webhook: endpoint live, agent ยังไม่เขียน — รอข้อมูล office server
+- 🚧 รอ policy บางอย่างใน `docs/QUESTIONS_FOR_MOD.md` (welfare, leave category details)
 
-**📅 Reminder เก่า 12 พ.ค. ผ่านแล้ว** — ไม่ต้องรอ decision A/B เรื่อง account rollout อีก
+**📅 Reminder ตั้งไว้ 16:00 ศุกร์ 15 พ.ค.:** มี GCal event + Claude scheduled-task
+
+**ล่าสุดเสร็จ (laptop · ศุกร์ 15 พ.ค. บ่าย):**
+- `351d3f2` — feat(telegram): Phase 1 — DM HR on leave/WFH submit
+  - lib/telegram.ts (sendTelegram + escapeTelegramHtml + getBotUsername)
+  - employees.telegram_chat_id + telegram_registered_at columns
+  - HrNotifyTarget gains telegramChatId
+  - leave + WFH submit fan-out adds Telegram channel when chat_id set
+  - Fail-safe: works silently until TELEGRAM_BOT_TOKEN + chat_id are configured
 
 **ล่าสุดเสร็จ (Codex · คืน 14→15 พ.ค. + เช้า 15 พ.ค.):**
 - ✅ Payroll bulk upload mobile/file picker fix (`สุชาติ`): ปุ่มเลือกไฟล์เป็นพื้นที่แตะใหญ่ขึ้น, accept `.pdf/.jpg/.png/.webp/.heic/.heif`, server ยอมรับ MIME เพี้ยนจากมือถือถ้านามสกุลถูก, และ match ชื่อไฟล์ได้ทั้ง `060-01`/`06001`
