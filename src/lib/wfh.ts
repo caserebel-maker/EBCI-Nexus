@@ -192,6 +192,25 @@ export async function submitWfhRequest(
         }
     })())
 
+    // 1b. Approver Telegram — real-time action channel. Email above is
+    // still the official paper trail; Telegram is only for opt-in users.
+    jobs.push((async () => {
+        try {
+            if (!approver.telegram_chat_id) return
+            const dateLabel = input.startDate === input.endDate ? input.startDate : `${input.startDate} → ${input.endDate}`
+            const text = [
+                `🔔 <b>รออนุมัติ WFH</b>`,
+                `👤 ${escapeTelegramHtml(applicantNick)}`,
+                `📅 ${escapeTelegramHtml(dateLabel)} (${totalDays} วัน)`,
+                reason ? `📝 ${escapeTelegramHtml(reason.slice(0, 200))}` : '',
+                `<a href="https://ebci-nexus.vercel.app/portal/wfh/inbox">เปิดกล่องอนุมัติใน Nexus →</a>`,
+            ].filter(Boolean).join('\n')
+            await sendTelegram({ chatId: approver.telegram_chat_id, text })
+        } catch (err) {
+            console.error('[wfh] approver telegram failed:', err)
+        }
+    })())
+
     // 2. HR FYI — per-person in-app 🔔
     jobs.push((async () => {
         try {

@@ -376,6 +376,31 @@ export async function POST(req: NextRequest) {
         console.error('[leave/submit] notification error:', err)
     }
 
+    // Telegram for the actual approver — real-time action channel.
+    // Email above remains the paper trail. Telegram is sent only when
+    // the approver has opted in and has telegram_chat_id on employees.
+    try {
+        if (approver.telegram_chat_id) {
+            const applicantNick = (employeeRow.data?.nickname as string | null) ?? employeeName
+            const leaveTypeTh = leaveType.name_th ?? 'ลา'
+            const dateLabel = startDate === endDate ? startDate : `${startDate} → ${endDate}`
+            const inboxUrl = approverInboxUrl.startsWith('http')
+                ? approverInboxUrl
+                : `https://ebci-nexus.vercel.app${approverInboxUrl}`
+            const text = [
+                `🔔 <b>รออนุมัติ${escapeTelegramHtml(leaveTypeTh)}</b>`,
+                `👤 ${escapeTelegramHtml(applicantNick)}`,
+                `📅 ${escapeTelegramHtml(dateLabel)} (${totalDays} วัน)`,
+                reason ? `📝 ${escapeTelegramHtml(reason.slice(0, 200))}` : '',
+                `<a href="${escapeTelegramHtml(inboxUrl)}">เปิดกล่องอนุมัติใน Nexus →</a>`,
+            ].filter(Boolean).join('\n')
+            sendTelegram({ chatId: approver.telegram_chat_id, text })
+                .catch(err => console.error('[leave/submit] approver telegram failed:', err))
+        }
+    } catch (err) {
+        console.error('[leave/submit] approver telegram fan-out failed:', err)
+    }
+
     // ── MD FYI fan-out — ม๊อด's 8 พ.ค. call: MD ต้องเห็นทุกใบลาพักร้อน ───
     // For annual leave only. When the request is short (≤ 3 วัน) MD is
     // notify-only — both in-app 🔔 AND email (ม๊อด's preference: she

@@ -15,12 +15,13 @@ export interface ApproverEmployee {
     approval_department_scope: string[] | null
     approval_level: number | null
     photo_url: string | null
+    telegram_chat_id: string | null
 }
 
 const APPROVER_SELECT = `
     id, first_name_th, last_name_th, nickname, email, department, position,
     reports_to_id, leave_approver_id, is_approver, approval_department_scope,
-    approval_level, photo_url
+    approval_level, photo_url, telegram_chat_id
 `.replace(/\s+/g, ' ').trim()
 
 async function fetchEmployee(id: string): Promise<ApproverEmployee | null> {
