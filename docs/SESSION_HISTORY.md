@@ -3138,6 +3138,101 @@ While I was working, Codex pushed two security commits I pulled before §3.16:
 
 ---
 
+# §23. MAY15 — Codex detailed handoff: auth rollout, leave approver cleanup, office beta readiness
+
+## 1. Context
+
+User asked Codex to continue the EBCI Nexus handoff and prepare the system for office beta testing on Friday 15 May 2026. Work happened from the local repo at `/Volumes/C1TB/EB-CI/EBCI-Nexus` and production `https://ebci-nexus.vercel.app`.
+
+Important instruction for next machine: **do not use stale status saying 26/47 accounts exist**. That status is obsolete. This section expands the shorter §22 office sync entry below with exact production checks and commit details.
+
+## 2. Commits shipped
+
+| Commit | Summary |
+|---|---|
+| `5f06f78` | Fix auth login by isolating `signInWithPassword` into a short-lived anon Supabase client. Prevents service-role client auth-state pollution in reused Vercel lambdas. |
+| `f235f4b` | Add UI support for editing leave approver scope in employee profile. |
+| `110592a` | Change manual leave approver scope UI default to employee department. |
+| `93e99a5` | Final leave approver model: remove duplicate manual approver-permission UI; derive approver permission automatically from `leave_approver_id` assignment. |
+| `4b4fb23` | Show global top progress bar when clicking employee rows; prevent double-click/double navigation while employee profile loads. |
+| `924efeb` | Docs update for office handoff after account rollout. |
+
+## 3. DB-only production changes
+
+### Company-wide account rollout
+
+All active employees were made login-ready in production:
+
+- Active employees: `48`
+- Created new Supabase Auth accounts: `22`
+- Reset/updated existing accounts: `26`
+- Every active employee now has `employees.user_id` linked to a real auth UUID.
+- Every active employee has a matching public `User` row.
+- Beta password for all active employees: `2000Ebc!`
+- Employee-code login works with and without dash, e.g. `009-35` and `00935`.
+
+Smoke tests run against production:
+
+- Employee: `009-35` / `00935` → `/portal`
+- Employee: `048-45` / `04845` → `/portal`
+- Employee: `056-47` / `05647` → `/portal`
+- Employee: `436-62` / `43662` → `/portal`
+- Ant: `TEST-ANT` → `/portal`
+- HR/admin: `506-69` / `50669` → `/hradmin/dashboard`
+- HR/admin: `153-59` / `15359` → `/hradmin/dashboard`
+- HR/admin: `457-63` / `45763` → `/hradmin/dashboard`
+
+### Role metadata sync
+
+After resetting all passwords, auth metadata was synced back from public `User.role` for HR/admin so admin users did not silently become employee sessions:
+
+- `001-29`
+- `153-59`
+- `457-63`
+- `506-69`
+
+### Leave approver data cleanup
+
+- แอนนี่ (`464-64`, อรุณี) was set as leave approver for `แผนกบัญชีและการเงิน`.
+- ตู่ (`009-35`) was narrowed from `all` to `แผนกประสานงานเอกสาร`.
+- Existing employees with `leave_approver_id` assignments were backfilled so their target approvers have `is_approver=true`, `approval_scopes` includes `leave`, and `approval_department_scope` covers the employee department.
+- Important: the UI no longer exposes a separate "สิทธิ์อนุมัติใบลา" toggle. HR sets only "ผู้อนุมัติการลา"; the system promotes that target automatically.
+
+## 4. Auth lessons
+
+The employee-code login route supports both dashed and undashed employee codes by normalizing `employee_code` and input with `replace(/[\\s-]/g, '')`.
+
+The production auth bug where one employee-code login worked and the next failed was caused by using `supabaseAdmin.auth.signInWithPassword()`. Supabase JS stores auth state in memory, and Vercel can reuse the same module instance. Fix: use a dedicated anon client for password sign-in while keeping `supabaseAdmin` only for service-role DB/admin work.
+
+## 5. UI responsiveness
+
+Employee detail pages are slow because they fetch many server-side datasets: profile, legacy applicant/photo data, all employees for dropdowns, leave balances/types, adjuster names, contracts, salary slips, and recent leaves. The immediate UX problem was worse because employee table rows used `router.push()` directly, which did not trigger the existing link-click progress bar.
+
+Fix in `4b4fb23`:
+
+- `RouteProgress` now listens for custom `nexus:route-progress:start`.
+- Employee rows dispatch that event before `router.push()`.
+- While navigating, the selected row highlights and other rows are disabled to prevent repeated clicks.
+
+## 6. Current beta instruction
+
+For Friday office beta:
+
+- Username: employee code, dashed or undashed
+- Password: `2000Ebc!`
+- Tell testers the password is case-sensitive: capital `E`, lowercase `bc`, final `!`
+- Avoid repeated wrong attempts: login route has rate limiting and can temporarily block a user/IP after repeated failures.
+
+## 7. Still open
+
+- Leave policy / policy center content is not fully entered.
+- Leave category numbers/conditions still need final HR/MD confirmation for several special leave types.
+- HIP card-scan agent/relay still not implemented; webhook exists.
+- Salary slip bulk upload still needs e2e test with a real accounting file.
+- Approval audit may still show president/advisors as `NO_LINK_AT_ALL`; that is likely acceptable if they are intentionally outside normal leave routing. If normal staff show `NO_APPROVER`, fix before broad leave beta.
+
+---
+
 # §22 — May 15 Office Sync
 
 ## Context

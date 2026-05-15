@@ -5,9 +5,9 @@
 
 ---
 
-## 🔁 สถานะล่าสุด — **Office · ศุกร์ 15 พ.ค.**
+## 🔁 สถานะล่าสุด — **Office · ศุกร์ 15 พ.ค. 2569**
 
-> เครื่องออฟฟิศ pull ถึง `origin/main` แล้วเมื่อ 15 พ.ค. 2569. ข้อมูล company-wide rollout ด้านล่างถูกแก้ตามงาน DB-only ที่ทำจากเครื่องบ้านเมื่อคืน.
+> เครื่องออฟฟิศต้อง pull ถึง `origin/main` ล่าสุดก่อนทำงาน. ข้อมูล company-wide rollout ด้านล่างคือสถานะ production ล่าสุดหลังงาน Codex คืน 14→15 พ.ค. และ docs update เช้า 15 พ.ค.
 
 **Step 1 — Pull ก่อนทุกเครื่อง:**
 ```bash
@@ -17,25 +17,36 @@ cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff
 
 **Step 2 — พิมพ์บอก Claude/Codex:**
 ```
-อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ office. company-wide rollout ทำ DB-only เสร็จจากเครื่องบ้านเมื่อคืน: ทุก active employee มี account พร้อมล็อกอินแล้ว. อย่าย้อนกลับไปใช้สถานะเก่า 26/47. งานถัดไปคือ verify login health-check, HIP relay/เครื่องแตะบัตร, salary slip upload e2e, และ approval-audit cleanup.
+อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ office. ทุก active employee 48/48 มี account login แล้ว, password beta คือ 2000Ebc!, login ด้วยรหัสพนักงานได้ทั้งมีขีด/ไม่มีขีด. อย่าย้อนกลับไปใช้สถานะเก่า 26/47. งานถัดไปคือ beta office verification, HIP relay/เครื่องแตะบัตร, salary slip upload e2e, approval-audit cleanup และนโยบายการลา.
 ```
 
 **Step 3 — ตอบเครื่อง:** "อยู่ office" หรือ "อยู่ home"
 
-**📌 Beta status: ~94% complete**
+**📌 Beta status: ~94-95% complete สำหรับ office beta**
 - ✅ 18/20 items ใน BETA_FEEDBACK ship แล้ว
-- 🚧 รอ ม๊อด ตอบ 12 คำถามใน `docs/QUESTIONS_FOR_MOD.md` (Welfare = ใหญ่สุด 6-8 ชม)
+- ✅ **Company-wide rollout accounts** — active employees `48/48` มี Supabase Auth + public `User` + `employees.user_id` ครบ
+- ✅ **Beta password:** ทุก active employee ถูกตั้งรหัสเริ่มต้นเป็น `2000Ebc!`
+- ✅ **Login identifier:** ใช้รหัสพนักงานได้ทั้งแบบมีขีดและไม่มีขีด เช่น `009-35` / `00935`
+- ✅ **Production login smoke test ผ่าน:** employee (`009-35`, `048-45`, `056-47`, `436-62`, `TEST-ANT`) และ HR/admin (`506-69`, `153-59`, `457-63`) เข้าได้
+- ✅ **Role metadata sync แล้ว:** HR/admin 4 คนยังเข้า `/hradmin/dashboard` ได้ ไม่ถูกลดเป็น employee
 - 🔧 HIP webhook: endpoint live, agent ยังไม่เขียน — รอข้อมูล office server (OS + IP + access)
-- ✅ **Company-wide rollout accounts** — ทำ DB-only เสร็จจากเครื่องบ้านคืน 14→15 พ.ค.; ทุกคนพร้อมล็อกอินแล้ว
+- 🚧 รอ policy/decision บางรายการใน `docs/QUESTIONS_FOR_MOD.md` โดยเฉพาะนโยบายลา/leave category details/welfare
 
 **📅 Reminder เก่า 12 พ.ค. ผ่านแล้ว** — ไม่ต้องรอ decision A/B เรื่อง account rollout อีก
 
-**ล่าสุดเสร็จ (home · คืน 14→15 พ.ค. — DB-only, no commits):**
-- ✅ สร้าง account ครบทุก active employee แล้ว — ทุกคนพร้อมล็อกอิน
-- ✅ สถานะเก่า "26/47 มี account, เหลือ 21 คน" ถือว่า obsolete
+**ล่าสุดเสร็จ (Codex · คืน 14→15 พ.ค. + เช้า 15 พ.ค.):**
+- ✅ สร้าง/ซ่อม account ครบทุก active employee แล้ว — created `22`, reset/updated `26`, total `48`
+- ✅ Reset password ทุก active employee เป็น `2000Ebc!`
+- ✅ ซ่อมครีม `436-62` จาก mock user เก่าเป็น auth UUID จริง
+- ✅ Sync auth metadata ให้ HR/admin: `001-29`, `153-59`, `457-63`, `506-69`
+- ✅ ปรับ login route ก่อนหน้าให้ isolate auth client (`5f06f78`) — employee-code login ไม่สลับ session ใน reused Vercel instance
+- ✅ ปรับ approval routing: การเลือก `ผู้อนุมัติการลา` ใน employee profile เป็น source of truth; ระบบ auto เปิดสิทธิ์ approver ให้ target (`93e99a5`)
+- ✅ แอนนี่ (`464-64`) อนุมัติแผนกบัญชีและการเงินได้; คนบัญชีที่เคยตัน route ไปแอนนี่แล้ว
+- ✅ เพิ่ม/แก้ progress bar ตอนคลิกรายชื่อพนักงาน (`4b4fb23`) กันกดซ้ำระหว่างเข้า profile
+- ✅ สถานะเก่า "26/47 มี account, เหลือ 21 คน" ถือว่า obsolete ห้ามใช้
 
 **ก่อนหน้านั้น (office · อังคาร 12 พ.ค. ช่วงบ่าย — DB-only, no commits):**
-- ✅ สร้าง account ทดสอบ อ.ปราโมท พงษ์ทอง (`056-47`) — role=employee, password=`000000`, ตำแหน่งที่ปรึกษา
+- ✅ สร้าง account ทดสอบ อ.ปราโมท พงษ์ทอง (`056-47`) — ตอนนี้ password ถูก reset เป็น `2000Ebc!` แล้ว
 - ✅ Verify B-path completed (§1.7 + §1.8 + §3.3 commits จาก laptop)
 
 **ก่อนหน้านั้น (laptop · จันทร์ 11 พ.ค. ค่ำ):**
@@ -60,14 +71,18 @@ cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff
 
 **ตอบเครื่อง:** "อยู่ office"
 
-**ทำก่อนทุกอย่าง (3 นาที verify):**
-1. Logout → login **`suchat@ebcitrade.com / EbciTest2026!`** (ชาติ — บัญชี/payroll manager)
-2. ดู sidebar — ควรเห็นเมนูพนักงานปกติ + **"💰 อัปโหลดสลิปเงินเดือน"** (Wallet icon) ที่เป็นลิ้งก์ไป /hradmin/payroll/bulk
-3. Click → ต้อง land หน้า bulk upload โดยไม่โดน redirect
-4. ลองพิมพ์ `/hradmin/employees` ตรงๆ → ควรโดน redirect (ชาติไม่มีสิทธิ์ HR ปกติ)
-5. กลับ login เป็น admin (ปอนด์/ม๊อด) — sidebar ของ admin ก็จะมี "อัปโหลดสลิปเงินเดือน" เพิ่มขึ้น (เพราะ flag = true)
+**ทำก่อนทุกอย่าง (5 นาที verify ที่ office):**
+1. Logout → login ด้วยรหัสพนักงานและ password `2000Ebc!`
+   - Employee smoke: `009-35` และ `00935` → ต้องเข้า `/portal`
+   - Newly-created smoke: `048-45` และ `04845` → ต้องเข้า `/portal`
+   - Advisor smoke: `056-47` และ `05647` → ต้องเข้า `/portal`
+   - HR/admin smoke: `506-69` และ `50669` → ต้องเข้า `/hradmin/dashboard`
+2. เปิด `/hradmin/employees` แล้วคลิกชื่อพนักงาน 1 คน — แถบ progress ด้านบนต้องขึ้นทันทีและแถวที่กดต้อง highlight กันกดซ้ำ
+3. เปิด `/hradmin/leave/approval-audit` — ถ้าขึ้น critical เหลือเฉพาะประธาน/ที่ปรึกษาที่ตั้งใจไม่มีสาย ถือว่า ok; ถ้ามีพนักงานปกติ NO_APPROVER ให้แก้ก่อนให้ beta ใช้ลา
+4. ทดสอบยื่นใบลา 1 ใบกับ tester ที่รู้ approver — submit success ต้องมี bell notification + email ถึง approver
+5. Salary slip bulk upload ยังต้อง e2e กับไฟล์จริง ถ้าจะเปิด payroll ในรอบเดียวกัน
 
-⚠️ **ปุ๋ย (wiyada) ถูก revoke `can_manage_payroll` แล้วเมื่อ 28 เม.ย. 11:29** — เธอ login ได้แต่ **จะไม่เห็น** เมนูสลิปเงินเดือน. ผู้ใช้คนเดียวที่เห็น/อัปโหลดสลิปได้คือ **ชาติ**.
+⚠️ **Beta password `2000Ebc!` เป็นรหัสชั่วคราวสำหรับทดสอบเท่านั้น** — หลัง launch จริงควร force reset/change password ต่อคน.
 
 ---
 
