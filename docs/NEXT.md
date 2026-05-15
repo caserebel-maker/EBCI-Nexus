@@ -42,7 +42,7 @@ cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff
 - ✅ Sync auth metadata ให้ HR/admin: `001-29`, `153-59`, `457-63`, `506-69`
 - ✅ ปรับ login route ก่อนหน้าให้ isolate auth client (`5f06f78`) — employee-code login ไม่สลับ session ใน reused Vercel instance
 - ✅ ปรับ approval routing: การเลือก `ผู้อนุมัติการลา` ใน employee profile เป็น source of truth; ระบบ auto เปิดสิทธิ์ approver ให้ target (`93e99a5`)
-- ✅ แอนนี่ (`464-64`) อนุมัติแผนกบัญชีและการเงินได้; คนบัญชีที่เคยตัน route ไปแอนนี่แล้ว
+- ✅ แอนนี่ (`466-64`) อนุมัติแผนกบัญชีและการเงินได้; คนบัญชีที่เคยตัน route ไปแอนนี่แล้ว
 - ✅ เพิ่ม/แก้ progress bar ตอนคลิกรายชื่อพนักงาน (`4b4fb23`) กันกดซ้ำระหว่างเข้า profile
 - ✅ สถานะเก่า "26/47 มี account, เหลือ 21 คน" ถือว่า obsolete ห้ามใช้
 

@@ -3193,7 +3193,7 @@ After resetting all passwords, auth metadata was synced back from public `User.r
 
 ### Leave approver data cleanup
 
-- แอนนี่ (`464-64`, อรุณี) was set as leave approver for `แผนกบัญชีและการเงิน`.
+- แอนนี่ (`466-64`, อรุณี) was set as leave approver for `แผนกบัญชีและการเงิน`.
 - ตู่ (`009-35`) was narrowed from `all` to `แผนกประสานงานเอกสาร`.
 - Existing employees with `leave_approver_id` assignments were backfilled so their target approvers have `is_approver=true`, `approval_scopes` includes `leave`, and `approval_department_scope` covers the employee department.
 - Important: the UI no longer exposes a separate "สิทธิ์อนุมัติใบลา" toggle. HR sets only "ผู้อนุมัติการลา"; the system promotes that target automatically.
