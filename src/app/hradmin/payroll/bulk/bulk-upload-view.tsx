@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-    Upload, AlertTriangle,
+    Upload, AlertTriangle, FileUp,
     Loader2, Wallet, Eye, ArrowLeft,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -12,6 +12,21 @@ const THAI_MONTHS = [
     'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
     'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
 ]
+const FILE_ACCEPT = [
+    '.pdf',
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.webp',
+    '.heic',
+    '.heif',
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/heic',
+    'image/heif',
+].join(',')
 
 interface Outcome {
     filename: string
@@ -60,6 +75,13 @@ export function BulkUploadView() {
     const [error, setError] = useState<string | null>(null)
     const [summary, setSummary] = useState<Summary | null>(null)
     const [outcomes, setOutcomes] = useState<Outcome[]>([])
+
+    function handleFiles(nextFiles: FileList | null) {
+        setFiles(nextFiles)
+        setError(null)
+        setSummary(null)
+        setOutcomes([])
+    }
 
     async function runUpload(dryRun: boolean) {
         if (!files || files.length === 0) {
@@ -175,17 +197,24 @@ export function BulkUploadView() {
                         </label>
                     </div>
 
-                    <label className="block">
+                    <div className="block">
                         <span className="text-[0.75rem] uppercase tracking-wider text-white/55 font-bold mb-1.5 block">
                             ไฟล์สลิป (เลือกหลายไฟล์ได้)
                         </span>
-                        <input
-                            type="file"
-                            multiple
-                            accept="application/pdf,image/jpeg,image/png,image/webp"
-                            onChange={(e) => setFiles(e.target.files)}
-                            className="block w-full text-sm text-white/85 file:mr-3 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:bg-emerald-500/20 file:text-emerald-100 file:font-semibold hover:file:bg-emerald-500/30 file:cursor-pointer"
-                        />
+                        <label className="flex min-h-[118px] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-emerald-300/35 bg-emerald-500/8 px-4 py-5 text-center transition hover:bg-emerald-500/12 active:scale-[0.99]">
+                            <FileUp size={24} className="text-emerald-200" />
+                            <span className="text-sm font-bold text-white">แตะเพื่อเลือกไฟล์สลิป</span>
+                            <span className="text-xs text-white/55">
+                                รองรับ PDF, JPG, PNG, WEBP, HEIC · เลือกหลายไฟล์ได้
+                            </span>
+                            <input
+                                type="file"
+                                multiple
+                                accept={FILE_ACCEPT}
+                                onChange={(e) => handleFiles(e.target.files)}
+                                className="sr-only"
+                            />
+                        </label>
                         {files && files.length > 0 && (
                             <p className="text-white/60 text-[0.85rem] mt-2">
                                 เลือกไว้ {files.length} ไฟล์ · รวม {formatFileSize(
@@ -193,7 +222,7 @@ export function BulkUploadView() {
                                 )}
                             </p>
                         )}
-                    </label>
+                    </div>
 
                     {error && (
                         <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-200 inline-flex items-start gap-2 w-full">

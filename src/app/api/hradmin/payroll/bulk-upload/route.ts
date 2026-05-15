@@ -20,6 +20,7 @@ const MAX_TOTAL_BYTES = 100 * 1024 * 1024  // 100MB total per request
  *
  * Examples that all match employee_code "060-01":
  *   060-01.pdf
+ *   06001.pdf
  *   Slip_060-01_2026-04.pdf
  *   payroll-060-01-march.pdf
  *
@@ -94,6 +95,10 @@ export async function POST(req: NextRequest) {
     // Sort codes longest-first so "060-001" is checked before "060-01"
     // when the regex would otherwise match the substring.
     const codesByLength = [...codeMap.keys()].sort((a, b) => b.length - a.length)
+    const normalizedCodesByLength = codesByLength.map(code => ({
+        code,
+        normalized: normalizeEmployeeCodeToken(code),
+    }))
 
     // ── Per-file outcome ────────────────────────────────────────────
     type Outcome = {
@@ -107,11 +112,18 @@ export async function POST(req: NextRequest) {
     }
     const outcomes: Outcome[] = []
     const ALLOWED_MIME = new Set([
-        'application/pdf', 'image/jpeg', 'image/png', 'image/webp',
+        'application/pdf',
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/heic',
+        'image/heif',
     ])
+    const ALLOWED_EXT = new Set(['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'])
     const MAX_PER_FILE = 10 * 1024 * 1024
 
     for (const file of files) {
+        const ext = filenameExtension(file.name)
         const baseOutcome: Outcome = {
             filename: file.name,
             size: file.size,
@@ -119,8 +131,12 @@ export async function POST(req: NextRequest) {
         }
 
         // Validate file
-        if (!ALLOWED_MIME.has(file.type)) {
-            outcomes.push({ ...baseOutcome, status: 'invalid_type', error: file.type || 'unknown' })
+        if (!isAllowedPayrollFile(file, ext, ALLOWED_MIME, ALLOWED_EXT)) {
+            outcomes.push({
+                ...baseOutcome,
+                status: 'invalid_type',
+                error: file.type || (ext ? `.${ext}` : 'unknown'),
+            })
             continue
         }
         if (file.size > MAX_PER_FILE) {
@@ -133,8 +149,10 @@ export async function POST(req: NextRequest) {
         }
 
         // Match employee by code in filename
-        const lower = file.name
-        const matchedCode = codesByLength.find((code) => lower.includes(code))
+        const normalizedFilename = normalizeEmployeeCodeToken(file.name)
+        const matchedCode = normalizedCodesByLength.find(({ normalized }) => (
+            normalized && normalizedFilename.includes(normalized)
+        ))?.code
         if (!matchedCode) {
             outcomes.push({ ...baseOutcome, status: 'no_match' })
             continue
@@ -194,4 +212,24 @@ export async function POST(req: NextRequest) {
         summary,
         outcomes,
     })
+}
+
+function filenameExtension(filename: string): string {
+    const match = /\.([a-z0-9]+)$/i.exec(filename)
+    return match?.[1]?.toLowerCase() ?? ''
+}
+
+function isAllowedPayrollFile(
+    file: File,
+    ext: string,
+    allowedMime: Set<string>,
+    allowedExt: Set<string>,
+): boolean {
+    if (allowedMime.has(file.type)) return true
+    if (allowedExt.has(ext) && (!file.type || file.type === 'application/octet-stream')) return true
+    return false
+}
+
+function normalizeEmployeeCodeToken(value: string): string {
+    return value.replace(/[^0-9a-z]/gi, '').toLowerCase()
 }

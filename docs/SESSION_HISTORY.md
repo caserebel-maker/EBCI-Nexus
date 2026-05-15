@@ -3294,3 +3294,24 @@ Office Mac network check:
 - TCP to `192.168.1.40:5005`, `:7005`, and `:80` all timeout
 
 Conclusion: this Office Mac cannot be the HIP relay host as-is. Need a machine in `192.168.1.x` or a network/routing change before writing/installing the final relay agent.
+
+---
+
+# §24 — May 15 Payroll Bulk Upload Mobile Fix
+
+## Trigger
+
+สุชาติ (payroll manager) tested `/hradmin/payroll/bulk` on mobile and reported that he could not call/select the attached slip file.
+
+## Fix
+
+- Made the file selector a large tap target instead of relying on the browser's tiny native file button.
+- Expanded client `accept` to include both MIME types and extensions: `.pdf`, `.jpg`, `.jpeg`, `.png`, `.webp`, `.heic`, `.heif`.
+- Hardened server validation to trust allowed filename extensions when mobile browsers send blank MIME or `application/octet-stream`.
+- Allowed HEIC/HEIF image slips.
+- Made filename matching tolerant of dashes, so both `payroll-060-01.pdf` and `payroll-06001.pdf` match employee code `060-01`.
+
+## Verify
+
+- `npx eslint src/app/hradmin/payroll/bulk/bulk-upload-view.tsx src/app/api/hradmin/payroll/bulk-upload/route.ts src/lib/salary-slip-persist.ts`
+- `npx tsc --noEmit`

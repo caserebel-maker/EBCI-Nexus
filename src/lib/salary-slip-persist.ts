@@ -107,13 +107,15 @@ export async function persistSlip(args: PersistSlipArgs): Promise<PersistSlipRes
 }
 
 function inferExtension(mime: string, name: string): string {
-    const fromName = /\.(pdf|jpe?g|png|webp)$/i.exec(name)
+    const fromName = /\.(pdf|jpe?g|png|webp|heic|heif)$/i.exec(name)
     if (fromName) return `.${fromName[1].toLowerCase()}`
     switch (mime) {
         case 'application/pdf': return '.pdf'
         case 'image/jpeg':      return '.jpg'
         case 'image/png':       return '.png'
         case 'image/webp':      return '.webp'
+        case 'image/heic':      return '.heic'
+        case 'image/heif':      return '.heif'
         default:                return '.bin'
     }
 }

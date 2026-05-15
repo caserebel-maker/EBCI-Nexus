@@ -35,6 +35,7 @@ cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff
 **📅 Reminder เก่า 12 พ.ค. ผ่านแล้ว** — ไม่ต้องรอ decision A/B เรื่อง account rollout อีก
 
 **ล่าสุดเสร็จ (Codex · คืน 14→15 พ.ค. + เช้า 15 พ.ค.):**
+- ✅ Payroll bulk upload mobile/file picker fix (`สุชาติ`): ปุ่มเลือกไฟล์เป็นพื้นที่แตะใหญ่ขึ้น, accept `.pdf/.jpg/.png/.webp/.heic/.heif`, server ยอมรับ MIME เพี้ยนจากมือถือถ้านามสกุลถูก, และ match ชื่อไฟล์ได้ทั้ง `060-01`/`06001`
 - ✅ สร้าง/ซ่อม account ครบทุก active employee แล้ว — created `22`, reset/updated `26`, total `48`
 - ✅ Reset password ทุก active employee เป็น `2000Ebc!`
 - ✅ ซ่อมครีม `436-62` จาก mock user เก่าเป็น auth UUID จริง
