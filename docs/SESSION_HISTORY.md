@@ -3135,3 +3135,27 @@ While I was working, Codex pushed two security commits I pulled before §3.16:
 ## Older sections deferred (will append later if needed)
 
 §19 (APR28 office) and §20 (APR29 morning + evening) entries are summarised in NEXT.md §0 TL;DR. The dedicated §19/§20 detail blocks were skipped to keep this archive append moving — if a future bug investigation needs the Apr 28-29 morning detail, the relevant context is in NEXT.md and the commits themselves (`b357a86`, `2d49dbe`, `136863e`, `37cffab`, `13d566d`, `206b405`, `1048759`).
+
+---
+
+# §22 — May 15 Office Sync
+
+## Context
+
+Office Mac pulled `origin/main` to `4b4fb23` and found `docs/NEXT.md` still carried the stale company-wide rollout state from May 12: "26/47 มี account, เหลือ 21 คน".
+
+User corrected that the home session on the night of May 14→15 completed the DB-only account rollout: **ทุก active employee มี account พร้อมล็อกอินแล้ว**.
+
+## Documentation update
+
+- Updated `docs/NEXT.md` top handoff to current office status.
+- Marked company-wide rollout accounts as complete.
+- Removed the instruction to decide between rollout strategy A/B as an active blocker.
+- Kept the health-check SQL warning: before sending credentials lists, still verify auth/users linkage to avoid the orphaned-auth pattern seen in beta testing.
+
+## Current next priorities
+
+1. Run/verify login health-check before distributing credentials.
+2. Continue HIP Ci100S relay/agent work.
+3. Test salary slip bulk upload end-to-end as สุชาติ/payroll manager.
+4. Have HR clean remaining approver-chain audit rows in `/hradmin/leave/approval-audit`.

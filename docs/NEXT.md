@@ -5,35 +5,36 @@
 
 ---
 
-## 🔁 ที่เครื่องถัดไป — **Home Mac · อังคาร 12 พ.ค. เย็น (~19:00 Bangkok)**
+## 🔁 สถานะล่าสุด — **Office · ศุกร์ 15 พ.ค.**
 
-> **อ่านเฉพาะตอนเปิด Claude Code ที่ home Mac**
+> เครื่องออฟฟิศ pull ถึง `origin/main` แล้วเมื่อ 15 พ.ค. 2569. ข้อมูล company-wide rollout ด้านล่างถูกแก้ตามงาน DB-only ที่ทำจากเครื่องบ้านเมื่อคืน.
 
-**Step 1 — Pull ก่อน:**
+**Step 1 — Pull ก่อนทุกเครื่อง:**
 ```bash
-cd ~/C1TB/EB-CI/EBCI-Nexus && git pull origin main --ff-only
+cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff-only
 ```
-*(ถ้า path ที่บ้านต่างไป ให้ `cd` ไป repo `EBCI-Nexus` ตัวจริงก่อน pull)*
+*(ถ้าอยู่บ้านใช้ `cd ~/C1TB/EB-CI/EBCI-Nexus && git pull origin main --ff-only`; ถ้า path ต่างไป ให้ `cd` ไป repo ตัวจริงก่อน pull)*
 
-**Step 2 — พิมพ์บอก Claude:**
+**Step 2 — พิมพ์บอก Claude/Codex:**
 ```
-อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ home. office session เพิ่งจบ — ม๊อด ถามเรื่อง company-wide rollout (login ด้วยรหัสพนักงาน + password เริ่มต้น) แต่ยังไม่เลือก strategy. ตัวเลือก:
-- A. รหัสเดียวกันหมด `000000` + force-change-on-first-login (~1.5 ชม รวม onboard 21 คน)
-- B. employee_code = password (no force-change, 30 นาที onboard 21 คน)
-ถาม ปอนด์ ก่อนเริ่ม แล้วลุยตามที่ตอบ.
+อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ office. company-wide rollout ทำ DB-only เสร็จจากเครื่องบ้านเมื่อคืน: ทุก active employee มี account พร้อมล็อกอินแล้ว. อย่าย้อนกลับไปใช้สถานะเก่า 26/47. งานถัดไปคือ verify login health-check, HIP relay/เครื่องแตะบัตร, salary slip upload e2e, และ approval-audit cleanup.
 ```
 
-**Step 3 — ตอบ Claude:** "อยู่ home"
+**Step 3 — ตอบเครื่อง:** "อยู่ office" หรือ "อยู่ home"
 
 **📌 Beta status: ~94% complete**
 - ✅ 18/20 items ใน BETA_FEEDBACK ship แล้ว
 - 🚧 รอ ม๊อด ตอบ 12 คำถามใน `docs/QUESTIONS_FOR_MOD.md` (Welfare = ใหญ่สุด 6-8 ชม)
 - 🔧 HIP webhook: endpoint live, agent ยังไม่เขียน — รอข้อมูล office server (OS + IP + access)
-- 🚀 **NEW: Company-wide rollout** — 26/47 มี account, ยังเหลือ 21 คน รอ ปอนด์ ตัดสินใจ A vs B
+- ✅ **Company-wide rollout accounts** — ทำ DB-only เสร็จจากเครื่องบ้านคืน 14→15 พ.ค.; ทุกคนพร้อมล็อกอินแล้ว
 
-**📅 Reminder ตอน 19:00 คืนนี้ (Bangkok):** มี GCal event + Claude scheduled-task รออยู่
+**📅 Reminder เก่า 12 พ.ค. ผ่านแล้ว** — ไม่ต้องรอ decision A/B เรื่อง account rollout อีก
 
-**ล่าสุดเสร็จ (office · อังคาร 12 พ.ค. ช่วงบ่าย — DB-only, no commits):**
+**ล่าสุดเสร็จ (home · คืน 14→15 พ.ค. — DB-only, no commits):**
+- ✅ สร้าง account ครบทุก active employee แล้ว — ทุกคนพร้อมล็อกอิน
+- ✅ สถานะเก่า "26/47 มี account, เหลือ 21 คน" ถือว่า obsolete
+
+**ก่อนหน้านั้น (office · อังคาร 12 พ.ค. ช่วงบ่าย — DB-only, no commits):**
 - ✅ สร้าง account ทดสอบ อ.ปราโมท พงษ์ทอง (`056-47`) — role=employee, password=`000000`, ตำแหน่งที่ปรึกษา
 - ✅ Verify B-path completed (§1.7 + §1.8 + §3.3 commits จาก laptop)
 
@@ -503,7 +504,11 @@ NEXUS_SESSION_SECRET   # signed session cookie (32+ bytes random)
 CARD_SCAN_WEBHOOK_SECRET   # gen ผ่าน `openssl rand -hex 32` — ใส่ที่ Vercel + เป็น header X-Webhook-Secret ที่ HIP/agent ใช้ POST
 ```
 
-**Test accounts (อัปเดตหลัง APR27):**
+**Login/account state (อัปเดต 15 พ.ค.):**
+
+- ✅ ทุก active employee มี account พร้อมล็อกอินแล้ว (DB-only จาก home session คืน 14→15 พ.ค.)
+- ก่อนส่ง credentials list ให้ HR/พนักงาน ยังต้องรัน health-check SQL ใน §11 เพื่อกันเคส orphaned auth/user row
+- Password policy บังคับแล้ว; ถ้าจะ reset password กลุ่มใหญ่ ให้ใช้ flow ที่ไม่เก็บ plaintext password ใน docs
 
 | User | username | role | can_manage_system | can_manage_payroll | หมายเหตุ |
 |---|---|---|---|---|---|
@@ -522,7 +527,7 @@ CARD_SCAN_WEBHOOK_SECRET   # gen ผ่าน `openssl rand -hex 32` — ใส�
 ## 5. Git + deploy state
 
 - **Repo:** `caserebel-maker/EBCI-Nexus`
-- **Last commit:** `1108af6` (`POST /api/webhooks/card-scan` — HMAC + shared-secret auth)
+- **Last commit:** `4b4fb23` (`fix(ui): show progress for employee row navigation`)
 - **Vercel deploy:** auto — `https://nexus.ebcitrade.com`
 - **Build:** ✓ TS clean (`tsc --noEmit` 0 errors บนไฟล์ที่แตะใน Phase 1A + 1B)
 
