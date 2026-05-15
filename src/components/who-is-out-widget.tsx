@@ -203,12 +203,12 @@ function WhoIsOutPopup({ entries, onClose }: { entries: Entry[]; onClose: () => 
 
     return (
         <div
-            className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4"
+            className="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-4"
             style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
             onClick={onClose}
         >
             <div
-                className="w-full sm:max-w-2xl max-h-[92vh] sm:max-h-[88vh] flex flex-col rounded-t-2xl sm:rounded-2xl overflow-hidden overflow-x-hidden"
+                className="w-full sm:max-w-2xl max-h-[88vh] flex flex-col rounded-2xl overflow-hidden overflow-x-hidden"
                 style={{
                     background: 'rgba(50,15,20,0.97)',
                     border: '1px solid rgba(255,255,255,0.12)',
