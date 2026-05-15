@@ -26,6 +26,7 @@ import {
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
 import { findHrNotifyTargets } from '@/lib/hr-notify'
 import { resolveApproverInboxUrl } from '@/lib/leave-inbox-url'
+import { sendTelegram, escapeTelegramHtml } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
 
@@ -425,10 +426,10 @@ export async function POST(req: NextRequest) {
     }
 
     // ── HR FYI fan-out — Mod's 4 May call: HR ต้องรับทราบทุกใบลา ──────
-    // No approval power; this is a CC. findHrNotifyTargets() filters
-    // hr_admin users to the ones actually working in ฝ่ายบุคคล (so we
-    // don't blast the whole permissions set). In-app only: email is
-    // intentionally limited to approve/reject decisions.
+    // Channels (per HR target):
+    //   • In-app 🔔 — always
+    //   • Telegram DM — only if telegramChatId is set (Phase 1: มด opts in)
+    //   • Email      — intentionally skipped (HR has dashboard; ม๊อด 8 พ.ค.)
     try {
         const hrTargets = await findHrNotifyTargets()
         if (hrTargets.length > 0) {
@@ -450,6 +451,18 @@ export async function POST(req: NextRequest) {
                     color: 'blue',
                     sender_name: applicantNick,
                 }).catch(err => console.error('[leave/submit] HR in-app notif failed:', err))
+
+                if (t.telegramChatId) {
+                    const text = [
+                        `🌴 <b>${escapeTelegramHtml(applicantNick)}</b> ${escapeTelegramHtml(leaveType.name_th ?? 'ลา')}`,
+                        `📅 ${escapeTelegramHtml(dateLabel)} (${totalDays} วัน)`,
+                        `🧑‍💼 รอ ${escapeTelegramHtml(approver.first_name_th ?? 'ผู้บังคับบัญชา')} อนุมัติ`,
+                        reason ? `📝 ${escapeTelegramHtml(reason.slice(0, 200))}` : '',
+                        `<a href="https://ebci-nexus.vercel.app/hradmin/leave?tab=requests">ดูใน Nexus →</a>`,
+                    ].filter(Boolean).join('\n')
+                    sendTelegram({ chatId: t.telegramChatId, text })
+                        .catch(err => console.error('[leave/submit] HR telegram failed:', err))
+                }
             }
         }
     } catch (err) {

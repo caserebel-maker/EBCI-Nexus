@@ -9,6 +9,7 @@ import {
     sendWfhSubmittedToEmployee,
     sendWfhSubmittedToApprover,
 } from '@/lib/email-wfh'
+import { sendTelegram, escapeTelegramHtml } from '@/lib/telegram'
 import type { WfhRequest } from '@/lib/wfh-shared'
 
 /**
@@ -196,13 +197,14 @@ export async function submitWfhRequest(
         try {
             const hrTargets = await findHrNotifyTargets()
             if (hrTargets.length === 0) return
+            const dateLabel = input.startDate === input.endDate ? input.startDate : `${input.startDate} → ${input.endDate}`
             for (const t of hrTargets) {
                 if (!t.userId) continue
                 await createNotification({
                     recipient_user_id: t.userId,
                     type: 'wfh_request_fyi',
                     title: `[FYI] ${applicantNick} ขอ WFH`,
-                    body: `${input.startDate === input.endDate ? input.startDate : `${input.startDate} → ${input.endDate}`} (${totalDays} วัน) — รอ ${approverName} อนุมัติ`,
+                    body: `${dateLabel} (${totalDays} วัน) — รอ ${approverName} อนุมัติ`,
                     action_url: '/portal/wfh',
                     action_label: 'ดูรายการ',
                     entity_type: 'wfh_request',
@@ -212,6 +214,18 @@ export async function submitWfhRequest(
                     color: 'blue',
                     sender_name: applicantNick,
                 }).catch(err => console.error('[wfh] HR in-app notif failed:', err))
+
+                if (t.telegramChatId) {
+                    const text = [
+                        `🏠 <b>${escapeTelegramHtml(applicantNick)}</b> ขอ WFH`,
+                        `📅 ${escapeTelegramHtml(dateLabel)} (${totalDays} วัน)`,
+                        `🧑‍💼 รอ ${escapeTelegramHtml(approverName)} อนุมัติ`,
+                        reason ? `📝 ${escapeTelegramHtml(reason.slice(0, 200))}` : '',
+                        `<a href="https://ebci-nexus.vercel.app/portal/wfh">ดูใน Nexus →</a>`,
+                    ].filter(Boolean).join('\n')
+                    sendTelegram({ chatId: t.telegramChatId, text })
+                        .catch(err => console.error('[wfh] HR telegram failed:', err))
+                }
             }
         } catch (err) {
             console.error('[wfh] HR FYI fan-out failed:', err)

@@ -29,6 +29,10 @@ export interface HrNotifyTarget {
     email: string | null
     name: string
     nickname: string | null
+    /** Phase 1 (ม๊อด MVP) — set when the HR person ran /start on our
+     *  Telegram bot. The leave/WFH fan-out DMs them in addition to the
+     *  in-app bell. Null = not registered → skip Telegram for them. */
+    telegramChatId: string | null
 }
 
 export async function findHrNotifyTargets(): Promise<HrNotifyTarget[]> {
@@ -49,7 +53,7 @@ export async function findHrNotifyTargets(): Promise<HrNotifyTarget[]> {
     //    Mod meant by "ส่งให้ HR ด้วย".
     const { data: hrEmps } = await supabaseAdmin
         .from('employees')
-        .select('id, user_id, email, first_name_th, last_name_th, nickname')
+        .select('id, user_id, email, first_name_th, last_name_th, nickname, telegram_chat_id')
         .in('user_id', userIds)
         .eq('status', 'active')
         .or('department.ilike.%บุคคล%,position.ilike.%บุคคล%')
@@ -61,6 +65,7 @@ export async function findHrNotifyTargets(): Promise<HrNotifyTarget[]> {
         first_name_th: string | null
         last_name_th: string | null
         nickname: string | null
+        telegram_chat_id: string | null
     }>
 
     if (targets.length === 0) {
@@ -74,5 +79,6 @@ export async function findHrNotifyTargets(): Promise<HrNotifyTarget[]> {
         email: t.email,
         name: `${(t.first_name_th ?? '').trim()} ${(t.last_name_th ?? '').trim()}`.trim() || 'ฝ่ายบุคคล',
         nickname: t.nickname,
+        telegramChatId: t.telegram_chat_id ?? null,
     }))
 }
