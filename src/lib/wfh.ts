@@ -392,18 +392,30 @@ export async function decideWfhRequest(input: {
                     .maybeSingle(),
                 supabaseAdmin
                     .from('employees')
-                    .select('first_name_th, last_name_th, nickname')
+                    .select('first_name_th, last_name_th, nickname, position')
                     .eq('id', input.approverEmployeeId)
                     .maybeSingle(),
             ])
-            const approverRow = approverEmp as { first_name_th: string | null; last_name_th: string | null; nickname: string | null } | null
-            const approverName = approverRow
-                ? (`${approverRow.first_name_th ?? ''} ${approverRow.last_name_th ?? ''}`.trim() || approverRow.nickname || 'ผู้อนุมัติ')
+            const approverRow = approverEmp as {
+                first_name_th: string | null
+                last_name_th: string | null
+                nickname: string | null
+                position: string | null
+            } | null
+            const approverFullName = approverRow
+                ? `${approverRow.first_name_th ?? ''} ${approverRow.last_name_th ?? ''}`.trim()
+                : ''
+            const approverName = approverFullName || approverRow?.nickname || 'ผู้อนุมัติ'
+            const approverFormalName = approverRow
+                ? [
+                    approverRow.position?.trim(),
+                    approverName,
+                    approverRow.nickname && approverRow.nickname !== approverName ? `(${approverRow.nickname})` : '',
+                ].filter(Boolean).join(' ')
                 : 'ผู้อนุมัติ'
             const dateLabel = r.start_date === r.end_date
                 ? r.start_date as string
                 : `${r.start_date as string} → ${r.end_date as string}`
-            const decisionLabel = input.decision === 'approve' ? 'อนุมัติ' : 'ไม่อนุมัติ'
             const decisionColor = input.decision === 'approve' ? 'green' : 'red'
             const decisionIcon = input.decision === 'approve' ? '✅' : '❌'
             const decisionTitle = input.decision === 'approve'
@@ -424,7 +436,7 @@ export async function decideWfhRequest(input: {
                         recipient_user_id: t.userId,
                         type: input.decision === 'approve' ? 'wfh_request_approved_fyi' : 'wfh_request_rejected_fyi',
                         title: `[FYI] ${empName} - ${decisionTitle}`,
-                        body: `${dateLabel} (${Number(r.total_days)} วัน) — ${approverName} ${decisionLabel}`,
+                        body: `${dateLabel} (${Number(r.total_days)} วัน) — ผู้อนุมัติ: ${approverFormalName}`,
                         action_url: '/portal/wfh',
                         action_label: 'ดูรายการ',
                         entity_type: 'wfh_request',
@@ -440,7 +452,7 @@ export async function decideWfhRequest(input: {
                         `${decisionIcon} <b>${escapeTelegramHtml(decisionTitle)}</b>`,
                         `👤 ${escapeTelegramHtml(empName)}`,
                         `📅 ${escapeTelegramHtml(dateLabel)} (${Number(r.total_days)} วัน)`,
-                        `🧑‍💼 ${escapeTelegramHtml(approverName)} ${escapeTelegramHtml(decisionLabel)}`,
+                        `🧑‍💼 ผู้อนุมัติ: ${escapeTelegramHtml(approverFormalName)}`,
                         note ? `📝 ${escapeTelegramHtml(note.slice(0, 200))}` : '',
                         `<a href="https://ebci-nexus.vercel.app/portal/wfh">ดูใน Nexus →</a>`,
                     ].filter(Boolean).join('\n')
