@@ -384,15 +384,71 @@ export async function decideWfhRequest(input: {
             .eq('id', input.id)
             .maybeSingle()
         if (r) {
-            const { data: emp } = await supabaseAdmin
-                .from('employees')
-                .select('first_name_th, last_name_th, nickname, email, user_id')
-                .eq('id', r.employee_id as string)
-                .maybeSingle()
+            const [{ data: emp }, { data: approverEmp }] = await Promise.all([
+                supabaseAdmin
+                    .from('employees')
+                    .select('first_name_th, last_name_th, nickname, email, user_id')
+                    .eq('id', r.employee_id as string)
+                    .maybeSingle(),
+                supabaseAdmin
+                    .from('employees')
+                    .select('first_name_th, last_name_th, nickname')
+                    .eq('id', input.approverEmployeeId)
+                    .maybeSingle(),
+            ])
+            const approverRow = approverEmp as { first_name_th: string | null; last_name_th: string | null; nickname: string | null } | null
+            const approverName = approverRow
+                ? (`${approverRow.first_name_th ?? ''} ${approverRow.last_name_th ?? ''}`.trim() || approverRow.nickname || 'ผู้อนุมัติ')
+                : 'ผู้อนุมัติ'
+            const dateLabel = r.start_date === r.end_date
+                ? r.start_date as string
+                : `${r.start_date as string} → ${r.end_date as string}`
+            const decisionLabel = input.decision === 'approve' ? 'อนุมัติ' : 'ไม่อนุมัติ'
+            const decisionColor = input.decision === 'approve' ? 'green' : 'red'
+            const decisionIcon = input.decision === 'approve' ? '✅' : '❌'
+            const decisionTitle = input.decision === 'approve'
+                ? 'WFH ได้รับการอนุมัติ'
+                : 'WFH ถูกปฏิเสธ'
             const empRow = emp as { first_name_th: string | null; last_name_th: string | null; nickname: string | null; email: string | null; user_id: string | null } | null
             const empName = empRow
                 ? (`${empRow.first_name_th ?? ''} ${empRow.last_name_th ?? ''}`.trim() || empRow.nickname || 'พนักงาน')
                 : 'พนักงาน'
+
+            const hrTargets = await findHrNotifyTargets().catch(err => {
+                console.error('[wfh] decision HR targets failed:', err)
+                return []
+            })
+            for (const t of hrTargets) {
+                if (t.userId) {
+                    createNotification({
+                        recipient_user_id: t.userId,
+                        type: input.decision === 'approve' ? 'wfh_request_approved_fyi' : 'wfh_request_rejected_fyi',
+                        title: `[FYI] ${empName} - ${decisionTitle}`,
+                        body: `${dateLabel} (${Number(r.total_days)} วัน) — ${approverName} ${decisionLabel}`,
+                        action_url: '/portal/wfh',
+                        action_label: 'ดูรายการ',
+                        entity_type: 'wfh_request',
+                        entity_id: input.id,
+                        reference_code: r.reference_code as string,
+                        icon: 'Home',
+                        color: decisionColor,
+                        sender_name: approverName,
+                    }).catch(err => console.error('[wfh] decision HR in-app failed:', err))
+                }
+                if (t.telegramChatId) {
+                    const text = [
+                        `${decisionIcon} <b>${escapeTelegramHtml(decisionTitle)}</b>`,
+                        `👤 ${escapeTelegramHtml(empName)}`,
+                        `📅 ${escapeTelegramHtml(dateLabel)} (${Number(r.total_days)} วัน)`,
+                        `🧑‍💼 ${escapeTelegramHtml(approverName)} ${escapeTelegramHtml(decisionLabel)}`,
+                        note ? `📝 ${escapeTelegramHtml(note.slice(0, 200))}` : '',
+                        `<a href="https://ebci-nexus.vercel.app/portal/wfh">ดูใน Nexus →</a>`,
+                    ].filter(Boolean).join('\n')
+                    sendTelegram({ chatId: t.telegramChatId, text })
+                        .catch(err => console.error('[wfh] decision HR telegram failed:', err))
+                }
+            }
+
             // Email
             if (empRow?.email && empRow.email.includes('@')) {
                 await sendWfhDecidedToEmployee({
