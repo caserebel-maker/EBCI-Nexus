@@ -402,10 +402,8 @@ export async function decideWfhRequest(input: {
                 nickname: string | null
                 position: string | null
             } | null
-            const approverFullName = approverRow
-                ? `${approverRow.first_name_th ?? ''} ${approverRow.last_name_th ?? ''}`.trim()
-                : ''
-            const approverName = approverFullName || approverRow?.nickname || 'ผู้อนุมัติ'
+            const approverFirstName = approverRow?.first_name_th?.trim() || ''
+            const approverName = approverFirstName || approverRow?.nickname || 'ผู้อนุมัติ'
             const approverFormalName = approverRow
                 ? [
                     approverRow.position?.trim(),
