@@ -62,6 +62,13 @@ cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff
 - ✅ `npx eslint src/lib/telegram.ts src/lib/hr-notify.ts src/app/api/leave/submit/route.ts src/lib/wfh.ts scripts/telegram-mod-setup.mjs` ผ่าน
 - ⛔ ยังทำ config จริงไม่ได้จนกว่าจะมี `TELEGRAM_BOT_TOKEN` จาก @BotFather และตั้ง env บน Vercel
 
+**ล่าสุดเสร็จ (office · พฤหัส 21 พ.ค.):**
+- ✅ ตรวจเคสจิมไม่ได้รับ/ไม่เจอช่องอนุมัติ WFH: `WFH-2026-0005` ยัง pending, routed ไปจิม `457-63`, bell notification มีจริงและยัง unread
+- ✅ Resend accepted manual resend ไป `thanawatana@ebcitrade.com` (`bfcd3af4-772e-4b0a-b046-c9c9fe160039`)
+- ✅ DNS Resend ที่สำคัญมีครบแล้ว: `send.ebcinext.com` SPF `include:amazonses.com`, MX ไป `feedback-smtp.us-east-1.amazonses.com`, DKIM `resend._domainkey.ebcinext.com`
+- ✅ ปรับ WFH approver email ให้ลิงก์ไป `/portal/wfh/inbox?ref=WFH-...` และหน้า inbox จะดันรายการจากเมลขึ้นบนพร้อมป้าย `จากอีเมล`
+- ✅ Verify: `npx eslint ...`, `npx tsc --noEmit`, `npm run build` ผ่าน
+
 **ล่าสุดเสร็จ (Codex · คืน 14→15 พ.ค. + เช้า 15 พ.ค.):**
 - ✅ Payroll bulk upload mobile/file picker fix (`สุชาติ`): ปุ่มเลือกไฟล์เป็นพื้นที่แตะใหญ่ขึ้น, accept `.pdf/.jpg/.png/.webp/.heic/.heif`, server ยอมรับ MIME เพี้ยนจากมือถือถ้านามสกุลถูก, และ match ชื่อไฟล์ได้ทั้ง `060-01`/`06001`
 - ✅ สร้าง/ซ่อม account ครบทุก active employee แล้ว — created `22`, reset/updated `26`, total `48`

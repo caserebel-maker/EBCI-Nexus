@@ -135,7 +135,7 @@ export async function sendWfhSubmittedToEmployee(c: WfhEmailContext) {
 
 export async function sendWfhSubmittedToApprover(c: WfhEmailContext) {
     if (!c.approverEmail) return { success: false }
-    const inboxUrl = `${BASE_URL}/portal/wfh/inbox`
+    const inboxUrl = `${BASE_URL}/portal/wfh/inbox?ref=${encodeURIComponent(c.referenceCode)}`
     const html = wrap({
         title: 'มีคำขอ WFH รออนุมัติ',
         subhead: 'WFH · Awaiting Your Approval',
@@ -150,8 +150,8 @@ export async function sendWfhSubmittedToApprover(c: WfhEmailContext) {
                 ['เหตุผล',     `<span style="white-space:pre-wrap;">${escapeHtml(c.reason)}</span>`],
                 ...(c.contactDuringWfh ? [['ติดต่อช่วง WFH', escapeHtml(c.contactDuringWfh)] as [string, string]] : []),
             ])}
-            ${button(inboxUrl, 'ไปที่กล่องอนุมัติ', 'amber')}
-            ${paragraph('กดปุ่มเพื่อเปิดรายละเอียดและอนุมัติ / ปฏิเสธได้ทันที', { small: true, muted: true })}
+            ${button(inboxUrl, 'เปิดหน้าอนุมัติ WFH', 'amber')}
+            ${paragraph('อีเมลนี้เป็นการแจ้งเตือนเท่านั้น ปุ่มอนุมัติ / ปฏิเสธอยู่ใน Nexus — กดปุ่มด้านบนแล้วระบบจะไฮไลต์รายการนี้ให้จากเลขอ้างอิง', { small: true, muted: true })}
         `,
     })
     return send({ to: c.approverEmail, subject: `มีคำขอ WFH รออนุมัติ: ${c.employeeName}`, html })

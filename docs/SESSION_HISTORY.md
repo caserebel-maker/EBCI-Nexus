@@ -3353,3 +3353,32 @@ This calls `getUpdates`, chooses the latest private chat, updates employee `153-
 - `npm run verify:accounts` ✅ `48/48`
 - `npx eslint src/lib/telegram.ts src/lib/hr-notify.ts src/app/api/leave/submit/route.ts src/lib/wfh.ts scripts/telegram-mod-setup.mjs` ✅
 - `npm run telegram:mod -- --list` fails cleanly with `Missing TELEGRAM_BOT_TOKEN` until the token is supplied.
+
+---
+
+# §26 — May 21 WFH Approver Email Clarification
+
+## Trigger
+
+จิม reported that he got an email/notification but it felt incomplete because there was no obvious approval channel.
+
+## Findings
+
+- The live pending request is `WFH-2026-0005` from ม๊อด to จิม.
+- Database routing is correct: approver `457-63`, email `thanawatana@ebcitrade.com`, status `pending`.
+- In-app bell notification exists for Jim and is still unread.
+- DNS for Resend's return-path subdomain is now present: `send.ebcinext.com` SPF + MX, plus DKIM at `resend._domainkey.ebcinext.com`.
+- Resend API key is send-only, so historical delivery/read/bounce logs cannot be queried from this machine.
+
+## Actions
+
+- Manually resent the WFH approval email to Jim through Resend.
+- Updated WFH approver emails to link directly to `/portal/wfh/inbox?ref=<reference_code>`.
+- Updated WFH inbox to sort the referenced request to the top and show a `จากอีเมล` badge so approvers know where to act.
+- Clarified the WFH approver email copy: approval/rejection happens inside Nexus, not inside the email body.
+
+## Verify
+
+- `npx eslint src/lib/email-wfh.ts src/app/portal/wfh/inbox/page.tsx src/app/portal/wfh/inbox/inbox-view.tsx`
+- `npx tsc --noEmit`
+- `npm run build`

@@ -27,7 +27,13 @@ function formatThaiRange(start: string, end: string): string {
     return `${formatThaiDate(start)} – ${formatThaiDate(end)}`
 }
 
-export function WfhInboxView({ items: initialItems }: { items: EnrichedWfh[] }) {
+export function WfhInboxView({
+    items: initialItems,
+    focusRef = null,
+}: {
+    items: EnrichedWfh[]
+    focusRef?: string | null
+}) {
     const [items, setItems] = useState(initialItems)
     const [decideTarget, setDecideTarget] = useState<EnrichedWfh | null>(null)
     const [toast, setToast] = useState<string | null>(null)
@@ -67,53 +73,66 @@ export function WfhInboxView({ items: initialItems }: { items: EnrichedWfh[] }) 
                 </div>
             ) : (
                 <ul className="space-y-2">
-                    {items.map(r => (
-                        <li
-                            key={r.id}
-                            className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 transition-colors"
-                        >
-                            <div className="flex items-start gap-3 flex-wrap">
-                                <Home size={16} className="text-blue-300 mt-0.5 shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-bold text-white">
-                                        {r.applicant_name}
-                                        {r.applicant_nickname && (
-                                            <span className="text-white/55 font-normal"> ({r.applicant_nickname})</span>
+                    {items.map(r => {
+                        const isFocused = focusRef === r.reference_code
+                        return (
+                            <li
+                                key={r.id}
+                                className={cn(
+                                    'rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/10 transition-colors',
+                                    isFocused && 'border-amber-300/70 bg-amber-400/10 shadow-[0_0_0_1px_rgba(252,211,77,0.35)]',
+                                )}
+                            >
+                                <div className="flex items-start gap-3 flex-wrap">
+                                    <Home size={16} className="text-blue-300 mt-0.5 shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-white">
+                                            {r.applicant_name}
+                                            {r.applicant_nickname && (
+                                                <span className="text-white/55 font-normal"> ({r.applicant_nickname})</span>
+                                            )}
+                                        </p>
+                                        {r.applicant_department && (
+                                            <p className="text-[11px] text-white/50">{r.applicant_department}</p>
                                         )}
-                                    </p>
-                                    {r.applicant_department && (
-                                        <p className="text-[11px] text-white/50">{r.applicant_department}</p>
-                                    )}
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        {isFocused && (
+                                            <span className="rounded-md bg-amber-300/20 px-2 py-1 text-[10px] font-bold text-amber-100">
+                                                จากอีเมล
+                                            </span>
+                                        )}
+                                        <span className="text-[11px] text-white/45">{r.reference_code}</span>
+                                    </div>
                                 </div>
-                                <span className="text-[11px] text-white/45 shrink-0">{r.reference_code}</span>
-                            </div>
-                            <div className="mt-2 flex items-center gap-2 text-sm text-white/85 flex-wrap">
-                                <Calendar size={13} className="text-white/55" />
-                                <strong>{formatThaiRange(r.start_date, r.end_date)}</strong>
-                                <span className="text-white/55"> · {Number(r.total_days)} วัน</span>
-                            </div>
-                            <p className="mt-2 text-sm text-white/80 leading-snug">เหตุผล: {r.reason}</p>
-                            {r.contact_during_wfh && (
-                                <p className="text-xs text-white/55 mt-0.5">ติดต่อ: {r.contact_during_wfh}</p>
-                            )}
-                            <div className="mt-3 flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setDecideTarget(r)}
-                                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-bold active:scale-95"
-                                >
-                                    <CheckCircle2 size={14} /> อนุมัติ
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setDecideTarget({ ...r, status: 'rejected' as const })}
-                                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-200 text-sm font-semibold"
-                                >
-                                    <XCircle size={14} /> ปฏิเสธ
-                                </button>
-                            </div>
-                        </li>
-                    ))}
+                                <div className="mt-2 flex items-center gap-2 text-sm text-white/85 flex-wrap">
+                                    <Calendar size={13} className="text-white/55" />
+                                    <strong>{formatThaiRange(r.start_date, r.end_date)}</strong>
+                                    <span className="text-white/55"> · {Number(r.total_days)} วัน</span>
+                                </div>
+                                <p className="mt-2 text-sm text-white/80 leading-snug">เหตุผล: {r.reason}</p>
+                                {r.contact_during_wfh && (
+                                    <p className="text-xs text-white/55 mt-0.5">ติดต่อ: {r.contact_during_wfh}</p>
+                                )}
+                                <div className="mt-3 flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setDecideTarget(r)}
+                                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-bold active:scale-95"
+                                    >
+                                        <CheckCircle2 size={14} /> อนุมัติ
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDecideTarget({ ...r, status: 'rejected' as const })}
+                                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-200 text-sm font-semibold"
+                                    >
+                                        <XCircle size={14} /> ปฏิเสธ
+                                    </button>
+                                </div>
+                            </li>
+                        )
+                    })}
                 </ul>
             )}
 

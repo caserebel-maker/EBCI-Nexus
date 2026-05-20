@@ -8,11 +8,23 @@ import { WfhInboxView } from './inbox-view'
 
 export const dynamic = 'force-dynamic'
 
-export default async function WfhInboxPage() {
+interface SearchParams {
+    ref?: string | string[]
+}
+
+export default async function WfhInboxPage({
+    searchParams,
+}: {
+    searchParams: Promise<SearchParams>
+}) {
     const session = await getSession()
     if (!session) redirect('/login')
     const employeeId = await resolveSessionEmployeeId(session)
     if (!employeeId) redirect('/portal/dashboard')
+
+    const sp = await searchParams
+    const requestedRef = Array.isArray(sp.ref) ? sp.ref[0] : sp.ref
+    const focusRef = requestedRef?.trim() || null
 
     const items = await listInboxForApprover(employeeId)
 
@@ -43,6 +55,13 @@ export default async function WfhInboxPage() {
             applicant_department: emp?.department ?? null,
         }
     })
+    if (focusRef) {
+        enriched.sort((a, b) => {
+            const aMatch = a.reference_code === focusRef ? 0 : 1
+            const bMatch = b.reference_code === focusRef ? 0 : 1
+            return aMatch - bMatch
+        })
+    }
 
-    return <WfhInboxView items={enriched} />
+    return <WfhInboxView items={enriched} focusRef={focusRef} />
 }
