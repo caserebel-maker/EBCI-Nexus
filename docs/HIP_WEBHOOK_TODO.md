@@ -87,7 +87,7 @@ HIP Ci100S ──TCP/7005──▶  Relay Agent (Office)  ──HTTPS──▶  
   npm run hip:sync -- --dry-run --since-minutes 1440
   npm run hip:watch -- --dry-run
   ```
-- ตั้ง Vercel env `CARD_SCAN_WEBHOOK_SECRET` แล้ว; production function จะเห็นค่าหลัง deploy ถัดไป
+- ตั้ง Vercel env `CARD_SCAN_WEBHOOK_SECRET` แล้ว และ production function พร้อมรับ secret แล้ว
 
 **Current blocker:** `npm run hip:probe` ต่อ TCP ได้ แต่ ZK/HIP protocol command timeout:
 

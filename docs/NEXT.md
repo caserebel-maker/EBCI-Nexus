@@ -76,7 +76,7 @@ cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff
 - ✅ ใส่ระเบียบการลา EBCI Final ลง production `leave_types` แล้ว: ลาพักผ่อนประจำปี, ลาป่วย, ลากิจ, ลาคลอด, ลาเพื่อรับราชการทหาร, ลาอุปสมบท, ลาเพื่อการสมรส
 - ✅ เพิ่ม migration `20260521_apply_ebci_final_leave_policy.sql`, ปรับ `/portal/leave-policy`, และ validation ลาเพื่อการสมรสต้องทำงานครบ 1 ปี
 - ✅ HIP agent Phase 1 code: `scripts/hip-card-agent.mjs` + `npm run hip:probe|hip:sync|hip:watch`, dependency `node-zklib`
-- ✅ Vercel env `CARD_SCAN_WEBHOOK_SECRET` ถูกตั้งแล้ว; commit/push ถัดไปจะทำให้ production function เห็นค่า env ใหม่
+- ✅ Vercel env `CARD_SCAN_WEBHOOK_SECRET` ถูกตั้งแล้วและ production `/api/webhooks/card-scan` พร้อมรับ secret แล้ว; auth probe ด้วย employee code ปลอมตอบ `bad_employee_code` ตามคาด
 - ⚠️ Office Mac LAN ตอนนี้ได้ `192.168.1.50`, ping HIP `192.168.1.40` ผ่าน, TCP `192.168.1.40:5005` เปิด แต่ ZK/HIP SDK command ยัง timeout (`TIMEOUT_ON_WRITING_MESSAGE`). ให้ลองปิด/disconnect โปรแกรม HIP desktop ที่จับเครื่องอยู่ แล้วรัน `npm run hip:probe` ซ้ำ
 
 **ล่าสุดเสร็จ (Codex · คืน 14→15 พ.ค. + เช้า 15 พ.ค.):**

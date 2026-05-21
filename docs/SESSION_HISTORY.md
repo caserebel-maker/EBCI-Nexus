@@ -3541,6 +3541,7 @@ TELEGRAM_BOT_TOKEN='...' npm run telegram:mod -- --employee-code 457-63 --name à
 - TCP `192.168.1.40:5005` succeeds; screenshot shows HIP desktop configured with port `5005`.
 - TCP `192.168.1.40:7005`, `4370`, and `80` are refused.
 - ZK/HIP SDK command to `192.168.1.40:5005` still times out with `TIMEOUT_ON_WRITING_MESSAGE`.
+- Production webhook auth probe succeeded with a fake employee code and inserted 0 rows (`bad_employee_code`).
 
 ## Shipped
 
@@ -3554,7 +3555,7 @@ TELEGRAM_BOT_TOKEN='...' npm run telegram:mod -- --employee-code 457-63 --name à
   - `npm run hip:probe`
   - `npm run hip:sync`
   - `npm run hip:watch`
-- Set Vercel `CARD_SCAN_WEBHOOK_SECRET`; production will see it after the next deploy.
+- Set Vercel `CARD_SCAN_WEBHOOK_SECRET`; production now returns auth-ready probe text and accepts authenticated test requests.
 
 ## Next
 
