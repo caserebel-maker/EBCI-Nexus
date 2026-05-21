@@ -122,6 +122,7 @@ export function getNotificationIcon(type: string): string {
         case 'announcement':                return 'Megaphone'
         case 'application_received':        return 'UserPlus'
         case 'application_status_changed':  return 'Briefcase'
+        case 'email_delivery_problem':      return 'MailWarning'
         case 'system':
         case 'system_test':                 return 'Info'
         default:                            return 'Bell'
@@ -137,6 +138,7 @@ export function getDefaultColor(type: string): NotificationColor {
         case 'announcement':                return 'blue'
         case 'application_received':        return 'blue'
         case 'application_status_changed':  return 'amber'
+        case 'email_delivery_problem':      return 'red'
         default:                            return 'maroon'
     }
 }

@@ -1,5 +1,6 @@
 import 'server-only'
 import { sendEmail } from '@/lib/email'
+import type { EmailAuditContext } from '@/lib/email-audit'
 
 /**
  * WFH-system email templates. Same brand voice + light-canvas layout
@@ -42,7 +43,22 @@ function escapeHtml(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
-function send(args: { to: string | string[]; subject: string; html: string }) {
+function wfhAudit(c: WfhEmailContext, template: string): EmailAuditContext {
+    return {
+        category: 'wfh',
+        entityType: 'wfh_request',
+        referenceCode: c.referenceCode,
+        template,
+        metadata: {
+            employeeName: c.employeeName,
+            approverName: c.approverName ?? null,
+            startDate: c.startDate,
+            endDate: c.endDate,
+        },
+    }
+}
+
+function send(args: { to: string | string[]; subject: string; html: string; audit?: EmailAuditContext }) {
     return sendEmail({ ...args, sender: 'hr' })
 }
 
@@ -128,7 +144,12 @@ export async function sendWfhSubmittedToEmployee(c: WfhEmailContext) {
             ${button(portalUrl, 'ดูคำขอของฉัน')}
         `,
     })
-    return send({ to: c.employeeEmail, subject: `คำขอ WFH ของคุณถูกบันทึกแล้ว [${c.referenceCode}]`, html })
+    return send({
+        to: c.employeeEmail,
+        subject: `คำขอ WFH ของคุณถูกบันทึกแล้ว [${c.referenceCode}]`,
+        html,
+        audit: wfhAudit(c, 'wfh_submitted_employee'),
+    })
 }
 
 // ─── 2. Heads-up to approver ───────────────────────────────────────────────
@@ -154,7 +175,12 @@ export async function sendWfhSubmittedToApprover(c: WfhEmailContext) {
             ${paragraph('อีเมลนี้เป็นการแจ้งเตือนเท่านั้น ปุ่มอนุมัติ / ปฏิเสธอยู่ใน Nexus — กดปุ่มด้านบนแล้วระบบจะไฮไลต์รายการนี้ให้จากเลขอ้างอิง', { small: true, muted: true })}
         `,
     })
-    return send({ to: c.approverEmail, subject: `มีคำขอ WFH รออนุมัติ: ${c.employeeName}`, html })
+    return send({
+        to: c.approverEmail,
+        subject: `มีคำขอ WFH รออนุมัติ: ${c.employeeName}`,
+        html,
+        audit: wfhAudit(c, 'wfh_submitted_approver'),
+    })
 }
 
 // ─── 3. FYI to HR (รับทราบ — no action) ────────────────────────────────────
@@ -180,7 +206,12 @@ export async function sendWfhSubmittedToHrFyi(
             ${paragraph('คุณได้รับเมลฉบับนี้เพราะอยู่ในฝ่ายบุคคล และมีหน้าที่รับทราบความเคลื่อนไหวการลา/WFH', { small: true, muted: true })}
         `,
     })
-    return send({ to: hrTo, subject: `[FYI] คำขอ WFH: ${c.employeeName} — ${fmtRange(c.startDate, c.endDate)}`, html })
+    return send({
+        to: hrTo,
+        subject: `[FYI] คำขอ WFH: ${c.employeeName} — ${fmtRange(c.startDate, c.endDate)}`,
+        html,
+        audit: wfhAudit(c, 'wfh_submitted_hr_fyi'),
+    })
 }
 
 // ─── 4. Decision back to applicant (approve / reject) ──────────────────────
@@ -215,5 +246,6 @@ export async function sendWfhDecidedToEmployee(
             ? `อนุมัติแล้ว: คำขอ WFH ของคุณ [${c.referenceCode}]`
             : `ถูกปฏิเสธ: คำขอ WFH ของคุณ [${c.referenceCode}]`,
         html,
+        audit: wfhAudit(c, isApproved ? 'wfh_decision_approved' : 'wfh_decision_rejected'),
     })
 }

@@ -68,6 +68,8 @@ cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff
 - ✅ DNS Resend ที่สำคัญมีครบแล้ว: `send.ebcinext.com` SPF `include:amazonses.com`, MX ไป `feedback-smtp.us-east-1.amazonses.com`, DKIM `resend._domainkey.ebcinext.com`
 - ✅ ปรับ WFH approver email ให้ลิงก์ไป `/portal/wfh/inbox?ref=WFH-...` และหน้า inbox จะดันรายการจากเมลขึ้นบนพร้อมป้าย `จากอีเมล`
 - ✅ Verify: `npx eslint ...`, `npx tsc --noEmit`, `npm run build` ผ่าน
+- ✅ Email reliability layer: `email_delivery_logs` + `email_delivery_events` live in Supabase, `/api/webhooks/resend`, `/hradmin/settings/email`, outbound `sendEmail()` audit auto-log
+- 🔧 ยังต้อง set Vercel env `RESEND_WEBHOOK_SECRET` + สร้าง webhook ใน Resend Dashboard ชี้ `https://ebci-nexus.vercel.app/api/webhooks/resend` เพื่อรับ delivered/bounced/failed จริง
 
 **ล่าสุดเสร็จ (Codex · คืน 14→15 พ.ค. + เช้า 15 พ.ค.):**
 - ✅ Payroll bulk upload mobile/file picker fix (`สุชาติ`): ปุ่มเลือกไฟล์เป็นพื้นที่แตะใหญ่ขึ้น, accept `.pdf/.jpg/.png/.webp/.heic/.heif`, server ยอมรับ MIME เพี้ยนจากมือถือถ้านามสกุลถูก, และ match ชื่อไฟล์ได้ทั้ง `060-01`/`06001`
@@ -560,6 +562,7 @@ Email notification note from beta:
 NEXT_PUBLIC_SUPABASE_URL · NEXT_PUBLIC_SUPABASE_ANON_KEY · SUPABASE_SERVICE_ROLE_KEY
 RESEND_API_KEY · EMAIL_FROM · EMAIL_REPLY_TO · HR_NOTIFY_EMAIL · NEXT_PUBLIC_APP_URL
 EMAIL_FROM_CAREERS · EMAIL_FROM_HR · EMAIL_FROM_SYSTEM
+RESEND_WEBHOOK_SECRET   # จาก Resend Dashboard → Webhooks; ใช้ verify svix signature
 NEXUS_SESSION_SECRET   # signed session cookie (32+ bytes random)
 
 # 🆕 ต้อง set ตอน Tuesday office visit (ก่อนเปิด HIP webhook):

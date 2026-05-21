@@ -1,4 +1,11 @@
 import { Resend } from 'resend'
+import {
+    createEmailAttempt,
+    markEmailFailed,
+    markEmailSent,
+    recordMockEmail,
+    type EmailAuditContext,
+} from '@/lib/email-audit'
 
 /**
  * Identity the email is sent *as*. Each key maps to an env var + a
@@ -42,18 +49,28 @@ interface SendEmailParams {
     to: string | string[]
     subject: string
     html: string
+    text?: string
     /** Identity to send as. Defaults to 'system' for safety. */
     sender?: EmailSenderKey
     /** Explicit override — takes precedence over `sender`. Rare. */
     from?: string
+    /** Optional business context for email audit/search. */
+    audit?: EmailAuditContext
 }
 
-export async function sendEmail({ to, subject, html, sender = 'system', from }: SendEmailParams) {
+export async function sendEmail({ to, subject, html, text, sender = 'system', from, audit }: SendEmailParams) {
     const FROM = from ?? EMAIL_SENDERS[sender]
     const apiKey = process.env.RESEND_API_KEY
     const recipients = Array.isArray(to) ? to : [to]
 
     if (!apiKey) {
+        await recordMockEmail({
+            senderKey: sender,
+            fromAddress: FROM,
+            toAddresses: recipients,
+            subject,
+            audit,
+        })
         // Dev/dry-run mode — do not pretend success in logs; the caller
         // receives `mock: true` so it can surface the state clearly.
         console.log('==========================================')
@@ -73,20 +90,38 @@ export async function sendEmail({ to, subject, html, sender = 'system', from }: 
         const results: Array<{ success: boolean; id?: string; error?: unknown }> = []
         for (let i = 0; i < recipients.length; i += chunkSize) {
             const chunk = recipients.slice(i, i + chunkSize)
-            const { data, error } = await resend.emails.send({
-                from: FROM,
-                to: chunk,
+            const auditId = await createEmailAttempt({
+                senderKey: sender,
+                fromAddress: FROM,
+                toAddresses: chunk,
                 subject,
-                html,
-                ...(REPLY_TO ? { replyTo: REPLY_TO } : {}),
+                audit,
             })
+            let data: { id?: string } | null = null
+            let error: unknown = null
+            try {
+                const result = await resend.emails.send({
+                    from: FROM,
+                    to: chunk,
+                    subject,
+                    html,
+                    ...(text ? { text } : {}),
+                    ...(REPLY_TO ? { replyTo: REPLY_TO } : {}),
+                })
+                data = result.data
+                error = result.error
+            } catch (err) {
+                error = err
+            }
             if (error) {
                 console.error('[email] Resend chunk error:', {
                     to: chunk, subject, from: FROM, error,
                 })
+                await markEmailFailed(auditId, error)
                 results.push({ success: false, error })
             } else {
                 console.log(`[email] sent (sender=${sender}) → ${chunk.join(', ')} — id=${data?.id}`)
+                await markEmailSent(auditId, data?.id, data)
                 results.push({ success: true, id: data?.id })
             }
         }

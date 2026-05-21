@@ -1,12 +1,13 @@
 import 'server-only'
 import { sendEmail } from '@/lib/email'
+import type { EmailAuditContext } from '@/lib/email-audit'
 
 /**
  * Thin wrapper that pins every leave email to the 'hr' sender
  * identity — employee-facing mail about leave should come from
  * hr@ebcinext.com, not the careers address.
  */
-function sendLeaveEmail(args: { to: string | string[]; subject: string; html: string }) {
+function sendLeaveEmail(args: { to: string | string[]; subject: string; html: string; audit?: EmailAuditContext }) {
     return sendEmail({ ...args, sender: 'hr' })
 }
 
@@ -208,6 +209,19 @@ export interface LeaveEmailContext {
     reason: string
 }
 
+function leaveAudit(c: { referenceCode: string; employeeName?: string; approverName?: string | null }, template: string): EmailAuditContext {
+    return {
+        category: 'leave',
+        entityType: 'leave_request',
+        referenceCode: c.referenceCode,
+        template,
+        metadata: {
+            employeeName: c.employeeName ?? null,
+            approverName: c.approverName ?? null,
+        },
+    }
+}
+
 // ══════════════════════════════════════════════════════════════════════════
 // Templates
 // ══════════════════════════════════════════════════════════════════════════
@@ -236,6 +250,7 @@ export async function sendLeaveSubmittedToEmployee(c: LeaveEmailContext) {
         to: c.employeeEmail,
         subject: `ใบลาของคุณถูกบันทึกแล้ว [${c.referenceCode}]`,
         html,
+        audit: leaveAudit(c, 'leave_submitted_employee'),
     })
 }
 
@@ -270,6 +285,7 @@ export async function sendLeaveSubmittedToApprover(c: LeaveEmailContext) {
         to: c.approverEmail,
         subject: `มีใบลารออนุมัติ: ${c.employeeName} — ${c.leaveTypeTh}`,
         html,
+        audit: leaveAudit(c, 'leave_submitted_approver'),
     })
 }
 
@@ -303,6 +319,7 @@ export async function sendLeaveSubmittedToHrFyi(
         to: hrTo,
         subject: `[FYI] ใบลา: ${c.employeeName} — ${c.leaveTypeTh} (${formatThaiDateRange(c.startDate, c.endDate)})`,
         html,
+        audit: leaveAudit(c, 'leave_submitted_hr_fyi'),
     })
 }
 
@@ -349,6 +366,7 @@ export async function sendLeaveSubmittedToMdFyi(c: {
         to: c.mdEmail,
         subject: `[FYI · MD] ลาพักร้อน: ${c.employeeName} (${c.totalDays} วัน · ${formatThaiDateRange(c.startDate, c.endDate)})`,
         html,
+        audit: leaveAudit(c, 'leave_submitted_md_fyi'),
     })
 }
 
@@ -376,6 +394,7 @@ export async function sendLeaveApproved(c: LeaveEmailContext & { approvalNotes?:
         to: c.employeeEmail,
         subject: `ใบลา [${c.referenceCode}] ได้รับการอนุมัติแล้ว`,
         html,
+        audit: leaveAudit(c, 'leave_approved'),
     })
 }
 
@@ -404,6 +423,7 @@ export async function sendLeaveRejected(c: LeaveEmailContext & { rejectionReason
         to: c.employeeEmail,
         subject: `ใบลา [${c.referenceCode}] ถูกปฏิเสธ`,
         html,
+        audit: leaveAudit(c, 'leave_rejected'),
     })
 }
 
@@ -432,5 +452,6 @@ export async function sendLeaveCancelled(
         to: recipients,
         subject: `ใบลา [${c.referenceCode}] ถูกยกเลิก`,
         html,
+        audit: leaveAudit(c, 'leave_cancelled'),
     })
 }

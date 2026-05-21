@@ -1,8 +1,9 @@
 import {
     LayoutDashboard, Users, UserCircle, FileText, Settings, Megaphone,
-    CalendarDays, ClipboardCheck, ShieldCheck, CalendarOff, MapPin, Network, Palmtree,
-    Activity, ScrollText, BarChart3, Clock, Calendar, Briefcase, User,
-    Gift, Wallet, CheckCircle, Database, DoorOpen, GitBranch, CalendarHeart, Home,
+    CalendarDays, ClipboardCheck, ShieldCheck, MapPin, Network, Palmtree,
+    ScrollText, BarChart3, Clock, Calendar, Briefcase, User,
+    Wallet, CheckCircle, Database, DoorOpen, GitBranch, CalendarHeart, Home,
+    MailWarning, type LucideIcon,
 } from 'lucide-react'
 import { ROLES, type UserRole } from './roles'
 
@@ -18,7 +19,7 @@ import { ROLES, type UserRole } from './roles'
 export interface NavItem {
     label: string
     href?: string
-    icon: any // LucideIcon
+    icon: LucideIcon
     children?: NavItem[]
     /** Extra URL prefixes that should mark this item active. */
     matchPrefix?: string[]
@@ -99,6 +100,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
             matchPrefix: ['/hradmin/settings', '/hradmin/reports'],
             children: [
                 { label: 'ระบบและทรัพยากร', href: '/hradmin/settings/quota',  icon: Database },
+                { label: 'Email Audit',       href: '/hradmin/settings/email',  icon: MailWarning },
                 { label: 'รายงาน',           href: '/hradmin/reports',         icon: FileText },
                 { label: 'แบ็กอัพข้อมูล',    href: '/hradmin/settings/backup', icon: ShieldCheck },
                 { label: 'ตั้งค่าทั่วไป',      href: '/hradmin/settings',        icon: Settings },

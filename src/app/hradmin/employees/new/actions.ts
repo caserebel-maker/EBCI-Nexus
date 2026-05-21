@@ -1,8 +1,8 @@
 'use server'
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { Resend } from 'resend'
 import { getSession } from '@/lib/auth'
+import { sendEmail } from '@/lib/email'
 import { revalidatePath } from 'next/cache'
 
 export interface CreateEmployeePayload {
@@ -251,19 +251,25 @@ export async function createEmployee(payload: CreateEmployeePayload) {
                     if (resetLink) {
                         const emailContent = buildWelcomeEmail({ name: fullName, resetLink })
                         console.log('[createEmployee] html length:', emailContent.html.length, '| text length:', emailContent.text.length)
-                        const resend = new Resend(process.env.RESEND_API_KEY)
-                        const { data: emailData, error: emailError } = await resend.emails.send({
+                        const emailResult = await sendEmail({
                             from: 'EBCI Nexus <noreply@ebcinext.com>',
                             to: payload.email,
                             subject: 'ยินดีต้อนรับสู่ EBCI Nexus — ตั้งรหัสผ่านของคุณ',
                             html: emailContent.html,
                             text: emailContent.text,
+                            sender: 'system',
+                            audit: {
+                                category: 'employee',
+                                entityType: 'employee',
+                                entityId: emp.id,
+                                referenceCode: payload.employee_code,
+                                template: 'employee_welcome_reset_password',
+                            },
                         })
-                        if (emailError) {
-                            console.error('[createEmployee] Resend full error:', JSON.stringify(emailError, null, 2))
-                        } else {
-                            console.log('[createEmployee] email sent, id:', emailData?.id)
+                        if (emailResult.success) {
                             emailSent = true
+                        } else {
+                            console.error('[createEmployee] welcome email failed:', emailResult)
                         }
                     }
                 }

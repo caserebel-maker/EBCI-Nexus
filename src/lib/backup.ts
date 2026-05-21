@@ -427,6 +427,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY              ← server-only, never ship to client
 DATABASE_URL                           ← Prisma; points at Supabase pooler
 RESEND_API_KEY
+RESEND_WEBHOOK_SECRET                  ← Resend webhook signing secret
 EMAIL_FROM                             ← legacy fallback
 EMAIL_FROM_CAREERS                     ← careers@ebcinext.com
 EMAIL_FROM_HR                          ← hr@ebcinext.com

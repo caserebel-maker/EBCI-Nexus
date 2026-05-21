@@ -2,7 +2,7 @@
 
 import {
     Bell, Calendar, CheckCircle, XCircle, Ban, Megaphone, UserPlus,
-    Briefcase, Info, type LucideIcon,
+    Briefcase, Info, MailWarning, type LucideIcon,
 } from 'lucide-react'
 import type { NotificationRow } from '@/hooks/useNotifications'
 import { cn } from '@/lib/utils'
@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 /** Map icon names (from `notifications.icon` column) to Lucide components. */
 const ICON_MAP: Record<string, LucideIcon> = {
     Bell, Calendar, CheckCircle, XCircle, Ban, Megaphone, UserPlus,
-    Briefcase, Info,
+    Briefcase, Info, MailWarning,
 }
 
 type Color = NonNullable<NotificationRow['color']>

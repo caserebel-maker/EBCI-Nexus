@@ -3382,3 +3382,43 @@ This calls `getUpdates`, chooses the latest private chat, updates employee `153-
 - `npx eslint src/lib/email-wfh.ts src/app/portal/wfh/inbox/page.tsx src/app/portal/wfh/inbox/inbox-view.tsx`
 - `npx tsc --noEmit`
 - `npm run build`
+
+---
+
+# §27 — May 21 Email Delivery Audit + Resend Webhook
+
+## Trigger
+
+Long-term fix for "email sent but recipient says they did not get it": stop treating Resend's API accept as the end of the story and track delivery events inside Nexus.
+
+## Shipped
+
+- Added `email_delivery_logs` and `email_delivery_events` tables in Supabase.
+- Enabled RLS on both tables; server-side service role is the only reader/writer.
+- `sendEmail()` now creates an audit row for every outbound chunk, marks API-level `sent` / `failed`, and keeps Resend message IDs.
+- Leave and WFH templates now attach business context (`category`, `referenceCode`, template name) so HR can search the audit by request code.
+- Employee welcome/password emails now go through `sendEmail()` instead of using Resend directly.
+- Added `POST /api/webhooks/resend` with Resend/Svix signature verification.
+- Webhook events update logs to `delivered`, `bounced`, `failed`, `delivery_delayed`, `complained`, etc.; duplicate Svix deliveries are idempotent via `svix_id`.
+- Problem events create HR bell notifications and Telegram alerts for HR targets with a registered `telegram_chat_id`.
+- Added HR page `/hradmin/settings/email` and sidebar entry `ตั้งค่าระบบ → Email Audit`.
+
+## Production DB
+
+Applied migration SQL manually via Supabase MCP on project `EBCI Nexus` (`cluirxjykhchthcpgosz`) because Supabase CLI is not installed on this machine.
+
+## Remaining Config
+
+- Set Vercel production env: `RESEND_WEBHOOK_SECRET`.
+- In Resend Dashboard, create a webhook endpoint:
+  - URL: `https://ebci-nexus.vercel.app/api/webhooks/resend`
+  - Events: `email.sent`, `email.delivered`, `email.delivery_delayed`, `email.bounced`, `email.complained`, `email.failed`, `email.suppressed`, optionally `email.opened`, `email.clicked`
+  - Copy the Resend signing secret into `RESEND_WEBHOOK_SECRET`
+
+## Verify
+
+- Real smoke email sent through `sendEmail()` to `tumyen@gmail.com`; Resend id `bec50ccf-1e8d-487a-beab-30d3311bc364`.
+- Audit row created in `email_delivery_logs`, then simulated `email.delivered` webhook updated it to `delivered` and inserted one `email_delivery_events` row.
+- `npx eslint src/lib/email.ts src/lib/email-audit.ts src/lib/email-leave.ts src/lib/email-wfh.ts src/app/api/webhooks/resend/route.ts src/app/hradmin/settings/email/page.tsx src/app/hradmin/employees/new/actions.ts src/components/notifications/NotificationItem.tsx src/lib/notifications.ts src/config/navigation.tsx src/lib/backup.ts`
+- `npx tsc --noEmit`
+- `npm run build`
