@@ -21,6 +21,8 @@ export default async function AdminDashboard() {
     const in30days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
     const year = now.getFullYear()
     const month = now.getMonth() + 1
+    const yearStart = `${year}-01-01`
+    const nextYearStart = `${year + 1}-01-01`
 
     // 12 months ago for leave stats
     const twelveMonthsAgo = new Date(now)
@@ -46,7 +48,7 @@ export default async function AdminDashboard() {
 
         // Leaves today (approved)
         supabaseAdmin.from('leave_requests')
-            .select('id, employee_id, leave_type')
+            .select('id, employee_id, leave_type:leave_type_id')
             .eq('status', 'approved')
             .lte('start_date', todayEnd)
             .gte('end_date', todayStart),
@@ -54,7 +56,9 @@ export default async function AdminDashboard() {
         // Pending leaves count
         supabaseAdmin.from('leave_requests')
             .select('id')
-            .eq('status', 'pending'),
+            .eq('status', 'pending')
+            .gte('start_date', yearStart)
+            .lt('start_date', nextYearStart),
 
         // Contracts expiring in 30 days
         supabaseAdmin.from('employees')
@@ -65,14 +69,16 @@ export default async function AdminDashboard() {
 
         // Leave history 12 months for chart
         supabaseAdmin.from('leave_requests')
-            .select('leave_type, start_date, status')
+            .select('leave_type:leave_type_id, start_date, status')
             .gte('start_date', twelveMonthsAgo.toISOString())
             .eq('status', 'approved'),
 
         // Pending leaves detail (5 latest)
         supabaseAdmin.from('leave_requests')
-            .select('id, employee_id, leave_type, start_date, end_date, total_days, reason, created_at')
+            .select('id, employee_id, leave_type:leave_type_id, start_date, end_date, total_days, reason, created_at')
             .eq('status', 'pending')
+            .gte('start_date', yearStart)
+            .lt('start_date', nextYearStart)
             .order('created_at', { ascending: false })
             .limit(5),
 

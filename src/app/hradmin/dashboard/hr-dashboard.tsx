@@ -544,7 +544,7 @@ export function HRDashboard({
                             href="/hradmin/leave/admin?filter=today" />
                         <MetricCard title="รออนุมัติใบลา" value={metrics.pendingLeaves}
                             sub="รายการ" icon={Clock} accent="bg-gradient-to-br from-amber-500 to-amber-700"
-                            href="/hradmin/leave/admin?filter=pending" />
+                            href="/hradmin/leave/admin?status=pending" />
                         <MetricCard title="สัญญาหมดใน 30 วัน" value={metrics.expiringContracts}
                             sub="คน" icon={AlertTriangle} accent="bg-gradient-to-br from-rose-500 to-rose-700"
                             href="/hradmin/employees?filter=contract-expiring" />

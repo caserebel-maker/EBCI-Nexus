@@ -3443,3 +3443,33 @@ Applied migration SQL manually via Supabase MCP on project `EBCI Nexus` (`cluirx
 - `npx tsc --noEmit`
 - `npm run build`
 - Targeted lint still reports pre-existing `any` / `<img>` findings in `employee-profile-view.tsx`; this change did not add a new lint finding.
+
+---
+
+# §29 — May 21 Pending Leave Dashboard Count Mismatch
+
+## Trigger
+
+มด reported that the HR dashboard showed `รออนุมัติใบลา = 1`, but clicking through did not show the pending leave in the admin list.
+
+## Finding
+
+- Production DB had one pending leave: `LV-2026-0008`, กุลธิดา (จอย), `personal`, 0.5 day on 2026-04-30.
+- Dashboard counted pending leaves with a direct Supabase query.
+- `/api/leave/requests`, used by `/hradmin/leave/admin`, still used the old Prisma model mapped to `leave_type`; production DB now uses `leave_type_id`, so the list endpoint did not line up with the live schema.
+
+## Shipped
+
+- Migrated `GET /api/leave/requests` to Supabase and mapped `leave_type_id` back to the existing frontend `leaveType` shape.
+- Kept employee self-view scoped to the signed-in employee via `resolveSessionEmployeeId`.
+- HR admin list now supports status/month/year/type/employee/department filters against the live schema.
+- Dashboard pending card now links to `/hradmin/leave/admin?status=pending`.
+- `/hradmin/leave/admin` initializes the status dropdown from `?status=pending` and still supports legacy `?filter=pending`.
+- Dashboard leave queries now alias `leave_type_id` to `leave_type` for existing chart/list rendering.
+
+## Verify
+
+- Supabase production query confirmed the single pending row (`LV-2026-0008`).
+- `npx eslint src/app/api/leave/requests/route.ts src/app/hradmin/leave/admin/page.tsx`
+- `npx tsc --noEmit`
+- `npm run build`

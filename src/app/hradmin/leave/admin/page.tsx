@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useTransition } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
     ShieldCheck, Download, Filter, CheckCircle2, XCircle,
     Clock, CalendarDays, User, Loader2, X, AlertCircle, ChevronDown, ChevronRight,
@@ -83,6 +84,7 @@ function SelectFilter({
             <select
                 value={value}
                 onChange={e => onChange(e.target.value)}
+                aria-label={label}
                 className="w-full appearance-none bg-white dark:bg-card border border-border rounded-lg px-3 py-2 pr-8 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
                 {options.map(opt => (
@@ -296,6 +298,10 @@ function HrRejectModal({
 
 // ---- Main Page ----
 export default function LeaveAdminPage() {
+    const searchParams = useSearchParams()
+    const urlStatus = searchParams.get('status')
+    const legacyFilter = searchParams.get('filter')
+    const initialStatus = urlStatus ?? (legacyFilter === 'pending' ? 'pending' : '')
     const confirm = useConfirmDialog()
     const [requests, setRequests] = useState<LeaveRequest[]>([])
     const [loading, setLoading] = useState(true)
@@ -318,7 +324,7 @@ export default function LeaveAdminPage() {
     const [month, setMonth] = useState('0')
     const [department, setDepartment] = useState('')
     const [leaveType, setLeaveType] = useState('')
-    const [status, setStatus] = useState('')
+    const [status, setStatus] = useState(initialStatus)
 
     const showToast = (type: 'success' | 'error', msg: string) => {
         setToast({ type, msg })
@@ -398,7 +404,7 @@ export default function LeaveAdminPage() {
     async function handleApprove(id: string) {
         setActionLoading(id)
         try {
-            const res = await fetch(`/api/leave/requests/${id}/approve`, { method: 'POST' })
+            const res = await fetch(`/api/leave/${id}/approve`, { method: 'POST' })
             const data = await res.json()
             if (!res.ok) { showToast('error', data.error || 'เกิดข้อผิดพลาด'); return }
             showToast('success', 'อนุมัติใบลาสำเร็จ')
@@ -430,10 +436,10 @@ export default function LeaveAdminPage() {
 
         setActionLoading(target.id)
         try {
-            const res = await fetch(`/api/leave/requests/${target.id}/reject`, {
+            const res = await fetch(`/api/leave/${target.id}/reject`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rejectionReason: reason }),
+                body: JSON.stringify({ rejection_reason: reason }),
             })
             const data = await res.json()
             if (!res.ok) { showToast('error', data.error || 'เกิดข้อผิดพลาด'); return }
