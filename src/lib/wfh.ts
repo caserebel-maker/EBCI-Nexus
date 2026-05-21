@@ -4,6 +4,7 @@ import { resolveLeaveApprover } from '@/lib/leave-approval'
 import { bangkokTodayIso } from '@/lib/leave-validations'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
 import { findHrNotifyTargets } from '@/lib/hr-notify'
+import { formatEmployeeName } from '@/lib/format-employee-name'
 import {
     sendWfhDecidedToEmployee,
     sendWfhSubmittedToEmployee,
@@ -293,7 +294,7 @@ export async function cancelWfhRequest(input: {
 }): Promise<{ ok: true } | { error: string }> {
     const { data: existing, error: lookupErr } = await supabaseAdmin
         .from('wfh_requests')
-        .select('employee_id, status')
+        .select('employee_id, status, approver_id, reference_code, start_date, end_date, total_days, reason')
         .eq('id', input.id)
         .maybeSingle()
     if (lookupErr || !existing) return { error: 'ไม่พบใบขอ WFH' }
@@ -313,6 +314,47 @@ export async function cancelWfhRequest(input: {
         console.error('[wfh] cancel error:', updErr)
         return { error: 'ยกเลิกไม่สำเร็จ' }
     }
+
+    // Close the loop for the action owner. HR Telegram intentionally stays
+    // quiet for pending cancellations to avoid noisy FYI churn.
+    if (existing.status === 'pending' && existing.approver_id) {
+        try {
+            const [{ data: employee }, { data: approver }] = await Promise.all([
+                supabaseAdmin
+                    .from('employees')
+                    .select('first_name_th, last_name_th, nickname')
+                    .eq('id', existing.employee_id as string)
+                    .maybeSingle(),
+                supabaseAdmin
+                    .from('employees')
+                    .select('telegram_chat_id')
+                    .eq('id', existing.approver_id as string)
+                    .maybeSingle(),
+            ])
+            const approverChatId = (approver as { telegram_chat_id?: string | null } | null)?.telegram_chat_id
+            if (approverChatId) {
+                const applicantName = formatEmployeeName(employee, 'พนักงาน')
+                const dateLabel = existing.start_date === existing.end_date
+                    ? existing.start_date as string
+                    : `${existing.start_date as string} → ${existing.end_date as string}`
+                const cancelReason = input.reason?.trim()
+                const originalReason = (existing.reason as string | null)?.trim()
+                const text = [
+                    `🗑️ <b>คำขอ WFH ถูกยกเลิกแล้ว</b>`,
+                    `👤 ${escapeTelegramHtml(applicantName)}`,
+                    `📅 ${escapeTelegramHtml(dateLabel)} (${Number(existing.total_days)} วัน)`,
+                    cancelReason ? `📝 เหตุผลที่ยกเลิก: ${escapeTelegramHtml(cancelReason.slice(0, 200))}` : '',
+                    originalReason ? `เหตุผลเดิม: ${escapeTelegramHtml(originalReason.slice(0, 200))}` : '',
+                    `<a href="https://ebci-nexus.vercel.app/portal/wfh/inbox">เปิดกล่องอนุมัติใน Nexus →</a>`,
+                ].filter(Boolean).join('\n')
+                sendTelegram({ chatId: approverChatId, text })
+                    .catch(err => console.error('[wfh] cancel approver telegram failed:', err))
+            }
+        } catch (err) {
+            console.error('[wfh] cancel approver notify failed:', err)
+        }
+    }
+
     return { ok: true }
 }
 

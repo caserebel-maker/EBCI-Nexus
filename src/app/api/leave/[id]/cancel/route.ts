@@ -3,6 +3,8 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
 import { resolveSessionEmployeeId } from '@/lib/session-employee'
 import { adjustPendingDays } from '@/lib/leave-balance'
+import { sendTelegram, escapeTelegramHtml } from '@/lib/telegram'
+import { formatEmployeeName } from '@/lib/format-employee-name'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,7 +35,7 @@ export async function POST(
     // Ownership + state check
     const { data: row, error: readErr } = await supabaseAdmin
         .from('leave_requests')
-        .select('id, employee_id, status, leave_type_id, total_days, start_date')
+        .select('id, employee_id, status, approver_id, leave_type_id, total_days, start_date, end_date, reason')
         .eq('id', id)
         .maybeSingle()
     if (readErr) return NextResponse.json({ error: readErr.message }, { status: 500 })
@@ -71,6 +73,52 @@ export async function POST(
     if (!balanceRes.ok) {
         console.error('[leave/cancel] balance rollback failed:', balanceRes.error)
         // Row is cancelled already; pending rollback is best-effort.
+    }
+
+    // Notify only the actual approver that the pending item was withdrawn.
+    // HR Telegram stays quiet until an approver decision exists.
+    try {
+        const [{ data: employee }, { data: approver }, { data: leaveType }] = await Promise.all([
+            supabaseAdmin
+                .from('employees')
+                .select('first_name_th, last_name_th, nickname')
+                .eq('id', row.employee_id as string)
+                .maybeSingle(),
+            row.approver_id
+                ? supabaseAdmin
+                    .from('employees')
+                    .select('telegram_chat_id')
+                    .eq('id', row.approver_id as string)
+                    .maybeSingle()
+                : Promise.resolve({ data: null }),
+            supabaseAdmin
+                .from('leave_types')
+                .select('name_th')
+                .eq('id', row.leave_type_id as string)
+                .maybeSingle(),
+        ])
+        const approverChatId = (approver as { telegram_chat_id?: string | null } | null)?.telegram_chat_id
+        if (approverChatId) {
+            const applicantName = formatEmployeeName(employee, 'พนักงาน')
+            const dateLabel = row.start_date === row.end_date
+                ? row.start_date as string
+                : `${row.start_date as string} → ${row.end_date as string}`
+            const leaveTypeTh = (leaveType as { name_th?: string | null } | null)?.name_th ?? 'ลา'
+            const originalReason = (row.reason as string | null)?.trim()
+            const text = [
+                `🗑️ <b>ใบลาถูกยกเลิกแล้ว</b>`,
+                `👤 ${escapeTelegramHtml(applicantName)}`,
+                `🌴 ${escapeTelegramHtml(leaveTypeTh)}`,
+                `📅 ${escapeTelegramHtml(dateLabel)} (${Number(row.total_days)} วัน)`,
+                reason ? `📝 เหตุผลที่ยกเลิก: ${escapeTelegramHtml(reason.slice(0, 200))}` : '',
+                originalReason ? `เหตุผลเดิม: ${escapeTelegramHtml(originalReason.slice(0, 200))}` : '',
+                `<a href="https://ebci-nexus.vercel.app/portal/leave/inbox">เปิดกล่องอนุมัติใน Nexus →</a>`,
+            ].filter(Boolean).join('\n')
+            sendTelegram({ chatId: approverChatId, text })
+                .catch(err => console.error('[leave/cancel] approver telegram failed:', err))
+        }
+    } catch (err) {
+        console.error('[leave/cancel] approver notify failed:', err)
     }
 
     return NextResponse.json({ success: true, id, cancelled_at: nowIso })
