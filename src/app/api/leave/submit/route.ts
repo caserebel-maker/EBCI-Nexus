@@ -450,10 +450,11 @@ export async function POST(req: NextRequest) {
         }
     }
 
-    // ── HR FYI fan-out — Mod's 4 May call: HR ต้องรับทราบทุกใบลา ──────
+    // ── HR FYI fan-out — pending requests stay in-app only ─────────────
     // Channels (per HR target):
     //   • In-app 🔔 — always
-    //   • Telegram DM — only if telegramChatId is set (Phase 1: มด opts in)
+    //   • Telegram DM — intentionally skipped until approve/reject,
+    //     because staff may submit wrong details and cancel/recreate.
     //   • Email      — intentionally skipped (HR has dashboard; ม๊อด 8 พ.ค.)
     try {
         const hrTargets = await findHrNotifyTargets()
@@ -476,18 +477,6 @@ export async function POST(req: NextRequest) {
                     color: 'blue',
                     sender_name: applicantNick,
                 }).catch(err => console.error('[leave/submit] HR in-app notif failed:', err))
-
-                if (t.telegramChatId) {
-                    const text = [
-                        `🌴 <b>${escapeTelegramHtml(applicantNick)}</b> ${escapeTelegramHtml(leaveType.name_th ?? 'ลา')}`,
-                        `📅 ${escapeTelegramHtml(dateLabel)} (${totalDays} วัน)`,
-                        `🧑‍💼 รอ ${escapeTelegramHtml(approver.first_name_th ?? 'ผู้บังคับบัญชา')} อนุมัติ`,
-                        reason ? `📝 ${escapeTelegramHtml(reason.slice(0, 200))}` : '',
-                        `<a href="https://ebci-nexus.vercel.app/hradmin/leave?tab=requests">ดูใน Nexus →</a>`,
-                    ].filter(Boolean).join('\n')
-                    sendTelegram({ chatId: t.telegramChatId, text })
-                        .catch(err => console.error('[leave/submit] HR telegram failed:', err))
-                }
             }
         }
     } catch (err) {

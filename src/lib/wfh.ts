@@ -211,7 +211,10 @@ export async function submitWfhRequest(
         }
     })())
 
-    // 2. HR FYI — per-person in-app 🔔
+    // 2. HR FYI — per-person in-app 🔔 only.
+    // Telegram is intentionally skipped while the request is pending:
+    // employees may submit the wrong dates/details and cancel/recreate.
+    // HR Telegram is sent only after the approver decides.
     jobs.push((async () => {
         try {
             const hrTargets = await findHrNotifyTargets()
@@ -233,18 +236,6 @@ export async function submitWfhRequest(
                     color: 'blue',
                     sender_name: applicantNick,
                 }).catch(err => console.error('[wfh] HR in-app notif failed:', err))
-
-                if (t.telegramChatId) {
-                    const text = [
-                        `🏠 <b>${escapeTelegramHtml(applicantNick)}</b> ขอ WFH`,
-                        `📅 ${escapeTelegramHtml(dateLabel)} (${totalDays} วัน)`,
-                        `🧑‍💼 รอ ${escapeTelegramHtml(approverName)} อนุมัติ`,
-                        reason ? `📝 ${escapeTelegramHtml(reason.slice(0, 200))}` : '',
-                        `<a href="https://ebci-nexus.vercel.app/portal/wfh">ดูใน Nexus →</a>`,
-                    ].filter(Boolean).join('\n')
-                    sendTelegram({ chatId: t.telegramChatId, text })
-                        .catch(err => console.error('[wfh] HR telegram failed:', err))
-                }
             }
         } catch (err) {
             console.error('[wfh] HR FYI fan-out failed:', err)

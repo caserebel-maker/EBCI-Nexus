@@ -3,6 +3,8 @@
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
 import { sendLeaveDecisionNotification } from '@/lib/leave-email'
+import { findHrNotifyTargets } from '@/lib/hr-notify'
+import { sendTelegram, escapeTelegramHtml } from '@/lib/telegram'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface ApprovalStep {
@@ -14,7 +16,9 @@ interface EmployeeRow {
     id: string
     first_name_th: string
     last_name_th: string
+    nickname: string | null
     email: string | null
+    position: string | null
     approval_level: number | null
     manager_id: string | null
     department: string | null
@@ -28,7 +32,7 @@ function errorMessage(err: unknown): string {
 async function fetchEmployee(id: string): Promise<EmployeeRow | null> {
     const { data } = await supabaseAdmin
         .from('employees')
-        .select('id, first_name_th, last_name_th, email, approval_level, manager_id, department')
+        .select('id, first_name_th, last_name_th, nickname, email, position, approval_level, manager_id, department')
         .eq('id', id)
         .single()
     return data ?? null
@@ -37,7 +41,7 @@ async function fetchEmployee(id: string): Promise<EmployeeRow | null> {
 async function findFirstByLevel(level: number): Promise<EmployeeRow | null> {
     const { data } = await supabaseAdmin
         .from('employees')
-        .select('id, first_name_th, last_name_th, email, approval_level, manager_id, department')
+        .select('id, first_name_th, last_name_th, nickname, email, position, approval_level, manager_id, department')
         .eq('approval_level', level)
         .eq('status', 'active')
         .limit(1)
@@ -56,7 +60,7 @@ async function findFirstHrAdmin(): Promise<EmployeeRow | null> {
     if (!userIds.length) return null
     const { data } = await supabaseAdmin
         .from('employees')
-        .select('id, first_name_th, last_name_th, email, approval_level, manager_id, department')
+        .select('id, first_name_th, last_name_th, nickname, email, position, approval_level, manager_id, department')
         .in('user_id', userIds)
         .eq('status', 'active')
         .limit(1)
@@ -190,7 +194,7 @@ export async function approveLeave(
             .select(`
                 id, status, current_step, leave_type, start_date, end_date, total_days, reason,
                 employee_id,
-                employees!employee_id (id, first_name_th, last_name_th, email, approval_level, manager_id, department)
+                employees!employee_id (id, first_name_th, last_name_th, nickname, email, position, approval_level, manager_id, department)
             `)
             .eq('id', leaveRequestId)
             .single()
@@ -262,6 +266,17 @@ export async function approveLeave(
                 }).catch(console.error)
             }
 
+            const approverRow = await fetchEmployee(approverId)
+            await notifyHrLeaveDecisionTelegram({
+                status: 'approved',
+                employeeName: `${employee.first_name_th} ${employee.last_name_th}`.trim() || employee.nickname || 'พนักงาน',
+                leaveType: lr.leave_type,
+                startDate: lr.start_date,
+                endDate: lr.end_date,
+                totalDays: lr.total_days,
+                approver: approverRow,
+            })
+
             return { success: true, fullyApproved: true }
         }
 
@@ -285,7 +300,7 @@ export async function rejectLeave(
             .select(`
                 id, status, leave_type, start_date, end_date, total_days,
                 employee_id,
-                employees!employee_id (id, first_name_th, last_name_th, email)
+                employees!employee_id (id, first_name_th, last_name_th, nickname, email)
             `)
             .eq('id', leaveRequestId)
             .single()
@@ -311,9 +326,9 @@ export async function rejectLeave(
             .eq('id', leaveRequestId)
 
         // Notify employee
-        const employee = lr.employees as unknown as Pick<EmployeeRow, 'id' | 'first_name_th' | 'last_name_th' | 'email'>
+        const employee = lr.employees as unknown as Pick<EmployeeRow, 'id' | 'first_name_th' | 'last_name_th' | 'nickname' | 'email'>
+        const approverRow = await fetchEmployee(approverId)
         if (employee?.email) {
-            const approverRow = await fetchEmployee(approverId)
             sendLeaveDecisionNotification({
                 employeeEmail: employee.email,
                 employeeName: `${employee.first_name_th} ${employee.last_name_th}`,
@@ -329,11 +344,65 @@ export async function rejectLeave(
             }).catch(console.error)
         }
 
+        await notifyHrLeaveDecisionTelegram({
+            status: 'rejected',
+            employeeName: `${employee.first_name_th} ${employee.last_name_th}`.trim() || employee.nickname || 'พนักงาน',
+            leaveType: lr.leave_type,
+            startDate: lr.start_date,
+            endDate: lr.end_date,
+            totalDays: lr.total_days,
+            approver: approverRow,
+            note: trimmedComment,
+        })
+
         return { success: true }
 
     } catch (err: unknown) {
         console.error('rejectLeave error:', err)
         return { error: errorMessage(err) }
+    }
+}
+
+async function notifyHrLeaveDecisionTelegram(args: {
+    status: 'approved' | 'rejected'
+    employeeName: string
+    leaveType: string
+    startDate: string
+    endDate: string
+    totalDays: number
+    approver: EmployeeRow | null
+    note?: string | null
+}) {
+    try {
+        const hrTargets = await findHrNotifyTargets()
+        const dateLabel = args.startDate === args.endDate
+            ? args.startDate
+            : `${args.startDate} → ${args.endDate}`
+        const approverName = args.approver?.first_name_th?.trim()
+            || args.approver?.nickname
+            || 'ผู้อนุมัติ'
+        const approverFormalName = [
+            args.approver?.position?.trim(),
+            approverName,
+            args.approver?.nickname && args.approver.nickname !== approverName ? `(${args.approver.nickname})` : '',
+        ].filter(Boolean).join(' ')
+        const isApproved = args.status === 'approved'
+        for (const t of hrTargets) {
+            if (!t.telegramChatId) continue
+            const text = [
+                `${isApproved ? '✅' : '❌'} <b>${isApproved ? 'ใบลาได้รับการอนุมัติ' : 'ใบลาถูกปฏิเสธ'}</b>`,
+                `👤 ${escapeTelegramHtml(args.employeeName)}`,
+                `🌴 ${escapeTelegramHtml(args.leaveType)}`,
+                `📅 ${escapeTelegramHtml(dateLabel)} (${args.totalDays} วัน)`,
+                `🧑‍💼 ผู้อนุมัติ: ${escapeTelegramHtml(approverFormalName)}`,
+                args.note ? `📝 ${escapeTelegramHtml(args.note.slice(0, 200))}` : '',
+                `<a href="https://ebci-nexus.vercel.app/hradmin/leave?tab=requests">ดูใน Nexus →</a>`,
+            ].filter(Boolean).join('\n')
+            sendTelegram({ chatId: t.telegramChatId, text })
+                .catch(err => console.error('[leave-actions] HR telegram failed:', err))
+        }
+    } catch (err) {
+        console.error('[leave-actions] HR telegram fan-out failed:', err)
     }
 }
 

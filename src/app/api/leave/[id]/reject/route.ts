@@ -5,6 +5,8 @@ import { resolveSessionEmployeeId } from '@/lib/session-employee'
 import { adjustPendingDays } from '@/lib/leave-balance'
 import { sendLeaveRejected } from '@/lib/email-leave'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
+import { findHrNotifyTargets } from '@/lib/hr-notify'
+import { sendTelegram, escapeTelegramHtml } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
 
@@ -100,7 +102,7 @@ export async function POST(
             .maybeSingle(),
         supabaseAdmin
             .from('employees')
-            .select('first_name_th, last_name_th, nickname, email')
+            .select('first_name_th, last_name_th, nickname, email, position')
             .eq('id', approverEmployeeId)
             .maybeSingle(),
         supabaseAdmin
@@ -165,6 +167,44 @@ export async function POST(
         }
     } catch (err) {
         console.error('[leave/reject] notification error:', err)
+    }
+
+    // HR Telegram FYI only after the approver decides. Pending leave
+    // requests stay out of HR Telegram to avoid noise from wrong/cancelled
+    // submissions.
+    try {
+        const hrTargets = await findHrNotifyTargets()
+        const leaveTypeTh = (typeResult.data?.name_th as string | undefined) ?? (row.leave_type_id as string)
+        const dateLabel = row.start_date === row.end_date
+            ? row.start_date as string
+            : `${row.start_date as string} → ${row.end_date as string}`
+        const applicantName = `${applicant?.first_name_th ?? ''} ${applicant?.last_name_th ?? ''}`.trim()
+            || (applicant?.nickname as string | null)
+            || 'พนักงาน'
+        const approverFirstName = (approver?.first_name_th as string | null)?.trim() || ''
+        const approverName = approverFirstName || (approver?.nickname as string | null) || 'ผู้อนุมัติ'
+        const approverFormalName = [
+            (approver?.position as string | null)?.trim(),
+            approverName,
+            approver?.nickname && approver.nickname !== approverName ? `(${approver.nickname})` : '',
+        ].filter(Boolean).join(' ')
+
+        for (const t of hrTargets) {
+            if (!t.telegramChatId) continue
+            const text = [
+                `❌ <b>ใบลาถูกปฏิเสธ</b>`,
+                `👤 ${escapeTelegramHtml(applicantName)}`,
+                `🌴 ${escapeTelegramHtml(leaveTypeTh)}`,
+                `📅 ${escapeTelegramHtml(dateLabel)} (${totalDays} วัน)`,
+                `🧑‍💼 ผู้อนุมัติ: ${escapeTelegramHtml(approverFormalName)}`,
+                `📝 ${escapeTelegramHtml(rejectionReason.slice(0, 200))}`,
+                `<a href="https://ebci-nexus.vercel.app/hradmin/leave?tab=requests">ดูใน Nexus →</a>`,
+            ].join('\n')
+            sendTelegram({ chatId: t.telegramChatId, text })
+                .catch(err => console.error('[leave/reject] HR telegram failed:', err))
+        }
+    } catch (err) {
+        console.error('[leave/reject] HR telegram fan-out failed:', err)
     }
 
     return NextResponse.json({
