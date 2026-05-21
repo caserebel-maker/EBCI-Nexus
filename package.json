@@ -13,6 +13,9 @@
     "verify:accounts": "node scripts/verify-beta-logins.mjs",
     "verify:accounts:smoke": "node scripts/verify-beta-logins.mjs --smoke",
     "telegram:mod": "node scripts/telegram-mod-setup.mjs",
+    "hip:probe": "node scripts/hip-card-agent.mjs probe",
+    "hip:sync": "node scripts/hip-card-agent.mjs sync",
+    "hip:watch": "node scripts/hip-card-agent.mjs watch",
     "postinstall": "prisma generate --no-engine"
   },
   "dependencies": {
@@ -27,6 +30,7 @@
     "lucide-react": "^0.563.0",
     "next": "^16.2.2",
     "next-themes": "^0.4.6",
+    "node-zklib": "^1.3.0",
     "nodemailer": "^7.0.13",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

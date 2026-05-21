@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 *.pem
+.hip-card-agent-state.json
+hip-code-map*.json
 
 # debug
 npm-debug.log*

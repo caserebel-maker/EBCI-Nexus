@@ -3525,3 +3525,43 @@ TELEGRAM_BOT_TOKEN='...' npm run telegram:mod -- --employee-code 457-63 --name �
 
 - Sick leave still requires a medical certificate only when total sick leave is at least 3 consecutive working days.
 - Existing quota numbers that the final text did not restate were left as-is: military service 60 days, ordination 15 days, marriage 3 days.
+
+---
+
+# §32 — May 21 HIP Ci100S Agent Attempt
+
+## Trigger
+
+มดเสียบ LAN ให้ Office Mac แล้ว IT confirmed HIP device IP `192.168.1.40`.
+
+## Finding
+
+- Office Mac now has Ethernet IP `192.168.1.50`.
+- Ping to `192.168.1.40` succeeds.
+- TCP `192.168.1.40:5005` succeeds; screenshot shows HIP desktop configured with port `5005`.
+- TCP `192.168.1.40:7005`, `4370`, and `80` are refused.
+- ZK/HIP SDK command to `192.168.1.40:5005` still times out with `TIMEOUT_ON_WRITING_MESSAGE`.
+
+## Shipped
+
+- Added `node-zklib` dependency.
+- Added `scripts/hip-card-agent.mjs` with:
+  - `probe` to separate TCP connectivity from ZK/HIP protocol response.
+  - `sync` to download attendance logs and POST new scans to `/api/webhooks/card-scan`.
+  - `watch` to subscribe to realtime logs and POST each scan.
+  - Optional `HIP_CODE_MAP_PATH` for mapping device user IDs to Nexus employee codes if the device does not store EBCI employee codes directly.
+- Added package scripts:
+  - `npm run hip:probe`
+  - `npm run hip:sync`
+  - `npm run hip:watch`
+- Set Vercel `CARD_SCAN_WEBHOOK_SECRET`; production will see it after the next deploy.
+
+## Next
+
+Close or disconnect the HIP desktop software session that may be occupying the device, then rerun:
+
+```bash
+npm run hip:probe
+```
+
+If protocol still times out, ask HIP/IT to confirm the SDK/download-log port and whether a communication password/network key is enabled on the device.

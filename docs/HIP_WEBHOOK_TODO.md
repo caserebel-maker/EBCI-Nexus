@@ -75,6 +75,29 @@ HIP Ci100S ──TCP/7005──▶  Relay Agent (Office)  ──HTTPS──▶  
 
 **Conclusion:** current Office Mac is also not a valid relay host yet. Relay must run on a machine with IP `192.168.1.x` that HIP can push TCP/7005 to, or networking must be changed so this Mac can receive from HIP.
 
+### ✅ Re-check จาก Office Mac — 21 พ.ค. 2569
+
+- เสียบ LAN แล้ว Office Mac ได้ IP `192.168.1.50` บน `en0`
+- `ping 192.168.1.40` ผ่าน 100%
+- TCP `192.168.1.40:5005` เปิด (`nc -vz` succeeded)
+- TCP `192.168.1.40:7005`, `:4370`, `:80` ยังปิด/refused
+- เพิ่ม agent script แล้ว:
+  ```bash
+  npm run hip:probe
+  npm run hip:sync -- --dry-run --since-minutes 1440
+  npm run hip:watch -- --dry-run
+  ```
+- ตั้ง Vercel env `CARD_SCAN_WEBHOOK_SECRET` แล้ว; production function จะเห็นค่าหลัง deploy ถัดไป
+
+**Current blocker:** `npm run hip:probe` ต่อ TCP ได้ แต่ ZK/HIP protocol command timeout:
+
+```text
+[hip-agent] TCP ok
+[hip-agent] ZK/HIP protocol failed: TIMEOUT_ON_WRITING_MESSAGE
+```
+
+Next action: ปิดหรือ disconnect โปรแกรม HIP desktop ที่เชื่อมเครื่อง `HIPCI100S` อยู่ แล้วรัน `npm run hip:probe` ซ้ำ. ถ้ายัง timeout ให้ฝ่าย IT/HIP confirm ว่า port สำหรับ SDK/download log คือ `5005` จริง หรือมี communication password/network key ที่ต้องใส่เพิ่ม.
+
 ---
 
 ## ❓ Q1-Q4 ที่ต้องตอบ — pickup ตรงนี้
@@ -117,9 +140,9 @@ ip addr   # หรือ ifconfig
 
 | ถ้าตอบ Q1 + Q2 | Action |
 |---|---|
-| **Linux + 1.x** | ผมเขียน Python agent + systemd service unit ให้ + คู่มือ install 5 ขั้น |
-| **Windows + 1.x** | Python agent + Task Scheduler XML / NSSM service wrapper |
-| **Mac + 1.x** | Python agent + launchd plist |
+| **Linux + 1.x** | ใช้ `scripts/hip-card-agent.mjs` + systemd service unit |
+| **Windows + 1.x** | ใช้ `scripts/hip-card-agent.mjs` + Task Scheduler / NSSM service wrapper |
+| **Mac + 1.x** | ใช้ `scripts/hip-card-agent.mjs` + launchd plist |
 | **ไม่ใช่ 1.x** | ต้อง: (a) เสียบ LAN ใหม่ให้ลงวง 1.x, หรือ (b) ซื้อ Raspberry Pi 4 (~1,500฿) วางใกล้ HIP |
 
 ### Agent skeleton (รออัพเกรดให้ตรงกับ OS/distro)
