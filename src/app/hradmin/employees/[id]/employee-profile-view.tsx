@@ -21,7 +21,7 @@ import { SalarySlipsCard, type SalarySlip } from "@/components/hradmin/employees
 import { AdjustBalanceModal } from "@/components/hradmin/leave/AdjustBalanceModal"
 import type { BalanceCell, LeaveTypeLite, EmployeeRowLite } from "@/components/hradmin/leave/types"
 import {
-    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList
+    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList
 } from "recharts"
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
@@ -49,6 +49,17 @@ const SEL_CHEVRON: React.CSSProperties = {
         "url(\"data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.65)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e\")",
     backgroundPosition: 'right 12px center',
     backgroundSize: '14px 14px',
+}
+const LEAVE_CHART_USED_FILL = '#38bdf8'
+const LEAVE_CHART_USED_STROKE = '#bae6fd'
+const LEAVE_CHART_REMAINING_FILL = 'rgba(255,255,255,0.28)'
+const LEAVE_CHART_REMAINING_STROKE = 'rgba(255,255,255,0.34)'
+type LeaveChartLabelProps = {
+    x?: number | string
+    y?: number | string
+    width?: number | string
+    height?: number | string
+    index?: number
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1304,12 +1315,26 @@ export function EmployeeProfileView({
                                     tick={{ fill: '#fcd34d', fontSize: 13, fontWeight: 600 }}
                                     axisLine={false} tickLine={false} />
                                 <Tooltip content={<LeaveTooltip />} cursor={{ fill: 'rgba(255,255,255,0.22)' }} />
-                                <Bar dataKey="ใช้ไปแล้ว" stackId="a" fill="#ad5f6c" radius={[4, 0, 0, 4]} />
-                                <Bar dataKey="คงเหลือ" stackId="a" fill="rgba(255,255,255,0.25)"
+                                <Bar
+                                    dataKey="ใช้ไปแล้ว"
+                                    stackId="a"
+                                    fill={LEAVE_CHART_USED_FILL}
+                                    stroke={LEAVE_CHART_USED_STROKE}
+                                    strokeWidth={1}
+                                    radius={[4, 0, 0, 4]}
+                                    minPointSize={(value) => (Number(value) > 0 ? 8 : 0)}
+                                />
+                                <Bar
+                                    dataKey="คงเหลือ"
+                                    stackId="a"
+                                    fill={LEAVE_CHART_REMAINING_FILL}
+                                    stroke={LEAVE_CHART_REMAINING_STROKE}
+                                    strokeWidth={0.5}
                                     radius={[0, 4, 4, 0]}>
                                     <LabelList dataKey="คงเหลือ" position="right"
-                                        content={({ x, y, width, height, index }: any) => {
-                                            const d = chartData[index]
+                                        content={(props: unknown) => {
+                                            const { x, y, width, height, index } = props as LeaveChartLabelProps
+                                            const d = typeof index === 'number' ? chartData[index] : undefined
                                             if (!d) return null
                                             const label = `${d.ใช้ไปแล้ว}/${d.entitled} วัน`
                                             return (
@@ -1334,10 +1359,16 @@ export function EmployeeProfileView({
                 {chartData.length > 0 && (
                     <div className="flex items-center gap-5 mt-3 pl-2">
                         <div className="flex items-center gap-2 text-[0.85rem] text-white/82">
-                            <span className="h-2.5 w-5 rounded-sm bg-[#ad5f6c]" /> ใช้ไปแล้ว
+                            <span
+                                className="h-2.5 w-5 rounded-sm border border-sky-100/70"
+                                style={{ backgroundColor: LEAVE_CHART_USED_FILL }}
+                            /> ใช้ไปแล้ว
                         </div>
                         <div className="flex items-center gap-2 text-[0.85rem] text-white/82">
-                            <span className="h-2.5 w-5 rounded-sm bg-white/18 border border-white/20" /> คงเหลือ
+                            <span
+                                className="h-2.5 w-5 rounded-sm border border-white/30"
+                                style={{ backgroundColor: LEAVE_CHART_REMAINING_FILL }}
+                            /> คงเหลือ
                         </div>
                     </div>
                 )}

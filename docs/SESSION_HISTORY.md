@@ -3422,3 +3422,24 @@ Applied migration SQL manually via Supabase MCP on project `EBCI Nexus` (`cluirx
 - `npx eslint src/lib/email.ts src/lib/email-audit.ts src/lib/email-leave.ts src/lib/email-wfh.ts src/app/api/webhooks/resend/route.ts src/app/hradmin/settings/email/page.tsx src/app/hradmin/employees/new/actions.ts src/components/notifications/NotificationItem.tsx src/lib/notifications.ts src/config/navigation.tsx src/lib/backup.ts`
 - `npx tsc --noEmit`
 - `npm run build`
+
+---
+
+# §28 — May 21 Employee Leave Chart Contrast
+
+## Trigger
+
+มด reported that the `ใช้ไปแล้ว` bars in employee profile leave statistics were almost invisible on the maroon card, especially `ลาป่วย` and `ลากิจ`.
+
+## Shipped
+
+- Updated `/hradmin/employees/[id]` leave chart used bar from brand maroon to cyan for clear contrast.
+- Added a light stroke around used bars.
+- Added `minPointSize` so non-zero small values still render at least 8px wide.
+- Updated the legend swatches to match the chart colors.
+
+## Verify
+
+- `npx tsc --noEmit`
+- `npm run build`
+- Targeted lint still reports pre-existing `any` / `<img>` findings in `employee-profile-view.tsx`; this change did not add a new lint finding.
