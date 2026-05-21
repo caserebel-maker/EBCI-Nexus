@@ -86,22 +86,28 @@ export const HALF_DAY_POLICY_RULES: LeavePolicyRule[] = [
 
 export const GENERAL_POLICY_RULES: LeavePolicyRule[] = [
     {
-        id: 'sick-cert',
-        title: 'ใบรับรองแพทย์',
-        description: `ลาป่วยตั้งแต่ ${SICK_LEAVE_RULES.medicalCertificateThreshold} วันขึ้นไป ต้องแนบใบรับรองแพทย์ · ลาป่วยไม่เกิน 2 วันไม่ต้องแนบ`,
+        id: 'approval-required',
+        title: 'ต้องได้รับอนุมัติก่อนลาหยุด',
+        description: 'การลาพักผ่อนประจำปีและลากิจต้องยื่นขออนุมัติจากหัวหน้างานผู้มีสิทธิอนุมัติล่วงหน้าไม่น้อยกว่า 1 วัน และต้องได้รับอนุมัติก่อนจึงจะลาหยุดได้',
+        icon: '✅',
+    },
+    {
+        id: 'sick-submit',
+        title: 'การยื่นลาป่วย',
+        description: `ต้องยื่นใบลาป่วยในวันแรกที่กลับมาทำงาน · หากลาป่วยตั้งแต่ ${SICK_LEAVE_RULES.medicalCertificateThreshold} วันทำงานติดต่อกัน ต้องส่งใบรับรองแพทย์หรือสถานพยาบาลของทางราชการ หากไม่มีต้องชี้แจงเป็นหนังสือ`,
         icon: '🏥',
     },
     {
-        id: 'sick-retroactive',
-        title: 'ลาป่วยต้องยื่นย้อนหลัง',
-        description: 'ลาป่วยต้องเลือกวันที่ผ่านไปแล้ว (ไม่สามารถยื่นลาป่วยล่วงหน้าได้)',
-        icon: '📅',
+        id: 'reason-required',
+        title: 'ลากิจต้องระบุเหตุผล',
+        description: 'พนักงานที่ลากิจต้องระบุเหตุผลในการลากิจทุกครั้ง',
+        icon: '📝',
     },
     {
-        id: 'advance-notice',
-        title: 'การขอลาล่วงหน้า',
-        description: 'ลาพักร้อนต้องขอล่วงหน้าตามจำนวนวันที่กำหนด (ดูรายละเอียดในแต่ละประเภท)',
-        icon: '⏰',
+        id: 'marriage-eligibility',
+        title: 'ลาเพื่อการสมรส',
+        description: 'พนักงานที่ทำงานกับบริษัทครบ 1 ปี มีสิทธิลาเพื่อการสมรสของตนเอง โดยต้องยื่นล่วงหน้าอย่างน้อย 3 วัน',
+        icon: '💍',
     },
     {
         id: 'cancel-pending',

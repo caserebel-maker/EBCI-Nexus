@@ -3503,3 +3503,25 @@ TELEGRAM_BOT_TOKEN='...' npm run telegram:mod -- --employee-code 457-63 --name �
 
 - `npx eslint scripts/telegram-mod-setup.mjs`
 - Dry run without token fails cleanly with `Missing TELEGRAM_BOT_TOKEN`.
+
+---
+
+# §31 — May 21 EBCI Final Leave Policy
+
+## Trigger
+
+มด supplied the final EBCI leave policy text and asked to put it into the system.
+
+## Shipped
+
+- Updated production `leave_types` for the seven finalized categories:
+  `annual`, `sick`, `personal`, `maternity`, `military_service`, `ordination`, `marriage`.
+- Added migration `20260521_apply_ebci_final_leave_policy.sql` so future machines and deploys have the same source of truth as production.
+- Updated general policy copy on `/portal/leave-policy` to match the final policy wording.
+- Added `military_draft` icon mapping so military leave rows do not fall back to a generic icon.
+- Added validation that `marriage` leave is available only after the employee has completed 1 year with EBCI.
+
+## Notes
+
+- Sick leave still requires a medical certificate only when total sick leave is at least 3 consecutive working days.
+- Existing quota numbers that the final text did not restate were left as-is: military service 60 days, ordination 15 days, marriage 3 days.

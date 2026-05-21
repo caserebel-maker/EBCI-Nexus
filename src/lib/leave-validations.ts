@@ -25,7 +25,7 @@ export function requiresLeaveAttachment(leaveType: LeaveType, totalDays: number)
 
 export function leaveAttachmentDescription(leaveType: LeaveType, totalDays: number): string | null {
     if (!requiresLeaveAttachment(leaveType, totalDays)) return null
-    if (leaveType.id === 'sick') return 'ใบรับรองแพทย์สำหรับการลาป่วยตั้งแต่ 3 วันขึ้นไป'
+    if (leaveType.id === 'sick') return 'ใบรับรองแพทย์หรือสถานพยาบาลของทางราชการสำหรับการลาป่วยตั้งแต่ 3 วันทำงานติดต่อกัน'
     return leaveType.attachment_description ?? null
 }
 
@@ -84,12 +84,32 @@ export async function hasOverlappingLeave(args: {
     return (data ?? []).length > 0
 }
 
+async function hasCompletedOneYear(employeeId: string, asOfDate: string): Promise<boolean> {
+    const { data, error } = await supabaseAdmin
+        .from('employees')
+        .select('start_date')
+        .eq('id', employeeId)
+        .maybeSingle()
+    if (error) {
+        console.error('[leave-validations] employee start_date query failed:', error)
+        return false
+    }
+    const startDate = (data?.start_date as string | null | undefined)?.slice(0, 10)
+    if (!startDate) return false
+
+    const [y, m, d] = startDate.split('-').map(Number)
+    if (!y || !m || !d) return false
+
+    const oneYearDate = Date.UTC(y + 1, m - 1, d) / 86400000
+    return toEpochDay(asOfDate) >= oneYearDate
+}
+
 // ── Main validator ─────────────────────────────────────────────────────────
 /**
  * Enforces the 7 leave-request rules from the spec:
  *   1. start_date <= end_date
  *   2. not in the past (except sick-leave, which *must* be past)
- *   3. advance_notice_days on leave_type (e.g. annual ≥ 7 days ahead)
+ *   3. advance_notice_days on leave_type (e.g. annual/personal ≥ 1 day ahead)
  *   4. same_day_allowed gate (sick leave rejects today onwards)
  *   5. requires_attachment
  *   6. total_days ≤ remaining (unless leave_type is unlimited)
@@ -148,7 +168,7 @@ export async function validateLeaveRequest(
                 error: 'ประเภทนี้ไม่อนุญาตให้ยื่นลาในวันเดียวกัน',
             }
         }
-        // Rule 3 — advance notice (e.g. annual needs ≥7 days)
+        // Rule 3 — advance notice from leave_types (e.g. annual/personal need at least 1 day)
         if (advanceDays > 0 && startEpoch - todayEpoch < advanceDays) {
             return {
                 ok: false,
@@ -159,6 +179,17 @@ export async function validateLeaveRequest(
     }
 
     const totalDays = calculateLeaveDays(startDate, endDate, isHalfDay)
+
+    if (leaveType.id === 'marriage') {
+        const eligible = await hasCompletedOneYear(employeeId, startDate)
+        if (!eligible) {
+            return {
+                ok: false,
+                field: 'leaveType',
+                error: 'ลาเพื่อการสมรสใช้ได้เมื่อทำงานกับบริษัทครบ 1 ปีแล้วเท่านั้น',
+            }
+        }
+    }
 
     // Rule 5 — required attachment. Sick leave is a special company
     // policy: medical certificate is required only when total leave is

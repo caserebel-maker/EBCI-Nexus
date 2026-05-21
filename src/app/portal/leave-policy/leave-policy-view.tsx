@@ -31,6 +31,7 @@ const LEAVE_ICONS: Record<string, typeof Palmtree> = {
     maternity: Baby,
     sterilization: Heart,
     military_service: Sword,
+    military_draft: Sword,
     military_conscription: Sword,
     training: BookOpen,
     ordination: Flower2,
