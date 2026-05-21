@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const ROOT = process.cwd()
 const MOD_CODE = '153-59'
+const DEFAULT_TEST_NAME = 'มด'
 
 function loadEnvFile(file) {
     const full = path.join(ROOT, file)
@@ -31,6 +32,8 @@ function args() {
     const out = {
         list: false,
         chatId: '',
+        employeeCode: MOD_CODE,
+        name: DEFAULT_TEST_NAME,
         latestPrivate: false,
         update: false,
         test: false,
@@ -44,6 +47,8 @@ function args() {
         else if (arg === '--test') out.test = true
         else if (arg === '--json') out.json = true
         else if (arg === '--chat-id') out.chatId = process.argv[++i] ?? ''
+        else if (arg === '--employee-code') out.employeeCode = process.argv[++i] ?? MOD_CODE
+        else if (arg === '--name') out.name = process.argv[++i] ?? DEFAULT_TEST_NAME
     }
     return out
 }
@@ -89,7 +94,7 @@ function latestPrivateChatId(updates) {
     return privateUpdates[0]?.chat_id ?? null
 }
 
-async function updateModChatId(chatId) {
+async function updateEmployeeChatId(employeeCode, chatId) {
     loadEnvFile('.env.local')
     loadEnvFile('.env')
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -106,19 +111,19 @@ async function updateModChatId(chatId) {
             telegram_chat_id: chatId,
             telegram_registered_at: new Date().toISOString(),
         })
-        .eq('employee_code', MOD_CODE)
+        .eq('employee_code', employeeCode)
         .select('employee_code, first_name_th, last_name_th, nickname, telegram_chat_id, telegram_registered_at')
         .single()
     if (error) throw error
     return data
 }
 
-async function sendTest(chatId) {
+async function sendTest(chatId, name) {
     return telegram('sendMessage', {
         chat_id: chatId,
         text: [
             '<b>EBCI Nexus Telegram test</b>',
-            'มดเชื่อม Telegram สำเร็จแล้ว',
+            `${name}เชื่อม Telegram สำเร็จแล้ว`,
             'หลังจากนี้ใบลา/WFH ใหม่จะมี bell 🔔 และ Telegram message',
         ].join('\n'),
         parse_mode: 'HTML',
@@ -137,13 +142,13 @@ async function main() {
     const result = { bot: me, updates, selectedChatId, updatedEmployee: null, testMessage: null }
 
     if (options.update) {
-        if (!selectedChatId) throw new Error('No chat id selected. Use --chat-id <id> or --latest-private after มด sends /start.')
-        result.updatedEmployee = await updateModChatId(selectedChatId)
+        if (!selectedChatId) throw new Error(`No chat id selected. Use --chat-id <id> or --latest-private after employee ${options.employeeCode} sends /start.`)
+        result.updatedEmployee = await updateEmployeeChatId(options.employeeCode, selectedChatId)
     }
 
     if (options.test) {
         if (!selectedChatId) throw new Error('No chat id selected for test. Use --chat-id <id> or --latest-private.')
-        result.testMessage = await sendTest(selectedChatId)
+        result.testMessage = await sendTest(selectedChatId, options.name)
     }
 
     if (options.json) {
@@ -157,7 +162,7 @@ async function main() {
         console.log(`- ${update.update_id} chat=${update.chat_id} type=${update.chat_type} from=${update.from_username ?? update.from_name ?? '-'} text=${JSON.stringify(update.text)}`)
     }
     if (selectedChatId) console.log(`Selected chat_id: ${selectedChatId}`)
-    if (result.updatedEmployee) console.log(`Updated ${MOD_CODE}: telegram_chat_id=${result.updatedEmployee.telegram_chat_id}`)
+    if (result.updatedEmployee) console.log(`Updated ${result.updatedEmployee.employee_code}: telegram_chat_id=${result.updatedEmployee.telegram_chat_id}`)
     if (result.testMessage) console.log(`Test message sent: ${result.testMessage.message_id}`)
 }
 

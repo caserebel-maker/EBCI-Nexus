@@ -3473,3 +3473,33 @@ Applied migration SQL manually via Supabase MCP on project `EBCI Nexus` (`cluirx
 - `npx eslint src/app/api/leave/requests/route.ts src/app/hradmin/leave/admin/page.tsx`
 - `npx tsc --noEmit`
 - `npm run build`
+
+---
+
+# §30 — May 21 Telegram Helper For Jim
+
+## Trigger
+
+จิม pressed `/start` on the Telegram bot and มด asked to finish the setup from the office machine.
+
+## Finding
+
+- Office `.env.local` / `.env` contain Supabase URL + service role, but no `TELEGRAM_BOT_TOKEN`.
+- Production `employees` row for จิม (`457-63`) still has `telegram_chat_id = null`.
+- Existing helper script was hard-coded to update มด (`153-59`) only.
+
+## Shipped
+
+- Updated `scripts/telegram-mod-setup.mjs` to accept:
+  - `--employee-code <code>` for any employee, defaulting to มด for backward compatibility.
+  - `--name <name>` for the test message.
+- Jim setup command once token is available:
+
+```bash
+TELEGRAM_BOT_TOKEN='...' npm run telegram:mod -- --employee-code 457-63 --name จิม --latest-private --update --test
+```
+
+## Verify
+
+- `npx eslint scripts/telegram-mod-setup.mjs`
+- Dry run without token fails cleanly with `Missing TELEGRAM_BOT_TOKEN`.

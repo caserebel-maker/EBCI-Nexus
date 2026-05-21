@@ -72,6 +72,7 @@ cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff
 - 🔧 ยังต้อง set Vercel env `RESEND_WEBHOOK_SECRET` + สร้าง webhook ใน Resend Dashboard ชี้ `https://ebci-nexus.vercel.app/api/webhooks/resend` เพื่อรับ delivered/bounced/failed จริง
 - ✅ ปรับกราฟ `สถิติการลา` ใน employee profile: แถบ `ใช้ไปแล้ว` เปลี่ยนเป็น cyan พร้อม stroke + min width 8px สำหรับค่ามากกว่า 0 ให้มองเห็นชัดบนพื้นหลังแดง
 - ✅ แก้ dashboard `รออนุมัติใบลา = 1` แต่กดแล้วไม่เห็นรายการ: `/api/leave/requests` ย้ายจาก Prisma schema เก่า (`leave_type`) มาอ่าน Supabase schema จริง (`leave_type_id`), dashboard link ใช้ `?status=pending`, หน้า `/hradmin/leave/admin` auto-apply filter จาก URL
+- ✅ Telegram helper รองรับ employee code แล้ว: จิมกด `/start` แล้ว แต่เครื่อง office ยังไม่มี `TELEGRAM_BOT_TOKEN`; หลังใส่ token ให้รัน `TELEGRAM_BOT_TOKEN='...' npm run telegram:mod -- --employee-code 457-63 --name จิม --latest-private --update --test`
 
 **ล่าสุดเสร็จ (Codex · คืน 14→15 พ.ค. + เช้า 15 พ.ค.):**
 - ✅ Payroll bulk upload mobile/file picker fix (`สุชาติ`): ปุ่มเลือกไฟล์เป็นพื้นที่แตะใหญ่ขึ้น, accept `.pdf/.jpg/.png/.webp/.heic/.heif`, server ยอมรับ MIME เพี้ยนจากมือถือถ้านามสกุลถูก, และ match ชื่อไฟล์ได้ทั้ง `060-01`/`06001`
