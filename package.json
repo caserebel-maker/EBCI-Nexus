@@ -19,6 +19,7 @@
     "hip:capture": "node scripts/hip-card-agent.mjs capture",
     "hip:sql-sync": "node scripts/hip-card-agent.mjs sql-sync",
     "welcome:server": "node welcome-server.mjs",
+    "skills:sync": "bash scripts/sync-codex-skills.sh",
     "postinstall": "prisma generate --no-engine"
   },
   "dependencies": {
