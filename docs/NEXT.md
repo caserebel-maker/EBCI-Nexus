@@ -7,8 +7,10 @@
 
 ## 🔁 ที่เครื่องถัดไป — **เสาร์ 30 พ.ค. ~12:00 (laptop/home handoff)**
 
-> Pushed commit 1a0e09e — รวมโค้ด checkout tracking และการแสดงประวัติการทาบบัตร (scans log) วันนี้
-> มี 1 SQL migration ใหม่ที่ต้องรันบน Supabase (`supabase/migrations/20260530_add_checkout_columns_to_attendance_logs.sql`)
+> Pushed commits for Card Scan Checkout Tracking & Real-time Welcome TV system.
+> มี 2 SQL migrations ใหม่ที่ต้องรันบน Supabase:
+> 1. `supabase/migrations/20260530_add_checkout_columns_to_attendance_logs.sql`
+> 2. `supabase/migrations/20260530_enable_realtime_on_card_scans.sql`
 
 **Step 1 — Pull ก่อน:**
 ```bash
@@ -18,11 +20,10 @@ git pull origin main --ff-only
 **Step 2 — พิมพ์บอก Claude:**
 ```
 อ่าน docs/NEXT.md แล้วทำต่อ — ล่าสุด:
-1) พุชโค้ด Checkout Tracking และประวัติแตะบัตรแล้ว (1a0e09e)
+1) พุชโค้ด Checkout Tracking และหน้าจอ Welcome TV Real-time แล้ว
 2) สิ่งที่ต้องทำต่อ:
-   - นำ SQL Migration ไปรันบน Supabase Editor (เนื่องจากบนเครื่องนี้ไม่มี Supabase credentials)
-   - ตรวจสอบความถูกต้องของตาราง Reconciliation Dashboard (/hradmin/attendance/reconcile)
-   - ตรวจสอบหน้า Portal Check-In บันทึกการแตะบัตรประวัติล่าสุด
+   - นำ SQL Migrations (2 ชิ้น) ไปรันบน Supabase SQL Editor
+   - ทดสอบความถูกต้องของ Reconciliation Dashboard และหน้าจอ Welcome TV (`/welcome-tv?key=ebci2026`)
 ```
 
 **Step 3 — ตอบเครื่อง:** "อยู่ office" / "อยู่บ้าน"
@@ -218,6 +219,7 @@ Sidebar polish · password change UI · WFH days · permissions list · email au
 
 | # | Commit | Track | สรุป |
 |---|---|---|---|
+| 11 | `2ac1d97` | 📺 Welcome TV | feat(welcome-tv): add real-time welcome TV screen dashboard with chime and realtime RLS policies |
 | 10 | `1a0e09e` | 📅 Attendance | feat(attendance): add checkout tracking for card scans and display log in checkin portal |
 | 9 | `1c25e44` | 🔌 Scanner | feat(hip-scanner): add sql sync agent, alternative python agent and CLI enhancements |
 | 8 | `8db0523` | 🔔 Notify | fix(notifications): tell approvers when pending requests are cancelled |
