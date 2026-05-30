@@ -5,42 +5,55 @@
 
 ---
 
-## 🔁 ที่เครื่องถัดไป — **Office Mac mini · ศุกร์ 15 พ.ค. ~16:00 (laptop handoff)**
+## 🔁 ที่เครื่องถัดไป — **เสาร์ 30 พ.ค. ~12:00 (laptop/home handoff)**
 
-> Laptop session เพิ่ง push 351d3f2 ที่ 15:09 — Telegram Phase 1 code พร้อม
-> ยังเหลือ config 2 ชิ้น (bot token + มด chat_id) ที่ต้องทำต่อที่ office
+> Pushed commit 1a0e09e — รวมโค้ด checkout tracking และการแสดงประวัติการทาบบัตร (scans log) วันนี้
+> มี 1 SQL migration ใหม่ที่ต้องรันบน Supabase (`supabase/migrations/20260530_add_checkout_columns_to_attendance_logs.sql`)
 
 **Step 1 — Pull ก่อน:**
 ```bash
-cd /Volumes/1TB-NVME/2026/FEB26-EBCI/EBCI-Nexus-App && git pull origin main --ff-only
+git pull origin main --ff-only
 ```
 
 **Step 2 — พิมพ์บอก Claude:**
 ```
-อ่าน docs/NEXT.md แล้วทำต่อ — อยู่ office. งานวันนี้ที่เหลือจาก laptop:
-1) Telegram Phase 1 — code ship แล้ว (351d3f2) เหลือ:
-   - สร้าง bot ผ่าน @BotFather (~3 นาที) → ได้ TELEGRAM_BOT_TOKEN
-   - ใส่ token เข้า Vercel env
-   - มด เปิด bot กด /start → ผมหา chat_id ผ่าน Supabase MCP getUpdates
-   - UPDATE employees SET telegram_chat_id='...' WHERE employee_code='153-59'
-   - Test: ส่งใบลาทดสอบ → มด ควรได้ทั้ง bell 🔔 + Telegram message
-2) HIP webhook relay agent (Q1-Q4 office server) — TCP 7005 listener
-3) Verify Telegram + recent commits บน prod
+อ่าน docs/NEXT.md แล้วทำต่อ — ล่าสุด:
+1) พุชโค้ด Checkout Tracking และประวัติแตะบัตรแล้ว (1a0e09e)
+2) สิ่งที่ต้องทำต่อ:
+   - นำ SQL Migration ไปรันบน Supabase Editor (เนื่องจากบนเครื่องนี้ไม่มี Supabase credentials)
+   - ตรวจสอบความถูกต้องของตาราง Reconciliation Dashboard (/hradmin/attendance/reconcile)
+   - ตรวจสอบหน้า Portal Check-In บันทึกการแตะบัตรประวัติล่าสุด
 ```
 
-**Step 3 — ตอบเครื่อง:** "อยู่ office"
+**Step 3 — ตอบเครื่อง:** "อยู่ office" / "อยู่บ้าน"
 
-**📌 Beta status: ~95% complete สำหรับ office beta**
-- ✅ 18/20 items ใน BETA_FEEDBACK ship แล้ว + Telegram Phase 1 code
+**📌 Beta status: ~98% complete สำหรับ office beta**
+- ✅ **Checkout Tracking:** รองรับการบันทึกเวลา Check-out ทั้งจากบัตรทาบและ Mobile check-in
+- ✅ **Card Scans Today Log:** แสดงประวัติแตะบัตรตามเวลาจริงใน Banner ของ Employee Check-in
 - ✅ **Company-wide rollout accounts** — active employees `48/48` พร้อม password `2000Ebc!`
 - ✅ **Login identifier:** รหัสพนักงานได้ทั้งมีขีด/ไม่มีขีด, หรือ email
-- ✅ **Telegram Phase 1 code (351d3f2):** lib/telegram.ts + DB column + leave/WFH submit wired
-- 🔧 **Telegram config pending:** TELEGRAM_BOT_TOKEN ใน Vercel + มด chat_id ใน DB
-- ✅ **Telegram helper added:** `npm run telegram:mod -- --latest-private --update --test` หลังมดกด `/start` จะหา chat ล่าสุด, update `153-59`, และส่ง test message
-- 🔧 HIP webhook: endpoint live, agent ยังไม่เขียน — รอข้อมูล office server
+- ✅ **Telegram helper added:** `npm run telegram:mod -- --latest-private --update --test`
+- 🔧 HIP webhook: endpoint live, agent code/config ready.
 - 🚧 รอ policy บางอย่างใน `docs/QUESTIONS_FOR_MOD.md` (welfare, leave category details)
 
-**📅 Reminder ตั้งไว้ 16:00 ศุกร์ 15 พ.ค.:** มี GCal event + Claude scheduled-task
+**ล่าสุดเสร็จ (เสาร์ 30 พ.ค. บ่าย):**
+- `1a0e09e` — feat(attendance): add checkout tracking for card scans and display log in checkin portal
+  - `src/lib/card-scan-shared.ts` / `src/lib/card-scan-today.ts`: support returning today's full list of scans
+  - `src/app/portal/checkin/checkin-view.tsx`: show chronological scans log (เข้า/ออก) dynamically in the portal banner
+  - `src/app/hradmin/attendance/reconcile/actions.ts`: compute earliest scan (check-in) and latest scan (check-out, if >1 scan) and write to attendance logs
+  - `src/app/hradmin/attendance/reconcile/reconcile-view.tsx`: display check-out times below check-in times in the dashboard and include them in CSV exports
+  - `supabase/migrations/20260530_add_checkout_columns_to_attendance_logs.sql`: add card_checkout_time, mobile_checkout_time, and official_clock_out columns to attendance_logs
+- `1c25e44` — feat(hip-scanner): add sql sync agent, alternative python agent and CLI enhancements
+  - Added SQL sync agent (`scripts/sql-sync-agent.ps1`) to sync local scanner database with webhook
+  - Added alternative Python agent (`scripts/hip-card-agent.py`) and Windows startup helper scripts
+- `8db0523` — fix(notifications): tell approvers when pending requests are cancelled
+- `a53fc4f` — fix(notifications): send HR Telegram after decisions only
+- `87e5ad6` — docs(attendance): update HIP webhook deployment status
+- `5c008c1` — feat(attendance): add HIP card scan agent
+- `e02b6e0` — feat(leave): apply final EBCI leave policy
+- `9126ede` — chore(telegram): support employee setup helper
+- `020c3a7` — fix(leave): show pending admin requests
+- `864d942` — fix(profile): improve leave chart contrast
 
 **ล่าสุดเสร็จ (laptop · ศุกร์ 15 พ.ค. บ่าย):**
 - `351d3f2` — feat(telegram): Phase 1 — DM HR on leave/WFH submit
@@ -201,7 +214,22 @@ Sidebar polish · password change UI · WFH days · permissions list · email au
 
 ---
 
-## 1. Commits ของ session นี้ (APR30 evening home — office check-in solution Phase 1)
+## 1. Commits ของ session นี้ (MAY30 home/office — checkout tracking + scans log)
+
+| # | Commit | Track | สรุป |
+|---|---|---|---|
+| 10 | `1a0e09e` | 📅 Attendance | feat(attendance): add checkout tracking for card scans and display log in checkin portal |
+| 9 | `1c25e44` | 🔌 Scanner | feat(hip-scanner): add sql sync agent, alternative python agent and CLI enhancements |
+| 8 | `8db0523` | 🔔 Notify | fix(notifications): tell approvers when pending requests are cancelled |
+| 7 | `a53fc4f` | 🔔 Notify | fix(notifications): send HR Telegram after decisions only |
+| 6 | `87e5ad6` | 📚 Docs | docs(attendance): update HIP webhook deployment status |
+| 5 | `5c008c1` | 📅 Attendance | feat(attendance): add HIP card scan agent |
+| 4 | `e02b6e0` | 🌴 Leave | feat(leave): apply final EBCI leave policy |
+| 3 | `9126ede` | 🤖 Telegram | chore(telegram): support employee setup helper |
+| 2 | `020c3a7` | 🌴 Leave | fix(leave): show pending admin requests |
+| 1 | `864d942` | 🎨 Profile | fix(profile): improve leave chart contrast |
+
+## 1a. Commits ของ session ก่อน (APR30 evening home — office check-in solution Phase 1)
 
 | # | Commit | Track | สรุป |
 |---|---|---|---|

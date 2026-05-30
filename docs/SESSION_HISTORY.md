@@ -3566,3 +3566,41 @@ npm run hip:probe
 ```
 
 If protocol still times out, ask HIP/IT to confirm the SDK/download-log port and whether a communication password/network key is enabled on the device.
+
+---
+
+# §33 — May 30 Card Scan Checkout Tracking & Scans Log
+
+## Trigger
+
+User requested check-out tracking for card scans and mobile check-ins. Attendance logs needed check-out times, the reconciliation dashboard needed to display them side-by-side with CSV exports, and the portal check-in page needed a chronological log of today's scans to let employees verify their punches.
+
+## Shipped
+
+1. **Database Migration (`supabase/migrations/20260530_add_checkout_columns_to_attendance_logs.sql`):**
+   - Added `card_checkout_time` (timestamp without time zone), `mobile_checkout_time` (timestamp with time zone), and `official_clock_out` (timestamp with time zone) columns to `attendance_logs` table.
+
+2. **Scanner Integration (`scripts/sql-sync-agent.ps1` & `scripts/hip-card-agent.py`):**
+   - Added a PowerShell-based SQL sync agent to read scans from the local trans-time database and POST to the webhook.
+   - Added a Python-based alternative agent with automatic Windows startup tasks.
+
+3. **Portal UI Card Scans Log (`src/lib/card-scan-shared.ts` / `src/lib/card-scan-today.ts` / `src/app/portal/checkin/checkin-view.tsx`):**
+   - Extended `CardScanTodayInfo` with a `scans` list.
+   - Updated `getCardScanTodayInfo` to query and return today's chronological scans.
+   - Rendered the scan log in the portal check-in banner, labeling each scan chronologically with proper "เข้า" (in) and "ออก" (out) badges and icons.
+
+4. **Reconciliation System (`src/app/hradmin/attendance/reconcile/actions.ts` & `reconcile-view.tsx`):**
+   - Modified the card scans logic to parse the earliest scan as check-in and the latest scan (if scanCount > 1) as check-out.
+   - Computed `officialClockOut` prioritizing card checkout, falling back to mobile checkout.
+   - Included checkout times in the upsert payload to the database.
+   - Displayed check-out times directly beneath check-in times in the table cell with a dimmer font.
+   - Updated the CSV export routine to include checkout columns (`บัตรออก`, `มือถือออก`, `เวลาออกจริง`).
+
+5. **Security and Fixes:**
+   - Modified `.gitignore` to prevent tracking of local sync agent state files (`.sql-sync-state.json`).
+   - Fixed notifications and leave features in previous helper commits.
+
+## Verify
+
+- `npx eslint` and `npx tsc --noEmit` checks passed successfully on all modified files.
+
