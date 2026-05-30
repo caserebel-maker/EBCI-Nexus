@@ -25,6 +25,8 @@
 *.pem
 .hip-card-agent-state.json
 hip-code-map*.json
+.sql-sync-state.json
+scripts/.sql-sync-state.json
 
 # debug
 npm-debug.log*

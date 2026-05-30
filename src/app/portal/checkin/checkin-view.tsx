@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 const CheckinMap = dynamic(() => import('@/components/checkin/checkin-map').then(m => m.CheckinMap), { ssr: false, loading: () => <div className="h-64 rounded-2xl bg-white/5 animate-pulse flex items-center justify-center text-white/40 text-sm">กำลังโหลดแผนที่...</div> })
 
 import { useCallback, useState, useEffect } from 'react'
-import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut, X, Briefcase, Palmtree, IdCard } from 'lucide-react'
+import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut, X, Briefcase, Palmtree, IdCard, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { checkIn, checkOut } from './actions'
 import { haversineDistance } from '@/lib/geo'
@@ -326,10 +326,34 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
                     <p className="text-sm text-white/75 leading-relaxed">
                         ไม่ต้องเช็คอินผ่านแอปซ้ำ — ระบบจะรวมข้อมูลบัตรเข้ากับ attendance log อัตโนมัติ
                     </p>
+                    {cardScanToday!.scans && cardScanToday!.scans.length > 0 && (
+                        <div className="mt-4 pt-3 border-t border-emerald-500/25 text-xs text-emerald-200/75 space-y-1.5 max-w-xs">
+                            <p className="font-semibold text-white/90 flex items-center gap-1.5 mb-2">
+                                <Clock size={12} />
+                                ประวัติการทาบบัตรวันนี้:
+                            </p>
+                            {cardScanToday!.scans.map((s, idx) => (
+                                <div key={idx} className="flex justify-between font-mono">
+                                    <span>ครั้งที่ {idx + 1}</span>
+                                    <span>
+                                        {formatScanClock(s.scanTime)} น.
+                                        {s.scanType && (
+                                            <span className={cn(
+                                                "ml-1.5 text-[10px] px-1 py-0.5 rounded-sm font-semibold",
+                                                s.scanType === 'in' ? "bg-emerald-500/20 text-emerald-200" : "bg-amber-500/20 text-amber-200"
+                                            )}>
+                                                {s.scanType === 'in' ? 'เข้า' : 'ออก'}
+                                            </span>
+                                        )}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                     <button
                         type="button"
                         onClick={() => setShowManualOverride(true)}
-                        className="mt-3 text-xs text-white/55 underline decoration-dotted hover:text-white/85"
+                        className="mt-4 text-xs text-white/55 underline decoration-dotted hover:text-white/85 block"
                     >
                         ฉันยังไม่ได้ทาบบัตร — ขอเช็คอินผ่านแอป
                     </button>

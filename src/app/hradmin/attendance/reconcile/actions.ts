@@ -22,10 +22,13 @@ export interface ReconRow {
     department: string | null
     position: string | null
     cardTime: string | null     // ISO without tz (Bangkok local)
+    cardCheckoutTime: string | null // ISO without tz (Bangkok local)
     mobileTime: string | null
+    mobileCheckoutTime: string | null // ISO (UTC)
     varianceMinutes: number | null
     status: ReconStatus
     officialClockIn: string | null
+    officialClockOut: string | null
     /** §1.3 — when status='on_leave' or the employee has an approved
      *  leave that day, surface the leave-type name so HR sees "ลาป่วย"
      *  instead of just "ลา". Null for non-leave rows. */
@@ -115,31 +118,54 @@ export async function reconcileDate(
         e => e.position !== 'ที่ปรึกษา' && e.department !== 'ที่ปรึกษา',
     )
 
-    // 2. Earliest card scan per employee for the day
+    // 2. Earliest and latest card scans per employee for the day
     const { data: scans } = await supabaseAdmin
         .from('card_scans')
         .select('employee_id, scan_time')
         .gte('scan_time', dayStart)
         .lte('scan_time', dayEnd)
         .order('scan_time', { ascending: true })
-    const cardByEmp = new Map<string, string>() // earliest
+    const cardByEmp = new Map<string, string>() // earliest (check-in)
+    const cardCheckoutByEmp = new Map<string, string>() // latest (check-out)
+    
+    const scansByEmp = new Map<string, string[]>()
     for (const s of scans ?? []) {
         const eid = s.employee_id as string
-        if (!cardByEmp.has(eid)) cardByEmp.set(eid, String(s.scan_time))
+        if (!scansByEmp.has(eid)) {
+            scansByEmp.set(eid, [])
+        }
+        scansByEmp.get(eid)!.push(String(s.scan_time))
+    }
+    for (const [eid, times] of scansByEmp.entries()) {
+        if (times.length > 0) {
+            cardByEmp.set(eid, times[0])
+            if (times.length > 1) {
+                cardCheckoutByEmp.set(eid, times[times.length - 1])
+            }
+        }
     }
 
-    // 3. Earliest mobile checkin per employee for the day
+    // 3. Earliest mobile checkin + latest checkout per employee for the day
     const { data: mobiles } = await supabaseAdmin
         .from('checkins')
-        .select('employee_id, checked_in_at, source')
+        .select('employee_id, checked_in_at, checked_out_at, source')
         .gte('checked_in_at', dayStart)
         .lte('checked_in_at', dayEnd)
         .order('checked_in_at', { ascending: true })
-    const mobileByEmp = new Map<string, string>()
+    const mobileByEmp = new Map<string, string>() // earliest checkin
+    const mobileCheckoutByEmp = new Map<string, string>() // latest checkout
     for (const m of mobiles ?? []) {
         if (m.source === 'card') continue // card-source lives in card_scans now
         const eid = m.employee_id as string
-        if (!mobileByEmp.has(eid)) mobileByEmp.set(eid, String(m.checked_in_at))
+        if (!mobileByEmp.has(eid)) {
+            mobileByEmp.set(eid, String(m.checked_in_at))
+        }
+        if (m.checked_out_at) {
+            const existingCheckout = mobileCheckoutByEmp.get(eid)
+            if (!existingCheckout || new Date(m.checked_out_at) > new Date(existingCheckout)) {
+                mobileCheckoutByEmp.set(eid, String(m.checked_out_at))
+            }
+        }
     }
 
     // 4. Existing attendance_logs for the date (to upsert without unique key)
@@ -193,7 +219,9 @@ export async function reconcileDate(
 
     for (const e of staff) {
         const cardTime = cardByEmp.get(e.id) ?? null
+        const cardCheckout = cardCheckoutByEmp.get(e.id) ?? null
         const mobileTime = mobileByEmp.get(e.id) ?? null
+        const mobileCheckout = mobileCheckoutByEmp.get(e.id) ?? null
         const classified = classify(
             toMs(cardTime, 'bangkok'),
             toMs(mobileTime, 'utc'),
@@ -213,6 +241,10 @@ export async function reconcileDate(
             cardTime // card is the source of truth when present
                 ? cardTime
                 : mobileTime ?? null
+        
+        const officialOut = cardCheckout
+            ? cardCheckout
+            : mobileCheckout ?? null
 
         rows.push({
             employeeId: e.id,
@@ -222,10 +254,13 @@ export async function reconcileDate(
             department: e.department ?? null,
             position: e.position ?? null,
             cardTime,
+            cardCheckoutTime: cardCheckout,
             mobileTime,
+            mobileCheckoutTime: mobileCheckout,
             varianceMinutes: variance,
             status,
             officialClockIn: official,
+            officialClockOut: officialOut,
             leaveTypeName: leaveOnDate?.typeName ?? null,
             isHalfDayLeave: leaveOnDate?.isHalfDay ?? false,
             halfDayLeavePeriod: leaveOnDate?.halfDayPeriod ?? null,
@@ -236,10 +271,13 @@ export async function reconcileDate(
             employee_id: e.id,
             date: dayStart,
             card_scan_time: cardTime,
+            card_checkout_time: cardCheckout,
             mobile_checkin_time: mobileTime,
+            mobile_checkout_time: mobileCheckout,
             variance_minutes: variance,
             reconciliation_status: status,
             official_clock_in: official,
+            official_clock_out: officialOut,
             source: cardTime ? 'card' : mobileTime ? 'mobile' : null,
             reconciled_at: reconciledAt,
             reconciled_by: session.id,

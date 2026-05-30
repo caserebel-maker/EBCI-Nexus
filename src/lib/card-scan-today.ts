@@ -63,5 +63,9 @@ export async function getCardScanTodayInfo(
         latestScanTime:   scans[scans.length - 1].scan_time,
         scanCount:        scans.length,
         earliestScanType: (scans[0].scan_type as 'in' | 'out' | null) ?? null,
+        scans: scans.map(s => ({
+            scanTime: s.scan_time,
+            scanType: (s.scan_type as 'in' | 'out' | null) ?? null,
+        })),
     }
 }

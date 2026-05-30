@@ -17,6 +17,8 @@ export interface CardScanTodayInfo {
     scanCount: number
     /** Earliest scan_type when set ('in'|'out'|null). */
     earliestScanType: 'in' | 'out' | null
+    /** All scans today. */
+    scans?: Array<{ scanTime: string; scanType: 'in' | 'out' | null }>
 }
 
 /**

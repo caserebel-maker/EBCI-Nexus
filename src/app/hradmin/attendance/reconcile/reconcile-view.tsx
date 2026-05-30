@@ -107,7 +107,7 @@ export function ReconcileView({ initialDate, initialData }: Props) {
 
     const handleExport = () => {
         if (!data) return
-        const header = ['รหัส', 'ชื่อ-นามสกุล', 'แผนก', 'ตำแหน่ง', 'บัตร', 'มือถือ', 'ต่าง(นาที)', 'สถานะ', 'เวลาอนุมัติ']
+        const header = ['รหัส', 'ชื่อ-นามสกุล', 'แผนก', 'ตำแหน่ง', 'บัตรเข้า', 'บัตรออก', 'มือถือเข้า', 'มือถือออก', 'ต่าง(นาที)', 'สถานะ', 'เวลาเข้าจริง', 'เวลาออกจริง']
         const statusLabel: Record<ReconStatus, string> = {
             matched: 'ตรงกัน', discrepancy: 'ต่างเกิน 10 นาที',
             card_only: 'บัตรอย่างเดียว', mobile_only: 'มือถืออย่างเดียว',
@@ -121,11 +121,13 @@ export function ReconcileView({ initialDate, initialData }: Props) {
                 r.department ?? '',
                 r.position ?? '',
                 formatTime(r.cardTime, 'bangkok'),
+                formatTime(r.cardCheckoutTime, 'bangkok'),
                 formatTime(r.mobileTime, 'utc'),
+                formatTime(r.mobileCheckoutTime, 'utc'),
                 r.varianceMinutes !== null ? String(r.varianceMinutes) : '',
                 `${statusLabel[r.status]}${r.isHalfDayLeave ? ` (ครึ่งวัน${r.halfDayLeavePeriod === 'morning' ? 'เช้า' : 'บ่าย'})` : ''}`,
-                // official_clock_in mirrors card when present, mobile otherwise
                 formatTime(r.officialClockIn, r.cardTime ? 'bangkok' : 'utc'),
+                formatTime(r.officialClockOut, r.cardCheckoutTime ? 'bangkok' : 'utc'),
             ]),
         ]
         downloadCsv(`reconcile_${data.date}.csv`, rows)
@@ -239,8 +241,22 @@ export function ReconcileView({ initialDate, initialData }: Props) {
                                                 {r.nickname && <span className="text-white/55"> ({r.nickname})</span>}
                                                 <div className="text-[10px] text-white/40">{r.department ?? '—'}</div>
                                             </td>
-                                            <td className="py-2 px-3 text-right font-mono text-xs text-sky-200">{formatTime(r.cardTime, 'bangkok')}</td>
-                                            <td className="py-2 px-3 text-right font-mono text-xs text-amber-200">{formatTime(r.mobileTime, 'utc')}</td>
+                                            <td className="py-2 px-3 text-right font-mono text-xs text-sky-200">
+                                                <div>{formatTime(r.cardTime, 'bangkok')}</div>
+                                                {r.cardCheckoutTime && (
+                                                    <div className="text-[10px] text-sky-300/70">
+                                                        ออก: {formatTime(r.cardCheckoutTime, 'bangkok')}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="py-2 px-3 text-right font-mono text-xs text-amber-200">
+                                                <div>{formatTime(r.mobileTime, 'utc')}</div>
+                                                {r.mobileCheckoutTime && (
+                                                    <div className="text-[10px] text-amber-300/70">
+                                                        ออก: {formatTime(r.mobileCheckoutTime, 'utc')}
+                                                    </div>
+                                                )}
+                                            </td>
                                             <td className={`py-2 px-3 text-right font-mono text-xs font-semibold ${
                                                 r.status === 'discrepancy' ? 'text-rose-300' :
                                                 r.status === 'matched' ? 'text-emerald-300' : 'text-white/40'
