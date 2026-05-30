@@ -219,6 +219,7 @@ Sidebar polish · password change UI · WFH days · permissions list · email au
 
 | # | Commit | Track | สรุป |
 |---|---|---|---|
+| 12 | `c03b121` | 📺 Welcome TV | style(welcome-tv): make digital clock font responsive to prevent screen overflow |
 | 11 | `2ac1d97` | 📺 Welcome TV | feat(welcome-tv): add real-time welcome TV screen dashboard with chime and realtime RLS policies |
 | 10 | `1a0e09e` | 📅 Attendance | feat(attendance): add checkout tracking for card scans and display log in checkin portal |
 | 9 | `1c25e44` | 🔌 Scanner | feat(hip-scanner): add sql sync agent, alternative python agent and CLI enhancements |

@@ -3600,6 +3600,13 @@ User requested check-out tracking for card scans and mobile check-ins. Attendanc
    - Modified `.gitignore` to prevent tracking of local sync agent state files (`.sql-sync-state.json`).
    - Fixed notifications and leave features in previous helper commits.
 
+6. **Real-time Welcome TV System (`src/app/welcome-tv/page.tsx` & `welcome-tv-dashboard.tsx`):**
+   - Developed a responsive, full-screen welcome dashboard utilizing client-side Supabase Realtime subscription.
+   - Generates a warm arpeggiated C-major chime dynamically on the client via the browser's Web Audio API.
+   - Built an animated glassmorphism welcome card showcasing employee photo, nickname, and custom Thai greetings.
+   - Implemented RLS-safe postgres replication and SELECT policies.
+   - Updated the clock styling to utilize viewport-relative sizing (`text-[9vw]`), preventing overflow on any viewport width.
+
 ## Verify
 
 - `npx eslint` and `npx tsc --noEmit` checks passed successfully on all modified files.
