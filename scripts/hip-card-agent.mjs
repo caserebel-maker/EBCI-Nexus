@@ -74,17 +74,21 @@ const config = {
     once: Boolean(args.once),
     sinceMinutes: args.sinceMinutes ? Number(args.sinceMinutes) : null,
     codeMapPath: String(args.codeMap ?? process.env.HIP_CODE_MAP_PATH ?? ''),
+    commKey: Number(args['comm-key'] ?? args.commKey ?? process.env.HIP_COMM_KEY ?? 0),
+    protocol: args.protocol ?? process.env.HIP_PROTOCOL ?? undefined,
 }
 
 function usage() {
     console.log(`Usage:
-  npm run hip:probe -- [--host 192.168.1.40] [--port 5005]
+  npm run hip:probe -- [--host 192.168.1.40] [--port 5005] [--comm-key 0] [--protocol tcp|udp]
   npm run hip:sync -- [--dry-run] [--since-minutes 1440]
   npm run hip:watch -- [--dry-run] [--once]
 
 Environment:
   HIP_HOST=192.168.1.40
   HIP_PORT=5005
+  HIP_COMM_KEY=0
+  HIP_PROTOCOL=tcp
   CARD_SCAN_WEBHOOK_SECRET=...
   NEXUS_CARD_SCAN_WEBHOOK=https://ebci-nexus.vercel.app/api/webhooks/card-scan
   HIP_CODE_MAP_PATH=./hip-code-map.json  # optional device user id -> employee_code map
@@ -107,7 +111,8 @@ function tcpProbe() {
 }
 
 async function createDevice() {
-    const zk = new ZKLib(config.host, config.port, config.timeoutMs, config.inport)
+    console.log(`[hip-agent] ZKLib params: IP=${config.host}, port=${config.port}, timeout=${config.timeoutMs}, inport=${config.inport}, commKey=${config.commKey}, protocol=${config.protocol ?? 'auto'}`)
+    const zk = new ZKLib(config.host, config.port, config.timeoutMs, config.inport, config.commKey, config.protocol)
     await zk.createSocket()
     return zk
 }
@@ -199,14 +204,18 @@ async function postScans(scans) {
 }
 
 async function runProbe() {
-    console.log(`[hip-agent] TCP probe ${config.host}:${config.port}`)
-    const tcp = await tcpProbe()
-    if (!tcp.ok) {
-        console.error(`[hip-agent] TCP failed: ${tcp.error}`)
-        process.exitCode = 1
-        return
+    if (config.protocol !== 'udp') {
+        console.log(`[hip-agent] TCP probe ${config.host}:${config.port}`)
+        const tcp = await tcpProbe()
+        if (!tcp.ok) {
+            console.error(`[hip-agent] TCP failed: ${tcp.error}`)
+            process.exitCode = 1
+            return
+        }
+        console.log('[hip-agent] TCP ok')
+    } else {
+        console.log(`[hip-agent] UDP mode selected, skipping TCP probe to ${config.host}:${config.port}`)
     }
-    console.log('[hip-agent] TCP ok')
 
     let zk
     try {
