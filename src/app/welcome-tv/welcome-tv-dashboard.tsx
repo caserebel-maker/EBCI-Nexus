@@ -36,6 +36,12 @@ export default function WelcomeTvDashboard() {
     // Sound states
     const [audioEnabled, setAudioEnabled] = useState(false)
 
+    // Debug & System Logs
+    const [logs, setLogs] = useState<string[]>(['System initialized'])
+    const addLog = useCallback((msg: string) => {
+        setLogs(prev => [...prev.slice(-9), `[${new Date().toLocaleTimeString('th-TH', { hour12: false })}] ${msg}`])
+    }, [])
+
     // Real-time scan states
     const [currentScan, setCurrentScan] = useState<ScanEvent | null>(null)
     const [employee, setEmployee] = useState<EmployeeData | null>(null)
@@ -109,7 +115,7 @@ export default function WelcomeTvDashboard() {
     useEffect(() => {
         if (!isAuthorized) return
 
-        console.log('[WelcomeTV] Subscribing to card_scans PostgreSQL changes...')
+        setTimeout(() => addLog('กำลังเชื่อมต่อ Supabase Realtime...'), 0)
 
         const channel = supabase
             .channel('welcome_tv_scans')
@@ -118,8 +124,8 @@ export default function WelcomeTvDashboard() {
                 schema: 'public',
                 table: 'card_scans'
             }, async (payload) => {
-                console.log('[WelcomeTV] New card scan detected:', payload.new)
                 const newScan = payload.new as ScanEvent
+                addLog(`ตรวจพบการแตะบัตรใหม่: รหัส ${newScan.employee_code || 'ไม่ระบุ'} (${newScan.scan_type || 'ไม่มีประเภท'})`)
 
                 // Cancel existing dismissal timeout if a new scan arrives
                 if (dismissTimeoutRef.current) {
@@ -135,12 +141,13 @@ export default function WelcomeTvDashboard() {
                          .maybeSingle()
 
                     if (empError) {
-                        console.error('[WelcomeTV] Employee fetch error:', empError)
+                        addLog(`ดึงข้อมูลพนักงานล้มเหลว: ${empError.message}`)
                         return
                     }
 
                     if (empData) {
                         const employeeInfo = empData as EmployeeData
+                        addLog(`โหลดข้อมูลพนักงานสำเร็จ: ${employeeInfo.first_name_th} (${employeeInfo.nickname || 'ไม่มีชื่อเล่น'})`)
                         setEmployee(employeeInfo)
                         setCurrentScan(newScan)
                         
@@ -171,20 +178,27 @@ export default function WelcomeTvDashboard() {
                         dismissTimeoutRef.current = setTimeout(() => {
                             setShowOverlay(false)
                         }, 8000)
+                    } else {
+                        addLog(`ไม่พบข้อมูลพนักงานสำหรับ ID: ${newScan.employee_id} (อาจติด RLS Policy หรือข้อมูลไม่ตรง)`)
                     }
-                } catch (err) {
-                    console.error('[WelcomeTV] Process scan error:', err)
+                } catch (err: unknown) {
+                    const errMsg = err instanceof Error ? err.message : String(err)
+                    addLog(`เกิดข้อผิดพลาดในการประมวลผล: ${errMsg}`)
                 }
             })
-            .subscribe((status) => {
-                console.log('[WelcomeTV] Subscription status changed:', status)
+            .subscribe((status, err) => {
+                if (err) {
+                    addLog(`การเชื่อมต่อมีปัญหา: ${err.message}`)
+                } else {
+                    addLog(`สถานะการเชื่อมต่อ: ${status}`)
+                }
             })
 
         return () => {
             if (dismissTimeoutRef.current) clearTimeout(dismissTimeoutRef.current)
             supabase.removeChannel(channel)
         }
-    }, [isAuthorized, playChime])
+    }, [isAuthorized, playChime, addLog])
 
     // Resolve employee profile photo URL
     const getPhotoUrl = (path: string | null) => {
@@ -334,6 +348,17 @@ export default function WelcomeTvDashboard() {
                         </div>
                     </div>
                 )}
+            </div>
+
+            {/* Debug logs (subtle at bottom left) */}
+            <div className="absolute bottom-4 left-4 text-[10px] font-mono text-neutral-500 max-w-xs text-left z-30 pointer-events-auto bg-black/50 p-3 rounded-xl border border-white/5 hover:border-white/10 transition-all max-h-36 overflow-y-auto">
+                <div className="font-bold text-neutral-400 mb-1 flex items-center justify-between gap-4">
+                    <span>TV STATUS LOGS</span>
+                    <button className="text-[8px] bg-white/5 hover:bg-white/10 px-1.5 py-0.5 rounded text-neutral-400" onClick={() => setLogs([])}>clear</button>
+                </div>
+                {logs.map((log, i) => (
+                    <div key={i} className="leading-tight mt-0.5 truncate">{log}</div>
+                ))}
             </div>
 
             {/* General Banner Footer */}
