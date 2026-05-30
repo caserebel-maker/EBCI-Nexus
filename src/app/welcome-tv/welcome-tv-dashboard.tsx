@@ -246,7 +246,7 @@ export default function WelcomeTvDashboard() {
 
             {/* Standby Digital Clock & Date */}
             <div className={`flex flex-col items-center justify-center flex-1 transition-all duration-700 ${showOverlay ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
-                <div className="text-[12rem] font-black tracking-tighter text-white drop-shadow-[0_0_50px_rgba(255,255,255,0.06)] font-mono tabular-nums leading-none">
+                <div className="text-[9vw] text-7xl md:text-8xl lg:text-[9vw] font-black tracking-tighter text-white drop-shadow-[0_0_50px_rgba(255,255,255,0.06)] font-mono tabular-nums leading-none text-center">
                     {timeStr || '00:00:00'}
                 </div>
                 <div className="text-4xl font-light text-neutral-400 mt-6 tracking-wide drop-shadow-sm">
