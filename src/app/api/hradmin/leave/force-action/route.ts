@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     const reason = body?.reason ? String(body.reason).trim() : ''
 
     if (!id) return NextResponse.json({ error: 'missing id' }, { status: 400 })
-    if (!['approve', 'reject', 'cancel'].includes(action)) {
+    if (!['approve', 'reject', 'cancel', 'delete'].includes(action)) {
         return NextResponse.json({ error: 'invalid action' }, { status: 400 })
     }
     if ((action === 'reject' || action === 'cancel') && reason.length < 5) {
@@ -72,7 +72,8 @@ export async function POST(req: NextRequest) {
     const oldStatus = row.status as string
     const newStatus = action === 'approve' ? 'approved'
         : action === 'reject' ? 'rejected'
-        : 'cancelled'
+        : action === 'cancel' ? 'cancelled'
+        : 'deleted'
 
     if (oldStatus === newStatus) {
         return NextResponse.json({ error: `ใบลาอยู่ในสถานะ ${newStatus} อยู่แล้ว` }, { status: 409 })
@@ -160,6 +161,25 @@ export async function POST(req: NextRequest) {
     if (balanceError) {
         console.error('[force-action] balance adjust error:', balanceError)
         // Non-fatal — status flip still happens; a reconciliation job can clean up.
+    }
+
+    if (action === 'delete') {
+        const { error: delErr } = await supabaseAdmin
+            .from('leave_requests')
+            .delete()
+            .eq('id', id)
+        if (delErr) {
+            console.error('[force-action] delete error:', delErr)
+            return NextResponse.json({ error: delErr.message }, { status: 500 })
+        }
+        return NextResponse.json({
+            success: true,
+            id,
+            reference_code: row.reference_code,
+            old_status: oldStatus,
+            new_status: 'deleted',
+            balance_warning: balanceError ?? null,
+        })
     }
 
     // Append audit trail to approval_notes (keep historical rejection_reason

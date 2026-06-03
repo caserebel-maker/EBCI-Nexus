@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import {
-    ShieldCheck, Download, Filter, CheckCircle2, XCircle,
+    ShieldCheck, Download, Filter, CheckCircle2, XCircle, Trash2,
     Clock, CalendarDays, User, Loader2, X, AlertCircle, ChevronDown, ChevronRight,
 } from 'lucide-react'
 import { approveLeaveAsCurrentUser, rejectLeaveAsCurrentUser } from '@/lib/leave-approval-actions'
@@ -453,6 +453,43 @@ export default function LeaveAdminPage() {
         }
     }
 
+    async function handleDelete(reqItem: LeaveRequest) {
+        const ok = await confirm({
+            title: 'ยืนยันลบใบลาถาวร?',
+            body: 'การลบนี้จะลบข้อมูลออกจากระบบโดยสิ้นเชิง และจะคืนวันลาสะสมตามสิทธิ์ของพนักงานโดยอัตโนมัติ (ไม่สามารถกู้คืนข้อมูลประวัติหรือแนบไฟล์ได้)',
+            summary: (
+                <div className="space-y-1">
+                    <p>👤 {reqItem.employee.firstNameTH} {reqItem.employee.lastNameTH}</p>
+                    <p>🌴 {LEAVE_TYPE_LABELS[reqItem.leaveType] ?? reqItem.leaveType} · {formatDate(reqItem.startDate)} – {formatDate(reqItem.endDate)}</p>
+                    <p>สถานะปัจจุบัน: {STATUS_CONFIG[reqItem.status]?.label ?? reqItem.status}</p>
+                </div>
+            ),
+            confirmLabel: 'ลบข้อมูล',
+            variant: 'destructive',
+        })
+        if (!ok) return
+
+        setActionLoading(reqItem.id)
+        try {
+            const res = await fetch('/api/hradmin/leave/force-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: reqItem.id, action: 'delete' }),
+            })
+            const data = await res.json()
+            if (!res.ok) {
+                showToast('error', data.error || 'เกิดข้อผิดพลาดในการลบ')
+                return
+            }
+            showToast('success', 'ลบใบลาและปรับยอดวันลาคืนพนักงานสำเร็จ')
+            fetchRequests()
+        } catch {
+            showToast('error', 'เกิดข้อผิดพลาดในการเชื่อมต่อ')
+        } finally {
+            setActionLoading(null)
+        }
+    }
+
     async function handleExport() {
         setExportLoading(true)
         try {
@@ -762,11 +799,30 @@ export default function LeaveAdminPage() {
                                                                     <XCircle size={10} />
                                                                     ปฏิเสธ
                                                                 </button>
+                                                                <button
+                                                                    onClick={() => handleDelete(req)}
+                                                                    disabled={actionLoading === req.id}
+                                                                    className="flex items-center gap-1 bg-neutral-600 hover:bg-neutral-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded-md disabled:opacity-60 transition-colors"
+                                                                    title="ลบใบลาถาวร"
+                                                                >
+                                                                    <Trash2 size={10} />
+                                                                    ลบ
+                                                                </button>
                                                             </div>
                                                         ) : (
-                                                            <span className="text-xs text-muted-foreground">
-                                                                {req.approver?.name || '—'}
-                                                            </span>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    {req.approver?.name || '—'}
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => handleDelete(req)}
+                                                                    disabled={actionLoading === req.id}
+                                                                    className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                                                                    title="ลบใบลาถาวร"
+                                                                >
+                                                                    <Trash2 size={13} />
+                                                                </button>
+                                                            </div>
                                                         )}
                                                     </td>
                                                 </tr>
@@ -792,7 +848,7 @@ export default function LeaveAdminPage() {
                                                         <p className="text-xs text-muted-foreground">{req.employee.department}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex gap-2">
+                                                <div className="flex gap-2 items-center">
                                                     <span className={`text-xs font-semibold px-2 py-1 rounded-full ${LEAVE_TYPE_COLORS[req.leaveType] || 'bg-gray-100 text-gray-700'}`}>
                                                         {LEAVE_TYPE_LABELS[req.leaveType]}
                                                     </span>
@@ -800,12 +856,22 @@ export default function LeaveAdminPage() {
                                                         {statusCfg.icon}
                                                         {statusCfg.label}
                                                     </span>
+                                                    {req.status !== 'pending' && (
+                                                        <button
+                                                            onClick={() => handleDelete(req)}
+                                                            disabled={actionLoading === req.id}
+                                                            className="text-red-500 hover:text-red-700 p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors shrink-0"
+                                                            title="ลบใบลาถาวร"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                             <p className="text-sm text-muted-foreground">
                                                 {formatDate(req.startDate)} – {formatDate(req.endDate)} ({req.totalDays} วัน)
                                             </p>
-                                            {req.status === 'pending' && (
+                                            {req.status === 'pending' ? (
                                                 <div className="flex gap-2">
                                                     <button
                                                         onClick={() => handleApprove(req.id)}
@@ -823,7 +889,20 @@ export default function LeaveAdminPage() {
                                                         <XCircle size={12} />
                                                         ปฏิเสธ
                                                     </button>
+                                                    <button
+                                                        onClick={() => handleDelete(req)}
+                                                        disabled={actionLoading === req.id}
+                                                        className="flex items-center justify-center bg-neutral-600 hover:bg-neutral-700 text-white text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-60 transition-colors"
+                                                    >
+                                                        <Trash2 size={12} />
+                                                    </button>
                                                 </div>
+                                            ) : (
+                                                req.approver?.name && (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        ผู้อนุมัติ: {req.approver.name}
+                                                    </p>
+                                                )
                                             )}
                                         </div>
                                     )
