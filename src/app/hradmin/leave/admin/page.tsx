@@ -404,7 +404,11 @@ export default function LeaveAdminPage() {
     async function handleApprove(id: string) {
         setActionLoading(id)
         try {
-            const res = await fetch(`/api/leave/${id}/approve`, { method: 'POST' })
+            const res = await fetch('/api/hradmin/leave/force-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, action: 'approve' }),
+            })
             const data = await res.json()
             if (!res.ok) { showToast('error', data.error || 'เกิดข้อผิดพลาด'); return }
             showToast('success', 'อนุมัติใบลาสำเร็จ')
@@ -436,10 +440,10 @@ export default function LeaveAdminPage() {
 
         setActionLoading(target.id)
         try {
-            const res = await fetch(`/api/leave/${target.id}/reject`, {
+            const res = await fetch('/api/hradmin/leave/force-action', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rejection_reason: reason }),
+                body: JSON.stringify({ id: target.id, action: 'reject', reason }),
             })
             const data = await res.json()
             if (!res.ok) { showToast('error', data.error || 'เกิดข้อผิดพลาด'); return }
