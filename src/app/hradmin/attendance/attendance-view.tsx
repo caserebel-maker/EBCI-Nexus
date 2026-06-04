@@ -60,6 +60,7 @@ export function AttendanceView({ initialDate, initialData }: Props) {
     const [date, setDate] = useState(initialDate)
     const [data, setData] = useState<InitialData | null>(initialData)
     const [filter, setFilter] = useState<FilterTab>('all')
+    const [sortBy, setSortBy] = useState<'alphabet' | 'checkin-time'>('alphabet')
     const [isPending, startTransition] = useTransition()
     const [nowTick, setNowTick] = useState(0) // force re-render for "X minutes ago"
 
@@ -107,6 +108,21 @@ export function AttendanceView({ initialDate, initialData }: Props) {
         if (filter === 'wfh') return r.checkin?.type === 'wfh'
         if (filter === 'late') return isRecordLate(r.checkin)
         return true
+    })
+
+    const sortedRecords = [...filteredRecords].sort((a, b) => {
+        if (sortBy === 'alphabet') {
+            return a.employeeName.localeCompare(b.employeeName, 'th')
+        } else {
+            const aTime = a.checkin?.checked_in_at
+            const bTime = b.checkin?.checked_in_at
+            if (aTime && bTime) {
+                return new Date(aTime).getTime() - new Date(bTime).getTime()
+            }
+            if (aTime) return -1
+            if (bTime) return 1
+            return a.employeeName.localeCompare(b.employeeName, 'th')
+        }
     })
 
     // Quick date presets — Bangkok-local so users in Bangkok between
@@ -203,34 +219,62 @@ export function AttendanceView({ initialDate, initialData }: Props) {
                 <StatCard icon={HelpCircle} label="ยังไม่เช็คอิน" value={stats.notCheckedInCount} color="text-amber-300" bg="bg-amber-500/10" border="border-amber-500/30" />
             </div>
 
-            {/* Filter tabs */}
-            <div className="flex items-center gap-2 flex-wrap">
-                <FilterTabBtn active={filter === 'all'} onClick={() => setFilter('all')} count={records.length}>
-                    ทั้งหมด
-                </FilterTabBtn>
-                <FilterTabBtn active={filter === 'office'} onClick={() => setFilter('office')} count={stats.officeCount}>
-                    🏢 ออฟฟิศ
-                </FilterTabBtn>
-                <FilterTabBtn active={filter === 'wfh'} onClick={() => setFilter('wfh')} count={stats.wfhCount}>
-                    🏠 WFH
-                </FilterTabBtn>
-                <FilterTabBtn active={filter === 'late'} onClick={() => setFilter('late')} count={lateCount}>
-                    ⏰ เข้างานสาย
-                </FilterTabBtn>
-                <FilterTabBtn active={filter === 'not-checked-in'} onClick={() => setFilter('not-checked-in')} count={stats.notCheckedInCount}>
-                    ❓ ยังไม่เช็คอิน
-                </FilterTabBtn>
+            {/* Filter tabs and Sorting */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-white/5 border border-white/10 rounded-2xl p-3" style={{ backdropFilter: 'blur(8px)' }}>
+                <div className="flex items-center gap-2 flex-wrap">
+                    <FilterTabBtn active={filter === 'all'} onClick={() => setFilter('all')} count={records.length}>
+                        ทั้งหมด
+                    </FilterTabBtn>
+                    <FilterTabBtn active={filter === 'office'} onClick={() => setFilter('office')} count={stats.officeCount}>
+                        🏢 ออฟฟิศ
+                    </FilterTabBtn>
+                    <FilterTabBtn active={filter === 'wfh'} onClick={() => setFilter('wfh')} count={stats.wfhCount}>
+                        🏠 WFH
+                    </FilterTabBtn>
+                    <FilterTabBtn active={filter === 'late'} onClick={() => setFilter('late')} count={lateCount}>
+                        ⏰ เข้างานสาย
+                    </FilterTabBtn>
+                    <FilterTabBtn active={filter === 'not-checked-in'} onClick={() => setFilter('not-checked-in')} count={stats.notCheckedInCount}>
+                        ❓ ยังไม่เช็คอิน
+                    </FilterTabBtn>
+                </div>
+
+                {/* Sort Selector */}
+                <div className="flex items-center gap-1 bg-black/30 border border-white/10 rounded-xl p-1 text-xs self-start md:self-auto shrink-0 animate-fade-in">
+                    <button
+                        onClick={() => setSortBy('alphabet')}
+                        className={cn(
+                            "px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer",
+                            sortBy === 'alphabet'
+                                ? "bg-[#882136] text-white shadow"
+                                : "text-white/60 hover:text-white hover:bg-white/5"
+                        )}
+                    >
+                        เรียงตามตัวอักษร
+                    </button>
+                    <button
+                        onClick={() => setSortBy('checkin-time')}
+                        className={cn(
+                            "px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer",
+                            sortBy === 'checkin-time'
+                                ? "bg-[#882136] text-white shadow"
+                                : "text-white/60 hover:text-white hover:bg-white/5"
+                        )}
+                    >
+                        เรียงตามเวลาเข้างาน
+                    </button>
+                </div>
             </div>
 
             {/* Employee list */}
             <div className="space-y-2">
-                {filteredRecords.length === 0 && (
+                {sortedRecords.length === 0 && (
                     <div className="text-center py-16 text-white/40">
                         <MapPinOff size={48} className="mx-auto mb-4 opacity-30" />
                         <p>ไม่มีข้อมูลในหมวดนี้</p>
                     </div>
                 )}
-                {filteredRecords.map((r) => (
+                {sortedRecords.map((r) => (
                     <EmployeeRow key={r.employeeId} record={r} />
                 ))}
             </div>
