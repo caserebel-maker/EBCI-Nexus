@@ -125,34 +125,6 @@ export async function reconcileDate(
         .gte('scan_time', dayStart)
         .lte('scan_time', dayEnd)
         .order('scan_time', { ascending: true })
-    const cardByEmp = new Map<string, string>() // earliest (check-in)
-    const cardCheckoutByEmp = new Map<string, string>() // latest (check-out)
-    
-    const scansByEmp = new Map<string, string[]>()
-    for (const s of scans ?? []) {
-        const eid = s.employee_id as string
-        if (!scansByEmp.has(eid)) {
-            scansByEmp.set(eid, [])
-        }
-        scansByEmp.get(eid)!.push(String(s.scan_time))
-    }
-    for (const [eid, times] of scansByEmp.entries()) {
-        if (times.length > 0) {
-            cardByEmp.set(eid, times[0])
-            
-            // Only scans at or after 15:00 (Bangkok time) are eligible for checkout.
-            // This prevents lunch or afternoon errand card taps from being counted as final check-out.
-            // The check-out scan must also be a different scan than the check-in scan.
-            const checkoutCandidates = times.slice(1).filter(t => {
-                const normalized = t.replace(' ', 'T')
-                const timePart = normalized.split('T')[1] || ''
-                return timePart >= '15:00:00'
-            })
-            if (checkoutCandidates.length > 0) {
-                cardCheckoutByEmp.set(eid, checkoutCandidates[checkoutCandidates.length - 1])
-            }
-        }
-    }
 
     // 3. Earliest mobile checkin + latest checkout per employee for the day
     const { data: mobiles } = await supabaseAdmin
@@ -173,6 +145,54 @@ export async function reconcileDate(
             const existingCheckout = mobileCheckoutByEmp.get(eid)
             if (!existingCheckout || new Date(m.checked_out_at) > new Date(existingCheckout)) {
                 mobileCheckoutByEmp.set(eid, String(m.checked_out_at))
+            }
+        }
+    }
+
+    const cardByEmp = new Map<string, string>() // earliest (check-in)
+    const cardCheckoutByEmp = new Map<string, string>() // latest (check-out)
+    
+    const scansByEmp = new Map<string, string[]>()
+    for (const s of scans ?? []) {
+        const eid = s.employee_id as string
+        if (!scansByEmp.has(eid)) {
+            scansByEmp.set(eid, [])
+        }
+        scansByEmp.get(eid)!.push(String(s.scan_time))
+    }
+    for (const [eid, times] of scansByEmp.entries()) {
+        if (times.length > 0) {
+            const earliestScan = times[0]
+            const normalizedEarliest = earliestScan.replace(' ', 'T')
+            const earliestScanTimePart = normalizedEarliest.split('T')[1] || ''
+            
+            // Smart matching for off-site staff: if the earliest card scan is after 15:00,
+            // and they checked in on mobile in the morning (before 15:00), we treat their
+            // card scans as checkout-only. This avoids creating a check-in discrepancy.
+            const hasMobileCheckInBefore15 = (() => {
+                const mobTime = mobileByEmp.get(eid)
+                if (!mobTime) return false
+                const d = new Date(mobTime)
+                const bkkHour = (d.getUTCHours() + 7) % 24
+                return bkkHour < 15
+            })()
+
+            if (earliestScanTimePart >= '15:00:00' && hasMobileCheckInBefore15) {
+                cardCheckoutByEmp.set(eid, times[times.length - 1])
+            } else {
+                cardByEmp.set(eid, earliestScan)
+                
+                // Only scans at or after 15:00 (Bangkok time) are eligible for checkout.
+                // This prevents lunch or afternoon errand card taps from being counted as final check-out.
+                // The check-out scan must also be a different scan than the check-in scan.
+                const checkoutCandidates = times.slice(1).filter(t => {
+                    const normalized = t.replace(' ', 'T')
+                    const timePart = normalized.split('T')[1] || ''
+                    return timePart >= '15:00:00'
+                })
+                if (checkoutCandidates.length > 0) {
+                    cardCheckoutByEmp.set(eid, checkoutCandidates[checkoutCandidates.length - 1])
+                }
             }
         }
     }
