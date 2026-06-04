@@ -19,7 +19,7 @@ export const maxDuration = 60
  * The nudge gives them a chance to fix it before the day ends and the
  * data calcifies.
  *
- * Why 10:00 BKK (1.5h past the 08:30 official start)? Earlier than that
+ * Why 10:00 BKK (2h past the 08:00 official start)? Earlier than that
  * is too aggressive — the on-time WFH'er hasn't even sat down at their
  * desk yet at 09:00. Past noon and we're nudging too late to save
  * the workday's data.

@@ -50,10 +50,10 @@ export interface AttendanceReport {
 }
 
 /** Cutoff used to flag a check-in as "มาสาย".
- *  08:30 = Bangkok minutes-of-day = 510. Hard-coded for v1 because
+ *  08:00 = Bangkok minutes-of-day = 480. Hard-coded for v1 because
  *  EBCI doesn't yet store a per-office shift schedule; once HR settles
  *  on cutoff(s) per role/office we'll move this into a config table. */
-const LATE_CUTOFF_MIN = 8 * 60 + 30
+const LATE_CUTOFF_MIN = 8 * 60
 
 /** YYYY-MM-DD comparator helper. Strings sort correctly because the
  *  format is fixed-width. */

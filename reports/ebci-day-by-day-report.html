@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EBCI Nexus Day-by-Day Report</title>
+  <style>
+    :root{
+      --bg:#0f1115;
+      --panel:#171a21;
+      --panel-2:#1d222b;
+      --text:#eef2f7;
+      --muted:#aab4c0;
+      --line:#2a3140;
+      --accent:#7cc4ff;
+      --accent-2:#8b5cf6;
+      --ok:#55d18a;
+      --warn:#ffbf69;
+      --danger:#ff7a7a;
+      --chip:#232938;
+      --shadow:0 18px 60px rgba(0,0,0,.35);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      background:
+        radial-gradient(1000px 500px at 10% 0%, rgba(124,196,255,.08), transparent 60%),
+        radial-gradient(800px 400px at 90% 10%, rgba(139,92,246,.10), transparent 55%),
+        linear-gradient(180deg, #0b0d11 0%, var(--bg) 100%);
+      color:var(--text);
+      font:16px/1.6 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    a{color:var(--accent);text-decoration:none}
+    a:hover{text-decoration:underline}
+    .wrap{max-width:1180px;margin:0 auto;padding:32px 20px 64px}
+    .hero{
+      background:linear-gradient(180deg, rgba(29,34,43,.96), rgba(23,26,33,.96));
+      border:1px solid var(--line);
+      border-radius:28px;
+      box-shadow:var(--shadow);
+      padding:28px;
+      overflow:hidden;
+      position:relative;
+    }
+    .hero:before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background:
+        linear-gradient(120deg, transparent 0 30%, rgba(124,196,255,.10) 30% 31%, transparent 31% 70%, rgba(139,92,246,.10) 70% 71%, transparent 71% 100%);
+      pointer-events:none;
+      opacity:.5;
+    }
+    .kicker{color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.78rem;margin:0 0 10px}
+    h1{margin:.2rem 0 .75rem;font-size:clamp(2rem,4vw,3.4rem);line-height:1.05}
+    .sub{margin:0;color:var(--muted);max-width:80ch}
+    .meta-grid{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:14px;
+      margin-top:22px;
+    }
+    .meta{
+      background:rgba(11,13,17,.45);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:14px 16px;
+    }
+    .meta .label{display:block;color:var(--muted);font-size:.82rem;margin-bottom:4px}
+    .meta .value{font-weight:700}
+    .layout{
+      display:grid;
+      grid-template-columns:280px minmax(0,1fr);
+      gap:22px;
+      margin-top:22px;
+      align-items:start;
+    }
+    .toc, .section{
+      background:rgba(23,26,33,.92);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+    }
+    .toc{padding:18px; position:sticky; top:18px}
+    .toc h2, .section h2{margin:0 0 12px;font-size:1.1rem}
+    .toc ol{margin:0;padding-left:18px}
+    .toc li{margin:10px 0}
+    .toc small{display:block;color:var(--muted)}
+    .content{display:grid;gap:18px}
+    .section{padding:20px}
+    .day-head{
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+      justify-content:space-between;
+      border-bottom:1px solid var(--line);
+      padding-bottom:12px;
+      margin-bottom:14px;
+    }
+    .day-title{margin:0;font-size:1.35rem}
+    .tag{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid var(--line);
+      background:var(--chip);
+      padding:6px 10px;
+      border-radius:999px;
+      color:var(--muted);
+      font-size:.84rem;
+      white-space:nowrap;
+    }
+    ul{margin:12px 0 0;padding-left:18px}
+    li{margin:8px 0}
+    .grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .card{
+      background:linear-gradient(180deg, rgba(35,41,56,.85), rgba(26,30,39,.9));
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:14px 16px;
+    }
+    .card h3{margin:0 0 8px;font-size:1rem}
+    .muted{color:var(--muted)}
+    .note{
+      border-left:4px solid var(--accent);
+      padding:12px 14px;
+      margin-top:14px;
+      background:rgba(124,196,255,.06);
+      border-radius:12px;
+      color:#d8e8f7;
+    }
+    .status-ok{color:var(--ok);font-weight:700}
+    .status-warn{color:var(--warn);font-weight:700}
+    .status-danger{color:var(--danger);font-weight:700}
+    footer{
+      margin-top:24px;
+      color:var(--muted);
+      font-size:.92rem;
+    }
+    code{background:#10141c;border:1px solid #2b3242;border-radius:8px;padding:1px 6px}
+    @media (max-width: 980px){
+      .layout{grid-template-columns:1fr}
+      .toc{position:static}
+      .meta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media (max-width: 640px){
+      .wrap{padding:18px 12px 40px}
+      .hero{padding:20px}
+      .meta-grid,.grid-2{grid-template-columns:1fr}
+      .day-head{flex-direction:column}
+    }
+    @media print{
+      body{background:#fff;color:#111}
+      .wrap{max-width:none;padding:0}
+      .hero,.toc,.section{box-shadow:none;background:#fff;border-color:#cfd6df}
+      a{color:#0b58ca;text-decoration:underline}
+      .layout{grid-template-columns:1fr}
+      .toc{position:static;break-inside:avoid}
+      .hero:before{display:none}
+      .tag,.card,.meta,.note{break-inside:avoid}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <p class="kicker">EBCI Nexus</p>
+      <h1>รายงานรายวัน ตั้งแต่วันแรกที่มีบันทึกงาน</h1>
+      <p class="sub">
+        สรุปแบบ day-by-day จาก session history ของโปรเจคนี้ ตั้งแต่ <strong>24 เม.ย. 2569</strong> ถึง <strong>21 พ.ค. 2569</strong>.
+        เน้นว่าทำอะไรไปจริงในแต่ละวัน, อะไรถูกส่งมอบ, และอะไรยังค้างอยู่ตอนจบของแต่ละช่วงงาน.
+      </p>
+      <div class="meta-grid">
+        <div class="meta"><span class="label">ช่วงวันที่</span><span class="value">24 เม.ย. - 21 พ.ค. 2569</span></div>
+        <div class="meta"><span class="label">วันทำงานที่มีบันทึก</span><span class="value">6 วันหลัก</span></div>
+        <div class="meta"><span class="label">ธีมงานหลัก</span><span class="value">Leave, Payroll, Auth, Audit, HIP</span></div>
+        <div class="meta"><span class="label">สถานะล่าสุด</span><span class="value">HIP agent ยังติด protocol timeout</span></div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <aside class="toc">
+        <h2>สารบัญ</h2>
+        <ol>
+          <li><a href="#d-2026-04-24">24 เม.ย. 2569</a><small>carryover sweep + email recursion fix</small></li>
+          <li><a href="#d-2026-04-25">25 เม.ย. 2569</a><small>leave calendar, auth sweep, holidays</small></li>
+          <li><a href="#d-2026-04-27">27 เม.ย. 2569</a><small>hire, contracts, payroll, permissions</small></li>
+          <li><a href="#d-2026-04-29">29 เม.ย. 2569</a><small>security hardening + meeting room + audit</small></li>
+          <li><a href="#d-2026-05-15">15 พ.ค. 2569</a><small>office sync + payroll fix + Telegram</small></li>
+          <li><a href="#d-2026-05-21">21 พ.ค. 2569</a><small>email audit + leave policy + HIP agent</small></li>
+          <li><a href="#status">สถานะค้าง</a><small>สิ่งที่ยังต้องทำต่อ</small></li>
+        </ol>
+      </aside>
+
+      <main class="content">
+        <section class="section" id="d-2026-04-24">
+          <div class="day-head">
+            <div>
+              <h2 class="day-title">24 เม.ย. 2569</h2>
+              <div class="muted">Office afternoon / home late</div>
+            </div>
+            <div class="tag">§14 carryover sweep</div>
+          </div>
+          <div class="grid-2">
+            <div class="card">
+              <h3>งานที่ทำ</h3>
+              <ul>
+                <li>ไล่ปิด carryover `§3.6` ทั้งชุด: bulk adjust balance modal, zip download เอกสารผู้สมัคร, review notes autosave.</li>
+                <li>แก้ critical bug ของ email wrapper ที่เรียกตัวเองวนลูป ทำให้ leave/careers email ใช้งานได้จริงอีกครั้ง.</li>
+                <li>รัน `tsc --noEmit` ปิด TS errors ที่ค้างอยู่จนเหลือ 0.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>ผลลัพธ์</h3>
+              <ul>
+                <li>งานค้างชุดใหญ่ของ leave/careers ถูกเก็บหมดในรอบเดียว.</li>
+                <li>ระบบอีเมลกลับมาทำงานต่อได้โดยไม่เกิด recursion ซ้ำ.</li>
+                <li>เพิ่มความมั่นใจให้ core flow ของ HR เดินต่อได้.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="d-2026-04-25">
+          <div class="day-head">
+            <div>
+              <h2 class="day-title">25 เม.ย. 2569</h2>
+              <div class="muted">Home night / late night</div>
+            </div>
+            <div class="tag">Leave Tab 4 + auth sweep + holidays</div>
+          </div>
+          <ul>
+            <li>เปิดใช้งาน Leave Tab 4 แบบ calendar พร้อม modal รายวัน, filter chips และ holiday highlight.</li>
+            <li>ต่อ notification จาก Careers ให้ HR เห็น event ตอนผู้สมัคร submit และผู้สมัครเห็นสถานะเปลี่ยน.</li>
+            <li>ตรวจ DB จริงแล้วพบว่า leave Phase 2 ที่เคยค้างจริง ๆ ถูกปิดไปแล้ว จึงปรับลำดับงานใหม่.</li>
+            <li>ทำ permission-flag based route auth sweep แทนการเช็ก `hr_admin` แบบ hardcode.</li>
+            <li>สร้างและ seed ตาราง `holidays` สำหรับปี 2026 รวมวันหยุดจันทรคติแบบ tentative.</li>
+            <li>เก็บ quick wins เพิ่ม: role-aware approver inbox URL, widen careers fan-out, explicit no-entitlement message.</li>
+          </ul>
+          <div class="note">
+            จุดเปลี่ยนของวันนี้คือเริ่มย้ายระบบจาก role-based ไป permission-based อย่างจริงจัง.
+          </div>
+        </section>
+
+        <section class="section" id="d-2026-04-27">
+          <div class="day-head">
+            <div>
+              <h2 class="day-title">27 เม.ย. 2569</h2>
+              <div class="muted">Office afternoon + home night</div>
+            </div>
+            <div class="tag">Hire, contracts, PDF, payroll, permissions</div>
+          </div>
+          <div class="grid-2">
+            <div class="card">
+              <h3>สิ่งที่ส่งมอบ</h3>
+              <ul>
+                <li>One-click hire flow จาก applicant ไป employee พร้อม seed leave balance อัตโนมัติ.</li>
+                <li>ระบบ contracts ของพนักงาน: DB table, storage bucket, UI card, backfill banner.</li>
+                <li>PDF export โปรไฟล์แบบขาวดำที่ยังเก็บ photo สีไว้ และแก้ print layout หลายรอบ.</li>
+                <li>Salary slips + payroll permission allow-list (`can_manage_payroll`) และ bulk upload flow.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>งานต่อยอด</h3>
+              <ul>
+                <li>สร้าง permission editor ที่ `/hradmin/settings/permissions`.</li>
+                <li>เพิ่ม audit log สำหรับ permission changes และ employee changes.</li>
+                <li>เปิด page `/hradmin/settings/audit` เพื่อดูประวัติทั้งสองตาราง.</li>
+                <li>ปิด carryover เรื่อง print 2-col ให้ข้อมูลสำคัญไม่หลุดไปหน้า 2.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="note">
+            วันนี้เป็นวันที่ core HR stack เริ่ม “ครบชุด”: hire → contract → salary slip → permission editor → audit.
+          </div>
+        </section>
+
+        <section class="section" id="d-2026-04-29">
+          <div class="day-head">
+            <div>
+              <h2 class="day-title">29 เม.ย. 2569</h2>
+              <div class="muted">Home / office afternoon</div>
+            </div>
+            <div class="tag">Security, meeting room, leave audit, beta incident</div>
+          </div>
+          <ul>
+            <li>ทำ signed session cookie hardening แทน cookie JSON เปล่า ๆ.</li>
+            <li>แก้ leave attachment bug ให้ลาป่วย 3 วันขึ้นไปแนบใบรับรองแพทย์ได้จริง.</li>
+            <li>hardening RLS policy ลดการพึ่ง `user_metadata` ที่ user แก้ได้เอง.</li>
+            <li>เปิดระบบ meeting room booking พร้อม calendar badge และ HR mirror page.</li>
+            <li>ทำ approval audit page ที่ไล่ chain การอนุมัติจริงต่อ employee ทุกคน.</li>
+            <li>เพิ่ม gender field ตอนสร้างพนักงาน และโชว์ข้อมูลเพศ/วันเกิด/คำนำหน้าบน profile.</li>
+            <li>เจอเหตุ login incident ของ beta tester 4 คน แล้วตามแก้ auth linkage ให้กลับมาล็อกอินได้.</li>
+          </ul>
+          <div class="note">
+            จุดนี้ทำให้ระบบเริ่มมี “auditability” ที่ดีพอสำหรับงาน HR จริง: ล็อกอิน, สิทธิ์, การอนุมัติ, และการจองห้องประชุม.
+          </div>
+        </section>
+
+        <section class="section" id="d-2026-05-15">
+          <div class="day-head">
+            <div>
+              <h2 class="day-title">15 พ.ค. 2569</h2>
+              <div class="muted">Office sync / verification</div>
+            </div>
+            <div class="tag">Account rollout, payroll fix, Telegram phase 1</div>
+          </div>
+          <ul>
+            <li>ยืนยันว่า account rollout ครบทุก active employee แล้ว และทำ health-check pattern ไว้ก่อนส่ง credentials.</li>
+            <li>แก้ payroll bulk upload บน mobile: ปุ่มเลือกไฟล์ใหญ่ขึ้น, accept file type มากขึ้น, รองรับ HEIC/HEIF.</li>
+            <li>ทำ Telegram Phase 1 code ship แล้ว และเตรียม flow ให้จิมกด `/start` เพื่อผูก chat id.</li>
+            <li>เพิ่ม helper script สำหรับ setup Telegram ของ HR โดยรองรับ employee code หลายแบบ.</li>
+            <li>ตรวจ network/relay plan ของ HIP Ci100S และสรุปว่า office Mac วงเดิมยังเป็น relay host ไม่ได้.</li>
+          </ul>
+          <div class="note">
+            วันนี้เน้น “verify before distribute” มากกว่าเขียนฟีเจอร์ใหม่: ยืนยัน account, ตรวจเส้นทาง notification, และเตรียม handoff ที่เปิดต่อได้จากเครื่องอื่น.
+          </div>
+        </section>
+
+        <section class="section" id="d-2026-05-21">
+          <div class="day-head">
+            <div>
+              <h2 class="day-title">21 พ.ค. 2569</h2>
+              <div class="muted">Office day</div>
+            </div>
+            <div class="tag">Email audit, leave policy final, HIP agent</div>
+          </div>
+          <div class="grid-2">
+            <div class="card">
+              <h3>งานฝั่ง HR / policy</h3>
+              <ul>
+                <li>ทำ email delivery audit + Resend webhook เพื่อให้เห็น delivered / bounced / failed จริงในระบบ.</li>
+                <li>แก้ WFH approver email ให้มีทางเข้า action ชัดเจน และดัน inbox item ที่อ้างถึง email ขึ้นบน.</li>
+                <li>ปรับกราฟ leave profile ให้แถบ `ใช้ไปแล้ว` มองเห็นชัดขึ้น.</li>
+                <li>แก้ pending leave dashboard count mismatch โดยย้าย API ไปอ่าน schema จริง.</li>
+                <li>ใส่ระเบียบการลา Final ลง production ทั้ง 7 ประเภท และบังคับ `ลาเพื่อการสมรส` เมื่อทำงานครบ 1 ปี.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>งานฝั่ง Telegram / HIP</h3>
+              <ul>
+                <li>ทำ Telegram helper ให้จิม โดย map `/start` ไปเป็น chat id จริงและส่ง test message.</li>
+                <li>ตั้ง `CARD_SCAN_WEBHOOK_SECRET` บน Vercel และยืนยันว่า production webhook รับ auth แล้ว.</li>
+                <li>ลง `node-zklib`, สร้าง `scripts/hip-card-agent.mjs`, และเพิ่ม `hip:probe / hip:sync / hip:watch`.</li>
+                <li>ตรวจ HIP `192.168.1.40:5005` ได้ระดับ TCP แต่ยัง timeout ตอนส่ง SDK command.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="note">
+            21 พ.ค. เป็นวันเปลี่ยนจาก “ระบบพร้อมรับ” ไปเป็น “ระบบรับจริงแล้ว” เกือบครบ ยกเว้นฝั่ง HIP protocol ยังต้องหาช่องทางอ่านข้อมูลที่เสถียรกว่า.
+          </div>
+        </section>
+
+        <section class="section" id="status">
+          <div class="day-head">
+            <div>
+              <h2 class="day-title">สถานะค้าง</h2>
+              <div class="muted">สิ่งที่ยังต้องไปต่อหลังรายงานนี้</div>
+            </div>
+            <div class="tag">Current blocker</div>
+          </div>
+          <ul>
+            <li><span class="status-warn">HIP agent ยังติด protocol timeout</span> แม้ TCP ถึง `192.168.1.40:5005` แล้ว</li>
+            <li><span class="status-ok">Webhook production พร้อม</span> และรับ secret แล้ว</li>
+            <li><span class="status-ok">leave / payroll / permissions / audit หลัก</span> ถือว่าปิดไปมากแล้ว</li>
+            <li><span class="status-warn">งานต่อที่เป็นธรรมชาติ</span> คือหา export file / database path จาก HIP Premium Time แล้วทำ agent อ่านไฟล์แทน</li>
+          </ul>
+          <footer>
+            แหล่งข้อมูลหลัก: <code>docs/SESSION_HISTORY.md</code> และ <code>docs/NEXT.md</code>.
+            สร้างรายงานเมื่อ <strong>3 มิ.ย. 2569</strong>.
+          </footer>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

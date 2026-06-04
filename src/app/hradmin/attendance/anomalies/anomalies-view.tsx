@@ -145,7 +145,7 @@ export function AnomaliesView({ initial }: Props) {
                         </h2>
                     </div>
                     <span className="text-[11px] text-white/40">
-                        เริ่มงาน 08:30 · เกิน 60 นาทีหัวหน้าจะได้ 🔔
+                        เริ่มงาน 08:00 · เกิน 60 นาทีหัวหน้าจะได้ 🔔
                     </span>
                 </header>
                 {data.lateCheckins.length === 0 ? (

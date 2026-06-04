@@ -298,12 +298,12 @@ function EmployeeRow({ record }: { record: AttendanceRecord }) {
                                 <span className="text-white/50">{c.type}</span>
                             )}
                         </div>
-                        <div className="text-[11px] text-white/50 mt-0.5 flex items-center gap-1 justify-end">
-                            <Clock size={10} />
+                        <div className="text-lg font-bold text-white mt-1 flex items-center gap-1.5 justify-end">
+                            <Clock size={14} className="text-white/60" />
                             {formatTime(c.checked_in_at)}
                             {c.checked_out_at && (
                                 <>
-                                    <LogOut size={10} className="ml-1" />
+                                    <LogOut size={14} className="ml-1.5 text-white/60" />
                                     {formatTime(c.checked_out_at)}
                                 </>
                             )}

@@ -107,7 +107,7 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
         const bkk = new Date(now.getTime() + 7 * 60 * 60 * 1000)
         return bkk.getUTCHours() * 60 + bkk.getUTCMinutes()
     })()
-    const OFFICIAL_START_MIN = 8 * 60 + 30   // 08:30
+    const OFFICIAL_START_MIN = 8 * 60   // 08:00
     const LATE_TIER2_MIN = 30                // tier 2: > 30 min = please explain
     const LATE_TIER3_MIN = 60                // tier 3: > 60 min = manager auto-notified
     const lateMinutes = !isCheckedIn && minutesOfDayBkk > OFFICIAL_START_MIN
@@ -620,7 +620,7 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
                         </div>
                     ) : (
                         <>
-                            {/* Late banner — visible whenever it's past 08:30 BKK
+                            {/* Late banner — visible whenever it's past 08:00 BKK
                                 and the user hasn't checked in yet. Three tiers:
                                   1 (1-30 min): amber chip, no input
                                   2 (31-60 min): amber chip + reason textarea (optional)
@@ -638,7 +638,7 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
                                     <div className="flex items-start gap-2 text-sm font-bold">
                                         <AlertCircle size={16} className="mt-0.5 shrink-0" />
                                         <span>
-                                            มาสาย {lateMinutes} นาที (เริ่มงาน 08:30)
+                                            มาสาย {lateMinutes} นาที (เริ่มงาน 08:00)
                                             {lateTier === 3 && ' — หัวหน้าจะได้รับแจ้งเตือน'}
                                         </span>
                                     </div>

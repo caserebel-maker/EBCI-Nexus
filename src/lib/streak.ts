@@ -18,7 +18,7 @@ import {
  *   ✅ Reset on:
  *      - approved sick leave (any duration)
  *      - approved personal leave (any duration)
- *      - late check-in / scan (clock-in time of day > 08:30 Bangkok)
+ *      - late check-in / scan (clock-in time of day > 08:00 Bangkok)
  *   ❌ Don't reset on:
  *      - approved annual / maternity / military / training / ordination
  *        / marriage / bereavement / sterilization (they're entitlements,

@@ -13,11 +13,11 @@
 // ── Work schedule ──────────────────────────────────────────────────────
 export const WORK_SCHEDULE = {
     /** Full-day office hours */
-    fullDayStart: '08:30',
+    fullDayStart: '08:00',
     fullDayEnd: '17:30',
 
-    /** Morning half = 08:30 – 12:00 */
-    morningStart: '08:30',
+    /** Morning half = 08:00 – 12:00 */
+    morningStart: '08:00',
     morningEnd: '12:00',
 
     /** Afternoon half = 13:00 – 17:30 */
@@ -34,7 +34,7 @@ export const HALF_DAY_RULES = {
     /** When employee takes morning leave, they must check in by this time */
     afternoonCheckinDeadline: '13:30',
     /** When employee takes afternoon leave, they must check in before this time */
-    morningCheckinDeadline: '08:30',
+    morningCheckinDeadline: '08:00',
     /** Half-day deduction in days */
     deductionDays: 0.5,
 } as const

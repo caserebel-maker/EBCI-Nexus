@@ -52,7 +52,7 @@ export interface CheckInPayload {
     accuracy: number | null
     notes?: string
     /**
-     * Optional explanation when arriving late (>0 min past 08:30 BKK).
+     * Optional explanation when arriving late (>0 min past 08:00 BKK).
      * UI prompts but doesn't block: tier 1 (1-30 min) is optional,
      * tier 2 (31-60 min) is "please explain", tier 3 (>60 min)
      * triggers a notification to the direct manager regardless of
@@ -62,8 +62,8 @@ export interface CheckInPayload {
 }
 
 // Official workday start (Bangkok wall-clock minutes from midnight).
-// 08:30 = 8*60 + 30 = 510. Anything past this counts as late.
-const OFFICIAL_START_MIN = 8 * 60 + 30
+// 08:00 = 8*60 = 480. Anything past this counts as late.
+const OFFICIAL_START_MIN = 8 * 60
 // Tier thresholds for late-check-in UX (minutes past OFFICIAL_START_MIN).
 const LATE_TIER2_MIN = 30   // > 30 min = "please explain"
 const LATE_TIER3_MIN = 60   // > 60 min = manager notified
