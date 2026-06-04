@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { MapPin, Users, Building, Home, HelpCircle, RefreshCw, Calendar, CheckCircle2, Clock, LogOut, MapPinOff, FileUp, AlertTriangle } from 'lucide-react'
+import { MapPin, Users, Building, Home, HelpCircle, RefreshCw, Calendar, CheckCircle2, Clock, LogOut, MapPinOff, FileUp, AlertTriangle, Download } from 'lucide-react'
+import { ExportAttendanceModal } from './export-modal'
 import { todayBangkokKey } from '@/lib/datetime'
 import { cn } from '@/lib/utils'
 import { formatBangkokTime } from '@/lib/datetime'
@@ -63,6 +64,7 @@ export function AttendanceView({ initialDate, initialData }: Props) {
     const [sortBy, setSortBy] = useState<'alphabet' | 'checkin-time'>('alphabet')
     const [isPending, startTransition] = useTransition()
     const [nowTick, setNowTick] = useState(0) // force re-render for "X minutes ago"
+    const [isExportOpen, setIsExportOpen] = useState(false)
 
     // Update "time ago" text every 30 seconds
     useState(() => {
@@ -162,6 +164,13 @@ export function AttendanceView({ initialDate, initialData }: Props) {
                         <FileUp size={14} />
                         <span className="hidden sm:inline">นำเข้า CSV</span>
                     </Link>
+                    <button
+                        onClick={() => setIsExportOpen(true)}
+                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-emerald-300/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-200 transition-all cursor-pointer"
+                    >
+                        <Download size={14} />
+                        <span className="hidden sm:inline">ส่งออก CSV</span>
+                    </button>
                     <button
                         onClick={refresh}
                         disabled={isPending}
@@ -278,6 +287,8 @@ export function AttendanceView({ initialDate, initialData }: Props) {
                     <EmployeeRow key={r.employeeId} record={r} />
                 ))}
             </div>
+
+            <ExportAttendanceModal open={isExportOpen} onClose={() => setIsExportOpen(false)} />
         </div>
     )
 }
