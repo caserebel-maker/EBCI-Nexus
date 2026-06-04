@@ -8,7 +8,20 @@ import { cn } from '@/lib/utils'
 import { formatBangkokTime } from '@/lib/datetime'
 import { getAttendanceForDate, type AttendanceStats, type AttendanceRecord } from './actions'
 
-type FilterTab = 'all' | 'office' | 'wfh' | 'not-checked-in'
+type FilterTab = 'all' | 'office' | 'wfh' | 'late' | 'not-checked-in'
+
+function isRecordLate(c: any): boolean {
+    if (!c) return false
+    if (c.late_minutes !== undefined && c.late_minutes !== null && c.late_minutes > 0) {
+        return true
+    }
+    const timeStr = formatBangkokTime(c.checked_in_at)
+    if (timeStr === '—') return false
+    const [h, m] = timeStr.split(':').map(Number)
+    if (h > 8) return true
+    if (h === 8 && m > 0) return true
+    return false
+}
 
 interface InitialData {
     stats: AttendanceStats
@@ -85,12 +98,14 @@ export function AttendanceView({ initialDate, initialData }: Props) {
 
     const stats = data?.stats ?? { totalEmployees: 0, officeCount: 0, wfhCount: 0, offsiteCount: 0, notCheckedInCount: 0 }
     const records = data?.records ?? []
+    const lateCount = records.filter(r => isRecordLate(r.checkin)).length
 
     const filteredRecords = records.filter((r) => {
         if (filter === 'all') return true
         if (filter === 'not-checked-in') return !r.checkin
         if (filter === 'office') return r.checkin?.type === 'office'
         if (filter === 'wfh') return r.checkin?.type === 'wfh'
+        if (filter === 'late') return isRecordLate(r.checkin)
         return true
     })
 
@@ -198,6 +213,9 @@ export function AttendanceView({ initialDate, initialData }: Props) {
                 </FilterTabBtn>
                 <FilterTabBtn active={filter === 'wfh'} onClick={() => setFilter('wfh')} count={stats.wfhCount}>
                     🏠 WFH
+                </FilterTabBtn>
+                <FilterTabBtn active={filter === 'late'} onClick={() => setFilter('late')} count={lateCount}>
+                    ⏰ เข้างานสาย
                 </FilterTabBtn>
                 <FilterTabBtn active={filter === 'not-checked-in'} onClick={() => setFilter('not-checked-in')} count={stats.notCheckedInCount}>
                     ❓ ยังไม่เช็คอิน
