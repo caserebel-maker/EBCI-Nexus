@@ -110,12 +110,12 @@ export async function reconcileDate(
     // 1. Active employees (excl. advisors)
     const { data: emps, error: empErr } = await supabaseAdmin
         .from('employees')
-        .select('id, employee_code, first_name_th, last_name_th, nickname, department, position')
+        .select('id, employee_code, first_name_th, last_name_th, nickname, department, position, is_advisor')
         .eq('status', 'active')
     if (empErr) return { error: empErr.message }
 
     const staff = (emps ?? []).filter(
-        e => e.position !== 'ที่ปรึกษา' && e.department !== 'ที่ปรึกษา',
+        e => !e.is_advisor,
     )
 
     // 2. Earliest and latest card scans per employee for the day

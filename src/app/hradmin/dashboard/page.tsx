@@ -44,7 +44,7 @@ export default async function AdminDashboard() {
         { data: newsAnnouncements },
     ] = await Promise.all([
         // All employees (include date_of_birth for birthday section)
-        supabaseAdmin.from('employees').select('id, employee_code, first_name_th, last_name_th, nickname, department, start_date, status, end_date, title, date_of_birth'),
+        supabaseAdmin.from('employees').select('id, employee_code, first_name_th, last_name_th, nickname, department, start_date, status, end_date, title, date_of_birth, is_advisor'),
 
         // Leaves today (approved)
         supabaseAdmin.from('leave_requests')
@@ -112,7 +112,7 @@ export default async function AdminDashboard() {
     const deptMap: Record<string, number> = {}
     for (const e of employees ?? []) {
         if (!e.department) continue
-        if (e.status !== 'active') continue
+        if (e.status !== 'active' || e.is_advisor) continue
         deptMap[e.department] = (deptMap[e.department] ?? 0) + 1
     }
     const deptData = Object.entries(deptMap)
@@ -144,7 +144,7 @@ export default async function AdminDashboard() {
 
     // ─── Weekly attendance line chart (30 days) ───
     const weeklyMap: Record<string, { present: number; absent: number; week: string }> = {}
-    const totalActiveEmployees = (employees ?? []).filter(e => e.status === 'active').length
+    const totalActiveEmployees = (employees ?? []).filter(e => e.status === 'active' && !e.is_advisor).length
     for (let i = 0; i < 5; i++) {
         const weekStart = new Date(thirtyDaysAgo.getTime() + i * 7 * 24 * 60 * 60 * 1000)
         const key = `สัปดาห์ที่ ${i + 1}`
@@ -241,7 +241,7 @@ export default async function AdminDashboard() {
     ])
 
     const activeEmployeeIds = new Set(
-        (employees ?? []).filter(e => e.status === 'active').map(e => e.id),
+        (employees ?? []).filter(e => e.status === 'active' && !e.is_advisor).map(e => e.id),
     )
     const checkinMap = new Map<string, string>()
     for (const c of todayCheckinsResult.data ?? []) {
@@ -276,8 +276,8 @@ export default async function AdminDashboard() {
     return (
         <HRDashboard
             metrics={{
-                totalEmployees: (employees ?? []).length,
-                activeEmployees: (employees ?? []).filter(e => e.status === 'active').length,
+                totalEmployees: (employees ?? []).filter(e => !e.is_advisor).length,
+                activeEmployees: (employees ?? []).filter(e => e.status === 'active' && !e.is_advisor).length,
                 leavingToday: (leavesToday ?? []).length,
                 pendingLeaves: (leavesPending ?? []).length,
                 expiringContracts: (contractsExpiring ?? []).length,

@@ -103,7 +103,7 @@ export async function getAnomalies(monthOverride?: string): Promise<AnomaliesDat
         // Pull all active employees in one shot to enrich both lists.
         supabaseAdmin
             .from('employees')
-            .select('id, employee_code, first_name_th, last_name_th, nickname, department')
+            .select('id, employee_code, first_name_th, last_name_th, nickname, department, is_advisor')
             .eq('status', 'active'),
     ])
 
@@ -114,6 +114,7 @@ export async function getAnomalies(monthOverride?: string): Promise<AnomaliesDat
         id: string; employee_code: string;
         first_name_th: string | null; last_name_th: string | null;
         nickname: string | null; department: string | null;
+        is_advisor: boolean | null;
     }
     const empMap = new Map<string, Emp>()
     for (const e of (empsRes.data ?? []) as Emp[]) empMap.set(e.id, e)
@@ -132,15 +133,17 @@ export async function getAnomalies(monthOverride?: string): Promise<AnomaliesDat
     const openSessions: OpenSessionRow[] = ((openRes.data ?? []) as Array<{
         id: string; employee_id: string; type: string;
         checked_in_at: string; late_minutes: number | null;
-    }>).map(r => ({
-        checkinId: r.id,
-        employeeId: r.employee_id,
-        ...enrich(r.employee_id),
-        type: r.type,
-        checkedInAtIso: r.checked_in_at,
-        minutesOpen: Math.max(0, Math.floor((nowMs - new Date(r.checked_in_at).getTime()) / 60000)),
-        lateMinutes: r.late_minutes,
-    }))
+    }>)
+        .filter(r => !empMap.get(r.employee_id)?.is_advisor)
+        .map(r => ({
+            checkinId: r.id,
+            employeeId: r.employee_id,
+            ...enrich(r.employee_id),
+            type: r.type,
+            checkedInAtIso: r.checked_in_at,
+            minutesOpen: Math.max(0, Math.floor((nowMs - new Date(r.checked_in_at).getTime()) / 60000)),
+            lateMinutes: r.late_minutes,
+        }))
     // Re-sort longest open first (was asc by checked_in_at = oldest first,
     // which IS longest open — but explicit makes intent clear if the query
     // ordering ever changes).
@@ -149,15 +152,17 @@ export async function getAnomalies(monthOverride?: string): Promise<AnomaliesDat
     const lateCheckins: LateCheckinRow[] = ((lateRes.data ?? []) as Array<{
         id: string; employee_id: string; type: string;
         checked_in_at: string; late_minutes: number; late_reason: string | null;
-    }>).map(r => ({
-        checkinId: r.id,
-        employeeId: r.employee_id,
-        ...enrich(r.employee_id),
-        checkedInAtIso: r.checked_in_at,
-        lateMinutes: r.late_minutes,
-        lateReason: r.late_reason,
-        type: r.type,
-    }))
+    }>)
+        .filter(r => !empMap.get(r.employee_id)?.is_advisor)
+        .map(r => ({
+            checkinId: r.id,
+            employeeId: r.employee_id,
+            ...enrich(r.employee_id),
+            checkedInAtIso: r.checked_in_at,
+            lateMinutes: r.late_minutes,
+            lateReason: r.late_reason,
+            type: r.type,
+        }))
 
     return {
         openSessions,

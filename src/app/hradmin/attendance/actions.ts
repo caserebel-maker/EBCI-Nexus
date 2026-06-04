@@ -41,6 +41,7 @@ export async function getAttendanceForDate(dateStr: string) {
         .from('employees')
         .select('id, first_name_th, last_name_th, nickname, department, position, photo_url, status')
         .eq('status', 'active')
+        .neq('is_advisor', true)
         .order('first_name_th', { ascending: true })
 
     if (empError) {

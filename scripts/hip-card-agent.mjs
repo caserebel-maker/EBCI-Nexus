@@ -133,9 +133,9 @@ function tcpProbe() {
     })
 }
 
-async function createDevice() {
+async function createDevice(onErr, onClose) {
     const zk = new ZKLib(config.host, config.port, config.timeoutMs, config.inport, config.commKey, config.protocol)
-    await zk.createSocket()
+    await zk.createSocket(onErr, onClose)
     return zk
 }
 
@@ -438,7 +438,16 @@ async function runWatch() {
     const codeMap = loadCodeMap()
     const state = loadState()
     const posted = new Set(state.posted ?? [])
-    const zk = await createDevice()
+    const zk = await createDevice(
+        (err) => {
+            console.error('[hip-agent] Socket error:', err?.message ?? err)
+            process.exit(1)
+        },
+        (type) => {
+            console.error('[hip-agent] Socket closed:', type)
+            process.exit(1)
+        }
+    )
     console.log(`[hip-agent] watching realtime logs from ${config.host}:${config.port}`)
     await zk.getRealTimeLogs(async (record) => {
         const scan = normalizeScan(record, codeMap)
