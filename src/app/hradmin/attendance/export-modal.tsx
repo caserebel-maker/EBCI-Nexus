@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { X, Calendar, Download } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 interface ExportAttendanceModalProps {
     open: boolean
@@ -33,7 +32,7 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
     })
 
     // Preset state (months count)
-    const [selectedPreset, setSelectedPreset] = useState('2')
+    const [selectedPreset, setSelectedPreset] = useState('1')
 
     if (!open) return null
 
@@ -109,7 +108,7 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
                             <option value="date" className="bg-slate-900">วันที่เลือก/วันที่ระบุ</option>
                             <option value="range" className="bg-slate-900">กำหนดช่วงวันที่เอง (From/To)</option>
                             <option value="month" className="bg-slate-900">ทั้งเดือนนั้นๆ</option>
-                            <option value="preset" className="bg-slate-900">ย้อนหลัง (2-12 เดือน)</option>
+                            <option value="preset" className="bg-slate-900">ย้อนหลัง (1-12 เดือน)</option>
                         </select>
                     </div>
 
@@ -172,10 +171,11 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
                                 onChange={(e) => setSelectedPreset(e.target.value)}
                                 className="w-full h-10 px-3 rounded-lg border border-white/15 bg-black/40 text-white text-sm focus:outline-none focus:border-emerald-500 cursor-pointer"
                             >
-                                <option value="2" className="bg-slate-900">ย้อนหลัง 2 เดือน</option>
-                                <option value="3" className="bg-slate-900">ย้อนหลัง 3 เดือน</option>
-                                <option value="4" className="bg-slate-900">ย้อนหลัง 4 เดือน</option>
-                                <option value="12" className="bg-slate-900">ย้อนหลัง 12 เดือน</option>
+                                {Array.from({ length: 12 }, (_, index) => index + 1).map(months => (
+                                    <option key={months} value={months} className="bg-slate-900">
+                                        ย้อนหลัง {months} เดือน
+                                    </option>
+                                ))}
                             </select>
                         </div>
                     )}
