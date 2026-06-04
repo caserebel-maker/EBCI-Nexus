@@ -836,12 +836,12 @@ export function EmployeeProfileView({
                                         {employee.status === "active" ? "ปฏิบัติงาน" : employee.status === "on_leave" ? "ลา" : "พ้นสภาพ"}
                                     </span>
                                     {employee.work_location === 'johnson' && (
-                                        <span className="px-3 py-1 rounded-full text-xs font-bold border bg-rose-500/20 text-rose-400 border-rose-500/25">
+                                        <span className="px-3 py-1 rounded-full text-xs font-bold border bg-white text-red-600 border-red-200">
                                             จอห์นสัน
                                         </span>
                                     )}
                                     {employee.work_location === 'saraburi' && (
-                                        <span className="px-3 py-1 rounded-full text-xs font-bold border bg-blue-500/20 text-blue-400 border-blue-500/25">
+                                        <span className="px-3 py-1 rounded-full text-xs font-bold border bg-white text-blue-600 border-blue-200">
                                             สระบุรี (WFH)
                                         </span>
                                     )}

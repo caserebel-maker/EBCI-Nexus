@@ -487,12 +487,12 @@ function EmployeeNameCell({ employee }: { employee: Employee }) {
                         {badgeLabel}
                     </span>
                     {employee.workLocation === 'johnson' && (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/25">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-red-600 border border-red-200">
                             จอห์นสัน
                         </span>
                     )}
                     {employee.workLocation === 'saraburi' && (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/25">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-blue-600 border border-blue-200">
                             สระบุรี (WFH)
                         </span>
                     )}
