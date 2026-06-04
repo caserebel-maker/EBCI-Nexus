@@ -38,6 +38,7 @@ export interface UpdateEmployeePayload {
     home_longitude?: number | null
     home_location_label?: string | null
     home_location_note?: string | null
+    work_location?: string | null
     // applicants table
     applicant_current_address: string
     applicant_phone: string  // legacy emergency contact (kept for backward compat)
@@ -58,7 +59,7 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
     // knows whether to push the new email into Supabase Auth too.
     const { data: before } = await supabaseAdmin
         .from('employees')
-        .select('employee_code, first_name_th, last_name_th, first_name_en, last_name_en, nickname, position, department, secondary_department, phone, email, employment_type, status, start_date, probation_end_date, date_of_birth, gender, quit_date, quit_reason, approval_level, manager_id, leave_approver_id, telegram_chat_id, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, emergency_contact_address, home_latitude, home_longitude, home_location_label, home_location_note, user_id')
+        .select('employee_code, first_name_th, last_name_th, first_name_en, last_name_en, nickname, position, department, secondary_department, phone, email, employment_type, status, start_date, probation_end_date, date_of_birth, gender, quit_date, quit_reason, approval_level, manager_id, leave_approver_id, telegram_chat_id, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, emergency_contact_address, home_latitude, home_longitude, home_location_label, home_location_note, user_id, work_location')
         .eq('id', employeeId)
         .maybeSingle()
 
@@ -162,6 +163,7 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
             home_location_label: employeeFields.home_location_label ?? null,
             home_location_note:  employeeFields.home_location_note  ?? null,
             ...(locationTouched && { home_location_updated_at: new Date().toISOString() }),
+            work_location: employeeFields.work_location ?? null,
         })
         .eq('id', employeeId)
 

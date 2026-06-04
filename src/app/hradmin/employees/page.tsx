@@ -17,6 +17,7 @@ export default async function EmployeesPage() {
         .from('employees')
         .select(`
             *,
+            work_location,
             applicants (
                 photo_path,
                 nickname
@@ -64,6 +65,7 @@ export default async function EmployeesPage() {
         quitDate: e.quit_date ?? null,
         quitReason: e.quit_reason ?? null,
         approvalLevel: e.approval_level ?? null,
+        workLocation: e.work_location ?? null,
     }))
 
     return (

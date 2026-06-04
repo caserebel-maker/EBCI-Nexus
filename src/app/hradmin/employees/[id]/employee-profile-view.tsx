@@ -180,6 +180,7 @@ interface FormState {
     position: string
     department: string
     secondary_department: string
+    work_location: string
     phone: string
     email: string
     employment_type: string
@@ -377,6 +378,7 @@ export function EmployeeProfileView({
         position: employee.position ?? '',
         department: employee.department ?? '',
         secondary_department: employee.secondary_department ?? '',
+        work_location: employee.work_location ?? '',
         phone: employee.phone ?? '',
         email: employee.email ?? '',
         employment_type: employee.employment_type ?? 'full-time',
@@ -531,6 +533,7 @@ export function EmployeeProfileView({
                 position: form.position,
                 department: form.department,
                 secondary_department: form.secondary_department || null,
+                work_location: form.work_location || null,
                 phone: form.phone,
                 email: form.email,
                 employment_type: form.employment_type,
@@ -832,6 +835,16 @@ export function EmployeeProfileView({
                                         <span className="h-1.5 w-1.5 rounded-full bg-current" />
                                         {employee.status === "active" ? "ปฏิบัติงาน" : employee.status === "on_leave" ? "ลา" : "พ้นสภาพ"}
                                     </span>
+                                    {employee.work_location === 'johnson' && (
+                                        <span className="px-3 py-1 rounded-full text-xs font-bold border bg-rose-500/20 text-rose-400 border-rose-500/25">
+                                            จอห์นสัน
+                                        </span>
+                                    )}
+                                    {employee.work_location === 'saraburi' && (
+                                        <span className="px-3 py-1 rounded-full text-xs font-bold border bg-blue-500/20 text-blue-400 border-blue-500/25">
+                                            สระบุรี (WFH)
+                                        </span>
+                                    )}
                                 </div>
                                 {isEditing
                                     ? <input className={cn(inp, 'mt-2 max-w-xs text-sm')} value={form.position} onChange={set('position')} placeholder="ตำแหน่ง" />
@@ -924,6 +937,18 @@ export function EmployeeProfileView({
                                                 <option value={form.department}>{form.department}</option>
                                             )}
                                             {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                                        </select>
+                                    </EditField>
+                                    <EditField label="สถานที่ปฏิบัติงาน" icon={MapPin}>
+                                        <select
+                                            className={cn(sel, 'text-sm')}
+                                            style={SEL_CHEVRON}
+                                            value={form.work_location}
+                                            onChange={set('work_location')}
+                                        >
+                                            <option value="">สำนักงาน EBCI (ปกติ)</option>
+                                            <option value="johnson">บริษัท จอห์นสัน (Johnson)</option>
+                                            <option value="saraburi">ทำงานที่บ้าน - สระบุรี (WFH)</option>
                                         </select>
                                     </EditField>
                                     {form.status === 'inactive' && (
@@ -1111,6 +1136,21 @@ export function EmployeeProfileView({
                         />
                         <InfoRow label="ตำแหน่ง" icon={Briefcase}
                             value={employee.position || '—'}
+                        />
+                        <InfoRow label="สถานที่ปฏิบัติงาน" icon={MapPin}
+                            value={
+                                employee.work_location === 'johnson' ? 'บริษัท จอห์นสัน (Johnson)' :
+                                employee.work_location === 'saraburi' ? 'ทำงานที่บ้าน (สระบุรี)' :
+                                'สำนักงาน EBCI (ปกติ)'
+                            }
+                            editing={isEditing}
+                            editNode={
+                                <select className={sel} value={form.work_location} onChange={set('work_location')}>
+                                    <option value="">สำนักงาน EBCI (ปกติ)</option>
+                                    <option value="johnson">บริษัท จอห์นสัน (Johnson)</option>
+                                    <option value="saraburi">ทำงานที่บ้าน - สระบุรี (WFH)</option>
+                                </select>
+                            }
                         />
                         <InfoRow label="ระดับพนักงาน" icon={Shield}
                             value={EMPLOYEE_LEVELS[employee.approval_level ?? 1]?.label ?? `Level ${employee.approval_level ?? 1}`}

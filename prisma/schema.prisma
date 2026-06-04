@@ -41,6 +41,7 @@ model Employee {
 
   position       String
   department     String
+  workLocation   String?  @map("work_location")
   startDate      DateTime @map("start_date")
   employmentType String   @map("employment_type") // full-time, contract, intern
   status         String   @default("active") // active, inactive, on_leave

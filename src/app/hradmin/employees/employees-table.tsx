@@ -40,6 +40,7 @@ export type Employee = {
     quitDate?: string | null
     quitReason?: string | null
     approvalLevel?: number | null
+    workLocation?: string | null
 }
 
 type SortKey =
@@ -485,6 +486,16 @@ function EmployeeNameCell({ employee }: { employee: Employee }) {
                     <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold border", badgeColor)}>
                         {badgeLabel}
                     </span>
+                    {employee.workLocation === 'johnson' && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/25">
+                            จอห์นสัน
+                        </span>
+                    )}
+                    {employee.workLocation === 'saraburi' && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/25">
+                            สระบุรี (WFH)
+                        </span>
+                    )}
                 </div>
                 <div className="text-xs text-white/50 font-mono">{employee.email}</div>
             </div>
