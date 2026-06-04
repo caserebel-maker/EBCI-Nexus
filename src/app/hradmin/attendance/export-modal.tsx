@@ -84,7 +84,7 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
                 <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
                     <h3 className="font-bold text-white flex items-center gap-2 text-base">
                         <Download size={18} className="text-emerald-300" />
-                        ส่งออกข้อมูลการเข้างาน (CSV)
+                        ดาวน์โหลดข้อมูลการเข้างาน
                     </h3>
                     <button 
                         onClick={onClose} 
@@ -99,23 +99,23 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
                 <div className="p-5 space-y-4 font-sans">
                     {/* Select Export Type */}
                     <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-white/50">รูปแบบช่วงเวลา</label>
+                        <label className="text-xs font-semibold text-white/50">เลือกช่วงข้อมูล</label>
                         <select
                             value={exportType}
                             onChange={(e) => setExportType(e.target.value as ExportType)}
                             className="w-full h-10 px-3 rounded-lg border border-white/15 bg-black/40 text-white text-sm focus:outline-none focus:border-emerald-500 cursor-pointer"
                         >
-                            <option value="date" className="bg-slate-900">วันที่เลือก/วันที่ระบุ</option>
-                            <option value="range" className="bg-slate-900">กำหนดช่วงวันที่เอง (From/To)</option>
-                            <option value="month" className="bg-slate-900">ทั้งเดือนนั้นๆ</option>
-                            <option value="preset" className="bg-slate-900">ย้อนหลัง (1-12 เดือน)</option>
+                            <option value="date" className="bg-slate-900">เฉพาะวันที่เลือก</option>
+                            <option value="range" className="bg-slate-900">กำหนดช่วงวันที่</option>
+                            <option value="month" className="bg-slate-900">เลือกทั้งเดือน</option>
+                            <option value="preset" className="bg-slate-900">ย้อนหลัง 1-12 เดือน</option>
                         </select>
                     </div>
 
                     {/* Conditional Input Rendering */}
                     {exportType === 'date' && (
                         <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-white/50">เลือกวันที่</label>
+                            <label className="text-xs font-semibold text-white/50">วันที่ต้องการ</label>
                             <div className="relative">
                                 <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
                                 <input
@@ -131,7 +131,7 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
                     {exportType === 'range' && (
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-white/50">เริ่มวันที่</label>
+                                <label className="text-xs font-semibold text-white/50">วันที่เริ่มต้น</label>
                                 <input
                                     type="date"
                                     value={startDate}
@@ -140,7 +140,7 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-xs font-semibold text-white/50">สิ้นสุดวันที่</label>
+                                <label className="text-xs font-semibold text-white/50">วันที่สิ้นสุด</label>
                                 <input
                                     type="date"
                                     value={endDate}
@@ -153,7 +153,7 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
 
                     {exportType === 'month' && (
                         <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-white/50">เลือกเดือน</label>
+                            <label className="text-xs font-semibold text-white/50">เดือนที่ต้องการ</label>
                             <input
                                 type="month"
                                 value={selectedMonth}
@@ -165,7 +165,7 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
 
                     {exportType === 'preset' && (
                         <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-white/50">ช่วงย้อนหลัง</label>
+                            <label className="text-xs font-semibold text-white/50">จำนวนเดือนย้อนหลัง</label>
                             <select
                                 value={selectedPreset}
                                 onChange={(e) => setSelectedPreset(e.target.value)}
@@ -173,7 +173,7 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
                             >
                                 {Array.from({ length: 12 }, (_, index) => index + 1).map(months => (
                                     <option key={months} value={months} className="bg-slate-900">
-                                        ย้อนหลัง {months} เดือน
+                                        {months === 1 ? '1 เดือน (เดือนปัจจุบัน)' : `${months} เดือนล่าสุด`}
                                     </option>
                                 ))}
                             </select>
@@ -188,7 +188,7 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
                         className="flex-1 h-10 rounded-lg text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-900 transition-colors flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/25"
                     >
                         <Download size={15} />
-                        ส่งออกข้อมูล
+                        ดาวน์โหลด CSV
                     </button>
                     <button
                         onClick={onClose}
