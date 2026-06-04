@@ -29,10 +29,12 @@ export interface AttendanceRecord {
     } | null
 }
 
+type AttendanceCheckin = NonNullable<AttendanceRecord['checkin']>
+
 export async function getAttendanceForDate(dateStr: string) {
     // dateStr: 'YYYY-MM-DD'
-    const startOfDay = new Date(dateStr + 'T00:00:00')
-    const endOfDay = new Date(dateStr + 'T23:59:59.999')
+    const startOfDay = new Date(dateStr + 'T00:00:00+07:00')
+    const endOfDay = new Date(dateStr + 'T23:59:59.999+07:00')
 
     // 1. Get all active employees
     const { data: employees, error: empError } = await supabaseAdmin
@@ -46,29 +48,58 @@ export async function getAttendanceForDate(dateStr: string) {
         return { error: empError.message }
     }
 
-    // 2. Get checkins for this day
-    const { data: checkins, error: chkError } = await supabaseAdmin
-        .from('checkins')
-        .select('*')
-        .gte('checked_in_at', startOfDay.toISOString())
-        .lte('checked_in_at', endOfDay.toISOString())
+    // 2. Get mobile checkins and HIP card scans for this Bangkok day
+    const [checkinsResult, cardScansResult] = await Promise.all([
+        supabaseAdmin
+            .from('checkins')
+            .select('*')
+            .gte('checked_in_at', startOfDay.toISOString())
+            .lte('checked_in_at', endOfDay.toISOString()),
+        supabaseAdmin
+            .from('card_scans')
+            .select('id, employee_id, scan_time')
+            .gte('scan_time', `${dateStr}T00:00:00`)
+            .lte('scan_time', `${dateStr}T23:59:59.999`)
+            .order('scan_time', { ascending: true }),
+    ])
 
-    if (chkError) {
-        console.error('checkins fetch error:', chkError)
-        return { error: chkError.message }
+    if (checkinsResult.error) {
+        console.error('checkins fetch error:', checkinsResult.error)
+        return { error: checkinsResult.error.message }
+    }
+    if (cardScansResult.error) {
+        console.error('card_scans fetch error:', cardScansResult.error)
+        return { error: cardScansResult.error.message }
     }
 
     // 3. Map employees to their checkin (if any)
-    const checkinByEmpId = new Map<string, any>()
-    for (const c of checkins ?? []) {
+    const checkinByEmpId = new Map<string, AttendanceCheckin>()
+    for (const c of checkinsResult.data ?? []) {
         // Take latest checkin if multiple
         const existing = checkinByEmpId.get(c.employee_id)
         if (!existing || new Date(c.checked_in_at) > new Date(existing.checked_in_at)) {
             checkinByEmpId.set(c.employee_id, c)
         }
     }
+    for (const scan of cardScansResult.data ?? []) {
+        // A physical card scan proves the employee is in the office.
+        // Keep the first scan as their displayed arrival time.
+        const existing = checkinByEmpId.get(scan.employee_id)
+        if (!existing || existing.type !== 'office') {
+            checkinByEmpId.set(scan.employee_id, {
+                id: `card-scan-${scan.id}`,
+                type: 'office',
+                latitude: null,
+                longitude: null,
+                accuracy_meters: null,
+                distance_from_office: null,
+                checked_in_at: `${scan.scan_time}+07:00`,
+                checked_out_at: null,
+            })
+        }
+    }
 
-    const records: AttendanceRecord[] = (employees ?? []).map((emp: any) => ({
+    const records: AttendanceRecord[] = (employees ?? []).map(emp => ({
         employeeId: emp.id,
         employeeName: `${emp.first_name_th ?? ''} ${emp.last_name_th ?? ''}`.trim() || 'ไม่มีชื่อ',
         nickname: emp.nickname ?? null,

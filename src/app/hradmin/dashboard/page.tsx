@@ -214,26 +214,63 @@ export default async function AdminDashboard() {
         return d
     })
 
-    // Fetch today's checkins for attendance widget
-    const startOfToday = new Date()
-    startOfToday.setHours(0, 0, 0, 0)
-    const endOfToday = new Date()
-    endOfToday.setHours(23, 59, 59, 999)
-    const { data: todayCheckins } = await supabaseAdmin
-        .from('checkins')
-        .select('employee_id, type')
-        .gte('checked_in_at', startOfToday.toISOString())
-        .lte('checked_in_at', endOfToday.toISOString())
+    // HIP card scans use Bangkok wall-clock timestamps, while mobile
+    // checkins use UTC. Read both sources so the live dashboard reflects
+    // employees who physically tapped their card without waiting for the
+    // attendance reconciliation batch.
+    const bangkokDate = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Bangkok',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).format(now)
+    const mobileDayStart = new Date(`${bangkokDate}T00:00:00+07:00`).toISOString()
+    const mobileDayEnd = new Date(`${bangkokDate}T23:59:59.999+07:00`).toISOString()
+    const [todayCheckinsResult, todayCardScansResult] = await Promise.all([
+        supabaseAdmin
+            .from('checkins')
+            .select('employee_id, type, checked_in_at')
+            .gte('checked_in_at', mobileDayStart)
+            .lte('checked_in_at', mobileDayEnd)
+            .order('checked_in_at', { ascending: true }),
+        supabaseAdmin
+            .from('card_scans')
+            .select('employee_id')
+            .gte('scan_time', `${bangkokDate}T00:00:00`)
+            .lte('scan_time', `${bangkokDate}T23:59:59.999`),
+    ])
 
+    const activeEmployeeIds = new Set(
+        (employees ?? []).filter(e => e.status === 'active').map(e => e.id),
+    )
     const checkinMap = new Map<string, string>()
-    for (const c of todayCheckins ?? []) {
-        checkinMap.set(c.employee_id, c.type as string)
+    for (const c of todayCheckinsResult.data ?? []) {
+        if (activeEmployeeIds.has(c.employee_id)) {
+            checkinMap.set(c.employee_id, c.type as string)
+        }
     }
+    const officeEmployeeIds = new Set(
+        (todayCardScansResult.data ?? [])
+            .map(scan => scan.employee_id)
+            .filter(employeeId => activeEmployeeIds.has(employeeId)),
+    )
+    for (const [employeeId, type] of checkinMap) {
+        if (type === 'office') officeEmployeeIds.add(employeeId)
+    }
+    const wfhEmployeeIds = new Set(
+        Array.from(checkinMap)
+            .filter(([employeeId, type]) => type === 'wfh' && !officeEmployeeIds.has(employeeId))
+            .map(([employeeId]) => employeeId),
+    )
+    const checkedInEmployeeIds = new Set([
+        ...officeEmployeeIds,
+        ...checkinMap.keys(),
+    ])
     const attendanceStats = {
-        officeCount: Array.from(checkinMap.values()).filter(t => t === 'office').length,
-        wfhCount: Array.from(checkinMap.values()).filter(t => t === 'wfh').length,
-        checkedInCount: checkinMap.size,
-        totalActive: (employees ?? []).filter(e => e.status === 'active').length,
+        officeCount: officeEmployeeIds.size,
+        wfhCount: wfhEmployeeIds.size,
+        checkedInCount: checkedInEmployeeIds.size,
+        totalActive: activeEmployeeIds.size,
     }
 
     return (
