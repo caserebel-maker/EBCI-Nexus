@@ -662,14 +662,14 @@ export default function LeaveAdminPage() {
                 {/* Summary Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {[
-                        { label: 'รายการทั้งหมด', value: stats.total, color: 'bg-white dark:bg-card border-border' },
-                        { label: 'รออนุมัติ', value: stats.pending, color: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400' },
-                        { label: 'อนุมัติแล้ว', value: stats.approved, color: 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400' },
-                        { label: 'วันลา (อนุมัติ)', value: `${stats.totalDays} วัน`, color: 'bg-primary/5 dark:bg-primary/10 border-primary/20 text-primary' },
-                    ].map(({ label, value, color }) => (
-                        <div key={label} className={`${color} rounded-xl border p-4`}>
-                            <p className="text-2xl font-bold">{value}</p>
-                            <p className="text-xs font-medium text-muted-foreground mt-1">{label}</p>
+                        { label: 'รายการทั้งหมด', value: stats.total, cardClass: 'bg-white dark:bg-card border-border', valueClass: 'text-foreground', labelClass: 'text-muted-foreground' },
+                        { label: 'รออนุมัติ', value: stats.pending, cardClass: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800', valueClass: 'text-amber-700 dark:text-amber-300', labelClass: 'text-amber-700/75 dark:text-amber-200/75' },
+                        { label: 'อนุมัติแล้ว', value: stats.approved, cardClass: 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800', valueClass: 'text-green-700 dark:text-green-300', labelClass: 'text-green-700/75 dark:text-green-200/75' },
+                        { label: 'วันลา (อนุมัติ)', value: `${stats.totalDays} วัน`, cardClass: 'bg-rose-50 dark:bg-rose-950/35 border-rose-200 dark:border-rose-800', valueClass: 'text-rose-700 dark:text-rose-300', labelClass: 'text-rose-700/75 dark:text-rose-200/75' },
+                    ].map(({ label, value, cardClass, valueClass, labelClass }) => (
+                        <div key={label} className={`${cardClass} rounded-xl border p-4`}>
+                            <p className={`text-2xl font-black leading-none ${valueClass}`}>{value}</p>
+                            <p className={`text-xs font-semibold mt-1 ${labelClass}`}>{label}</p>
                         </div>
                     ))}
                 </div>
