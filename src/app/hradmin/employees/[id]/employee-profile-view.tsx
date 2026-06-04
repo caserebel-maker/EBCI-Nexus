@@ -190,6 +190,7 @@ interface FormState {
     gender: string
     quit_date: string
     quit_reason: string
+    quit_reason_other: string
     address: string
     emergency_contact: string
     emergency_contact_name: string
@@ -387,7 +388,12 @@ export function EmployeeProfileView({
             ? String(employee.date_of_birth).slice(0, 10) : '',
         gender: employee.gender ?? '',
         quit_date: employee.quit_date ? employee.quit_date.slice(0, 10) : '',
-        quit_reason: employee.quit_reason ?? '',
+        quit_reason: ['resigned', 'retired', 'contract_ended', ''].includes(employee.quit_reason ?? '')
+            ? (employee.quit_reason ?? '')
+            : 'other',
+        quit_reason_other: ['resigned', 'retired', 'contract_ended', ''].includes(employee.quit_reason ?? '')
+            ? ''
+            : (employee.quit_reason ?? ''),
         address: employee.applicants?.current_address ?? '',
         emergency_contact: employee.applicants?.phone ?? '',
         emergency_contact_name:     employee.emergency_contact_name     ?? '',
@@ -534,7 +540,7 @@ export function EmployeeProfileView({
                 date_of_birth: form.date_of_birth || null,
                 gender: form.gender || null,
                 quit_date: form.quit_date || undefined,
-                quit_reason: form.quit_reason || undefined,
+                quit_reason: (form.quit_reason === 'other' ? form.quit_reason_other : form.quit_reason) || undefined,
                 approval_level: form.approval_level,
                 applicant_current_address: form.address,
                 applicant_phone: form.emergency_contact,
@@ -944,6 +950,17 @@ export function EmployeeProfileView({
                                                     <option value="other">อื่นๆ</option>
                                                 </select>
                                             </EditField>
+                                            {form.quit_reason === 'other' && (
+                                                <EditField label="ระบุสาเหตุอื่นๆ (ถ้ามี)" icon={FileText}>
+                                                    <input
+                                                        type="text"
+                                                        className={cn(inp, 'text-sm')}
+                                                        value={form.quit_reason_other || ''}
+                                                        onChange={set('quit_reason_other')}
+                                                        placeholder="เช่น ทำผิดกฎบริษัท, ย้ายที่อยู่"
+                                                    />
+                                                </EditField>
+                                            )}
                                         </>
                                     )}
                                 </div>
@@ -1060,6 +1077,22 @@ export function EmployeeProfileView({
                             editing={isEditing}
                             editNode={<input type="date" className={inp} value={form.probation_end_date} onChange={set('probation_end_date')} />}
                         />
+                        {employee.status === 'inactive' && !isEditing && (
+                            <>
+                                <InfoRow label="วันที่พ้นสภาพ" icon={Calendar}
+                                    value={employee.quit_date ? fmtDate(employee.quit_date) : '—'}
+                                />
+                                <InfoRow label="สาเหตุที่พ้นสภาพ" icon={LogOut}
+                                    value={
+                                        employee.quit_reason === 'resigned' ? 'ลาออกเอง' :
+                                        employee.quit_reason === 'retired' ? 'เกษียณอายุ' :
+                                        employee.quit_reason === 'contract_ended' ? 'สัญญาหมด' :
+                                        employee.quit_reason === 'other' ? 'อื่นๆ' :
+                                        employee.quit_reason || '—'
+                                    }
+                                />
+                            </>
+                        )}
                         <InfoRow label="แผนก" icon={Building}
                             value={employee.department || '—'}
                         />
