@@ -136,15 +136,17 @@ export function AttendanceView({ initialDate, initialData }: Props) {
     return (
         <div className="max-w-5xl mx-auto space-y-5">
             {/* Header */}
-            <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-[#882136]/60 flex items-center justify-center text-[#ad5f6c] border border-[#ad5f6c]/20">
-                    <MapPin size={20} />
+            <div className="flex flex-col gap-3 rounded-2xl bg-white/5 border border-white/10 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-0 sm:bg-transparent sm:border-0">
+                <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-[#882136]/60 flex items-center justify-center text-[#ad5f6c] border border-[#ad5f6c]/20 shrink-0">
+                        <MapPin size={20} />
+                    </div>
+                    <div className="min-w-0">
+                        <h1 className="text-lg sm:text-xl font-bold text-white leading-tight whitespace-nowrap">การเข้างาน</h1>
+                        <p className="text-xs sm:text-sm text-white/50">{formatThaiDate(date)}</p>
+                    </div>
                 </div>
-                <div>
-                    <h1 className="text-xl font-bold text-white">การเข้างาน</h1>
-                    <p className="text-sm text-white/50">{formatThaiDate(date)}</p>
-                </div>
-                <div className="ml-auto flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
                     {data?.fetchedAt && (
                         <span key={nowTick} className="text-xs text-white/40 hidden sm:inline">
                             อัปเดต {timeAgo(data.fetchedAt)}
