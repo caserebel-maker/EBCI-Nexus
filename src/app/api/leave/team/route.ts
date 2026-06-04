@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
                         department: true,
                         position: true,
                         email: true,
+                        workLocation: true,
                     },
                 },
                 approver: { select: { name: true } },

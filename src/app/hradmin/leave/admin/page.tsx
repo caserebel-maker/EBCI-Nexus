@@ -31,6 +31,7 @@ interface LeaveRequest {
         department: string
         position: string
         email: string
+        workLocation?: string | null
     }
 }
 
@@ -166,7 +167,7 @@ interface HrApprovalStep {
 interface HrLeaveReq {
     id: string; leave_type: string; start_date: string; end_date: string
     total_days: number; reason: string; status: string; created_at: string
-    employee: { id: string; first_name_th: string; last_name_th: string; nickname: string | null; department: string | null; position: string | null }
+    employee: { id: string; first_name_th: string; last_name_th: string; nickname: string | null; department: string | null; position: string | null; work_location?: string | null }
     leave_approvals: HrApprovalStep[]
 }
 
@@ -196,9 +197,21 @@ function HrLeaveCard({
                         <User size={13} className="text-primary" />
                     </div>
                     <div>
-                        <p className="font-semibold text-foreground text-sm">
-                            {emp.first_name_th} {emp.last_name_th}
-                            {emp.nickname && <span className="font-normal text-muted-foreground"> ({emp.nickname})</span>}
+                        <p className="font-semibold text-foreground text-sm flex items-center gap-1.5 flex-wrap">
+                            <span>
+                                {emp.first_name_th} {emp.last_name_th}
+                                {emp.nickname && <span className="font-normal text-muted-foreground"> ({emp.nickname})</span>}
+                            </span>
+                            {emp.work_location === 'johnson' && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-red-600 border border-red-200 leading-none shrink-0 shadow-sm">
+                                    จอห์นสัน
+                                </span>
+                            )}
+                            {emp.work_location === 'saraburi' && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-blue-600 border border-blue-200 leading-none shrink-0 shadow-sm">
+                                    สระบุรี (WFH)
+                                </span>
+                            )}
                         </p>
                         <p className="text-xs text-muted-foreground">{emp.position} · {emp.department}</p>
                     </div>
@@ -762,7 +775,19 @@ export default function LeaveAdminPage() {
                                                                 <User size={14} className="text-primary" />
                                                             </div>
                                                             <div>
-                                                                <p className="font-medium text-foreground">{req.employee.firstNameTH} {req.employee.lastNameTH}</p>
+                                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                                    <p className="font-medium text-foreground">{req.employee.firstNameTH} {req.employee.lastNameTH}</p>
+                                                                    {req.employee.workLocation === 'johnson' && (
+                                                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-red-600 border border-red-200 leading-none shrink-0 shadow-sm">
+                                                                            จอห์นสัน
+                                                                        </span>
+                                                                    )}
+                                                                    {req.employee.workLocation === 'saraburi' && (
+                                                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-blue-600 border border-blue-200 leading-none shrink-0 shadow-sm">
+                                                                            สระบุรี (WFH)
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                                 <p className="text-xs text-muted-foreground">{req.employee.employeeCode}</p>
                                                             </div>
                                                         </div>

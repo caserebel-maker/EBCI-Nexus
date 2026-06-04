@@ -28,6 +28,7 @@ interface LeaveRequest {
         department: string
         position: string
         email: string
+        workLocation?: string | null
     }
 }
 
@@ -144,9 +145,21 @@ function LeaveCard({
                             <User size={18} className="text-primary" />
                         </div>
                         <div className="min-w-0">
-                            <p className="font-semibold text-foreground text-sm truncate">
-                                {req.employee.firstNameTH} {req.employee.lastNameTH}
-                            </p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="font-semibold text-foreground text-sm truncate">
+                                    {req.employee.firstNameTH} {req.employee.lastNameTH}
+                                </p>
+                                {req.employee.workLocation === 'johnson' && (
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-red-600 border border-red-200 leading-none shrink-0 shadow-sm">
+                                        จอห์นสัน
+                                    </span>
+                                )}
+                                {req.employee.workLocation === 'saraburi' && (
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-blue-600 border border-blue-200 leading-none shrink-0 shadow-sm">
+                                        สระบุรี (WFH)
+                                    </span>
+                                )}
+                            </div>
                             <p className="text-xs text-muted-foreground">
                                 {req.employee.position} • {req.employee.department}
                             </p>

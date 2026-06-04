@@ -237,8 +237,19 @@ export function ReconcileView({ initialDate, initialData }: Props) {
                                         <tr key={r.employeeId} className="border-b border-white/5 hover:bg-white/5">
                                             <td className="py-2 px-3 font-mono text-xs text-white/70">{r.employeeCode}</td>
                                             <td className="py-2 px-3 text-white">
-                                                {r.firstNameTh}
-                                                {r.nickname && <span className="text-white/55"> ({r.nickname})</span>}
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    <span>{r.firstNameTh}{r.nickname && <span className="text-white/55"> ({r.nickname})</span>}</span>
+                                                    {r.workLocation === 'johnson' && (
+                                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-red-600 border border-red-200 leading-none shrink-0">
+                                                            จอห์นสัน
+                                                        </span>
+                                                    )}
+                                                    {r.workLocation === 'saraburi' && (
+                                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-blue-600 border border-blue-200 leading-none shrink-0">
+                                                            สระบุรี (WFH)
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className="text-[10px] text-white/40">{r.department ?? '—'}</div>
                                             </td>
                                             <td className="py-2 px-3 text-right font-mono text-xs text-sky-200">

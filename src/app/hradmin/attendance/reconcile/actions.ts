@@ -21,6 +21,7 @@ export interface ReconRow {
     nickname: string | null
     department: string | null
     position: string | null
+    workLocation: string | null
     cardTime: string | null     // ISO without tz (Bangkok local)
     cardCheckoutTime: string | null // ISO without tz (Bangkok local)
     mobileTime: string | null
@@ -110,7 +111,7 @@ export async function reconcileDate(
     // 1. Active employees (excl. advisors)
     const { data: emps, error: empErr } = await supabaseAdmin
         .from('employees')
-        .select('id, employee_code, first_name_th, last_name_th, nickname, department, position, is_advisor')
+        .select('id, employee_code, first_name_th, last_name_th, nickname, department, position, is_advisor, work_location')
         .eq('status', 'active')
     if (empErr) return { error: empErr.message }
 
@@ -282,6 +283,7 @@ export async function reconcileDate(
             nickname: e.nickname ?? null,
             department: e.department ?? null,
             position: e.position ?? null,
+            workLocation: e.work_location ?? null,
             cardTime,
             cardCheckoutTime: cardCheckout,
             mobileTime,

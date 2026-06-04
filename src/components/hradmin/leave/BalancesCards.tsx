@@ -62,9 +62,21 @@ export function BalancesCards({
                                 )}
                             </span>
                             <div className="flex-1 min-w-0">
-                                <p className="text-white font-semibold text-sm truncate">
-                                    {formatEmployeeName(emp)}
-                                </p>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="text-white font-semibold text-sm truncate">
+                                        {formatEmployeeName(emp)}
+                                    </p>
+                                    {emp.work_location === 'johnson' && (
+                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-red-600 border border-red-200 leading-none shrink-0 shadow-sm">
+                                            จอห์นสัน
+                                        </span>
+                                    )}
+                                    {emp.work_location === 'saraburi' && (
+                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-blue-600 border border-blue-200 leading-none shrink-0 shadow-sm">
+                                            สระบุรี (WFH)
+                                        </span>
+                                    )}
+                                </div>
                                 <p className="text-[11px] text-white/50 truncate">
                                     {emp.department ?? '—'}
                                     {emp.approval_level ? ` · L${emp.approval_level}` : ''}

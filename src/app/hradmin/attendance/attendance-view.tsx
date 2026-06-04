@@ -330,7 +330,7 @@ function EmployeeRow({ record }: { record: AttendanceRecord }) {
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     <span
                         className={cn(
                             "h-2 w-2 rounded-full shrink-0",
@@ -339,7 +339,17 @@ function EmployeeRow({ record }: { record: AttendanceRecord }) {
                             isCheckedIn && !isWorking && "bg-white/30"
                         )}
                     />
-                    <p className="font-semibold text-white text-sm truncate">{displayName}</p>
+                    <span className="font-semibold text-white text-sm truncate">{displayName}</span>
+                    {record.workLocation === 'johnson' && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-red-600 border border-red-200 leading-none shrink-0">
+                            จอห์นสัน
+                        </span>
+                    )}
+                    {record.workLocation === 'saraburi' && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-blue-600 border border-blue-200 leading-none shrink-0">
+                            สระบุรี (WFH)
+                        </span>
+                    )}
                 </div>
                 <p className="text-xs text-white/50 truncate mt-0.5">{record.department ?? 'ไม่ระบุฝ่าย'} · {record.position ?? 'ไม่ระบุตำแหน่ง'}</p>
             </div>

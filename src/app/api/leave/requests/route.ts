@@ -11,6 +11,7 @@ type EmployeeJoin = {
     department: string | null
     position: string | null
     email: string | null
+    work_location: string | null
 }
 
 type LeaveRequestRow = {
@@ -108,7 +109,7 @@ export async function GET(req: NextRequest) {
                 created_at, updated_at,
                 employee:employees!leave_requests_employee_id_fkey (
                     id, employee_code, first_name_th, last_name_th,
-                    department, position, email
+                    department, position, email, work_location
                 )
             `)
             .gte('start_date', startFilter)
@@ -141,6 +142,7 @@ export async function GET(req: NextRequest) {
                     department: employee.department,
                     position: employee.position,
                     email: employee.email,
+                    workLocation: employee.work_location,
                 } : null,
             }
         })

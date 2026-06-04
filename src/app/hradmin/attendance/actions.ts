@@ -17,6 +17,7 @@ export interface AttendanceRecord {
     department: string | null
     position: string | null
     photoUrl: string | null
+    workLocation: string | null
     checkin: {
         id: string
         type: string
@@ -39,7 +40,7 @@ export async function getAttendanceForDate(dateStr: string) {
     // 1. Get all active employees
     const { data: employees, error: empError } = await supabaseAdmin
         .from('employees')
-        .select('id, first_name_th, last_name_th, nickname, department, position, photo_url, status')
+        .select('id, first_name_th, last_name_th, nickname, department, position, photo_url, status, work_location')
         .eq('status', 'active')
         .neq('is_advisor', true)
         .order('first_name_th', { ascending: true })
@@ -107,6 +108,7 @@ export async function getAttendanceForDate(dateStr: string) {
         department: emp.department ?? null,
         position: emp.position ?? null,
         photoUrl: emp.photo_url ?? null,
+        workLocation: emp.work_location ?? null,
         checkin: checkinByEmpId.get(emp.id) ?? null,
     }))
 

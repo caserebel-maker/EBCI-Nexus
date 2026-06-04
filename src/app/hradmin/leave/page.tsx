@@ -512,7 +512,7 @@ async function renderBalancesTab(sp: SearchParams, year: number) {
     // We sort by department + nickname so department grouping reads naturally.
     let empQuery = supabaseAdmin
         .from('employees')
-        .select('id, employee_code, first_name_th, last_name_th, nickname, department, position, photo_url, approval_level', { count: 'exact' })
+        .select('id, employee_code, first_name_th, last_name_th, nickname, department, position, photo_url, approval_level, work_location', { count: 'exact' })
         .eq('status', 'active')
 
     if (departmentFilter.length > 0) empQuery = empQuery.in('department', departmentFilter)
@@ -581,6 +581,7 @@ async function renderBalancesTab(sp: SearchParams, year: number) {
         position: string | null
         photo_url: string | null
         approval_level: number | null
+        work_location: string | null
     }>
     const totalEmployees = empCount ?? 0
     const totalPages = Math.max(1, Math.ceil(totalEmployees / BALANCES_PAGE_SIZE))

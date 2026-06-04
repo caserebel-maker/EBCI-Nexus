@@ -111,12 +111,24 @@ function RequestRow({
                 <div className="flex items-center gap-2.5 min-w-0">
                     <Avatar emp={emp} />
                     <div className="min-w-0">
-                        <p
-                            className="text-white text-sm font-semibold truncate max-w-[220px]"
-                            title={formatEmployeeName(emp)}
-                        >
-                            {formatEmployeeName(emp)}
-                        </p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            <p
+                                className="text-white text-sm font-semibold truncate max-w-[220px]"
+                                title={formatEmployeeName(emp)}
+                            >
+                                {formatEmployeeName(emp)}
+                            </p>
+                            {emp?.work_location === 'johnson' && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-red-600 border border-red-200 leading-none shrink-0 shadow-sm">
+                                    จอห์นสัน
+                                </span>
+                            )}
+                            {emp?.work_location === 'saraburi' && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-blue-600 border border-blue-200 leading-none shrink-0 shadow-sm">
+                                    สระบุรี (WFH)
+                                </span>
+                            )}
+                        </div>
                         <p className="text-[11px] text-white/45 truncate max-w-[220px]">
                             {emp?.department ?? '—'}
                         </p>
@@ -185,9 +197,21 @@ function RequestCard({
                 <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                            <p className="text-white font-semibold text-sm truncate" title={formatEmployeeName(emp)}>
-                                {formatEmployeeName(emp)}
-                            </p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="text-white font-semibold text-sm truncate" title={formatEmployeeName(emp)}>
+                                    {formatEmployeeName(emp)}
+                                </p>
+                                {emp?.work_location === 'johnson' && (
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-red-600 border border-red-200 leading-none shrink-0 shadow-sm">
+                                        จอห์นสัน
+                                    </span>
+                                )}
+                                {emp?.work_location === 'saraburi' && (
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-blue-600 border border-blue-200 leading-none shrink-0 shadow-sm">
+                                        สระบุรี (WFH)
+                                    </span>
+                                )}
+                            </div>
                             <p className="text-[11px] text-white/45 truncate">{emp?.department ?? '—'}</p>
                         </div>
                         <span

@@ -18,6 +18,7 @@ export interface EmployeeLite {
     position: string | null
     photo_url: string | null
     email: string | null
+    work_location?: string | null
 }
 
 export interface ApproverLite {
@@ -109,6 +110,7 @@ export interface EmployeeRowLite {
     position: string | null
     photo_url: string | null
     approval_level: number | null
+    work_location?: string | null
 }
 
 export interface BalancesFilterState {

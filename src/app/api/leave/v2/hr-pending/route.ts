@@ -26,7 +26,7 @@ export async function GET() {
                 id, leave_type, start_date, end_date, total_days, reason,
                 status, current_step, created_at,
                 employee:employees!employee_id (
-                    id, first_name_th, last_name_th, nickname, department, position, email
+                    id, first_name_th, last_name_th, nickname, department, position, email, work_location
                 ),
                 leave_approvals (
                     id, approver_role, status, comment, acted_at, created_at,
