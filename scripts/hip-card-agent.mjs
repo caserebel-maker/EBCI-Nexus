@@ -3,9 +3,12 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import net from 'node:net'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
 import ZKLib from 'node-zklib'
 
+const execFileAsync = promisify(execFile)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, '..')
 
@@ -60,6 +63,7 @@ const command = args._[0] ?? 'probe'
 const config = {
     host: String(args.host ?? process.env.HIP_HOST ?? '192.168.1.40'),
     port: Number(args.port ?? process.env.HIP_PORT ?? 5005),
+    listenPort: Number(args.listenPort ?? args['listen-port'] ?? process.env.HIP_LISTEN_PORT ?? 7005),
     inport: Number(args.inport ?? process.env.HIP_INPORT ?? 4000),
     timeoutMs: Number(args.timeout ?? process.env.HIP_TIMEOUT_MS ?? 10000),
     webhookUrl: String(
@@ -72,8 +76,17 @@ const config = {
     stateFile: String(args.stateFile ?? process.env.HIP_STATE_FILE ?? path.join(repoRoot, '.hip-card-agent-state.json')),
     dryRun: Boolean(args.dryRun ?? args['dry-run']),
     once: Boolean(args.once),
+    verbose: Boolean(args.verbose),
+    limit: Number(args.limit ?? process.env.HIP_SQL_LIMIT ?? 200),
     sinceMinutes: args.sinceMinutes ? Number(args.sinceMinutes) : null,
     codeMapPath: String(args.codeMap ?? process.env.HIP_CODE_MAP_PATH ?? ''),
+    captureDir: String(args.captureDir ?? args['capture-dir'] ?? process.env.HIP_CAPTURE_DIR ?? path.join(repoRoot, 'hip-captures')),
+    ackHex: String(args.ackHex ?? args['ack-hex'] ?? process.env.HIP_ACK_HEX ?? ''),
+    sqlcmdPath: String(args.sqlcmd ?? process.env.SQLCMD_PATH ?? 'sqlcmd'),
+    sqlServer: String(args.sqlServer ?? args['sql-server'] ?? process.env.HIP_SQL_SERVER ?? '.\\SQLEXPRESS'),
+    sqlDatabase: String(args.sqlDatabase ?? args['sql-database'] ?? process.env.HIP_SQL_DATABASE ?? 'Synctime'),
+    sqlUser: String(args.sqlUser ?? args['sql-user'] ?? process.env.HIP_SQL_USER ?? ''),
+    sqlPassword: String(args.sqlPassword ?? args['sql-password'] ?? process.env.HIP_SQL_PASSWORD ?? ''),
     commKey: Number(args['comm-key'] ?? args.commKey ?? process.env.HIP_COMM_KEY ?? 0),
     protocol: args.protocol ?? process.env.HIP_PROTOCOL ?? undefined,
 }
@@ -83,15 +96,25 @@ function usage() {
   npm run hip:probe -- [--host 192.168.1.40] [--port 5005] [--comm-key 0] [--protocol tcp|udp]
   npm run hip:sync -- [--dry-run] [--since-minutes 1440]
   npm run hip:watch -- [--dry-run] [--once]
+  npm run hip:capture -- [--listen-port 7005] [--once] [--ack-hex 010203]
+  npm run hip:sql-sync -- [--dry-run] [--once] [--limit 200]
 
 Environment:
   HIP_HOST=192.168.1.40
   HIP_PORT=5005
+  HIP_LISTEN_PORT=7005
   HIP_COMM_KEY=0
   HIP_PROTOCOL=tcp
   CARD_SCAN_WEBHOOK_SECRET=...
   NEXUS_CARD_SCAN_WEBHOOK=https://ebci-nexus.vercel.app/api/webhooks/card-scan
   HIP_CODE_MAP_PATH=./hip-code-map.json  # optional device user id -> employee_code map
+  HIP_CAPTURE_DIR=./hip-captures
+  HIP_ACK_HEX=...                         # optional raw ack bytes, only after packet capture confirms it
+  HIP_SQL_SERVER=.\\SQLEXPRESS
+  HIP_SQL_DATABASE=Synctime
+  HIP_SQL_USER=sa                          # optional; omit to use Windows auth
+  HIP_SQL_PASSWORD=...
+  SQLCMD_PATH=sqlcmd
 `)
 }
 
@@ -111,7 +134,6 @@ function tcpProbe() {
 }
 
 async function createDevice() {
-    console.log(`[hip-agent] ZKLib params: IP=${config.host}, port=${config.port}, timeout=${config.timeoutMs}, inport=${config.inport}, commKey=${config.commKey}, protocol=${config.protocol ?? 'auto'}`)
     const zk = new ZKLib(config.host, config.port, config.timeoutMs, config.inport, config.commKey, config.protocol)
     await zk.createSocket()
     return zk
@@ -169,8 +191,155 @@ function normalizeScan(record, codeMap) {
     }
 }
 
+function normalizeHipEmployeeCode(row, codeMap) {
+    const enroll = String(row.enrollnumber || '').trim()
+    const studentCode = String(row.studentcode || '').trim()
+    const rawCode = enroll || studentCode
+    const mapped = codeMap.get(rawCode) ?? codeMap.get(enroll) ?? codeMap.get(studentCode)
+    if (mapped) return { employeeCode: mapped, rawCode }
+
+    // HIP Ci100S enroll numbers are imported as 6 digits where the first
+    // digit is a device prefix and the remaining 5 digits are the EBCI
+    // employee code without a hyphen.
+    // Example: 715359 -> 153-59, 750669 -> 506-69, 704845 -> 048-45.
+    if (/^7\d{5}$/.test(enroll)) {
+        const code = enroll.slice(1)
+        return { employeeCode: `${code.slice(0, 3)}-${code.slice(3)}`, rawCode }
+    }
+    if (/^\d{5}$/.test(studentCode)) {
+        return { employeeCode: `${studentCode.slice(0, 3)}-${studentCode.slice(3)}`, rawCode }
+    }
+    return { employeeCode: rawCode, rawCode }
+}
+
+function normalizeHipSqlDate(raw) {
+    const value = String(raw ?? '').trim()
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{1,2}):(\d{2}):(\d{2})(?:\s*(AM|PM))?$/i)
+    if (!match) return value.replace(' ', 'T')
+
+    const [, date, rawHour, minute, second, meridiem] = match
+    let hour = Number(rawHour)
+    if (meridiem) {
+        const upper = meridiem.toUpperCase()
+        if (upper === 'AM' && hour === 12) hour = 0
+        if (upper === 'PM' && hour < 12) hour += 12
+    }
+    return `${date}T${pad(hour)}:${minute}:${second}`
+}
+
+function normalizeSqlScan(row, codeMap) {
+    const { employeeCode } = normalizeHipEmployeeCode(row, codeMap)
+    const scanTime = normalizeHipSqlDate(row.datetimescan)
+    if (!employeeCode || !scanTime) return null
+    const scanType = String(row.timetype ?? '').trim().toLowerCase()
+    return {
+        device_id: `HIP-${row.machineno || config.deviceId}`,
+        employee_code: employeeCode,
+        scan_time: scanTime,
+        scan_type: scanType === 'in' || scanType === 'out' ? scanType : undefined,
+        raw_data: {
+            source: 'hip-sql-sync',
+            sql_server: config.sqlServer,
+            sql_database: config.sqlDatabase,
+            transcantime_id: row.id,
+            enrollnumber: row.enrollnumber,
+            studentcode: row.studentcode,
+            machineno: row.machineno,
+            verifymode: row.verifymode,
+            verifymodestr: row.verifymodestr,
+            adddate: row.adddate,
+            timetype: row.timetype,
+        },
+    }
+}
+
 function scanKey(scan) {
     return `${scan.employee_code}|${scan.scan_time}`
+}
+
+async function queryHipSql(lastId) {
+    const query = `
+SET NOCOUNT ON;
+SELECT TOP (${Math.max(1, Math.min(500, config.limit))})
+    CAST(t.id AS nvarchar(30)) AS id,
+    CAST(t.enrollnumber AS nvarchar(50)) AS enrollnumber,
+    ISNULL(CAST(s.studentcode AS nvarchar(100)), '') AS studentcode,
+    ISNULL(CAST(t.machineno AS nvarchar(50)), '') AS machineno,
+    ISNULL(CAST(t.verifymode AS nvarchar(50)), '') AS verifymode,
+    ISNULL(CAST(t.verifymodestr AS nvarchar(100)), '') AS verifymodestr,
+    ISNULL(CAST(t.datetimescan AS nvarchar(100)), '') AS datetimescan,
+    ISNULL(CONVERT(nvarchar(30), t.adddate, 126), '') AS adddate,
+    ISNULL(CAST(t.timetype AS nvarchar(20)), '') AS timetype
+FROM dbo.Transcantime t
+LEFT JOIN dbo.Student s ON s.enrollnumber = t.enrollnumber
+WHERE t.id > ${Number(lastId) || 0}
+ORDER BY t.id ASC;
+`
+    const authArgs = config.sqlUser
+        ? ['-U', config.sqlUser, '-P', config.sqlPassword]
+        : ['-E']
+    const { stdout } = await execFileAsync(config.sqlcmdPath, [
+        '-S', config.sqlServer,
+        ...authArgs,
+        '-d', config.sqlDatabase,
+        '-h', '-1',
+        '-W',
+        '-s', '|',
+        '-Q', query,
+    ], {
+        cwd: repoRoot,
+        windowsHide: true,
+        maxBuffer: 1024 * 1024 * 5,
+    })
+
+    return stdout
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(line => line && !/^\(\d+ rows? affected\)$/i.test(line))
+        .map(line => {
+            const [
+                id, enrollnumber, studentcode, machineno, verifymode,
+                verifymodestr, datetimescan, adddate, timetype,
+            ] = line.split('|')
+            return {
+                id: Number(id),
+                enrollnumber,
+                studentcode,
+                machineno,
+                verifymode,
+                verifymodestr,
+                datetimescan,
+                adddate,
+                timetype,
+            }
+        })
+        .filter(row => Number.isFinite(row.id))
+}
+
+function sanitizeHex(input) {
+    return String(input ?? '').replace(/[^a-fA-F0-9]/g, '')
+}
+
+function decodeOptionalAck() {
+    const hex = sanitizeHex(config.ackHex)
+    if (!hex) return null
+    if (hex.length % 2 !== 0) {
+        throw new Error('HIP_ACK_HEX / --ack-hex must contain an even number of hex digits')
+    }
+    return Buffer.from(hex, 'hex')
+}
+
+function appendCapture(entry) {
+    fs.mkdirSync(config.captureDir, { recursive: true })
+    const date = new Date().toISOString().slice(0, 10)
+    const file = path.join(config.captureDir, `hip-capture-${date}.jsonl`)
+    fs.appendFileSync(file, JSON.stringify(entry) + '\n')
+    return file
+}
+
+function compactHex(buffer, maxBytes = 96) {
+    const clipped = buffer.subarray(0, maxBytes).toString('hex')
+    return buffer.length > maxBytes ? `${clipped}...` : clipped
 }
 
 async function postScans(scans) {
@@ -297,6 +466,108 @@ async function runWatch() {
     })
 }
 
+async function runSqlSync() {
+    const codeMap = loadCodeMap()
+    const state = loadState()
+    const lastSqlId = Number(state.last_sql_transcantime_id ?? 0)
+    const rows = await queryHipSql(lastSqlId)
+    const scans = rows
+        .map(row => normalizeSqlScan(row, codeMap))
+        .filter(Boolean)
+
+    console.log(`[hip-sql-sync] fetched=${rows.length} scans=${scans.length} last_id=${lastSqlId}`)
+    const result = await postScans(scans)
+    if (result?.summary) {
+        console.log('[hip-sql-sync] webhook summary:', result.summary)
+        if (config.verbose && result.outcomes) {
+            console.log('[hip-sql-sync] webhook outcomes:', result.outcomes)
+        }
+    } else {
+        console.log('[hip-sql-sync] webhook result:', result)
+    }
+
+    const maxId = rows.reduce((max, row) => Math.max(max, Number(row.id) || 0), lastSqlId)
+    if (!config.dryRun && maxId > lastSqlId) {
+        saveState({
+            ...state,
+            last_sql_transcantime_id: maxId,
+            updated_at: new Date().toISOString(),
+        })
+    }
+
+    if (!config.once) {
+        console.log('[hip-sql-sync] done. Run again, or schedule this command every 1-5 minutes.')
+    }
+}
+
+async function runCapture() {
+    const ack = decodeOptionalAck()
+    let connectionCount = 0
+
+    const server = net.createServer((socket) => {
+        connectionCount += 1
+        const connectionId = `${Date.now()}-${connectionCount}`
+        const remote = `${socket.remoteAddress ?? 'unknown'}:${socket.remotePort ?? 'unknown'}`
+        const startedAt = new Date().toISOString()
+        const chunks = []
+
+        console.log(`[hip-capture] connection ${connectionId} from ${remote}`)
+        socket.setTimeout(config.timeoutMs)
+
+        socket.on('data', (chunk) => {
+            chunks.push(chunk)
+            console.log(`[hip-capture] ${connectionId} chunk bytes=${chunk.length} hex=${compactHex(chunk)}`)
+            if (ack) {
+                socket.write(ack)
+                console.log(`[hip-capture] ${connectionId} wrote ack bytes=${ack.length}`)
+            }
+        })
+
+        socket.on('timeout', () => {
+            console.warn(`[hip-capture] ${connectionId} timeout after ${config.timeoutMs}ms`)
+            socket.end()
+        })
+
+        socket.on('error', (err) => {
+            console.error(`[hip-capture] ${connectionId} socket error:`, err.message)
+        })
+
+        socket.on('close', () => {
+            const raw = Buffer.concat(chunks)
+            const entry = {
+                captured_at: new Date().toISOString(),
+                connection_id: connectionId,
+                remote,
+                local_port: config.listenPort,
+                started_at: startedAt,
+                bytes: raw.length,
+                hex: raw.toString('hex'),
+                base64: raw.toString('base64'),
+                chunks: chunks.map((chunk, index) => ({
+                    index,
+                    bytes: chunk.length,
+                    hex: chunk.toString('hex'),
+                    base64: chunk.toString('base64'),
+                })),
+            }
+            const file = appendCapture(entry)
+            console.log(`[hip-capture] ${connectionId} saved bytes=${raw.length} file=${file}`)
+            if (config.once) {
+                server.close()
+            }
+        })
+    })
+
+    await new Promise((resolve, reject) => {
+        server.once('error', reject)
+        server.listen(config.listenPort, '0.0.0.0', resolve)
+    })
+
+    console.log(`[hip-capture] listening on 0.0.0.0:${config.listenPort}`)
+    console.log('[hip-capture] Set HIP ServerIP to this machine IP, ServerPort to this port, then tap one card.')
+    console.log(`[hip-capture] Writing JSONL captures to ${config.captureDir}`)
+}
+
 try {
     if (args.help || args.h) {
         usage()
@@ -306,6 +577,10 @@ try {
         await runSync()
     } else if (command === 'watch') {
         await runWatch()
+    } else if (command === 'capture' || command === 'listen') {
+        await runCapture()
+    } else if (command === 'sql-sync' || command === 'sqlsync') {
+        await runSqlSync()
     } else {
         usage()
         process.exitCode = 1

@@ -16,6 +16,9 @@
     "hip:probe": "node scripts/hip-card-agent.mjs probe",
     "hip:sync": "node scripts/hip-card-agent.mjs sync",
     "hip:watch": "node scripts/hip-card-agent.mjs watch",
+    "hip:capture": "node scripts/hip-card-agent.mjs capture",
+    "hip:sql-sync": "node scripts/hip-card-agent.mjs sql-sync",
+    "welcome:server": "node welcome-server.mjs",
     "postinstall": "prisma generate --no-engine"
   },
   "dependencies": {

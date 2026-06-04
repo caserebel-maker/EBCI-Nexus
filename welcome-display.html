@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EBCI — Welcome Display</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════════════════════
+       EBCI Welcome Display — Maroon HUD Theme
+       Matches reference mockups exactly
+       ═══════════════════════════════════════════════════════════ */
+
+    :root {
+      --bg-start:    #2a0c10;
+      --bg-mid:      #561e23;
+      --bg-end:      #3d1519;
+      --accent:      #c53040;
+      --accent-lite: #e8555e;
+      --accent-glow: rgba(200, 50, 60, 0.5);
+      --gold:        #d4a843;
+      --green:       #2dcc7a;
+      --green-glow:  rgba(45, 204, 122, 0.35);
+      --white:       #ffffff;
+      --muted:       rgba(255,255,255,0.55);
+      --dim:         rgba(255,255,255,0.25);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: 'Sarabun', 'Inter', sans-serif;
+      color: var(--white);
+    }
+
+    body {
+      background: linear-gradient(180deg, var(--bg-start) 0%, var(--bg-mid) 40%, var(--bg-end) 100%);
+    }
+
+    /* ── Subtle ambient glow ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 80%, rgba(200,50,60,0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 50% 20%, rgba(100,20,30,0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── App Container ── */
+    #app {
+      position: relative;
+      z-index: 1;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       HEADER
+       ══════════════════════════════════════════════════════════════ */
+    header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 32px 44px 0;
+      flex-shrink: 0;
+    }
+    .logo-text {
+      font-family: 'Inter', sans-serif;
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: var(--white);
+    }
+    #clock { text-align: right; }
+    #clock-time {
+      font-family: 'Inter', sans-serif;
+      font-size: 42px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      line-height: 1;
+    }
+    #clock-date {
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       STAGE — shared space for idle & welcome
+       ══════════════════════════════════════════════════════════════ */
+    #stage {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       IDLE SCREEN
+       ══════════════════════════════════════════════════════════════ */
+    #idle-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      padding: 20px 40px 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .idle-title {
+      font-size: clamp(30px, 5vw, 44px);
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 12px;
+      text-shadow: 0 2px 20px rgba(0,0,0,0.3);
+    }
+
+    /* Mascot Area — supports both video and static image */
+    .mascot-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      width: 100%;
+      min-height: 0;
+    }
+    .mascot-video {
+      max-width: 420px;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      z-index: 2;
+    }
+    .mascot-img {
+      max-width: 380px;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      z-index: 2;
+      animation: mascotBounce 3.5s ease-in-out infinite;
+      filter: drop-shadow(0 8px 30px rgba(0,0,0,0.5));
+    }
+    @keyframes mascotBounce {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      30%  { transform: translateY(-14px) rotate(-1.5deg); }
+      60%  { transform: translateY(4px) rotate(1deg); }
+      80%  { transform: translateY(-6px) rotate(-0.5deg); }
+    }
+
+    /* Holographic rings under mascot */
+    .holo-rings {
+      position: absolute;
+      bottom: 5%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      height: 80px;
+      z-index: 1;
+    }
+    .holo-ring {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      border-radius: 50%;
+      border: 2px solid;
+      transform: translate(-50%, -50%) rotateX(72deg);
+    }
+    .holo-ring-1 {
+      width: 280px; height: 280px;
+      border-color: rgba(200,50,60,0.35);
+      border-style: dashed;
+      animation: spinCW 15s linear infinite;
+    }
+    .holo-ring-2 {
+      width: 200px; height: 200px;
+      border-color: rgba(200,50,60,0.55);
+      box-shadow: 0 0 18px rgba(200,50,60,0.25), inset 0 0 18px rgba(200,50,60,0.15);
+      animation: spinCCW 10s linear infinite;
+    }
+    @keyframes spinCW  { to { transform: translate(-50%,-50%) rotateX(72deg) rotate(360deg); } }
+    @keyframes spinCCW { to { transform: translate(-50%,-50%) rotateX(72deg) rotate(-360deg); } }
+
+    /* Bottom info area on idle */
+    .idle-bottom {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding-bottom: 20px;
+      width: 100%;
+    }
+
+    /* Tap card prompt */
+    .tap-prompt {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .tap-wifi-icon {
+      width: 42px; height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .tap-wifi-icon svg {
+      width: 36px; height: 36px;
+      fill: none;
+      stroke: var(--white);
+      stroke-width: 2;
+      opacity: 0.8;
+    }
+    .tap-text-th {
+      font-size: clamp(18px, 2.5vw, 22px);
+      font-weight: 600;
+    }
+    .tap-text-en {
+      font-size: clamp(13px, 1.6vw, 15px);
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       STATUS CARD — shared between idle and welcome
+       ══════════════════════════════════════════════════════════════ */
+    .status-card {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 18px 32px;
+      background: rgba(0,0,0,0.30);
+      border: 1px solid rgba(200,50,60,0.4);
+      border-radius: 18px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+      width: 88%;
+      max-width: 460px;
+    }
+    .status-check {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      border: 2.5px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 0 12px var(--accent-glow);
+      animation: checkPulse 2.5s ease-in-out infinite;
+    }
+    .status-check.success {
+      border-color: var(--green);
+      box-shadow: 0 0 12px var(--green-glow);
+      animation: checkPulseGreen 2.5s ease-in-out infinite;
+    }
+    @keyframes checkPulse {
+      0%,100% { box-shadow: 0 0 12px var(--accent-glow); }
+      50%     { box-shadow: 0 0 22px rgba(200,50,60,0.7); }
+    }
+    @keyframes checkPulseGreen {
+      0%,100% { box-shadow: 0 0 12px var(--green-glow); }
+      50%     { box-shadow: 0 0 22px rgba(45,204,122,0.6); }
+    }
+    .status-check svg {
+      width: 24px; height: 24px;
+      stroke: var(--white);
+      stroke-width: 2.5;
+      fill: none;
+    }
+    .status-check.success svg { stroke: var(--green); }
+    .status-label { font-size: 20px; font-weight: 700; line-height: 1.3; }
+    .status-sub   { font-size: 14px; color: var(--muted); margin-top: 1px; }
+
+    /* ── Golden chevron at very bottom ── */
+    .bottom-chevron {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      padding: 10px 0 8px;
+      flex-shrink: 0;
+    }
+    .bottom-chevron svg {
+      width: 36px;
+      height: 18px;
+      fill: var(--gold);
+      opacity: 0.7;
+      filter: drop-shadow(0 0 6px rgba(212,168,67,0.4));
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       WELCOME CARD (after scan)
+       ══════════════════════════════════════════════════════════════ */
+    #welcome-card {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto auto;
+      justify-items: center;
+      padding: min(4vh, 48px) clamp(26px, 5vw, 64px) 8px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.38s ease;
+      background:
+        radial-gradient(circle at 50% 28%, rgba(255, 116, 125, 0.18), transparent 36%),
+        radial-gradient(circle at 88% 8%, rgba(255, 142, 142, 0.14), transparent 31%),
+        linear-gradient(180deg, rgba(68, 12, 18, 0.94), rgba(44, 7, 12, 0.92) 52%, rgba(24, 4, 8, 0.95));
+      overflow: hidden;
+    }
+    #welcome-card::before,
+    #welcome-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    #welcome-card::before {
+      background:
+        linear-gradient(90deg, transparent 0 12%, rgba(255,150,150,0.22) 12.1%, transparent 12.2% 87.8%, rgba(255,150,150,0.18) 87.9%, transparent 88%),
+        radial-gradient(circle at 20% 14%, rgba(255, 115, 115, 0.16) 0 1px, transparent 2px),
+        radial-gradient(circle at 80% 64%, rgba(255, 115, 115, 0.12) 0 1px, transparent 2px);
+      background-size: 100% 100%, 22px 22px, 24px 24px;
+      opacity: 0.55;
+    }
+    #welcome-card::after {
+      inset: auto 10% 0;
+      height: 16%;
+      background: linear-gradient(180deg, transparent, rgba(255, 98, 108, 0.18));
+      filter: blur(10px);
+    }
+    #welcome-card.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Welcome title above photo */
+    .wc-title {
+      position: relative;
+      z-index: 3;
+      text-align: center;
+      margin-bottom: clamp(14px, 2.2vh, 32px);
+      flex-shrink: 0;
+      opacity: 0;
+      animation: fadeSlideUp 0.5s ease forwards;
+    }
+    .wc-title-line1 {
+      font-size: clamp(40px, 7.6vw, 78px);
+      font-weight: 800;
+      letter-spacing: 0;
+      line-height: 1.05;
+      text-shadow: 0 0 12px rgba(255,118,124,0.54), 0 4px 24px rgba(0,0,0,0.38);
+    }
+    .wc-title-name {
+      position: relative;
+      font-size: clamp(26px, 4.8vw, 48px);
+      font-weight: 700;
+      color: #ffb6b9;
+      line-height: 1.15;
+      margin-top: clamp(20px, 3vh, 36px);
+      text-shadow: 0 0 14px rgba(255,118,124,0.45);
+    }
+    .wc-title-name::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + clamp(9px, 1.2vh, 14px));
+      width: min(66vw, 560px);
+      height: 12px;
+      transform: translateX(-50%);
+      background:
+        linear-gradient(90deg, transparent, rgba(255,143,143,0.72) 18%, rgba(255,255,255,0.92) 50%, rgba(255,143,143,0.72) 82%, transparent),
+        repeating-linear-gradient(90deg, transparent 0 46%, #fff 46% 48%, transparent 48% 52%);
+      box-shadow: 0 0 18px rgba(255,104,112,0.75);
+      clip-path: polygon(0 43%, 43% 43%, 47% 0, 53% 0, 57% 43%, 100% 43%, 100% 58%, 57% 58%, 53% 100%, 47% 100%, 43% 58%, 0 58%);
+    }
+
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* HUD Photo Frame */
+    .photo-frame-area {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 0;
+    }
+    .photo-frame {
+      position: relative;
+      width: min(78vw, 720px);
+      height: min(58vh, 920px);
+      min-height: 420px;
+      opacity: 0;
+      animation: framePop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards 0.15s;
+    }
+    @keyframes framePop {
+      from { opacity: 0; transform: scale(0.85); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* HUD corner brackets */
+    .frame-corner {
+      position: absolute;
+      width: clamp(88px, 13vw, 140px);
+      height: clamp(88px, 13vw, 140px);
+      border-color: #ff8e93;
+      border-style: solid;
+      z-index: 3;
+      filter: drop-shadow(0 0 10px rgba(255,115,124,0.9));
+    }
+    .fc-tl { top: 20px; left: 20px; border-width: 5px 0 0 5px; clip-path: polygon(0 0,100% 0,100% 18%,18% 18%,18% 100%,0 100%); }
+    .fc-tr { top: 20px; right: 20px; border-width: 5px 5px 0 0; clip-path: polygon(0 0,100% 0,100% 100%,82% 100%,82% 18%,0 18%); }
+    .fc-bl { bottom: 20px; left: 20px; border-width: 0 0 5px 5px; clip-path: polygon(0 0,18% 0,18% 82%,100% 82%,100% 100%,0 100%); }
+    .fc-br { bottom: 20px; right: 20px; border-width: 0 5px 5px 0; clip-path: polygon(82% 0,100% 0,100% 100%,0 100%,0 82%,82% 82%); }
+
+    /* Side tech lines */
+    .frame-side-line {
+      position: absolute;
+      z-index: 3;
+    }
+    .fsl-top {
+      top: 28px; left: 150px; right: 150px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #ff7d84 15%, #fff 50%, #ff7d84 85%, transparent);
+      opacity: 0.9;
+      box-shadow: 0 0 16px rgba(255, 102, 112, 0.9);
+    }
+    .fsl-bottom {
+      bottom: 28px; left: 150px; right: 150px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #ff7d84 15%, #fff 50%, #ff7d84 85%, transparent);
+      opacity: 0.95;
+      box-shadow: 0 0 16px rgba(255, 102, 112, 0.95);
+    }
+    .fsl-left {
+      top: 150px; bottom: 150px; left: 28px;
+      width: 2px;
+      background: linear-gradient(180deg, transparent, #ff7d84 20%, rgba(255,125,132,0.25) 50%, #ff7d84 80%, transparent);
+      opacity: 0.95;
+      box-shadow: 0 0 13px rgba(255, 102, 112, 0.85);
+    }
+    .fsl-right {
+      top: 150px; bottom: 150px; right: 28px;
+      width: 2px;
+      background: linear-gradient(180deg, transparent, #ff7d84 20%, rgba(255,125,132,0.25) 50%, #ff7d84 80%, transparent);
+      opacity: 0.95;
+      box-shadow: 0 0 13px rgba(255, 102, 112, 0.85);
+    }
+
+    /* Outer glow box */
+    .frame-glow {
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(255, 151, 151, 0.38);
+      background:
+        linear-gradient(135deg, transparent 0 8%, rgba(255,128,136,0.1) 8% 9%, transparent 9% 91%, rgba(255,128,136,0.1) 91% 92%, transparent 92%),
+        radial-gradient(circle at 50% 2%, rgba(255,255,255,0.35), transparent 12%),
+        radial-gradient(circle at 50% 98%, rgba(255,255,255,0.35), transparent 12%);
+      box-shadow: 0 0 34px rgba(255,83,93,0.42), inset 0 0 34px rgba(255,89,97,0.14);
+      clip-path: polygon(9% 0, 91% 0, 100% 10%, 100% 90%, 91% 100%, 9% 100%, 0 90%, 0 10%);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* Photo container */
+    .photo-inner {
+      position: absolute;
+      inset: clamp(44px, 6vw, 68px);
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 22%, rgba(255, 130, 130, 0.12), transparent 38%),
+        linear-gradient(180deg, #66242b 0%, #451219 100%);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 1;
+      clip-path: polygon(5% 0, 95% 0, 100% 6%, 100% 94%, 95% 100%, 5% 100%, 0 94%, 0 6%);
+    }
+    .photo-inner::after {
+      content: '';
+      position: absolute;
+      inset: auto 0 0;
+      height: 24%;
+      background: linear-gradient(180deg, transparent, rgba(32, 2, 8, 0.64));
+      pointer-events: none;
+    }
+    .photo-inner img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 50% 18%;
+    }
+    .photo-initials {
+      font-size: 72px;
+      font-weight: 800;
+      color: var(--white);
+      text-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    /* Scanning laser line */
+    .scan-laser {
+      position: absolute;
+      left: clamp(48px, 6vw, 72px); right: clamp(48px, 6vw, 72px);
+      height: 2px;
+      background: linear-gradient(90deg, transparent 5%, #fff 50%, transparent 95%);
+      box-shadow: 0 0 14px rgba(255, 126, 134, 0.9);
+      animation: laserSweep 3s linear infinite;
+      z-index: 4;
+      pointer-events: none;
+    }
+    @keyframes laserSweep {
+      0%   { top: 8px; }
+      50%  { top: calc(100% - 10px); }
+      100% { top: 8px; }
+    }
+
+    /* Welcome bottom area */
+    .wc-bottom {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      padding: clamp(18px, 3vh, 34px) 0 0;
+      width: 100%;
+      position: relative;
+      z-index: 3;
+    }
+    .wc-bottom .status-card {
+      width: min(74vw, 660px);
+      min-height: clamp(88px, 13vh, 132px);
+      justify-content: flex-start;
+      gap: clamp(22px, 4vw, 38px);
+      padding: clamp(18px, 2.7vh, 30px) clamp(30px, 5vw, 48px);
+      border-radius: 22px;
+      background:
+        linear-gradient(180deg, rgba(55, 10, 15, 0.78), rgba(25, 2, 7, 0.66)),
+        radial-gradient(circle at 50% 100%, rgba(255, 101, 110, 0.22), transparent 34%);
+      border: 1px solid rgba(255, 143, 143, 0.62);
+      box-shadow: 0 0 22px rgba(255, 78, 88, 0.18), inset 0 0 16px rgba(255, 126, 134, 0.1);
+      opacity: 0;
+      animation: fadeSlideUp 0.5s ease forwards 0.35s;
+    }
+    .wc-bottom .status-check {
+      width: clamp(70px, 10vw, 94px);
+      height: clamp(70px, 10vw, 94px);
+      border-color: rgba(255, 164, 164, 0.7);
+      background: rgba(255, 92, 103, 0.16);
+      box-shadow: 0 0 22px rgba(255, 93, 103, 0.56), inset 0 0 16px rgba(255,255,255,0.08);
+    }
+    .wc-bottom .status-check.success svg {
+      width: 58%;
+      height: 58%;
+      stroke: #fff;
+      stroke-width: 3;
+    }
+    .wc-bottom .status-label {
+      font-size: clamp(24px, 3.5vw, 36px);
+      line-height: 1.15;
+      color: #fff7f7;
+      text-shadow: 0 0 10px rgba(255, 142, 142, 0.32);
+    }
+    .wc-bottom .status-sub {
+      font-size: clamp(16px, 2.4vw, 24px);
+      color: #ffbfc0;
+      margin-top: 4px;
+    }
+
+    /* Progress bar */
+    .progress-wrap {
+      width: min(64vw, 520px);
+      height: 3px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 3px;
+      overflow: hidden;
+      opacity: 0;
+      animation: fadeSlideUp 0.3s ease forwards 0.5s;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, transparent, #ff737b, #fff, #ff737b);
+      box-shadow: 0 0 14px rgba(255, 116, 124, 0.9);
+      transform-origin: left;
+      transform: scaleX(0);
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       CONFETTI & RIPPLE
+       ══════════════════════════════════════════════════════════════ */
+    #confetti-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      pointer-events: none;
+    }
+    .ripple {
+      position: fixed;
+      border-radius: 50%;
+      border: 2px solid rgba(200,50,60,0.4);
+      transform: scale(0);
+      animation: rippleOut 1.4s ease-out forwards;
+      pointer-events: none;
+      z-index: 40;
+    }
+    @keyframes rippleOut { to { transform: scale(8); opacity: 0; } }
+
+    /* ══════════════════════════════════════════════════════════════
+       FOOTER / CONNECTION STATUS
+       ══════════════════════════════════════════════════════════════ */
+    #footer-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 44px;
+      font-size: 12px;
+      color: var(--dim);
+      flex-shrink: 0;
+    }
+    #conn-status { display: flex; align-items: center; gap: 6px; }
+    #conn-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #888;
+    }
+    #conn-dot.ok    { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    #conn-dot.error { background: #ff4d4d; box-shadow: 0 0 6px #ff4d4d; }
+
+    /* ══════════════════════════════════════════════════════════════
+       RECENT SCANS (bottom right)
+       ══════════════════════════════════════════════════════════════ */
+    #recent-list {
+      position: fixed;
+      bottom: 50px; right: 40px;
+      width: 240px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 30;
+    }
+    .recent-item {
+      padding: 8px 12px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      animation: slideInRight 0.3s ease;
+    }
+    @keyframes slideInRight {
+      from { transform: translateX(20px); opacity: 0; }
+      to   { transform: translateX(0); opacity: 1; }
+    }
+    .recent-ava {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 1px solid var(--accent);
+      overflow: hidden;
+      flex-shrink: 0;
+      background: #1a0608;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .recent-ava img { width: 100%; height: 100%; object-fit: cover; }
+    .recent-name { font-weight: 600; color: var(--white); }
+    .recent-time { font-size: 10px; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+
+<div id="app">
+  <!-- ══ HEADER ══ -->
+  <header>
+    <div class="logo-text">EBCI</div>
+    <div id="clock">
+      <div id="clock-time">08:45</div>
+      <div id="clock-date">—</div>
+    </div>
+  </header>
+
+  <!-- ══ STAGE ══ -->
+  <div id="stage">
+
+    <!-- ── IDLE SCREEN ── -->
+    <div id="idle-screen">
+      <div class="idle-title">ยินดีต้อนรับสู่ EBCI</div>
+
+      <!-- Mascot: video if available, fallback to animated image -->
+      <div class="mascot-wrap">
+        <video class="mascot-video" id="mascot-video"
+               autoplay loop muted playsinline
+               style="display:none;">
+          <source src="/public/mascot.webm" type="video/webm">
+          <source src="/public/mascot.mp4"  type="video/mp4">
+        </video>
+        <img class="mascot-img" id="mascot-img"
+             src="/public/mascot.png"
+             alt="EBCI Mascot" />
+        <!-- Holographic rings -->
+        <div class="holo-rings">
+          <div class="holo-ring holo-ring-1"></div>
+          <div class="holo-ring holo-ring-2"></div>
+        </div>
+      </div>
+
+      <!-- Bottom info -->
+      <div class="idle-bottom">
+        <div class="tap-prompt">
+          <div class="tap-wifi-icon">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 18h.01M8.53 14.53a5 5 0 0 1 6.95 0M5.64 11.64a9 9 0 0 1 12.73 0M2.05 8.05a14 14 0 0 1 19.9 0" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div>
+            <div class="tap-text-th">แตะบัตรเพื่อบันทึกเวลาเข้างาน</div>
+            <div class="tap-text-en">Please tap your card to check in</div>
+          </div>
+        </div>
+
+        <div class="status-card">
+          <div class="status-check">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <div class="status-label">System Ready</div>
+            <div class="status-sub">Waiting for Check-in</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-chevron">
+        <svg viewBox="0 0 36 18"><polygon points="18,18 0,0 6,0 18,12 30,0 36,0"/></svg>
+      </div>
+    </div>
+
+    <!-- ── WELCOME CARD ── -->
+    <div id="welcome-card">
+      <div class="wc-title">
+        <div class="wc-title-line1">ยินดีต้อนรับกลับมา</div>
+        <div class="wc-title-name" id="emp-name">คุณพนักงาน</div>
+      </div>
+
+      <div class="photo-frame-area">
+        <div class="photo-frame">
+          <div class="frame-corner fc-tl"></div>
+          <div class="frame-corner fc-tr"></div>
+          <div class="frame-corner fc-bl"></div>
+          <div class="frame-corner fc-br"></div>
+          <div class="frame-side-line fsl-top"></div>
+          <div class="frame-side-line fsl-bottom"></div>
+          <div class="frame-side-line fsl-left"></div>
+          <div class="frame-side-line fsl-right"></div>
+          <div class="frame-glow"></div>
+          <div class="scan-laser"></div>
+          <div class="photo-inner" id="avatar-inner">
+            <span class="photo-initials" id="avatar-initials">EB</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="wc-bottom">
+        <div class="status-card">
+          <div class="status-check success">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <div class="status-label">บันทึกเวลาเข้างานเรียบร้อยแล้ว</div>
+            <div class="status-sub">Check-in successful</div>
+          </div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="bottom-chevron">
+        <svg viewBox="0 0 36 18"><polygon points="18,18 0,0 6,0 18,12 30,0 36,0"/></svg>
+      </div>
+    </div>
+
+  </div><!-- /stage -->
+
+  <!-- ══ FOOTER ══ -->
+  <div id="footer-bar">
+    <div id="conn-status">
+      <div id="conn-dot"></div>
+      <span id="conn-text">กำลังเชื่อมต่อ...</span>
+    </div>
+    <div id="last-scan-info">ยังไม่มีการแตะบัตร</div>
+  </div>
+</div>
+
+<div id="recent-list"></div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     JAVASCRIPT
+     ══════════════════════════════════════════════════════════════ -->
+<script>
+// ─── Mascot video/image toggle ──────────────────────────────────────
+(function() {
+  const video = document.getElementById('mascot-video');
+  const img   = document.getElementById('mascot-img');
+  // Try to play video; on success hide image, on fail hide video
+  video.addEventListener('canplaythrough', () => {
+    video.style.display = 'block';
+    img.style.display = 'none';
+    console.log('[mascot] Video loaded — using video.');
+  }, { once: true });
+  video.addEventListener('error', () => {
+    video.style.display = 'none';
+    img.style.display = 'block';
+    console.log('[mascot] Video not found — using animated image.');
+  }, { once: true });
+  // Also handle source errors
+  const sources = video.querySelectorAll('source');
+  let failCount = 0;
+  sources.forEach(s => s.addEventListener('error', () => {
+    failCount++;
+    if (failCount >= sources.length) {
+      video.style.display = 'none';
+      img.style.display = 'block';
+    }
+  }));
+})();
+
+// ─── Clock ──────────────────────────────────────────────────────────
+const DAYS_TH = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const MONTHS_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                   'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('clock-time').textContent = `${h}:${m}`;
+  document.getElementById('clock-date').textContent =
+    `${now.getDate()} ${MONTHS_TH[now.getMonth()]} ${now.getFullYear() + 543}`;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ─── Initials ───────────────────────────────────────────────────────
+function getInitials(name) {
+  if (!name) return 'EB';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return parts[0][0] + parts[1][0];
+  return name.slice(0, 2);
+}
+
+// ─── Sound ──────────────────────────────────────────────────────────
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+function playWelcomeTone() {
+  ensureAudio();
+  [523.25, 659.26, 783.99, 1046.5].forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    const t = audioCtx.currentTime + i * 0.12;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.15, t + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    osc.start(t);
+    osc.stop(t + 0.3);
+  });
+}
+
+// ─── Confetti ───────────────────────────────────────────────────────
+const canvas = document.getElementById('confetti-canvas');
+const ctx = canvas.getContext('2d');
+let confettiPieces = [], confettiActive = false;
+
+function resizeCanvas() { canvas.width = innerWidth; canvas.height = innerHeight; }
+resizeCanvas();
+addEventListener('resize', resizeCanvas);
+
+function launchConfetti() {
+  confettiPieces = [];
+  const colors = ['#ff4d5a','#ff8a94','#fff','#ffd4d8','#d4a843','#e8b5b9'];
+  for (let i = 0; i < 90; i++) {
+    confettiPieces.push({
+      x: Math.random()*canvas.width, y: -10,
+      vx: (Math.random()-0.5)*4, vy: Math.random()*3+1.5,
+      rot: Math.random()*360, rotV: (Math.random()-0.5)*8,
+      w: Math.random()*10+5, h: Math.random()*6+3,
+      color: colors[Math.floor(Math.random()*colors.length)],
+      life: 1
+    });
+  }
+  confettiActive = true;
+}
+function drawConfetti() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if (!confettiActive) return;
+  let alive = false;
+  confettiPieces.forEach(p => {
+    p.x += p.vx; p.y += p.vy; p.rot += p.rotV; p.life -= 0.006;
+    if (p.life <= 0 || p.y > canvas.height) return;
+    alive = true;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot*Math.PI/180);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+    ctx.restore();
+  });
+  if (!alive) { confettiActive = false; ctx.clearRect(0,0,canvas.width,canvas.height); }
+}
+setInterval(drawConfetti, 16);
+
+// ─── Ripple ─────────────────────────────────────────────────────────
+function createRipple() {
+  const el = document.createElement('div');
+  el.className = 'ripple';
+  const sz = 80;
+  el.style.cssText = `width:${sz}px;height:${sz}px;left:${innerWidth/2-sz/2}px;top:${innerHeight/2-sz/2}px;`;
+  document.body.appendChild(el);
+  el.addEventListener('animationend', () => el.remove());
+}
+
+// ─── Welcome show/hide ──────────────────────────────────────────────
+let hideTimer = null;
+const SHOW_DURATION = 5000;
+
+function showWelcome(data) {
+  console.log('[welcome] Show:', data.name, data.photo_url);
+
+  // Set name
+  const nick = data.nickname ? ` (${data.nickname})` : '';
+  document.getElementById('emp-name').textContent = `คุณ${data.name}${nick}`;
+
+  // Photo or initials
+  const initials = getInitials(data.nickname || data.name);
+  const inner = document.getElementById('avatar-inner');
+  if (data.photo_url) {
+    inner.innerHTML = `<img src="${data.photo_url}" alt="${initials}"
+      onerror="this.style.display='none';document.getElementById('avatar-initials').style.display='block';" />
+      <span class="photo-initials" id="avatar-initials" style="display:none;">${initials}</span>`;
+  } else {
+    inner.innerHTML = `<span class="photo-initials" id="avatar-initials">${initials}</span>`;
+  }
+
+  // Scan time
+  const st = formatScanTime(data.scantime);
+  document.getElementById('last-scan-info').textContent = `${data.name} · ${st}`;
+
+  // Switch screens
+  document.getElementById('idle-screen').style.display = 'none';
+  const card = document.getElementById('welcome-card');
+  card.classList.remove('active');
+  void card.offsetWidth;
+
+  // Progress bar
+  const fill = document.getElementById('progress-fill');
+  fill.style.transition = 'none';
+  fill.style.transform = 'scaleX(1)';
+  void fill.offsetWidth;
+  fill.style.transition = `transform ${SHOW_DURATION}ms linear`;
+  fill.style.transform = 'scaleX(0)';
+
+  card.classList.add('active');
+
+  playWelcomeTone();
+  launchConfetti();
+  createRipple();
+  addRecent(data);
+
+  if (hideTimer) clearTimeout(hideTimer);
+  hideTimer = setTimeout(hideWelcome, SHOW_DURATION);
+}
+
+function hideWelcome() {
+  document.getElementById('welcome-card').classList.remove('active');
+  setTimeout(() => {
+    document.getElementById('idle-screen').style.display = 'flex';
+  }, 400);
+}
+
+function formatScanTime(raw) {
+  if (!raw) return '';
+  const d = new Date(raw);
+  if (!isNaN(d.getTime())) {
+    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  }
+  return raw.slice(0,19).replace('T',' ');
+}
+
+// ─── Recent list ────────────────────────────────────────────────────
+const recentScans = [];
+function addRecent(data) {
+  recentScans.unshift(data);
+  if (recentScans.length > 3) recentScans.pop();
+  const list = document.getElementById('recent-list');
+  list.innerHTML = '';
+  recentScans.forEach((s, i) => {
+    const it = document.createElement('div');
+    it.className = 'recent-item';
+    const t = s.scantime ? s.scantime.replace('T',' ').slice(11,16) : '';
+    const ini = getInitials(s.nickname || s.name);
+    const avaH = s.photo_url
+      ? `<img src="${s.photo_url}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"/><span style="display:none">${ini}</span>`
+      : `<span>${ini}</span>`;
+    it.innerHTML = `<div class="recent-ava">${avaH}</div><div><div class="recent-name">${s.nickname||s.name}</div><div class="recent-time">${t}</div></div>`;
+    list.appendChild(it);
+  });
+}
+
+// ─── SSE ────────────────────────────────────────────────────────────
+let evtSource = null, reconnDelay = 2000;
+
+function setConn(ok, text) {
+  document.getElementById('conn-dot').className = ok===true?'ok':(ok===false?'error':'');
+  document.getElementById('conn-text').textContent = text;
+}
+function connect() {
+  if (evtSource) { evtSource.close(); evtSource = null; }
+  setConn(null, 'กำลังเชื่อมต่อ...');
+  evtSource = new EventSource('/events');
+  evtSource.onopen = () => { setConn(true, 'เชื่อมต่อแล้ว'); reconnDelay = 2000; };
+  evtSource.onmessage = e => {
+    try { const d = JSON.parse(e.data); if (d.type==='scan') showWelcome(d); } catch {}
+  };
+  evtSource.onerror = () => {
+    setConn(false, `ขาดการเชื่อมต่อ — ลองใหม่ใน ${reconnDelay/1000}s`);
+    evtSource.close(); evtSource = null;
+    setTimeout(connect, reconnDelay);
+    reconnDelay = Math.min(reconnDelay*1.5, 30000);
+  };
+}
+connect();
+
+if (new URLSearchParams(location.search).has('preview') || location.protocol === 'file:') {
+  setTimeout(() => {
+    showWelcome({
+      type: 'scan',
+      id: 'preview',
+      name: 'กิตติพงศ์',
+      nickname: '',
+      photo_url: '/public/mascot.png',
+      department: 'EBCI',
+      scantime: new Date().toISOString()
+    });
+  }, 500);
+}
+
+// ─── Shortcuts ──────────────────────────────────────────────────────
+document.addEventListener('click', () => ensureAudio(), { once: false });
+document.addEventListener('keydown', e => {
+  if (e.key==='t'||e.key==='T') fetch('/test').catch(()=>{});
+  if (e.key==='Escape') hideWelcome();
+});
+</script>
+</body>
+</html>
