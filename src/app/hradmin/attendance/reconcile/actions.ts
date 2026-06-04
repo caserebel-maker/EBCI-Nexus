@@ -139,8 +139,17 @@ export async function reconcileDate(
     for (const [eid, times] of scansByEmp.entries()) {
         if (times.length > 0) {
             cardByEmp.set(eid, times[0])
-            if (times.length > 1) {
-                cardCheckoutByEmp.set(eid, times[times.length - 1])
+            
+            // Only scans at or after 15:00 (Bangkok time) are eligible for checkout.
+            // This prevents lunch or afternoon errand card taps from being counted as final check-out.
+            // The check-out scan must also be a different scan than the check-in scan.
+            const checkoutCandidates = times.slice(1).filter(t => {
+                const normalized = t.replace(' ', 'T')
+                const timePart = normalized.split('T')[1] || ''
+                return timePart >= '15:00:00'
+            })
+            if (checkoutCandidates.length > 0) {
+                cardCheckoutByEmp.set(eid, checkoutCandidates[checkoutCandidates.length - 1])
             }
         }
     }
