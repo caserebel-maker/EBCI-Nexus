@@ -4,6 +4,9 @@ import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { formatBangkokTime, todayBangkokKey } from '@/lib/datetime'
 import { isWorkdaySaturday } from '@/lib/saturday-rules'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const WORK_LOCATION_LABELS: Record<string, string> = {
     johnson: 'จอห์นสัน',
     saraburi: 'ทำงานที่บ้าน (สระบุรี)',
@@ -344,6 +347,9 @@ export async function GET(req: NextRequest) {
             headers: {
                 'Content-Type': 'text/csv; charset=utf-8',
                 'Content-Disposition': `attachment; filename="${filename}"`,
+                'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+                'Pragma': 'no-cache',
+                'Expires': '0',
             },
         })
 

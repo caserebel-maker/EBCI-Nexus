@@ -66,7 +66,7 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
         if (!from || !to) return
 
         // Open download in a new window/tab to trigger browser download
-        const url = `/api/hradmin/attendance/export?from=${from}&to=${to}`
+        const url = `/api/hradmin/attendance/export?from=${from}&to=${to}&_ts=${Date.now()}`
         window.open(url, '_blank')
         onClose()
     }
