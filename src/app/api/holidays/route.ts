@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getAuth, isHrStaff } from '@/lib/route-auth'
 
+import { mergeHolidays } from '@/lib/saturday-rules'
+
 export async function GET(req: NextRequest) {
     const auth = await getAuth()
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -15,7 +17,8 @@ export async function GET(req: NextRequest) {
         .order('date', { ascending: true })
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ data })
+    const merged = mergeHolidays(data ?? [], parseInt(year))
+    return NextResponse.json({ data: merged })
 }
 
 export async function POST(req: NextRequest) {

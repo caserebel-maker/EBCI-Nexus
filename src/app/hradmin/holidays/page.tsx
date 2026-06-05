@@ -26,21 +26,23 @@ const TYPE_CONFIG: Record<string, { label: string; color: string; emoji: string 
     religious: { label: 'วันสำคัญทางศาสนา', color: '#F472B6', emoji: '🛕' },
     company:   { label: 'บริษัทกำหนด',     color: '#60A5FA', emoji: '📌' },
     wfh:       { label: 'WFH',             color: '#34D399', emoji: '🏠' },
+    work:      { label: 'วันทำงาน (ออฟฟิศ)', color: '#818CF8', emoji: '🏢' },
 }
 
 // Cell-bg palette for the GRID. Same scheme as the portal calendar
 // (sync if you change one — they're conceptually the same legend
 // even though the data sources differ; HR sees only holidays/WFH).
-type CellKind = 'public' | 'religious' | 'company' | 'wfh'
+type CellKind = 'public' | 'religious' | 'company' | 'wfh' | 'work'
 const CELL_PALETTE: Record<CellKind, { bg: string; text: string; label: string }> = {
     public:    { bg: '#F4F4F5', text: '#000000', label: 'นักขัตฤกษ์' },
     religious: { bg: '#FBBF24', text: '#000000', label: 'วันสำคัญทางศาสนา' },
     company:   { bg: '#FB923C', text: '#000000', label: 'บริษัทกำหนด' },
     wfh:       { bg: '#3B82F6', text: '#FFFFFF', label: 'WFH' },
+    work:      { bg: '#6366F1', text: '#FFFFFF', label: 'วันทำงาน (ออฟฟิศ)' },
 }
-const CELL_PRIORITY: CellKind[] = ['public', 'religious', 'company', 'wfh']
+const CELL_PRIORITY: CellKind[] = ['public', 'religious', 'company', 'wfh', 'work']
 function holidayTypeToCellKind(t: string): CellKind {
-    if (t === 'public' || t === 'religious' || t === 'company' || t === 'wfh') return t
+    if (t === 'public' || t === 'religious' || t === 'company' || t === 'wfh' || t === 'work') return t
     return 'company'  // unknown → fall back so it still paints something
 }
 const TYPE_OPTIONS: Array<{ value: string; label: string }> = [

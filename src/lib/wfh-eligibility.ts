@@ -29,11 +29,22 @@ import type { WfhEligibility } from '@/lib/wfh-eligibility-shared'
  * import it without dragging supabaseAdmin into the bundle.
  */
 
+import { isWfhSaturday } from '@/lib/saturday-rules'
+
 export async function checkWfhEligibility(
     employeeId: string,
     dateIso: string,                  // YYYY-MM-DD (Bangkok wall-clock)
 ): Promise<WfhEligibility> {
     if (!employeeId || !dateIso) return { allowed: false, source: null }
+
+    // Check if it's the 3rd Saturday (company-wide WFH workday)
+    if (isWfhSaturday(dateIso)) {
+        return {
+            allowed: true,
+            source: 'company',
+            label: 'วันทำงานครึ่งวัน (WFH)',
+        }
+    }
 
     // Layer 1: company-wide WFH? Cheap query — only one row max for the
     // date because we don't dedupe by type, and HR rarely creates two

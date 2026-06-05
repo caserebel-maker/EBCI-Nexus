@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { formatBangkokTime } from '@/lib/datetime'
+import { isWorkdaySaturday } from '@/lib/saturday-rules'
 
 const WORK_LOCATION_LABELS: Record<string, string> = {
     johnson: 'จอห์นสัน',
@@ -106,7 +107,7 @@ export async function GET(req: NextRequest) {
         for (const dateStr of dateRange) {
             const [yr, mon, day] = dateStr.split('-').map(Number)
             const dObj = new Date(yr, mon - 1, day)
-            const isWeekend = dObj.getDay() === 0 || dObj.getDay() === 6
+            const isWeekend = dObj.getDay() === 0 || (dObj.getDay() === 6 && !isWorkdaySaturday(dateStr))
             const formattedDateTh = dObj.toLocaleDateString('th-TH', {
                 year: 'numeric',
                 month: 'short',

@@ -7,6 +7,8 @@ import { CalendarClient } from './calendar-client'
 
 export const dynamic = 'force-dynamic'
 
+import { mergeHolidays } from '@/lib/saturday-rules'
+
 export interface Holiday {
     id: string
     date: string   // 'YYYY-MM-DD'
@@ -45,7 +47,7 @@ export default async function CalendarPage() {
             .select('id, date, name, type')
             .eq('year', year)
             .order('date', { ascending: true })
-        holidays = (data ?? []) as Holiday[]
+        holidays = mergeHolidays((data ?? []) as Holiday[], year)
     } catch (e) {
         console.error('[calendar] holidays fetch failed:', e)
     }

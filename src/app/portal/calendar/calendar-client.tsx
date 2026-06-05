@@ -30,6 +30,7 @@ const HOLIDAY_CONFIG: Record<string, { label: string; color: string; emoji: stri
     religious: { label: 'วันสำคัญทางศาสนา', color: '#F472B6', emoji: '🛕' },
     company:   { label: 'บริษัทกำหนด',     color: '#60A5FA', emoji: '📌' },
     wfh:       { label: 'WFH',             color: '#34D399', emoji: '🏠' },
+    work:      { label: 'วันทำงาน (ออฟฟิศ)', color: '#818CF8', emoji: '🏢' },
 }
 
 // Leave types — same as above, used by the modal not the grid.
@@ -58,18 +59,19 @@ const LEAVE_CONFIG: Record<string, { label: string; color: string; emoji: string
 // CELL_PRIORITY wins as the bg. The others render as small accent
 // dots in the cell's bottom-right corner so the user still sees
 // "this day has multiple things going on".
-type CellKind = 'public' | 'religious' | 'company' | 'wfh' | 'leave' | 'booking'
+type CellKind = 'public' | 'religious' | 'company' | 'wfh' | 'work' | 'leave' | 'booking'
 
 const CELL_PALETTE: Record<CellKind, { bg: string; text: string; label: string }> = {
     public:    { bg: '#F4F4F5', text: '#000000', label: 'นักขัตฤกษ์' },     // white / black
     religious: { bg: '#FBBF24', text: '#000000', label: 'วันสำคัญทางศาสนา' }, // yellow / black
     company:   { bg: '#FB923C', text: '#000000', label: 'บริษัทกำหนด' },     // orange / black
     wfh:       { bg: '#3B82F6', text: '#FFFFFF', label: 'WFH' },             // blue / white
+    work:      { bg: '#6366F1', text: '#FFFFFF', label: 'วันทำงาน (ออฟฟิศ)' }, // indigo / white
     leave:     { bg: '#10B981', text: '#FFFFFF', label: 'ใบลา' },            // green / white
     booking:   { bg: '#EC4899', text: '#FFFFFF', label: 'จองห้องประชุม' },   // pink / white
 }
 
-const CELL_PRIORITY: CellKind[] = ['public', 'religious', 'company', 'wfh', 'leave', 'booking']
+const CELL_PRIORITY: CellKind[] = ['public', 'religious', 'company', 'wfh', 'work', 'leave', 'booking']
 
 /** Map a holidays.type value to a CellKind (or null if not a calendar
  *  bg-painter — defensive for legacy/imported types we don't render). */
@@ -78,6 +80,7 @@ function holidayTypeToCellKind(holidayType: string): CellKind | null {
     if (holidayType === 'religious') return 'religious'
     if (holidayType === 'company') return 'company'
     if (holidayType === 'wfh') return 'wfh'
+    if (holidayType === 'work') return 'work'
     return 'company'  // unknown → treat as "company-set" so it still paints
 }
 

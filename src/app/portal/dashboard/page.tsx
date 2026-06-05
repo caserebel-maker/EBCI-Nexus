@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { resolveCreators, displayCreator } from '@/lib/creators'
 import { PortalDashboardClient } from './dashboard-client'
+import { isWorkdaySaturday, getSaturdayIndex } from '@/lib/saturday-rules'
 
 export const dynamic = 'force-dynamic'
 
@@ -222,14 +223,18 @@ export default async function PortalDashboardPage() {
         console.error('[dashboard] announcements query failed:', e)
     }
 
-    // ── Working days this year (Mon–Fri, Jan 1 → today) ──────────────────────
     const today = new Date()
     const yearStart = new Date(today.getFullYear(), 0, 1)
     let workingDays = 0
     const cur = new Date(yearStart)
     while (cur <= today) {
         const dow = cur.getDay()
-        if (dow !== 0 && dow !== 6) workingDays++
+        const dateStr = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`
+        const isSaturday = dow === 6
+        const isSunday = dow === 0
+        if (!isSunday && (!isSaturday || isWorkdaySaturday(dateStr))) {
+            workingDays++
+        }
         cur.setDate(cur.getDate() + 1)
     }
 
@@ -251,6 +256,18 @@ export default async function PortalDashboardPage() {
             todayCalendarEntry = {
                 name: (data.name as string) ?? '',
                 type: (data.type as string) ?? 'company',
+            }
+        } else {
+            // Check if today is a Saturday and return dynamic entry
+            const satIdx = getSaturdayIndex(tzDate)
+            if (satIdx > 0) {
+                if (satIdx === 1) {
+                    todayCalendarEntry = { name: 'วันทำงานครึ่งวัน (ออฟฟิศ)', type: 'work' }
+                } else if (satIdx === 3) {
+                    todayCalendarEntry = { name: 'วันทำงานครึ่งวัน (WFH)', type: 'wfh' }
+                } else {
+                    todayCalendarEntry = { name: 'วันหยุดประจำสัปดาห์', type: 'company' }
+                }
             }
         }
     } catch (e) {
