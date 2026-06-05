@@ -107,6 +107,20 @@ function normalizeScanTime(raw: string): string | null {
     return null
 }
 
+/**
+ * Map employee codes from physical card scanner variations to their DB equivalent.
+ * Specifically, map Arunee (Annie) Nilbanjong's card codes (e.g. 010466, 010464, etc.)
+ * to her database employee code '466-64'.
+ */
+function mapEmployeeCode(code: string): string {
+    const trimmed = code.trim()
+    // Map Arunee's various card scan codes to her DB employee_code '466-64'
+    if (['010466', '010464', '10466', '10464', '0466', '0464', '466', '464'].includes(trimmed)) {
+        return '466-64'
+    }
+    return trimmed
+}
+
 export async function POST(req: NextRequest) {
     const rawBody = await req.text()
     const auth = verifyAuth(req, rawBody)
@@ -133,7 +147,7 @@ export async function POST(req: NextRequest) {
     // Resolve employee_codes → employees.id in one round-trip so the
     // insert loop doesn't hit the DB N times for the same code.
     const allCodes = Array.from(new Set(
-        scans.map(s => (s?.employee_code ?? '').trim()).filter(Boolean),
+        scans.map(s => mapEmployeeCode((s?.employee_code ?? '').trim())).filter(Boolean),
     ))
     const empMap = new Map<string, string>()
     if (allCodes.length > 0) {
@@ -150,7 +164,8 @@ export async function POST(req: NextRequest) {
     const nowIso = new Date().toISOString()
 
     for (const scan of scans) {
-        const code = (scan?.employee_code ?? '').trim()
+        const rawCode = (scan?.employee_code ?? '').trim()
+        const code = mapEmployeeCode(rawCode)
         const time = normalizeScanTime(String(scan?.scan_time ?? ''))
         if (!code || !time) {
             outcomes.push({
