@@ -529,13 +529,28 @@ function PopupRow({ label, value, color }: { label: string; value: string; color
 // ─── Today calendar banner (WFH / Holiday) ───────────────────────────────────
 function TodayCalendarBanner({ entry }: { entry: TodayCalendarEntry }) {
     const isWfh = entry.type === 'wfh'
-    const Icon = isWfh ? Home : CalendarOff
-    const headline = isWfh ? '🏠 วันนี้ทำงานที่บ้าน (WFH)' : '🎌 วันนี้เป็นวันหยุดบริษัท'
-    const bg = isWfh
-        ? 'linear-gradient(135deg, rgba(16,185,129,0.18), rgba(52,211,153,0.10))'
-        : 'linear-gradient(135deg, rgba(248,113,113,0.18), rgba(239,68,68,0.10))'
-    const border = isWfh ? 'rgba(52,211,153,0.35)' : 'rgba(248,113,113,0.35)'
-    const accent = isWfh ? '#34D399' : '#F87171'
+    const isWork = entry.type === 'work'
+    
+    let Icon = CalendarOff
+    let headline = '🎌 วันนี้เป็นวันหยุดบริษัท'
+    let bg = 'linear-gradient(135deg, rgba(248,113,113,0.18), rgba(239,68,68,0.10))'
+    let border = 'rgba(248,113,113,0.35)'
+    let accent = '#F87171'
+
+    if (isWfh) {
+        Icon = Home
+        headline = '🏠 วันนี้ทำงานที่บ้าน (WFH)'
+        bg = 'linear-gradient(135deg, rgba(16,185,129,0.18), rgba(52,211,153,0.10))'
+        border = 'rgba(52,211,153,0.35)'
+        accent = '#34D399'
+    } else if (isWork) {
+        Icon = MapPin
+        headline = '🏢 วันนี้ทำงานครึ่งวัน (ออฟฟิศ)'
+        bg = 'linear-gradient(135deg, rgba(147,51,234,0.18), rgba(168,85,247,0.10))'
+        border = 'rgba(168,85,247,0.35)'
+        accent = '#C084FC'
+    }
+
     return (
         <div
             className="flex items-center gap-3 p-3.5 rounded-2xl"

@@ -29,8 +29,8 @@ const HOLIDAY_CONFIG: Record<string, { label: string; color: string; emoji: stri
     public:    { label: 'นักขัตฤกษ์',      color: '#F87171', emoji: '🇹🇭' },
     religious: { label: 'วันสำคัญทางศาสนา', color: '#F472B6', emoji: '🛕' },
     company:   { label: 'บริษัทกำหนด',     color: '#60A5FA', emoji: '📌' },
-    wfh:       { label: 'WFH',             color: '#34D399', emoji: '🏠' },
-    work:      { label: 'วันทำงาน (ออฟฟิศ)', color: '#818CF8', emoji: '🏢' },
+    wfh:       { label: 'WFH',             color: '#60A5FA', emoji: '🏠' },
+    work:      { label: 'วันทำงาน (ออฟฟิศ)', color: '#C084FC', emoji: '🏢' },
 }
 
 // Leave types — same as above, used by the modal not the grid.
@@ -65,8 +65,8 @@ const CELL_PALETTE: Record<CellKind, { bg: string; text: string; label: string }
     public:    { bg: '#F4F4F5', text: '#000000', label: 'นักขัตฤกษ์' },     // white / black
     religious: { bg: '#FBBF24', text: '#000000', label: 'วันสำคัญทางศาสนา' }, // yellow / black
     company:   { bg: '#FB923C', text: '#000000', label: 'บริษัทกำหนด' },     // orange / black
-    wfh:       { bg: '#3B82F6', text: '#FFFFFF', label: 'WFH' },             // blue / white
-    work:      { bg: '#6366F1', text: '#FFFFFF', label: 'วันทำงาน (ออฟฟิศ)' }, // indigo / white
+    wfh:       { bg: '#2563EB', text: '#FFFFFF', label: 'WFH' },             // rich blue / white
+    work:      { bg: '#9333EA', text: '#FFFFFF', label: 'วันทำงาน (ออฟฟิศ)' }, // vibrant purple / white
     leave:     { bg: '#10B981', text: '#FFFFFF', label: 'ใบลา' },            // green / white
     booking:   { bg: '#EC4899', text: '#FFFFFF', label: 'จองห้องประชุม' },   // pink / white
 }
