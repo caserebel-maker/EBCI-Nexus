@@ -23,6 +23,39 @@ const SOURCE_LABELS: Record<string, string> = {
     mobile: 'มือถือ',
 }
 
+type AttendanceLogRow = {
+    date: string
+    employee_id: string
+    card_scan_time: string | null
+    card_checkout_time: string | null
+    official_clock_in: string | null
+    official_clock_out: string | null
+    reconciliation_status: string | null
+    source: string | null
+}
+
+type CheckinRow = {
+    employee_id: string
+    source: string | null
+    checked_in_at: string
+    checked_out_at: string | null
+}
+
+type CardScanRow = {
+    employee_id: string | null
+    employee_code: string | null
+    scan_time: string
+}
+
+type LeaveRow = {
+    employee_id: string
+    leave_type_id: string
+    start_date: string
+    end_date: string
+    is_half_day: boolean | null
+    half_day_period: string | null
+}
+
 function getDatesInRange(startStr: string, endStr: string): string[] {
     const dates: string[] = []
     const [sYr, sMon, sDay] = startStr.split('-').map(Number)
@@ -67,6 +100,10 @@ export async function GET(req: NextRequest) {
             .order('employee_code', { ascending: true })
 
         if (empError) throw new Error(empError.message)
+        const employeeIdByCode = new Map<string, string>()
+        for (const emp of employees ?? []) {
+            if (emp.employee_code) employeeIdByCode.set(emp.employee_code, emp.id)
+        }
 
         // 2. Fetch attendance logs in range
         const { data: logs, error: logError } = await supabaseAdmin
@@ -78,8 +115,8 @@ export async function GET(req: NextRequest) {
         if (logError) throw new Error(logError.message)
 
         // Group logs by date_employeeId
-        const logMap = new Map<string, any>()
-        for (const log of logs ?? []) {
+        const logMap = new Map<string, AttendanceLogRow>()
+        for (const log of (logs ?? []) as AttendanceLogRow[]) {
             const datePart = log.date.split('T')[0]
             logMap.set(`${datePart}_${log.employee_id}`, log)
         }
@@ -96,7 +133,7 @@ export async function GET(req: NextRequest) {
                 .lte('checked_in_at', endOfDay.toISOString()),
             supabaseAdmin
                 .from('card_scans')
-                .select('id, employee_id, scan_time')
+                .select('id, employee_id, employee_code, scan_time')
                 .gte('scan_time', `${from}T00:00:00`)
                 .lte('scan_time', `${to}T23:59:59.999`)
                 .order('scan_time', { ascending: true }),
@@ -109,7 +146,7 @@ export async function GET(req: NextRequest) {
         ])
 
         // Parse leaves into name names map
-        const leaves = leavesResult.data ?? []
+        const leaves = (leavesResult.data ?? []) as LeaveRow[]
         const leaveTypeIds = Array.from(new Set(leaves.map(l => l.leave_type_id)))
         const { data: leaveTypes } = leaveTypeIds.length
             ? await supabaseAdmin.from('leave_types').select('id, name_th').in('id', leaveTypeIds)
@@ -136,8 +173,8 @@ export async function GET(req: NextRequest) {
         }
 
         // Group checkins by date and employee
-        const checkinMap = new Map<string, any[]>()
-        for (const c of checkinsResult.data ?? []) {
+        const checkinMap = new Map<string, CheckinRow[]>()
+        for (const c of (checkinsResult.data ?? []) as CheckinRow[]) {
             const datePart = new Date(new Date(c.checked_in_at).getTime() + 7 * 60 * 60 * 1000).toISOString().split('T')[0]
             const key = `${datePart}_${c.employee_id}`
             if (!checkinMap.has(key)) checkinMap.set(key, [])
@@ -145,10 +182,12 @@ export async function GET(req: NextRequest) {
         }
 
         // Group scans by date and employee
-        const scanMap = new Map<string, any[]>()
-        for (const s of cardScansResult.data ?? []) {
-            const datePart = s.scan_time.split('T')[0]
-            const key = `${datePart}_${s.employee_id}`
+        const scanMap = new Map<string, CardScanRow[]>()
+        for (const s of (cardScansResult.data ?? []) as CardScanRow[]) {
+            const datePart = s.scan_time.split(/[T ]/)[0]
+            const employeeId = s.employee_id ?? (s.employee_code ? employeeIdByCode.get(s.employee_code) ?? null : null)
+            if (!employeeId) continue
+            const key = `${datePart}_${employeeId}`
             if (!scanMap.has(key)) scanMap.set(key, [])
             scanMap.get(key)!.push(s)
         }
@@ -172,6 +211,7 @@ export async function GET(req: NextRequest) {
         ]
 
         const csvRows = [headers.map(h => `"${h}"`).join(',')]
+        const todayStr = todayBangkokKey()
 
         for (const dateStr of dateRange) {
             const [yr, mon, day] = dateStr.split('-').map(Number)
@@ -184,7 +224,15 @@ export async function GET(req: NextRequest) {
             })
 
             for (const emp of employees ?? []) {
-                const log = logMap.get(`${dateStr}_${emp.id}`)
+                const key = `${dateStr}_${emp.id}`
+                const log = logMap.get(key)
+                const dayCheckins = checkinMap.get(key) ?? []
+                const dayScans = scanMap.get(key) ?? []
+                const dayLeave = leaveMap.get(key)
+                const hasLiveEvidence = dayCheckins.length > 0 || dayScans.length > 0 || !!dayLeave
+                const isOpenDay = dateStr >= todayStr
+                const shouldUseLog = !!log
+                    && !(log.reconciliation_status === 'absent' && (isOpenDay || hasLiveEvidence))
                 
                 const fullName = `${emp.first_name_th ?? ''} ${emp.last_name_th ?? ''}`.trim()
                 const workLoc = emp.work_location ? WORK_LOCATION_LABELS[emp.work_location] ?? emp.work_location : 'สำนักงาน EBCI (ปกติ)'
@@ -194,20 +242,17 @@ export async function GET(req: NextRequest) {
                 let statusLabel = isWeekend ? 'วันหยุด' : 'ยังไม่เช็คอิน'
                 let sourceLabel = '—'
 
-                if (log) {
+                if (shouldUseLog) {
                     const inSource = log.card_scan_time ? 'bangkok' : 'utc'
                     const outSource = log.card_checkout_time ? 'bangkok' : 'utc'
-                    clockIn = formatBangkokTime(log.official_clock_in, inSource)
-                    clockOut = formatBangkokTime(log.official_clock_out, outSource)
-                    statusLabel = STATUS_LABELS[log.reconciliation_status] ?? log.reconciliation_status
-                    sourceLabel = SOURCE_LABELS[log.source] ?? log.source ?? '—'
+                    clockIn = log.official_clock_in ? formatBangkokTime(log.official_clock_in, inSource) : '—'
+                    clockOut = log.official_clock_out ? formatBangkokTime(log.official_clock_out, outSource) : '—'
+                    const statusKey = log.reconciliation_status ?? ''
+                    const sourceKey = log.source ?? ''
+                    statusLabel = statusKey ? STATUS_LABELS[statusKey] ?? statusKey : '—'
+                    sourceLabel = sourceKey ? SOURCE_LABELS[sourceKey] ?? sourceKey : '—'
                 } else {
-                    const key = `${dateStr}_${emp.id}`
-                    const dayCheckins = checkinMap.get(key) ?? []
-                    const dayScans = scanMap.get(key) ?? []
-                    const dayLeave = leaveMap.get(key)
-
-                    let earliestMobile: any = null
+                    let earliestMobile: CheckinRow | null = null
                     let latestMobileCheckout: string | null = null
                     for (const c of dayCheckins) {
                         if (c.source === 'card') continue
@@ -240,7 +285,7 @@ export async function GET(req: NextRequest) {
                             clockIn = formatBangkokTime(`${earliestCardScan}+07:00`)
                             sourceLabel = 'แสกนบัตร'
                             statusLabel = 'เฉพาะบัตร'
-                        } else {
+                        } else if (earliestMobile) {
                             clockIn = formatBangkokTime(earliestMobile.checked_in_at)
                             sourceLabel = 'มือถือ'
                             statusLabel = 'เฉพาะมือถือ'
@@ -265,13 +310,10 @@ export async function GET(req: NextRequest) {
                             : dayLeave.typeName
                     } else if (isWeekend) {
                         statusLabel = 'วันหยุด'
+                    } else if (dateStr < todayStr) {
+                        statusLabel = 'ขาดเช็คอิน'
                     } else {
-                        const todayStr = todayBangkokKey()
-                        if (dateStr < todayStr) {
-                            statusLabel = 'ขาดเช็คอิน'
-                        } else {
-                            statusLabel = 'ยังไม่เช็คอิน'
-                        }
+                        statusLabel = 'ยังไม่เช็คอิน'
                     }
                 }
 
@@ -305,7 +347,7 @@ export async function GET(req: NextRequest) {
             },
         })
 
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error('Attendance export error:', err)
         return NextResponse.json({ error: 'เกิดข้อผิดพลาดในการส่งออกข้อมูล' }, { status: 500 })
     }
