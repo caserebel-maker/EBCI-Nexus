@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getAuth, isHrStaff } from '@/lib/route-auth'
-import { formatBangkokTime } from '@/lib/datetime'
+import { formatBangkokTime, todayBangkokKey } from '@/lib/datetime'
 import { isWorkdaySaturday } from '@/lib/saturday-rules'
 
 const WORK_LOCATION_LABELS: Record<string, string> = {
@@ -84,6 +84,75 @@ export async function GET(req: NextRequest) {
             logMap.set(`${datePart}_${log.employee_id}`, log)
         }
 
+        // 2b. Fetch checkins, card scans, and approved leave requests in the range for fallback
+        const startOfDay = new Date(`${from}T00:00:00+07:00`)
+        const endOfDay = new Date(`${to}T23:59:59.999+07:00`)
+
+        const [checkinsResult, cardScansResult, leavesResult] = await Promise.all([
+            supabaseAdmin
+                .from('checkins')
+                .select('*')
+                .gte('checked_in_at', startOfDay.toISOString())
+                .lte('checked_in_at', endOfDay.toISOString()),
+            supabaseAdmin
+                .from('card_scans')
+                .select('id, employee_id, scan_time')
+                .gte('scan_time', `${from}T00:00:00`)
+                .lte('scan_time', `${to}T23:59:59.999`)
+                .order('scan_time', { ascending: true }),
+            supabaseAdmin
+                .from('leave_requests')
+                .select('employee_id, leave_type_id, start_date, end_date, is_half_day, half_day_period')
+                .eq('status', 'approved')
+                .lte('start_date', to)
+                .gte('end_date', from),
+        ])
+
+        // Parse leaves into name names map
+        const leaves = leavesResult.data ?? []
+        const leaveTypeIds = Array.from(new Set(leaves.map(l => l.leave_type_id)))
+        const { data: leaveTypes } = leaveTypeIds.length
+            ? await supabaseAdmin.from('leave_types').select('id, name_th').in('id', leaveTypeIds)
+            : { data: [] }
+        const leaveTypeNames = new Map((leaveTypes ?? []).map(t => [t.id, t.name_th ?? 'ลา']))
+
+        const leaveMap = new Map<string, { typeName: string; isHalfDay: boolean; halfDayPeriod: string | null }>()
+        for (const l of leaves) {
+            const start = new Date(l.start_date)
+            const end = new Date(l.end_date)
+            const cur = new Date(start)
+            while (cur <= end) {
+                const y = cur.getFullYear()
+                const m = String(cur.getMonth() + 1).padStart(2, '0')
+                const d = String(cur.getDate()).padStart(2, '0')
+                const dateStr = `${y}-${m}-${d}`
+                leaveMap.set(`${dateStr}_${l.employee_id}`, {
+                    typeName: leaveTypeNames.get(l.leave_type_id) ?? 'ลา',
+                    isHalfDay: Boolean(l.is_half_day),
+                    halfDayPeriod: l.half_day_period ? String(l.half_day_period) : null,
+                })
+                cur.setDate(cur.getDate() + 1)
+            }
+        }
+
+        // Group checkins by date and employee
+        const checkinMap = new Map<string, any[]>()
+        for (const c of checkinsResult.data ?? []) {
+            const datePart = new Date(new Date(c.checked_in_at).getTime() + 7 * 60 * 60 * 1000).toISOString().split('T')[0]
+            const key = `${datePart}_${c.employee_id}`
+            if (!checkinMap.has(key)) checkinMap.set(key, [])
+            checkinMap.get(key)!.push(c)
+        }
+
+        // Group scans by date and employee
+        const scanMap = new Map<string, any[]>()
+        for (const s of cardScansResult.data ?? []) {
+            const datePart = s.scan_time.split('T')[0]
+            const key = `${datePart}_${s.employee_id}`
+            if (!scanMap.has(key)) scanMap.set(key, [])
+            scanMap.get(key)!.push(s)
+        }
+
         // 3. Generate date sequence in range
         const dateRange = getDatesInRange(from, to)
 
@@ -132,6 +201,78 @@ export async function GET(req: NextRequest) {
                     clockOut = formatBangkokTime(log.official_clock_out, outSource)
                     statusLabel = STATUS_LABELS[log.reconciliation_status] ?? log.reconciliation_status
                     sourceLabel = SOURCE_LABELS[log.source] ?? log.source ?? '—'
+                } else {
+                    const key = `${dateStr}_${emp.id}`
+                    const dayCheckins = checkinMap.get(key) ?? []
+                    const dayScans = scanMap.get(key) ?? []
+                    const dayLeave = leaveMap.get(key)
+
+                    let earliestMobile: any = null
+                    let latestMobileCheckout: string | null = null
+                    for (const c of dayCheckins) {
+                        if (c.source === 'card') continue
+                        if (!earliestMobile || new Date(c.checked_in_at) < new Date(earliestMobile.checked_in_at)) {
+                            earliestMobile = c
+                        }
+                        if (c.checked_out_at) {
+                            if (!latestMobileCheckout || new Date(c.checked_out_at) > new Date(latestMobileCheckout)) {
+                                latestMobileCheckout = c.checked_out_at
+                            }
+                        }
+                    }
+
+                    const earliestCardScan = dayScans.length > 0 ? dayScans[0].scan_time : null
+                    const latestCardScan = dayScans.length > 1 ? dayScans[dayScans.length - 1].scan_time : null
+
+                    if (earliestCardScan || earliestMobile) {
+                        if (earliestCardScan && earliestMobile) {
+                            const cardTime = new Date(earliestCardScan.replace(' ', 'T') + '+07:00')
+                            const mobTime = new Date(earliestMobile.checked_in_at)
+                            if (cardTime < mobTime) {
+                                clockIn = formatBangkokTime(`${earliestCardScan}+07:00`)
+                                sourceLabel = 'แสกนบัตร'
+                            } else {
+                                clockIn = formatBangkokTime(earliestMobile.checked_in_at)
+                                sourceLabel = 'มือถือ'
+                            }
+                            statusLabel = 'ตรงกัน'
+                        } else if (earliestCardScan) {
+                            clockIn = formatBangkokTime(`${earliestCardScan}+07:00`)
+                            sourceLabel = 'แสกนบัตร'
+                            statusLabel = 'เฉพาะบัตร'
+                        } else {
+                            clockIn = formatBangkokTime(earliestMobile.checked_in_at)
+                            sourceLabel = 'มือถือ'
+                            statusLabel = 'เฉพาะมือถือ'
+                        }
+
+                        let finalCheckout: string | null = null
+                        if (latestCardScan && latestMobileCheckout) {
+                            const cardTime = new Date(latestCardScan.replace(' ', 'T') + '+07:00')
+                            const mobTime = new Date(latestMobileCheckout)
+                            finalCheckout = cardTime > mobTime ? `${latestCardScan}+07:00` : latestMobileCheckout
+                        } else if (latestCardScan) {
+                            finalCheckout = `${latestCardScan}+07:00`
+                        } else if (latestMobileCheckout) {
+                            finalCheckout = latestMobileCheckout
+                        }
+                        if (finalCheckout) {
+                            clockOut = formatBangkokTime(finalCheckout)
+                        }
+                    } else if (dayLeave) {
+                        statusLabel = dayLeave.isHalfDay 
+                            ? `ลาครึ่งวัน (${dayLeave.halfDayPeriod === 'morning' ? 'เช้า' : 'บ่าย'})`
+                            : dayLeave.typeName
+                    } else if (isWeekend) {
+                        statusLabel = 'วันหยุด'
+                    } else {
+                        const todayStr = todayBangkokKey()
+                        if (dateStr < todayStr) {
+                            statusLabel = 'ขาดเช็คอิน'
+                        } else {
+                            statusLabel = 'ยังไม่เช็คอิน'
+                        }
+                    }
                 }
 
                 const columns = [
