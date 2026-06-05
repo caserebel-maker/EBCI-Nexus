@@ -35,6 +35,8 @@ type LeaveRow = {
     half_day_period: string | null
 }
 
+const SUPABASE_PAGE_SIZE = 1000
+
 function getDatesInRange(startStr: string, endStr: string): string[] {
     const dates: string[] = []
     const [sYr, sMon, sDay] = startStr.split('-').map(Number)
@@ -52,6 +54,60 @@ function getDatesInRange(startStr: string, endStr: string): string[] {
         cur.setDate(cur.getDate() + 1)
     }
     return dates
+}
+
+async function fetchAllCheckins(startIso: string, endIso: string): Promise<CheckinRow[]> {
+    const rows: CheckinRow[] = []
+    for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
+        const { data, error } = await supabaseAdmin
+            .from('checkins')
+            .select('employee_id, type, source, checked_in_at, checked_out_at')
+            .gte('checked_in_at', startIso)
+            .lte('checked_in_at', endIso)
+            .order('checked_in_at', { ascending: true })
+            .range(from, from + SUPABASE_PAGE_SIZE - 1)
+
+        if (error) throw new Error(error.message)
+        rows.push(...((data ?? []) as CheckinRow[]))
+        if (!data || data.length < SUPABASE_PAGE_SIZE) break
+    }
+    return rows
+}
+
+async function fetchAllCardScans(fromDate: string, toDate: string): Promise<CardScanRow[]> {
+    const rows: CardScanRow[] = []
+    for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
+        const { data, error } = await supabaseAdmin
+            .from('card_scans')
+            .select('id, employee_id, employee_code, scan_time')
+            .gte('scan_time', `${fromDate}T00:00:00`)
+            .lte('scan_time', `${toDate}T23:59:59.999`)
+            .order('scan_time', { ascending: true })
+            .range(from, from + SUPABASE_PAGE_SIZE - 1)
+
+        if (error) throw new Error(error.message)
+        rows.push(...((data ?? []) as CardScanRow[]))
+        if (!data || data.length < SUPABASE_PAGE_SIZE) break
+    }
+    return rows
+}
+
+async function fetchAllLeaves(fromDate: string, toDate: string): Promise<LeaveRow[]> {
+    const rows: LeaveRow[] = []
+    for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
+        const { data, error } = await supabaseAdmin
+            .from('leave_requests')
+            .select('employee_id, leave_type_id, start_date, end_date, is_half_day, half_day_period')
+            .eq('status', 'approved')
+            .lte('start_date', toDate)
+            .gte('end_date', fromDate)
+            .range(from, from + SUPABASE_PAGE_SIZE - 1)
+
+        if (error) throw new Error(error.message)
+        rows.push(...((data ?? []) as LeaveRow[]))
+        if (!data || data.length < SUPABASE_PAGE_SIZE) break
+    }
+    return rows
 }
 
 export async function GET(req: NextRequest) {
@@ -91,32 +147,13 @@ export async function GET(req: NextRequest) {
         const startOfDay = new Date(`${from}T00:00:00+07:00`)
         const endOfDay = new Date(`${to}T23:59:59.999+07:00`)
 
-        const [checkinsResult, cardScansResult, leavesResult] = await Promise.all([
-            supabaseAdmin
-                .from('checkins')
-                .select('employee_id, type, source, checked_in_at, checked_out_at')
-                .gte('checked_in_at', startOfDay.toISOString())
-                .lte('checked_in_at', endOfDay.toISOString()),
-            supabaseAdmin
-                .from('card_scans')
-                .select('id, employee_id, employee_code, scan_time')
-                .gte('scan_time', `${from}T00:00:00`)
-                .lte('scan_time', `${to}T23:59:59.999`)
-                .order('scan_time', { ascending: true }),
-            supabaseAdmin
-                .from('leave_requests')
-                .select('employee_id, leave_type_id, start_date, end_date, is_half_day, half_day_period')
-                .eq('status', 'approved')
-                .lte('start_date', to)
-                .gte('end_date', from),
+        const [checkins, cardScans, leaves] = await Promise.all([
+            fetchAllCheckins(startOfDay.toISOString(), endOfDay.toISOString()),
+            fetchAllCardScans(from, to),
+            fetchAllLeaves(from, to),
         ])
 
-        if (checkinsResult.error) throw new Error(checkinsResult.error.message)
-        if (cardScansResult.error) throw new Error(cardScansResult.error.message)
-        if (leavesResult.error) throw new Error(leavesResult.error.message)
-
         // Parse leaves into name names map
-        const leaves = (leavesResult.data ?? []) as LeaveRow[]
         const leaveTypeIds = Array.from(new Set(leaves.map(l => l.leave_type_id)))
         const { data: leaveTypes } = leaveTypeIds.length
             ? await supabaseAdmin.from('leave_types').select('id, name_th').in('id', leaveTypeIds)
@@ -144,7 +181,7 @@ export async function GET(req: NextRequest) {
 
         // Group checkins by date and employee
         const checkinMap = new Map<string, CheckinRow[]>()
-        for (const c of (checkinsResult.data ?? []) as CheckinRow[]) {
+        for (const c of checkins) {
             const datePart = new Date(new Date(c.checked_in_at).getTime() + 7 * 60 * 60 * 1000).toISOString().split('T')[0]
             const key = `${datePart}_${c.employee_id}`
             if (!checkinMap.has(key)) checkinMap.set(key, [])
@@ -153,7 +190,7 @@ export async function GET(req: NextRequest) {
 
         // Group scans by date and employee
         const scanMap = new Map<string, CardScanRow[]>()
-        for (const s of (cardScansResult.data ?? []) as CardScanRow[]) {
+        for (const s of cardScans) {
             const datePart = s.scan_time.split(/[T ]/)[0]
             const employeeId = s.employee_id ?? (s.employee_code ? employeeIdByCode.get(s.employee_code) ?? null : null)
             if (!employeeId) continue
