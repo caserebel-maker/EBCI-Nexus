@@ -106,6 +106,28 @@ function formatThaiFull(iso: string): string {
     return `${THAI_DOWS[date.getDay()]} · ${d} ${THAI_MONTHS[m - 1]} ${y + 543}`
 }
 
+function getShortCellLabel(
+    dayHolidays: any[],
+    dayLeaves: any[],
+    dayBookings: any[],
+): string {
+    if (dayHolidays.length > 0) {
+        const h = dayHolidays[0]
+        if (h.name.includes('วันทำงานครึ่งวัน (ออฟฟิศ)')) return 'งานออฟฟิศ'
+        if (h.name.includes('วันทำงานครึ่งวัน (WFH)')) return 'งาน WFH'
+        if (h.name.includes('วันหยุดประจำสัปดาห์')) return 'วันหยุด'
+        return h.name.length > 10 ? h.name.slice(0, 8) + '..' : h.name
+    }
+    if (dayLeaves.length > 0) {
+        const config = LEAVE_CONFIG[dayLeaves[0].leaveType]
+        return config ? config.label : 'ใบลา'
+    }
+    if (dayBookings.length > 0) {
+        return 'ห้องประชุม'
+    }
+    return ''
+}
+
 export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
     const today = new Date()
     const [viewYear, setViewYear] = useState(today.getFullYear())
@@ -258,8 +280,8 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                             ? { background: palette.bg, color: palette.text }
                             : {}
                         const cellClass = palette
-                            ? 'aspect-square rounded-lg flex items-center justify-center transition-all cursor-pointer hover:brightness-110 relative'
-                            : `aspect-square rounded-lg flex items-center justify-center transition-all relative ${
+                            ? 'aspect-square rounded-lg flex flex-col items-center justify-center p-1 gap-0.5 transition-all cursor-pointer hover:brightness-110 relative'
+                            : `aspect-square rounded-lg flex flex-col items-center justify-center p-1 gap-0.5 transition-all relative ${
                                 isToday
                                     ? 'bg-amber-400/15 border border-amber-400/60'
                                     : 'bg-white/[0.04] border border-white/10 cursor-default'
@@ -285,11 +307,19 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                                 }}
                             >
                                 <span
-                                    className="text-base font-bold tabular-nums leading-none"
+                                    className="text-sm sm:text-base font-bold tabular-nums leading-none"
                                     style={{ color: dayNumberColor }}
                                 >
                                     {d}
                                 </span>
+                                {hasEvents && (
+                                    <span
+                                        className="text-[8px] sm:text-[9px] md:text-[10px] font-semibold leading-tight text-center truncate max-w-full px-0.5 select-none opacity-90 mt-0.5"
+                                        style={{ color: dayNumberColor }}
+                                    >
+                                        {getShortCellLabel(dayHolidays, dayLeaves, dayBookings)}
+                                    </span>
+                                )}
                                 {accentKinds.length > 0 && (
                                     <div className="absolute bottom-1 right-1 flex items-center gap-0.5">
                                         {accentKinds.slice(0, 3).map(k => (

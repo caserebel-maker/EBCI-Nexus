@@ -60,6 +60,13 @@ function formatThaiDate(dateStr: string): string {
     return `${parseInt(d)} ${THAI_MONTHS[parseInt(m) - 1]} ${parseInt(y) + 543}`
 }
 
+function getShortHolidayLabel(name: string): string {
+    if (name.includes('วันทำงานครึ่งวัน (ออฟฟิศ)')) return 'งานออฟฟิศ'
+    if (name.includes('วันทำงานครึ่งวัน (WFH)')) return 'งาน WFH'
+    if (name.includes('วันหยุดประจำสัปดาห์')) return 'วันหยุด'
+    return name.length > 10 ? name.slice(0, 8) + '..' : name
+}
+
 const emptyForm = { date: '', name: '', type: 'public' }
 
 export default function HolidaysPage() {
@@ -497,8 +504,8 @@ function CalendarMonthView({
                             ? { background: palette.bg, color: palette.text }
                             : {}
                         const cellClass = palette
-                            ? 'aspect-square rounded-lg flex items-center justify-center transition-all cursor-pointer hover:brightness-110 relative'
-                            : `aspect-square rounded-lg flex items-center justify-center transition-all relative ${
+                            ? 'aspect-square rounded-lg flex flex-col items-center justify-center p-1 gap-0.5 transition-all cursor-pointer hover:brightness-110 relative'
+                            : `aspect-square rounded-lg flex flex-col items-center justify-center p-1 gap-0.5 transition-all relative ${
                                 isToday
                                     ? 'bg-amber-400/15 border border-amber-400/60'
                                     : 'bg-white/[0.04] border border-white/10 cursor-default'
@@ -523,12 +530,21 @@ function CalendarMonthView({
                                 }}
                             >
                                 <span
-                                    className="text-base font-bold tabular-nums leading-none"
+                                    className="text-sm sm:text-base font-bold tabular-nums leading-none"
                                     style={{ color: dayNumberColor }}
                                 >
                                     {d}
                                 </span>
+                                {hasEvents && (
+                                    <span
+                                        className="text-[8px] sm:text-[9px] md:text-[10px] font-semibold leading-tight text-center truncate max-w-full px-0.5 select-none opacity-90 mt-0.5"
+                                        style={{ color: dayNumberColor }}
+                                    >
+                                        {getShortHolidayLabel(events[0].name)}
+                                    </span>
+                                )}
                                 {accentKinds.length > 0 && (
+
                                     <div className="absolute bottom-1 right-1 flex items-center gap-0.5">
                                         {accentKinds.slice(0, 3).map(k => (
                                             <span
