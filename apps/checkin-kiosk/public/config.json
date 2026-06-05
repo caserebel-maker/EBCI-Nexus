@@ -1,0 +1,10 @@
+{
+    "standbyMode":  "canva",
+    "canvaUrl":  "https://www.canva.com/design/DAHAbWX6Gkw/QD_mPD8IUZKhZ0x2Of6dqw/view?embed=",
+    "popupDurationMs":  3000,
+    "unknownCardMessage":  "ไม่พบข้อมูลพนักงาน",
+    "companyName":  "EBCI",
+    "fallbackImage":  "assets/fallback-standby.png",
+    "canvaAdvanceIntervalMs":  8000,
+    "canvaSlideCount":  6
+}

@@ -1,0 +1,16 @@
+[
+  {
+    "cardId": "EMP001",
+    "nameTh": "คุณกิตติพงศ์",
+    "nameEn": "Kittipong",
+    "position": "Operations Officer",
+    "photo": "assets/employees/EMP001.jpg"
+  },
+  {
+    "cardId": "EMP002",
+    "nameTh": "คุณสุริยะ",
+    "nameEn": "Suriya",
+    "position": "Director",
+    "photo": "assets/employees/EMP002.jpg"
+  }
+]
