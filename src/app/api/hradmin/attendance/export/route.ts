@@ -88,6 +88,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const from = searchParams.get('from')
     const to = searchParams.get('to')
+    const debug = searchParams.get('debug') === '1'
 
     if (!from || !to || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
         return NextResponse.json({ error: 'รูปแบบวันที่ไม่ถูกต้อง (ต้องเป็น YYYY-MM-DD)' }, { status: 400 })
@@ -197,6 +198,42 @@ export async function GET(req: NextRequest) {
 
         // 3. Generate date sequence in range
         const dateRange = getDatesInRange(from, to)
+
+        if (debug) {
+            const days = dateRange.map(dateStr => {
+                const scanKeys = Array.from(scanMap.keys()).filter(key => key.startsWith(`${dateStr}_`))
+                const checkinKeys = Array.from(checkinMap.keys()).filter(key => key.startsWith(`${dateStr}_`))
+                return {
+                    date: dateStr,
+                    employeesWithCardScans: scanKeys.length,
+                    cardScanRows: scanKeys.reduce((sum, key) => sum + (scanMap.get(key)?.length ?? 0), 0),
+                    employeesWithCheckins: checkinKeys.length,
+                    checkinRows: checkinKeys.reduce((sum, key) => sum + (checkinMap.get(key)?.length ?? 0), 0),
+                    attendanceLogRows: Array.from(logMap.keys()).filter(key => key.startsWith(`${dateStr}_`)).length,
+                    sampleCardScanEmployeeCodes: scanKeys.slice(0, 8).map(key => {
+                        const employeeId = key.slice(dateStr.length + 1)
+                        const emp = (employees ?? []).find(e => e.id === employeeId)
+                        return emp?.employee_code ?? employeeId
+                    }),
+                }
+            })
+
+            return NextResponse.json(
+                {
+                    from,
+                    to,
+                    activeEmployees: employees?.length ?? 0,
+                    days,
+                },
+                {
+                    headers: {
+                        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+                        'Pragma': 'no-cache',
+                        'Expires': '0',
+                    },
+                },
+            )
+        }
 
         // 4. Construct CSV rows
         const headers = [
