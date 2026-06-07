@@ -43,6 +43,20 @@ export const PERMISSION_PRESETS = {
             can_view_audit_log:       false,
         },
     },
+    mis_admin: {
+        label: '🛠️ MIS Admin',
+        description: 'ดู/แก้ไขข้อมูลพนักงาน + ดู audit log สำหรับดูแลข้อมูล · ไม่มี payroll และไม่ใช่ super-admin',
+        permissions: {
+            can_view_all_employees:   true,
+            can_edit_employees:       true,
+            can_view_approval_limits: true,
+            can_edit_approval_limits: false,
+            can_approve_leave:        true,
+            can_manage_system:        false,
+            can_manage_payroll:       false,
+            can_view_audit_log:       true,
+        },
+    },
     payroll_manager: {
         label: '💰 Payroll Manager',
         description: 'อัปโหลด/ดูสลิปเงินเดือน · ไม่เห็นข้อมูลพนักงานอื่น',
@@ -81,7 +95,7 @@ export type PresetName = keyof typeof PERMISSION_PRESETS
  * making it explicit removes any doubt.
  */
 export const PRESET_ORDER: PresetName[] = [
-    'super_admin', 'hr_manager', 'payroll_manager', 'executive', 'employee',
+    'super_admin', 'hr_manager', 'mis_admin', 'payroll_manager', 'executive', 'employee',
 ]
 
 export function detectPreset(perms: UserPermissions): PresetName | 'custom' {

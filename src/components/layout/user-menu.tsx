@@ -52,7 +52,8 @@ export function UserMenu({
     // reachable from any page on any viewport.
     const inHradmin = pathname?.startsWith('/hradmin') ?? false
     const togglePath = inHradmin ? '/portal/dashboard' : '/hradmin/dashboard'
-    const toggleLabel = inHradmin ? 'สลับเป็นพนักงาน' : 'กลับเป็น HR Admin'
+    const adminModeLabel = roleLabel || 'Admin'
+    const toggleLabel = inHradmin ? 'สลับเป็นพนักงาน' : `กลับเป็น ${adminModeLabel}`
 
     // Close on Escape — improves keyboard UX + dismisses cleanly when the
     // user opens a different control (e.g. the language toggle) which
@@ -93,7 +94,7 @@ export function UserMenu({
     const dotColor = inHradmin ? '#3b82f6' : '#f59e0b'
     const modeLabel = !isDualRole
         ? null
-        : inHradmin ? 'โหมด HR Admin' : 'โหมดพนักงาน'
+        : inHradmin ? `โหมด ${adminModeLabel}` : 'โหมดพนักงาน'
 
     return (
         <div ref={containerRef} className="relative">

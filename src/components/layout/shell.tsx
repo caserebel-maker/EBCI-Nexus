@@ -188,9 +188,10 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                         ? (inHradminMode ? 'ring-[3px] ring-blue-500' : 'ring-[3px] ring-amber-500')
                         : 'ring-2 ring-white/25'
                     const dotColor = inHradminMode ? '#3b82f6' : '#f59e0b'
+                    const adminModeLabel = profile?.roleLabel ?? 'Admin'
                     const modeLabel = !isDualRole
                         ? null
-                        : inHradminMode ? 'โหมด HR Admin' : 'โหมดพนักงาน'
+                        : inHradminMode ? `โหมด ${adminModeLabel}` : 'โหมดพนักงาน'
                     return (
                         <div className="px-4 pb-3 pt-0 shrink-0 flex items-center gap-3">
                             <div className="relative shrink-0">
@@ -275,7 +276,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                             <div className="flex items-center gap-2">
                                 <RefreshCw size={14} />
                                 <span className="text-xs">
-                                    {pathname?.startsWith('/hradmin') ? 'สลับเป็นพนักงาน' : 'กลับเป็น HR Admin'}
+                                    {pathname?.startsWith('/hradmin') ? 'สลับเป็นพนักงาน' : `กลับเป็น ${profile?.roleLabel ?? 'Admin'}`}
                                 </span>
                             </div>
                             <span className="text-sm">→</span>

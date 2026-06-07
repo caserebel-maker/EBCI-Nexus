@@ -26,6 +26,21 @@ const ROLE_LABELS: Record<string, string> = {
     employee: 'Employee',
 }
 
+function resolveRoleLabel(
+    role: string,
+    row?: { department: string | null; position: string | null } | null,
+): string {
+    if (role === 'hr_admin') {
+        const dept = row?.department?.toLowerCase() ?? ''
+        const position = row?.position?.toLowerCase() ?? ''
+        if (dept.includes('mis') || position.includes('mis')) {
+            return 'MIS Admin'
+        }
+    }
+
+    return ROLE_LABELS[role] ?? 'User'
+}
+
 export async function getEmployeeProfile(
     employeeId: string | undefined,
     fallbackName: string,
@@ -33,7 +48,7 @@ export async function getEmployeeProfile(
     role: string,
     authUserId?: string,
 ): Promise<EmployeeProfile> {
-    const roleLabel = ROLE_LABELS[role] ?? 'User'
+    const fallbackRoleLabel = resolveRoleLabel(role)
 
     try {
         // Lookup order:
@@ -92,7 +107,7 @@ export async function getEmployeeProfile(
                 nickname: null,
                 email: fallbackEmail,
                 photoUrl: null,
-                roleLabel,
+                roleLabel: fallbackRoleLabel,
                 position: null,
                 department: null,
                 startDate: null,
@@ -113,7 +128,7 @@ export async function getEmployeeProfile(
             nickname: data.nickname ?? null,
             email: data.email ?? fallbackEmail,
             photoUrl: data.photo_url ?? null,
-            roleLabel,
+            roleLabel: resolveRoleLabel(role, data),
             position: data.position ?? null,
             department: data.department ?? null,
             startDate: data.start_date ?? null,
@@ -128,7 +143,7 @@ export async function getEmployeeProfile(
             nickname: null,
             email: fallbackEmail,
             photoUrl: null,
-            roleLabel,
+            roleLabel: fallbackRoleLabel,
             position: null,
             department: null,
             startDate: null,

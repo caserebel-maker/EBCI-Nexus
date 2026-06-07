@@ -66,7 +66,8 @@ interface Props {
 const PRESET_TONE: Record<PresetName | 'custom', { bg: string; text: string; border: string }> = {
     super_admin:     { bg: 'bg-amber-500/15',   text: 'text-amber-200',   border: 'border-amber-400/40' },
     hr_manager:      { bg: 'bg-emerald-500/15', text: 'text-emerald-200', border: 'border-emerald-400/40' },
-    payroll_manager: { bg: 'bg-sky-500/15',     text: 'text-sky-200',     border: 'border-sky-400/40' },
+    mis_admin:       { bg: 'bg-sky-500/15',     text: 'text-sky-200',     border: 'border-sky-400/40' },
+    payroll_manager: { bg: 'bg-violet-500/15',  text: 'text-violet-200',  border: 'border-violet-400/40' },
     executive:       { bg: 'bg-purple-500/15',  text: 'text-purple-200',  border: 'border-purple-400/40' },
     employee:        { bg: 'bg-white/10',       text: 'text-white/70',    border: 'border-white/15' },
     custom:          { bg: 'bg-rose-500/15',    text: 'text-rose-200',    border: 'border-rose-400/40' },
@@ -166,7 +167,7 @@ export function PermissionsView({ users, audits, currentUserId, unlinkedEmployee
 
             {filteredUsers.length === 0 ? (
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center text-white/55 text-sm">
-                    ไม่พบผู้ใช้ที่ตรงกับ "{query}"
+                    ไม่พบผู้ใช้ที่ตรงกับ &quot;{query}&quot;
                 </div>
             ) : (
                 <>
@@ -607,7 +608,7 @@ function EditPermissionsModal({
                                             {' → '}
                                             <span className="text-emerald-200 font-semibold">{a.preset_after ?? '?'}</span>
                                         </p>
-                                        {a.note && <p className="mt-0.5 text-white/55 italic">"{a.note}"</p>}
+                                        {a.note && <p className="mt-0.5 text-white/55 italic">&quot;{a.note}&quot;</p>}
                                     </li>
                                 ))}
                             </ul>
