@@ -73,7 +73,27 @@ const LEAVE_LABELS: Record<string, string> = {
     personal: 'ลากิจ',
     maternity: 'ลาคลอด',
     ordination: 'ลาบวช',
+    marriage: 'ลาแต่งงาน',
+    bereavement: 'ลาพ่อแม่เสียชีวิต',
+    training: 'ลาพัฒนาความรู้',
+    military_service: 'ลารับราชการทหาร',
+    military_draft: 'ลาเกณฑ์ทหาร',
+    sterilization: 'ลาทำหมัน',
     other: 'อื่นๆ',
+}
+
+const LEAVE_CHART_LABELS: Record<string, string> = {
+    annual: 'ลาพักร้อน',
+    sick: 'ลาป่วย',
+    personal: 'ลากิจ',
+    maternity: 'ลาคลอด',
+    ordination: 'ลาอุปสมบท',
+    marriage: 'ลาแต่งงาน',
+    bereavement: 'ลาพ่อแม่เสียชีวิต',
+    training: 'ลาพัฒนาความรู้',
+    military_service: 'ลารับราชการทหาร',
+    military_draft: 'ลาเกณฑ์ทหาร',
+    sterilization: 'ลาทำหมัน',
 }
 const LEAVE_STATUS_STYLE: Record<string, string> = {
     approved: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
@@ -88,6 +108,14 @@ const LEAVE_STATUS_LABEL: Record<string, string> = {
 
 function fmtDate(d: string) {
     return new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function leaveLabel(typeId: string, name?: string | null): string {
+    return name ?? LEAVE_LABELS[typeId] ?? typeId
+}
+
+function leaveChartLabel(typeId: string, name?: string | null): string {
+    return LEAVE_CHART_LABELS[typeId] ?? name ?? LEAVE_LABELS[typeId] ?? typeId
 }
 
 /**
@@ -380,7 +408,7 @@ function LeaveHistory({ leaves }: { leaves: LeaveRequest[] }) {
                                 </div>
                                 <div>
                                     <p className="text-[1rem] font-semibold text-white">
-                                        {lr.leave_type_name ?? LEAVE_LABELS[lr.leave_type] ?? lr.leave_type}
+                                        {leaveLabel(lr.leave_type, lr.leave_type_name)}
                                         <span className="text-white/75 font-normal ml-2 text-[0.85rem]">{lr.days} วัน</span>
                                     </p>
                                     <p className="text-[0.85rem] text-white/75">
@@ -659,7 +687,7 @@ export function EmployeeProfileView({
             return leaveBalances
                 .filter(b => b.entitled_days > 0 || b.used_days > 0)
                 .map(b => ({
-                    name: b.leave_type_name ?? leaveTypeNameById.get(b.leave_type) ?? LEAVE_LABELS[b.leave_type] ?? b.leave_type,
+                    name: leaveChartLabel(b.leave_type, b.leave_type_name ?? leaveTypeNameById.get(b.leave_type)),
                     ใช้ไปแล้ว: b.used_days,
                     คงเหลือ: Math.max(0, b.remaining_days),
                     entitled: b.entitled_days,
@@ -671,7 +699,7 @@ export function EmployeeProfileView({
             counts[l.leave_type] = (counts[l.leave_type] ?? 0) + (l.days ?? 1)
         })
         return Object.entries(counts).map(([type, days]) => ({
-            name: leaveTypeNameById.get(type) ?? LEAVE_LABELS[type] ?? type,
+            name: leaveChartLabel(type, leaveTypeNameById.get(type)),
             ใช้ไปแล้ว: days,
             คงเหลือ: 0,
             entitled: days,
@@ -1456,8 +1484,8 @@ export function EmployeeProfileView({
                             >
                                 <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.75)', fontSize: 12 }}
                                     axisLine={false} tickLine={false} />
-                                <YAxis type="category" dataKey="name" width={80}
-                                    tick={{ fill: '#fcd34d', fontSize: 13, fontWeight: 600 }}
+                                <YAxis type="category" dataKey="name" width={128}
+                                    tick={{ fill: '#fcd34d', fontSize: 12, fontWeight: 600 }}
                                     axisLine={false} tickLine={false} />
                                 <Tooltip content={<LeaveTooltip />} cursor={{ fill: 'rgba(255,255,255,0.22)' }} />
                                 <Bar
