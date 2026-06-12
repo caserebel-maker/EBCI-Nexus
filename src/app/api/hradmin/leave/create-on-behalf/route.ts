@@ -69,17 +69,46 @@ export async function POST(req: NextRequest) {
             .eq('id', employeeId)
             .maybeSingle(),
         supabaseAdmin.from('leave_types')
-            .select('id, name_th')
+            .select('id, name_th, is_unlimited')
             .eq('id', leaveTypeId)
             .maybeSingle(),
     ])
     if (!empRes.data) return NextResponse.json({ error: 'ไม่พบพนักงาน' }, { status: 404 })
     if (!typeRes.data) return NextResponse.json({ error: 'ประเภทลาไม่ถูกต้อง' }, { status: 400 })
     const leaveTypeTh = typeRes.data.name_th as string
+    const isUnlimited = typeRes.data.is_unlimited === true
 
     const totalDays = calculateLeaveDays(startDate, endDate, isHalfDay)
     if (!(totalDays > 0)) {
         return NextResponse.json({ error: 'คำนวณจำนวนวันลาไม่สำเร็จ' }, { status: 400 })
+    }
+
+    const year = new Date(startDate).getFullYear()
+
+    // Fetch existing balance to validate before inserting request
+    const { data: existing } = await supabaseAdmin
+        .from('leave_balances')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .eq('leave_type_id', leaveTypeId)
+        .eq('year', year)
+        .maybeSingle()
+
+    if (!isUnlimited) {
+        const totalEntitled = Number(existing?.total_days ?? 0)
+        if (totalEntitled <= 0) {
+            return NextResponse.json({
+                error: `พนักงานไม่มีสิทธิ์${leaveTypeTh}ในปีนี้ — กรุณากำหนดโควตาก่อน`,
+            }, { status: 400 })
+        }
+        const used = Number(existing?.used_days ?? 0)
+        const pending = Number(existing?.pending_days ?? 0)
+        const remaining = Math.max(0, totalEntitled - used - pending)
+        if (totalDays > remaining) {
+            return NextResponse.json({
+                error: `วันลาไม่พอ — คงเหลือ ${remaining} วัน · ขอ ${totalDays} วัน`,
+            }, { status: 400 })
+        }
     }
 
     // Reserve reference code
@@ -122,14 +151,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Balance: +used_days directly (skip pending — it's already approved)
-    const year = new Date(startDate).getFullYear()
-    const { data: existing } = await supabaseAdmin
-        .from('leave_balances')
-        .select('*')
-        .eq('employee_id', employeeId)
-        .eq('leave_type_id', leaveTypeId)
-        .eq('year', year)
-        .maybeSingle()
     if (existing?.id) {
         const nextUsed = Number(existing.used_days ?? 0) + totalDays
         await supabaseAdmin
