@@ -8,5 +8,5 @@ export default async function PortalSettingsPage() {
     const session = await getSession()
     if (!session) redirect('/login')
 
-    return <SettingsClient />
+    return <SettingsClient initialEmail={session.email ?? null} />
 }

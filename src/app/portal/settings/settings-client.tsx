@@ -14,8 +14,8 @@ const glass: React.CSSProperties = {
     boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
 }
 
-export function SettingsClient() {
-    const [email, setEmail] = useState<string | null>(null)
+export function SettingsClient({ initialEmail }: { initialEmail: string | null }) {
+    const [email, setEmail] = useState<string | null>(initialEmail)
     const [current, setCurrent] = useState('')
     const [next, setNext] = useState('')
     const [confirm, setConfirm] = useState('')
@@ -25,13 +25,15 @@ export function SettingsClient() {
     const [loading, setLoading] = useState(false)
     const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
-    // Fetch the signed-in user's email so we can re-authenticate them
-    // before applying the password change. signInWithPassword needs an email.
+    // The Nexus app owns the main session cookie, while Supabase Auth may not
+    // have a browser session until this form re-authenticates. Use the server
+    // session email first, then fall back to Supabase if it exists.
     useEffect(() => {
+        if (initialEmail) return
         supabase.auth.getUser().then(({ data }) => {
             if (data.user?.email) setEmail(data.user.email)
         })
-    }, [])
+    }, [initialEmail])
 
     const submit = async (e: React.FormEvent) => {
         e.preventDefault()
