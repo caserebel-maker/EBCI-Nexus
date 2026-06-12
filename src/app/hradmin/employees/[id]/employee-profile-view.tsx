@@ -58,6 +58,7 @@ const WFH_CHART_APPROVED_FILL = '#60a5fa'
 const WFH_CHART_PENDING_FILL = '#fbbf24'
 const WFH_CHART_REJECTED_FILL = '#fb7185'
 const WFH_CHART_CANCELLED_FILL = 'rgba(255,255,255,0.22)'
+const ABSENCE_CHART_LEAVE_FILL = '#c084fc'
 type LeaveChartLabelProps = {
     x?: number | string
     y?: number | string
@@ -706,9 +707,23 @@ export function EmployeeProfileView({
         }))
     })()
     const leaveChartHeight = Math.max(220, chartData.length * 34 + 48)
-    const wfhChartData = wfhMonthly.filter(m =>
-        m.approved > 0 || m.pending > 0 || m.rejected > 0 || m.cancelled > 0,
-    )
+    const approvedLeaveDays = recentLeaves
+        .filter(l => l.status === 'approved' && new Date(l.start_date).getFullYear() === balanceYear)
+        .reduce((sum, l) => sum + Number(l.days ?? 0), 0)
+    const leaveDaysByMonth = new Map<string, number>()
+    for (const l of recentLeaves) {
+        if (l.status !== 'approved') continue
+        const d = new Date(l.start_date)
+        if (d.getFullYear() !== balanceYear) continue
+        const month = d.toLocaleDateString('th-TH', { month: 'short' })
+        leaveDaysByMonth.set(month, (leaveDaysByMonth.get(month) ?? 0) + Number(l.days ?? 0))
+    }
+    const absenceChartData = wfhMonthly
+        .map(m => ({
+            ...m,
+            leave: leaveDaysByMonth.get(m.month) ?? 0,
+        }))
+        .filter(m => m.leave > 0 || m.approved > 0 || m.pending > 0 || m.rejected > 0 || m.cancelled > 0)
 
     const EMPLOYMENT_LABELS: Record<string, string> = {
         'full-time': 'ประจำ',
@@ -1547,22 +1562,22 @@ export function EmployeeProfileView({
                 )}
             </div>
 
-            {/* ── 4b. WFH Statistics ──────────────────────────────────────── */}
+            {/* ── 4b. Leave + WFH Statistics ──────────────────────────────── */}
             <div style={glass} className="p-4 shadow-xl print:hidden">
-                <SHead icon={Home} label={`สถิติ Work From Home (${balanceYear + 543})`} />
+                <SHead icon={Home} label={`สถิติลาและ Work From Home (${balanceYear + 543})`} />
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-                    <WfhStatTile label="ขอทั้งหมด" value={wfhStats.requestedDays} tone="text-sky-200" />
-                    <WfhStatTile label="อนุมัติแล้ว" value={wfhStats.approvedDays} tone="text-emerald-200" />
-                    <WfhStatTile label="รออนุมัติ" value={wfhStats.pendingDays} tone="text-amber-200" />
-                    <WfhStatTile label="จำนวนคำขอ" value={wfhStats.requests} suffix="รายการ" tone="text-white" />
+                    <WfhStatTile label="วันลาอนุมัติ" value={approvedLeaveDays} tone="text-violet-200" />
+                    <WfhStatTile label="WFH อนุมัติ" value={wfhStats.approvedDays} tone="text-sky-200" />
+                    <WfhStatTile label="WFH รออนุมัติ" value={wfhStats.pendingDays} tone="text-amber-200" />
+                    <WfhStatTile label="คำขอ WFH" value={wfhStats.requests} suffix="รายการ" tone="text-white" />
                 </div>
-                {wfhChartData.length === 0 ? (
-                    <p className="text-white/65 text-[0.95rem] text-center py-8">ยังไม่มีประวัติการขอ WFH ในปีนี้</p>
+                {absenceChartData.length === 0 ? (
+                    <p className="text-white/65 text-[0.95rem] text-center py-8">ยังไม่มีประวัติวันลา/WFH ในปีนี้</p>
                 ) : (
                     <>
                         <div className="h-[210px]">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={wfhChartData} margin={{ top: 4, right: 12, left: -18, bottom: 0 }}>
+                                <BarChart data={absenceChartData} margin={{ top: 4, right: 12, left: -18, bottom: 0 }}>
                                     <XAxis
                                         dataKey="month"
                                         tick={{ fill: 'rgba(255,255,255,0.75)', fontSize: 12 }}
@@ -1575,18 +1590,20 @@ export function EmployeeProfileView({
                                         tickLine={false}
                                     />
                                     <Tooltip content={<WfhTooltip />} cursor={{ fill: 'rgba(255,255,255,0.14)' }} />
-                                    <Bar dataKey="approved" name="อนุมัติแล้ว" stackId="wfh" fill={WFH_CHART_APPROVED_FILL} radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="pending" name="รออนุมัติ" stackId="wfh" fill={WFH_CHART_PENDING_FILL} radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="rejected" name="ปฏิเสธ" stackId="wfh" fill={WFH_CHART_REJECTED_FILL} radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="cancelled" name="ยกเลิก" stackId="wfh" fill={WFH_CHART_CANCELLED_FILL} radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="leave" name="วันลาอนุมัติ" stackId="absence" fill={ABSENCE_CHART_LEAVE_FILL} radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="approved" name="WFH อนุมัติ" stackId="absence" fill={WFH_CHART_APPROVED_FILL} radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="pending" name="WFH รออนุมัติ" stackId="absence" fill={WFH_CHART_PENDING_FILL} radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="rejected" name="WFH ปฏิเสธ" stackId="absence" fill={WFH_CHART_REJECTED_FILL} radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="cancelled" name="WFH ยกเลิก" stackId="absence" fill={WFH_CHART_CANCELLED_FILL} radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
                         <div className="flex items-center gap-4 mt-3 flex-wrap text-[0.82rem] text-white/82">
-                            <ChartLegend color={WFH_CHART_APPROVED_FILL} label="อนุมัติแล้ว" />
-                            <ChartLegend color={WFH_CHART_PENDING_FILL} label="รออนุมัติ" />
-                            <ChartLegend color={WFH_CHART_REJECTED_FILL} label="ปฏิเสธ" />
-                            <ChartLegend color={WFH_CHART_CANCELLED_FILL} label="ยกเลิก" />
+                            <ChartLegend color={ABSENCE_CHART_LEAVE_FILL} label="วันลาอนุมัติ" />
+                            <ChartLegend color={WFH_CHART_APPROVED_FILL} label="WFH อนุมัติ" />
+                            <ChartLegend color={WFH_CHART_PENDING_FILL} label="WFH รออนุมัติ" />
+                            <ChartLegend color={WFH_CHART_REJECTED_FILL} label="WFH ปฏิเสธ" />
+                            <ChartLegend color={WFH_CHART_CANCELLED_FILL} label="WFH ยกเลิก" />
                         </div>
                     </>
                 )}
