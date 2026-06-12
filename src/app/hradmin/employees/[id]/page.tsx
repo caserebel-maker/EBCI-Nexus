@@ -172,12 +172,15 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
         display_order: number | null
     }>
 
+    const leaveTypeNameById = new Map(leaveTypes.map(t => [t.id, t.name_th]))
+
     // Legacy chart shape — kept until the chart in employee-profile-view
-    // is migrated to read `total_days` directly. Maps the canonical cells
-    // back to the older `{leave_type, entitled_days, used_days, remaining_days}`
-    // structure the chart already understands.
+    // is migrated to read `total_days` directly. Include the Thai label
+    // from leave_types so profile charts do not leak raw ids such as
+    // `marriage` / `training` / `military_service`.
     const leaveBalances = Object.values(balanceCells).map(c => ({
         leave_type: c.leave_type_id,
+        leave_type_name: leaveTypeNameById.get(c.leave_type_id) ?? c.leave_type_id,
         entitled_days: c.total_days,
         used_days: c.used_days,
         remaining_days: c.remaining_days ?? Math.max(0, c.total_days - c.used_days - c.pending_days),
@@ -236,20 +239,93 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
     // ── All leave requests ─────────────────────────────────────────────────────
     const { data: recentLeavesRaw } = await supabaseAdmin
         .from('leave_requests')
-        .select('id, leave_type, start_date, end_date, days, status, created_at, reason')
+        .select('id, leave_type_id, start_date, end_date, total_days, status, created_at, reason')
         .eq('employee_id', employee.id)
         .order('created_at', { ascending: false })
 
     const recentLeaves: {
         id: string
         leave_type: string
+        leave_type_name: string
         start_date: string
         end_date: string
         days: number
         status: string
         created_at: string
         reason: string | null
-    }[] = recentLeavesRaw ?? []
+    }[] = ((recentLeavesRaw ?? []) as Array<{
+        id: string
+        leave_type_id: string
+        start_date: string
+        end_date: string
+        total_days: number | string | null
+        status: string
+        created_at: string
+        reason: string | null
+    }>).map(r => ({
+        id: r.id,
+        leave_type: r.leave_type_id,
+        leave_type_name: leaveTypeNameById.get(r.leave_type_id) ?? r.leave_type_id,
+        start_date: r.start_date,
+        end_date: r.end_date,
+        days: num(r.total_days),
+        status: r.status,
+        created_at: r.created_at,
+        reason: r.reason,
+    }))
+
+    // ── WFH request statistics (current year) ────────────────────────────────
+    const yearStart = `${currentYear}-01-01`
+    const yearEnd = `${currentYear}-12-31`
+    const { data: wfhRowsRaw } = await supabaseAdmin
+        .from('wfh_requests')
+        .select('id, start_date, end_date, total_days, status')
+        .eq('employee_id', employee.id)
+        .lte('start_date', yearEnd)
+        .gte('end_date', yearStart)
+
+    const wfhRows = (wfhRowsRaw ?? []) as Array<{
+        id: string
+        start_date: string
+        end_date: string
+        total_days: number | string | null
+        status: string
+    }>
+    const wfhStats = {
+        requestedDays: 0,
+        approvedDays: 0,
+        pendingDays: 0,
+        rejectedDays: 0,
+        cancelledDays: 0,
+        requests: wfhRows.length,
+    }
+    const wfhMonthly: Record<string, { month: string; approved: number; pending: number; rejected: number; cancelled: number }> = {}
+    for (let m = 0; m < 12; m++) {
+        const key = `${currentYear}-${String(m + 1).padStart(2, '0')}`
+        wfhMonthly[key] = {
+            month: new Date(currentYear, m, 1).toLocaleDateString('th-TH', { month: 'short' }),
+            approved: 0,
+            pending: 0,
+            rejected: 0,
+            cancelled: 0,
+        }
+    }
+    for (const row of wfhRows) {
+        const days = num(row.total_days)
+        if (row.status !== 'cancelled') wfhStats.requestedDays += days
+        if (row.status === 'approved') wfhStats.approvedDays += days
+        else if (row.status === 'pending') wfhStats.pendingDays += days
+        else if (row.status === 'rejected') wfhStats.rejectedDays += days
+        else if (row.status === 'cancelled') wfhStats.cancelledDays += days
+
+        const monthKey = (row.start_date ?? '').slice(0, 7)
+        const bucket = wfhMonthly[monthKey]
+        if (!bucket) continue
+        if (row.status === 'approved') bucket.approved += days
+        else if (row.status === 'pending') bucket.pending += days
+        else if (row.status === 'rejected') bucket.rejected += days
+        else if (row.status === 'cancelled') bucket.cancelled += days
+    }
 
     // ── Tenure ─────────────────────────────────────────────────────────────────
     const startDate = new Date(employee.start_date)
@@ -273,6 +349,8 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             leaveTypes={leaveTypes}
             balanceYear={currentYear}
             recentLeaves={recentLeaves}
+            wfhStats={wfhStats}
+            wfhMonthly={Object.values(wfhMonthly)}
             allEmployees={allEmployees}
             id={id}
             isHrAdmin={isHrAdmin}

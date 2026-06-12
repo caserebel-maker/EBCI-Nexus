@@ -5,7 +5,7 @@ import {
     ArrowLeft, User, Phone, Mail, MapPin, Building, Briefcase,
     Calendar, Shield, ChevronRight, Pencil, X, Check,
     AlertCircle, CheckCircle2, Camera, Trash2, Clock, FileText,
-    Lock, LogOut, Printer, Send,
+    Lock, LogOut, Printer, Send, Home,
 } from "lucide-react"
 import type { LucideIcon } from 'lucide-react'
 import Link from "next/link"
@@ -54,6 +54,10 @@ const LEAVE_CHART_USED_FILL = '#38bdf8'
 const LEAVE_CHART_USED_STROKE = '#bae6fd'
 const LEAVE_CHART_REMAINING_FILL = 'rgba(255,255,255,0.28)'
 const LEAVE_CHART_REMAINING_STROKE = 'rgba(255,255,255,0.34)'
+const WFH_CHART_APPROVED_FILL = '#60a5fa'
+const WFH_CHART_PENDING_FILL = '#fbbf24'
+const WFH_CHART_REJECTED_FILL = '#fb7185'
+const WFH_CHART_CANCELLED_FILL = 'rgba(255,255,255,0.22)'
 type LeaveChartLabelProps = {
     x?: number | string
     y?: number | string
@@ -109,6 +113,7 @@ function calcAgeText(dob: string | Date | null | undefined): string {
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface LeaveBalance {
     leave_type: string
+    leave_type_name?: string
     entitled_days: number
     used_days: number
     remaining_days: number
@@ -116,12 +121,28 @@ interface LeaveBalance {
 interface LeaveRequest {
     id: string
     leave_type: string
+    leave_type_name?: string
     start_date: string
     end_date: string
     days: number
     status: string
     created_at: string
     reason: string | null
+}
+interface WfhStats {
+    requestedDays: number
+    approvedDays: number
+    pendingDays: number
+    rejectedDays: number
+    cancelledDays: number
+    requests: number
+}
+interface WfhMonth {
+    month: string
+    approved: number
+    pending: number
+    rejected: number
+    cancelled: number
 }
 interface EmployeeOption {
     id: string
@@ -146,6 +167,8 @@ interface Props {
     /** Year the balanceCells reflect — drives the modal title + audit log. */
     balanceYear: number
     recentLeaves: LeaveRequest[]
+    wfhStats: WfhStats
+    wfhMonthly: WfhMonth[]
     allEmployees: EmployeeOption[]
     id: string
     isHrAdmin: boolean
@@ -256,6 +279,50 @@ function LeaveTooltip({ active, payload, label }: any) {
     )
 }
 
+function WfhTooltip({ active, payload, label }: any) {
+    if (!active || !payload?.length) return null
+    const visible = payload.filter((p: any) => Number(p.value ?? 0) > 0)
+    if (visible.length === 0) return null
+    return (
+        <div style={{ background: 'rgba(20,4,10,0.95)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '10px 14px' }}>
+            <p className="text-white font-bold text-sm mb-1">{label}</p>
+            {visible.map((p: any) => (
+                <p key={p.name} className="text-xs" style={{ color: p.fill }}>
+                    {p.name}: <span className="font-bold">{p.value} วัน</span>
+                </p>
+            ))}
+        </div>
+    )
+}
+
+function WfhStatTile({
+    label, value, suffix = 'วัน', tone,
+}: {
+    label: string
+    value: number
+    suffix?: string
+    tone: string
+}) {
+    return (
+        <div className="rounded-xl border border-white/10 bg-white/6 px-3 py-3">
+            <p className="text-[0.72rem] font-bold text-white/55 uppercase tracking-widest">{label}</p>
+            <p className={cn('mt-1 text-2xl font-black tabular-nums leading-none', tone)}>
+                {value}
+                <span className="ml-1 text-xs font-semibold text-white/55">{suffix}</span>
+            </p>
+        </div>
+    )
+}
+
+function ChartLegend({ color, label }: { color: string; label: string }) {
+    return (
+        <span className="inline-flex items-center gap-2">
+            <span className="h-2.5 w-5 rounded-sm border border-white/25" style={{ backgroundColor: color }} />
+            {label}
+        </span>
+    )
+}
+
 const LEAVE_PAGE_SIZE = 10
 
 // ─── Leave History Sub-component ─────────────────────────────────────────────
@@ -313,7 +380,7 @@ function LeaveHistory({ leaves }: { leaves: LeaveRequest[] }) {
                                 </div>
                                 <div>
                                     <p className="text-[1rem] font-semibold text-white">
-                                        {LEAVE_LABELS[lr.leave_type] ?? lr.leave_type}
+                                        {lr.leave_type_name ?? LEAVE_LABELS[lr.leave_type] ?? lr.leave_type}
                                         <span className="text-white/75 font-normal ml-2 text-[0.85rem]">{lr.days} วัน</span>
                                     </p>
                                     <p className="text-[0.85rem] text-white/75">
@@ -358,7 +425,7 @@ function LeaveHistory({ leaves }: { leaves: LeaveRequest[] }) {
 export function EmployeeProfileView({
     employee, photoUrl, displayName, supervisorName, tenure,
     leaveBalances, balanceCells, leaveTypes, balanceYear,
-    recentLeaves, allEmployees, id, isHrAdmin,
+    recentLeaves, wfhStats, wfhMonthly, allEmployees, id, isHrAdmin,
     contracts, canViewPayroll, salarySlips,
 }: Props) {
     const router = useRouter()
@@ -585,13 +652,14 @@ export function EmployeeProfileView({
     const lvl = employee.approval_level ?? 1
     const levelColor = LEVEL_BADGE_COLORS[lvl] ?? LEVEL_BADGE_COLORS[1]
     const levelLabel = EMPLOYEE_LEVELS[lvl]?.label.split('—')[0].trim() ?? `Level ${lvl}`
+    const leaveTypeNameById = new Map(leaveTypes.map(t => [t.id, t.name_th]))
     // ── Leave chart data — primary: leave_balances, fallback: leave_requests ──
     const chartData = (() => {
         if (leaveBalances.length > 0) {
             return leaveBalances
                 .filter(b => b.entitled_days > 0 || b.used_days > 0)
                 .map(b => ({
-                    name: LEAVE_LABELS[b.leave_type] ?? b.leave_type,
+                    name: b.leave_type_name ?? leaveTypeNameById.get(b.leave_type) ?? LEAVE_LABELS[b.leave_type] ?? b.leave_type,
                     ใช้ไปแล้ว: b.used_days,
                     คงเหลือ: Math.max(0, b.remaining_days),
                     entitled: b.entitled_days,
@@ -603,12 +671,16 @@ export function EmployeeProfileView({
             counts[l.leave_type] = (counts[l.leave_type] ?? 0) + (l.days ?? 1)
         })
         return Object.entries(counts).map(([type, days]) => ({
-            name: LEAVE_LABELS[type] ?? type,
+            name: leaveTypeNameById.get(type) ?? LEAVE_LABELS[type] ?? type,
             ใช้ไปแล้ว: days,
             คงเหลือ: 0,
             entitled: days,
         }))
     })()
+    const leaveChartHeight = Math.max(220, chartData.length * 34 + 48)
+    const wfhChartData = wfhMonthly.filter(m =>
+        m.approved > 0 || m.pending > 0 || m.rejected > 0 || m.cancelled > 0,
+    )
 
     const EMPLOYMENT_LABELS: Record<string, string> = {
         'full-time': 'ประจำ',
@@ -1374,7 +1446,7 @@ export function EmployeeProfileView({
                 {chartData.length === 0 ? (
                     <p className="text-white/65 text-[0.95rem] text-center py-8">ยังไม่มีข้อมูลวันลา</p>
                 ) : (
-                    <div className="h-[220px]">
+                    <div style={{ height: leaveChartHeight }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart
                                 data={chartData}
@@ -1444,6 +1516,51 @@ export function EmployeeProfileView({
                             /> คงเหลือ
                         </div>
                     </div>
+                )}
+            </div>
+
+            {/* ── 4b. WFH Statistics ──────────────────────────────────────── */}
+            <div style={glass} className="p-4 shadow-xl print:hidden">
+                <SHead icon={Home} label={`สถิติ Work From Home (${balanceYear + 543})`} />
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                    <WfhStatTile label="ขอทั้งหมด" value={wfhStats.requestedDays} tone="text-sky-200" />
+                    <WfhStatTile label="อนุมัติแล้ว" value={wfhStats.approvedDays} tone="text-emerald-200" />
+                    <WfhStatTile label="รออนุมัติ" value={wfhStats.pendingDays} tone="text-amber-200" />
+                    <WfhStatTile label="จำนวนคำขอ" value={wfhStats.requests} suffix="รายการ" tone="text-white" />
+                </div>
+                {wfhChartData.length === 0 ? (
+                    <p className="text-white/65 text-[0.95rem] text-center py-8">ยังไม่มีประวัติการขอ WFH ในปีนี้</p>
+                ) : (
+                    <>
+                        <div className="h-[210px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={wfhChartData} margin={{ top: 4, right: 12, left: -18, bottom: 0 }}>
+                                    <XAxis
+                                        dataKey="month"
+                                        tick={{ fill: 'rgba(255,255,255,0.75)', fontSize: 12 }}
+                                        axisLine={false}
+                                        tickLine={false}
+                                    />
+                                    <YAxis
+                                        tick={{ fill: 'rgba(255,255,255,0.65)', fontSize: 12 }}
+                                        axisLine={false}
+                                        tickLine={false}
+                                    />
+                                    <Tooltip content={<WfhTooltip />} cursor={{ fill: 'rgba(255,255,255,0.14)' }} />
+                                    <Bar dataKey="approved" name="อนุมัติแล้ว" stackId="wfh" fill={WFH_CHART_APPROVED_FILL} radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="pending" name="รออนุมัติ" stackId="wfh" fill={WFH_CHART_PENDING_FILL} radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="rejected" name="ปฏิเสธ" stackId="wfh" fill={WFH_CHART_REJECTED_FILL} radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="cancelled" name="ยกเลิก" stackId="wfh" fill={WFH_CHART_CANCELLED_FILL} radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="flex items-center gap-4 mt-3 flex-wrap text-[0.82rem] text-white/82">
+                            <ChartLegend color={WFH_CHART_APPROVED_FILL} label="อนุมัติแล้ว" />
+                            <ChartLegend color={WFH_CHART_PENDING_FILL} label="รออนุมัติ" />
+                            <ChartLegend color={WFH_CHART_REJECTED_FILL} label="ปฏิเสธ" />
+                            <ChartLegend color={WFH_CHART_CANCELLED_FILL} label="ยกเลิก" />
+                        </div>
+                    </>
                 )}
             </div>
 
