@@ -80,7 +80,7 @@ export function RequestFilters({ filters, leaveTypes, departments }: Props) {
 
     return (
         <div
-            className="rounded-2xl border border-white/10 p-3 sm:p-4 space-y-3"
+            className="relative z-30 rounded-2xl border border-white/10 p-3 sm:p-4 space-y-3"
             style={{
                 background: 'linear-gradient(160deg, rgba(60,15,20,0.95) 0%, rgba(86,30,35,0.92) 100%)',
                 backdropFilter: 'blur(12px)',

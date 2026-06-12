@@ -158,7 +158,10 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                 {/* Sidebar Header */}
                 <div className="flex flex-col shrink-0 pt-3 pb-1 2xl:pt-6 2xl:pb-4">
                     <div className="flex flex-col items-center justify-center px-4 w-full">
-                        <Link href="/hradmin" className="flex flex-col items-center gap-1 2xl:gap-4 group">
+                        <Link
+                            href={pathname?.startsWith('/portal') ? '/portal/dashboard' : '/hradmin/dashboard'}
+                            className="flex flex-col items-center gap-1 2xl:gap-4 group"
+                        >
                             <img
                                 src="/sidebar-logo.png"
                                 alt="EBCI NEXUS"
@@ -326,7 +329,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                 >
                     {/* Mobile Logo — left-aligned */}
                     <Link
-                        href={role === 'hr_admin' ? '/hradmin' : '/portal'}
+                        href={pathname?.startsWith('/portal') ? '/portal/dashboard' : '/hradmin/dashboard'}
                         className="lg:hidden flex items-center group"
                     >
                         <img
