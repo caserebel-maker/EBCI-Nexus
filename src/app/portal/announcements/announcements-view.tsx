@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
     Megaphone, AlertTriangle, AlertCircle, Info, Calendar, Archive, Filter, X, Clock,
@@ -33,6 +33,7 @@ interface Props {
     activeItems: Announcement[]
     initialArchive: ArchivePayload
     initialTab: 'active' | 'archive'
+    focusId?: string | null
 }
 
 const PRIORITY_CONFIG: Record<string, {
@@ -477,10 +478,11 @@ function ArchiveView({
 // ─── Main view ────────────────────────────────────────────────────────────────
 type TabKey = 'active' | 'archive'
 
-export function AnnouncementsView({ activeItems, initialArchive, initialTab }: Props) {
+export function AnnouncementsView({ activeItems, initialArchive, initialTab, focusId }: Props) {
     const [tab, setTab] = useState<TabKey>(initialTab)
     const [filter, setFilter] = useState<string>('all')
     const [modalAnn, setModalAnn] = useState<Announcement | null>(null)
+    const openedFocusRef = useRef<string | null>(null)
 
     const activeCount = activeItems.length
     const archiveCount = initialArchive.total
@@ -488,6 +490,20 @@ export function AnnouncementsView({ activeItems, initialArchive, initialTab }: P
     const filteredActive = useMemo(() => (
         filter === 'all' ? activeItems : activeItems.filter(a => a.priority === filter)
     ), [activeItems, filter])
+
+    useEffect(() => {
+        if (!focusId || openedFocusRef.current === focusId) return
+
+        const focusedActive = activeItems.find(a => a.id === focusId)
+        const focusedArchive = initialArchive.items.find(a => a.id === focusId)
+        const focused = focusedActive ?? focusedArchive
+        if (!focused) return
+
+        openedFocusRef.current = focusId
+        setFilter('all')
+        setTab(focusedArchive ? 'archive' : 'active')
+        setModalAnn(focused)
+    }, [activeItems, focusId, initialArchive.items])
 
     return (
         <>

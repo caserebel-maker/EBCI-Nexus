@@ -254,7 +254,7 @@ export function WfhAnnounceView() {
                             sub={result.daysSkipped > 0 ? `(ข้าม ${result.daysSkipped} วันที่ตั้งไว้แล้ว)` : null} />
                         {result.announcementId && (
                             <SummaryRow icon={Megaphone} label="สร้างประกาศหน้าแรกแล้ว" sub={null}
-                                href={`/portal/announcements/${result.announcementId}`} />
+                                href={`/portal/announcements?focus=${result.announcementId}`} />
                         )}
                         <SummaryRow icon={CheckCircle2}
                             label={`แจ้งเตือนในแอป ${result.notificationsCreated}/${result.employeesTargeted} คน`}

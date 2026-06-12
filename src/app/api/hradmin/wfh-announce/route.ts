@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
                     title: headline,
                     body: bodyText,
                     action_url: summary.announcementId
-                        ? `/portal/announcements/${summary.announcementId}`
+                        ? `/portal/announcements?focus=${summary.announcementId}`
                         : '/portal/announcements',
                     action_label: 'ดูรายละเอียด',
                     icon: '📢',

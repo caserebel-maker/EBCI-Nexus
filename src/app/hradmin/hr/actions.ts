@@ -128,7 +128,7 @@ export async function publishAnnouncement(formData: FormData) {
                     type: 'announcement',
                     title: notifTitle,
                     body: truncatedBody,
-                    action_url: '/portal/announcements',
+                    action_url: `/portal/announcements?focus=${announcement.id}`,
                     action_label: 'ดูประกาศ',
                     entity_type: 'announcement',
                     entity_id: announcement.id,

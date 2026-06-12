@@ -13,6 +13,7 @@ const ARCHIVE_PAGE_SIZE = 10
 interface SearchParams {
     tab?: string
     page?: string
+    focus?: string
 }
 
 export default async function AnnouncementsListPage({
@@ -26,6 +27,7 @@ export default async function AnnouncementsListPage({
     const sp = await searchParams
     const initialTab: 'active' | 'archive' = sp.tab === 'archive' ? 'archive' : 'active'
     const requestedPage = Math.max(1, parseInt(sp.page ?? '1', 10) || 1)
+    const focusId = sp.focus?.trim() || null
 
     const nowIso = new Date().toISOString()
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
@@ -37,6 +39,12 @@ export default async function AnnouncementsListPage({
             : `${supabaseUrl}/storage/v1/object/public/announcement-images/${imagePath}`
     }
 
+    const toViewItem = (a: any, creatorMap: Map<string, string>) => ({
+        ...a,
+        imageUrl: resolveImage(a.image_path as string | null),
+        creator_name: displayCreator(a.created_by as string | null, creatorMap),
+    })
+
     // Active = published + (no expiry OR expires in the future)
     const { data: activeRows } = await supabaseAdmin
         .from('announcements')
@@ -47,11 +55,7 @@ export default async function AnnouncementsListPage({
         .limit(50)
 
     const activeCreatorMap = await resolveCreators((activeRows ?? []).map(a => a.created_by as string | null))
-    const active = (activeRows ?? []).map(a => ({
-        ...a,
-        imageUrl: resolveImage(a.image_path as string | null),
-        creator_name: displayCreator(a.created_by as string | null, activeCreatorMap),
-    }))
+    const active = (activeRows ?? []).map(a => toViewItem(a, activeCreatorMap))
 
     // Archive = published + expired (expires_at <= NOW) — paginated
     const from = (requestedPage - 1) * ARCHIVE_PAGE_SIZE
@@ -70,11 +74,41 @@ export default async function AnnouncementsListPage({
     // Clamp the requested page if it's out of range (e.g. old bookmark)
     const initialPage = Math.min(requestedPage, totalPages)
     const archiveCreatorMap = await resolveCreators((archiveRows ?? []).map(a => a.created_by as string | null))
-    const archiveInitial = (archiveRows ?? []).map(a => ({
-        ...a,
-        imageUrl: resolveImage(a.image_path as string | null),
-        creator_name: displayCreator(a.created_by as string | null, archiveCreatorMap),
-    }))
+    const archiveInitial = (archiveRows ?? []).map(a => toViewItem(a, archiveCreatorMap))
+
+    let finalInitialTab = initialTab
+    let activeItems = active
+    let archiveItems = archiveInitial
+
+    if (focusId) {
+        const alreadyLoaded = activeItems.some(a => a.id === focusId) || archiveItems.some(a => a.id === focusId)
+
+        if (!alreadyLoaded) {
+            const { data: focusedRow } = await supabaseAdmin
+                .from('announcements')
+                .select('id, headline, content, priority, publish_date, expires_at, image_path, created_by')
+                .eq('id', focusId)
+                .eq('publish_status', 'published')
+                .maybeSingle()
+
+            if (focusedRow) {
+                const focusedCreatorMap = await resolveCreators([focusedRow.created_by as string | null])
+                const focused = toViewItem(focusedRow, focusedCreatorMap)
+                const isArchived = Boolean(focusedRow.expires_at && focusedRow.expires_at <= nowIso)
+                if (isArchived) {
+                    archiveItems = [focused, ...archiveItems.filter(a => a.id !== focusId)]
+                    finalInitialTab = 'archive'
+                } else {
+                    activeItems = [focused, ...activeItems.filter(a => a.id !== focusId)]
+                    finalInitialTab = 'active'
+                }
+            }
+        } else if (archiveItems.some(a => a.id === focusId)) {
+            finalInitialTab = 'archive'
+        } else {
+            finalInitialTab = 'active'
+        }
+    }
 
     return (
         <div className="max-w-5xl mx-auto space-y-6">
@@ -96,15 +130,16 @@ export default async function AnnouncementsListPage({
             </div>
 
             <AnnouncementsView
-                activeItems={active}
+                activeItems={activeItems}
                 initialArchive={{
-                    items: archiveInitial,
+                    items: archiveItems,
                     total: archiveTotal,
                     page: initialPage,
                     pageSize: ARCHIVE_PAGE_SIZE,
                     totalPages,
                 }}
-                initialTab={initialTab}
+                initialTab={finalInitialTab}
+                focusId={focusId}
             />
         </div>
     )
