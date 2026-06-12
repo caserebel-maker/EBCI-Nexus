@@ -33,6 +33,18 @@ export async function GET() {
         return new Response('Forbidden — super-admin only', { status: 403 })
     }
 
+    if (process.env.BACKUP_DOWNLOAD_ENABLED !== 'true') {
+        return new Response(
+            'System backup download is temporarily disabled to preserve Vercel free-tier CPU. Set BACKUP_DOWNLOAD_ENABLED=true only when you need to run a manual backup.',
+            {
+                status: 503,
+                headers: {
+                    'cache-control': 'no-store',
+                },
+            },
+        )
+    }
+
     const startedAt = new Date()
     const zip = new JSZip()
     const failures: string[] = []
