@@ -274,7 +274,7 @@ export default function AnnouncementPage() {
                         value={headline}
                         onChange={e => setHeadline(e.target.value)}
                         placeholder={priority === 'emergency' ? "e.g., FIRE ALARM: EVACUATE IMMEDIATELY" : "e.g., Annual Town Hall Meeting"}
-                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-lg font-bold text-white focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-white/20"
+                        className="w-full bg-black/5 border border-black/10 rounded-xl px-4 py-3 text-lg font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-gray-400"
                     />
                 </div>
 
@@ -287,7 +287,7 @@ export default function AnnouncementPage() {
                         value={content}
                         onChange={e => setContent(e.target.value)}
                         placeholder={t('announcements.form.content')}
-                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-white/20"
+                        className="w-full bg-black/5 border border-black/10 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-gray-400"
                     />
                 </div>
 
@@ -300,7 +300,7 @@ export default function AnnouncementPage() {
                         name="expires_at"
                         value={expiresAt}
                         onChange={e => setExpiresAt(e.target.value)}
-                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        className="w-full bg-black/5 border border-black/10 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/50"
                     />
                     <p className="text-xs text-muted-foreground">
                         ถ้าไม่ระบุ ประกาศ emergency จะหมดอายุภายใน 7 วัน • ประกาศทั่วไปจะยังแสดงในหน้ารวมประกาศ
