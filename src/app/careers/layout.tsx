@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { Kanit } from 'next/font/google'
 import { getDictionary } from '@/config/i18n'
+import { getSession } from '@/lib/auth'
+import { ROLE_CONFIG, type UserRole } from '@/config/roles'
 
 const kanit = Kanit({
     subsets: ['thai', 'latin'],
@@ -14,6 +16,11 @@ export default async function CareersLayout({
 }: {
     children: React.ReactNode
 }) {
+    const session = await getSession()
+    const role = session?.role as UserRole | undefined
+    const homePath = role && ROLE_CONFIG[role] ? ROLE_CONFIG[role].homePath : '/login'
+    const linkText = session ? 'Back to Portal' : 'Staff Login'
+
     return (
         <div className={`min-h-screen bg-brand-gradient dark:bg-background text-foreground flex flex-col font-sans ${kanit.variable} transition-colors duration-300`}>
             {/* Public Header */}
@@ -37,8 +44,8 @@ export default async function CareersLayout({
                         </span>
                     </Link>
                     <div className="flex items-center gap-4">
-                        <Link href="/login" className="text-sm text-white/80 hover:text-white dark:text-muted-foreground dark:hover:text-foreground transition-colors">
-                            Staff Login
+                        <Link href={homePath} className="text-sm text-white/80 hover:text-white dark:text-muted-foreground dark:hover:text-foreground transition-colors">
+                            {linkText}
                         </Link>
                     </div>
                 </div>
