@@ -20,8 +20,8 @@ const glass = {
 const HIGHLIGHTS: Array<{ icon: typeof Sparkles; title: string; body: string }> = [
     { icon: MapPin,     title: 'ที่ตั้งสะดวก',    body: 'ออฟฟิศใจกลาง กทม. เดินทางง่าย ใกล้รถไฟฟ้า' },
     { icon: Clock,      title: 'เวลางานยืดหยุ่น', body: 'เวลาเริ่มงาน 8:00–9:00 · Flexi-hour สำหรับบางตำแหน่ง' },
-    { icon: Users,      title: 'ทีมอบอุ่น',       body: 'วัฒนธรรมแบบครอบครัว พี่น้องช่วยกันโต มีงานเลี้ยงประจำปี' },
-    { icon: ShieldCheck,title: 'สวัสดิการครบ',   body: 'ประกันสังคม · ประกันสุขภาพ · โบนัส · วันหยุดพักร้อน' },
+    { icon: Users,      title: 'ทีมเป็นกันเอง',   body: 'ทำงานร่วมกันอย่างเป็นกันเอง ช่วยเหลือกันเพื่อการเติบโต มีงานเลี้ยงประจำปี' },
+    { icon: ShieldCheck,title: 'สวัสดิการครบ',   body: 'ประกันสังคม · โบนัส · วันหยุดพักร้อน' },
 ]
 
 export function CareersLandingClient() {
