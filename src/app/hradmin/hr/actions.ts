@@ -215,3 +215,92 @@ export async function publishAnnouncement(formData: FormData) {
         return { error: error.message || 'เกิดข้อผิดพลาด' }
     }
 }
+
+export async function getAnnouncement(id: string) {
+    const session = await getSession()
+    if (!session || session.role !== 'hr_admin') {
+        return { error: 'ไม่มีสิทธิ์เข้าถึง' }
+    }
+    const { data, error } = await supabaseAdmin
+        .from('announcements')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
+
+    if (error) return { error: error.message }
+    return { success: true, announcement: data }
+}
+
+export async function updateAnnouncement(id: string, formData: FormData) {
+    const session = await getSession()
+    if (!session || session.role !== 'hr_admin') {
+        return { error: 'ไม่มีสิทธิ์เข้าถึง — เฉพาะ HR Admin เท่านั้น' }
+    }
+
+    const headline = formData.get('headline') as string
+    const content  = formData.get('content')  as string
+    const priority = formData.get('priority') as string
+    const imageFile = formData.get('image')   as File | null
+    const expiresInput = formData.get('expires_at') as string | null
+
+    if (!id || !headline || !content || !priority) {
+        return { error: 'Missing required fields' }
+    }
+
+    let expiresAt: string | null = null
+    if (expiresInput) {
+        expiresAt = new Date(expiresInput + 'T23:59:59').toISOString()
+    } else if (priority === 'emergency' || priority === 'urgent') {
+        const d = new Date()
+        d.setDate(d.getDate() + 7)
+        expiresAt = d.toISOString()
+    }
+
+    try {
+        // Handle image upload if provided
+        let imagePath: string | undefined = undefined
+        if (imageFile && imageFile.size > 0) {
+            const fileExt = imageFile.name.split('.').pop()
+            const fileName = `${crypto.randomUUID()}.${fileExt}`
+            const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+                .from('announcement-images')
+                .upload(fileName, imageFile)
+
+            if (uploadError) throw new Error('อัปโหลดรูปไม่สำเร็จ: ' + uploadError.message)
+            imagePath = uploadData?.path ?? undefined
+        }
+
+        const now = new Date().toISOString()
+        const updateData: Record<string, any> = {
+            headline,
+            content,
+            priority,
+            expires_at: expiresAt,
+            updated_at: now,
+        }
+
+        if (imagePath !== undefined) {
+            updateData.image_path = imagePath
+        }
+
+        const { error: updateError } = await supabaseAdmin
+            .from('announcements')
+            .update(updateData)
+            .eq('id', id)
+
+        if (updateError) throw new Error('แก้ไขประกาศไม่สำเร็จ: ' + updateError.message)
+
+        revalidatePath('/dashboard')
+        revalidatePath('/portal/notifications')
+        revalidatePath('/hradmin/announcements')
+        revalidatePath('/portal/announcements')
+        revalidatePath('/portal/dashboard')
+        revalidatePath('/hradmin/dashboard')
+
+        return { success: true }
+    } catch (error: any) {
+        console.error('updateAnnouncement error:', error)
+        return { error: error.message || 'เกิดข้อผิดพลาด' }
+    }
+}
+

@@ -42,7 +42,7 @@ export default async function HrAnnouncementsManagePage({
     // Active: published + (no expiry OR expires in the future)
     const { data: activeRows } = await supabaseAdmin
         .from('announcements')
-        .select('id, headline, content, priority, publish_date, expires_at, image_path, created_by')
+        .select('id, headline, content, priority, publish_date, expires_at, image_path, created_by, updated_at')
         .eq('publish_status', 'published')
         .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
         .order('publish_date', { ascending: false })
@@ -60,7 +60,7 @@ export default async function HrAnnouncementsManagePage({
     const to = from + ARCHIVE_PAGE_SIZE - 1
     const { data: archiveRows, count: archiveCount } = await supabaseAdmin
         .from('announcements')
-        .select('id, headline, content, priority, publish_date, expires_at, image_path, created_by', { count: 'exact' })
+        .select('id, headline, content, priority, publish_date, expires_at, image_path, created_by, updated_at', { count: 'exact' })
         .eq('publish_status', 'published')
         .not('expires_at', 'is', null)
         .lte('expires_at', nowIso)

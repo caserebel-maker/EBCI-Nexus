@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useTransition } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { publishAnnouncement } from "../actions"
 import { AlertTriangle, Send, Megaphone, Info, Loader2, ArrowLeft, X, ChevronRight } from "lucide-react"
@@ -15,10 +15,58 @@ const LIST_PATH = '/hradmin/announcements'
 export default function AnnouncementPage() {
     const { t } = useTranslation()
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const editId = searchParams.get('edit')
+
     const [isPending, startTransition] = useTransition()
     const [priority, setPriority] = useState("internal")
     const [success, setSuccess] = useState(false)
     const [isDirty, setIsDirty] = useState(false)
+
+    // Form field states for editing/creating
+    const [headline, setHeadline] = useState("")
+    const [content, setContent] = useState("")
+    const [expiresAt, setExpiresAt] = useState("")
+    const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null)
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+    const [isLoading, setIsLoading] = useState(false)
+
+    // Fetch existing announcement data if editing
+    useEffect(() => {
+        if (!editId) return
+        setIsLoading(true)
+        startTransition(async () => {
+            try {
+                const { getAnnouncement } = await import("../actions")
+                const res = await getAnnouncement(editId)
+                if (res.success && res.announcement) {
+                    const a = res.announcement
+                    setHeadline(a.headline || "")
+                    setContent(a.content || "")
+                    setPriority(a.priority || "internal")
+                    if (a.expires_at) {
+                        setExpiresAt(new Date(a.expires_at).toISOString().split('T')[0])
+                    }
+                    if (a.image_path) {
+                        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+                        const url = a.image_path.startsWith('http')
+                            ? a.image_path
+                            : `${supabaseUrl}/storage/v1/object/public/announcement-images/${a.image_path}`
+                        setExistingImageUrl(url)
+                    }
+                } else {
+                    alert(res.error || "โหลดข้อมูลประกาศไม่สำเร็จ")
+                    router.push(LIST_PATH)
+                }
+            } catch (err) {
+                console.error("Error loading announcement:", err)
+                alert("เกิดข้อผิดพลาดในการโหลดข้อมูล")
+                router.push(LIST_PATH)
+            } finally {
+                setIsLoading(false)
+            }
+        })
+    }, [editId, router])
 
     // Changing priority away from the default counts as a modification too
     const handlePriorityChange = (id: string) => {
@@ -47,7 +95,9 @@ export default function AnnouncementPage() {
 
     const handleSubmit = (formData: FormData) => {
         setSuccess(false)
-        if (priority === 'emergency' || priority === 'urgent') {
+        
+        // Only warn for new emergency/urgent publishes. Edits don't broadcast new emails/banners.
+        if (!editId && (priority === 'emergency' || priority === 'urgent')) {
             const label = priority === 'emergency' ? 'ฉุกเฉิน' : 'ด่วน'
             if (!confirm(`ยืนยันการส่งประกาศประเภท "${label}"\n\nระบบจะ:\n1. แสดง banner บนหน้า Dashboard พนักงานทุกคน\n2. ส่งอีเมลหาพนักงานทุกคนทันที\n\nยืนยันหรือไม่?`)) {
                 return
@@ -55,7 +105,14 @@ export default function AnnouncementPage() {
         }
 
         startTransition(async () => {
-            const result = await publishAnnouncement(formData)
+            let result
+            if (editId) {
+                const { updateAnnouncement } = await import("../actions")
+                result = await updateAnnouncement(editId, formData)
+            } else {
+                result = await publishAnnouncement(formData)
+            }
+            
             if (result.success) {
                 // Form is persisted — clear dirty flag so success autoclose
                 // doesn't prompt the unsaved-changes dialog
@@ -71,6 +128,18 @@ export default function AnnouncementPage() {
         setSuccess(false)
         router.push(LIST_PATH)
     }
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+                <Loader2 size={36} className="animate-spin text-amber-400" />
+                <p className="text-white/60 text-sm font-medium">กำลังโหลดข้อมูลประกาศ...</p>
+            </div>
+        )
+    }
+
+    const successTitle = editId ? "แก้ไขประกาศสำเร็จ" : "สร้างประกาศสำเร็จ"
+    const successSubtitle = editId ? "ประกาศของคุณได้ถูกแก้ไขเรียบร้อยแล้ว" : "ประกาศของคุณได้ถูกเผยแพร่เรียบร้อยแล้ว"
 
     return (
         <div className="max-w-3xl mx-auto space-y-6 lg:space-y-8">
@@ -88,7 +157,7 @@ export default function AnnouncementPage() {
                     ประกาศข่าวสาร
                 </Link>
                 <ChevronRight size={14} className="text-white/30" />
-                <span className="text-white/80 font-semibold">สร้างใหม่</span>
+                <span className="text-white/80 font-semibold">{editId ? "แก้ไขประกาศ" : "สร้างใหม่"}</span>
             </nav>
 
             {/* Header: back · title · close */}
@@ -106,10 +175,12 @@ export default function AnnouncementPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                     <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">
-                        {t('announcements.create')}
+                        {editId ? "แก้ไขประกาศ" : t('announcements.create')}
                     </h1>
                     <p className="hidden sm:block text-white/70 text-sm mt-0.5">
-                        Broadcast news, updates, or emergency alerts to the organization.
+                        {editId 
+                            ? "Edit the announcement headline, content, status, or image details."
+                            : "Broadcast news, updates, or emergency alerts to the organization."}
                     </p>
                 </div>
                 <button
@@ -125,8 +196,8 @@ export default function AnnouncementPage() {
 
             <SuccessPopup
                 open={success}
-                title="สร้างประกาศสำเร็จ"
-                subtitle="ประกาศของคุณได้ถูกเผยแพร่เรียบร้อยแล้ว"
+                title={successTitle}
+                subtitle={successSubtitle}
                 autoCloseMs={3000}
                 onClose={handleSuccessClose}
             />
@@ -188,7 +259,9 @@ export default function AnnouncementPage() {
                             <strong className="block mb-1 uppercase tracking-wider text-xs">
                                 {priority === 'emergency' ? '⚠️ คำเตือน — ฉุกเฉิน' : '🚨 คำเตือน — ด่วน'}
                             </strong>
-                            การเผยแพร่ประกาศระดับนี้จะ<u>ส่งอีเมลหาพนักงานที่ปฏิบัติงานทุกคนทันที</u> และแสดง banner บน Dashboard
+                            {editId 
+                                ? "การแก้ไขประกาศระดับนี้จะบันทึกการเปลี่ยนแปลงและอัปเดตข้อมูลบนหน้า Dashboard"
+                                : "การเผยแพร่ประกาศระดับนี้จะส่งอีเมลหาพนักงานที่ปฏิบัติงานทุกคนทันที และแสดง banner บน Dashboard"}
                         </div>
                     </div>
                 )}
@@ -198,6 +271,8 @@ export default function AnnouncementPage() {
                     <input
                         name="headline"
                         required
+                        value={headline}
+                        onChange={e => setHeadline(e.target.value)}
                         placeholder={priority === 'emergency' ? "e.g., FIRE ALARM: EVACUATE IMMEDIATELY" : "e.g., Annual Town Hall Meeting"}
                         className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-lg font-bold text-white focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-white/20"
                     />
@@ -209,6 +284,8 @@ export default function AnnouncementPage() {
                         name="content"
                         required
                         rows={5}
+                        value={content}
+                        onChange={e => setContent(e.target.value)}
                         placeholder={t('announcements.form.content')}
                         className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-white/20"
                     />
@@ -221,6 +298,8 @@ export default function AnnouncementPage() {
                     <input
                         type="date"
                         name="expires_at"
+                        value={expiresAt}
+                        onChange={e => setExpiresAt(e.target.value)}
                         className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
                     />
                     <p className="text-xs text-muted-foreground">
@@ -241,27 +320,26 @@ export default function AnnouncementPage() {
                                 if (file) {
                                     const reader = new FileReader();
                                     reader.onload = (ev) => {
-                                        const img = document.getElementById('preview-image') as HTMLImageElement;
-                                        if (img && ev.target?.result) img.src = ev.target.result as string;
-                                        const container = document.getElementById('preview-container');
-                                        if (container) container.style.display = 'block';
-                                        const placeholder = document.getElementById('upload-placeholder');
-                                        if (placeholder) placeholder.style.display = 'none';
+                                        if (ev.target?.result) {
+                                            setPreviewUrl(ev.target.result as string)
+                                        }
                                     };
                                     reader.readAsDataURL(file);
                                 }
                             }}
                         />
-                        <div id="upload-placeholder" className="pointer-events-none flex flex-col items-center">
+                        <div id="upload-placeholder" style={{ display: (existingImageUrl || previewUrl) ? 'none' : 'flex' }} className="pointer-events-none flex flex-col items-center">
                             <div className="h-12 w-12 rounded-full bg-gray-900/10 flex items-center justify-center mb-2 text-gray-900 group-hover:scale-110 transition-transform">
                                 <Megaphone size={24} className="-rotate-12" />
                             </div>
                             <span className="text-gray-900 font-bold uppercase tracking-wider text-sm">Click to Upload Image</span>
                             <span className="text-[10px] text-gray-600 mt-1">PNG, JPG up to 10MB · แนะนำ 16:9 (1920×1080)</span>
                         </div>
-                        <div id="preview-container" className="hidden relative z-0 pointer-events-none w-full">
-                            <img id="preview-image" src="" alt="Preview" className="max-h-40 rounded-lg mx-auto shadow-lg object-contain w-auto" />
-                            <p className="text-xs text-emerald-400 mt-2 font-bold uppercase tracking-wider">Image Selected</p>
+                        <div id="preview-container" style={{ display: (existingImageUrl || previewUrl) ? 'block' : 'none' }} className="relative z-0 pointer-events-none w-full">
+                            <img id="preview-image" src={previewUrl || existingImageUrl || ""} alt="Preview" className="max-h-40 rounded-lg mx-auto shadow-lg object-contain w-auto" />
+                            <p className="text-xs text-emerald-600 mt-2 font-bold uppercase tracking-wider">
+                                {previewUrl ? "New Image Selected" : "Existing Image (Click/Drag to Replace)"}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -271,15 +349,17 @@ export default function AnnouncementPage() {
                         type="submit"
                         disabled={isPending}
                         className={cn(
-                            "flex items-center gap-2 px-8 py-3 rounded-xl font-bold uppercase tracking-widest transition-all transform active:scale-95 shadow-lg",
+                            "flex items-center gap-2 px-8 py-3 rounded-xl font-bold uppercase tracking-widest transition-all transform active:scale-[0.98] shadow-lg",
                             priority === 'emergency'
                                 ? "bg-amber-500 hover:bg-amber-400 text-black shadow-amber-500/20"
-                                : "bg-primary hover:bg-primary/90 text-white shadow-primary/20",
+                                : "bg-[#882136] hover:bg-[#a02640] text-white shadow-[#882136]/20",
                             isPending && "opacity-70 cursor-not-allowed"
                         )}
                     >
                         {isPending ? <Loader2 className="animate-spin" /> : <Send size={18} />}
-                        {priority === 'emergency' ? "Broadcast Alert" : t('announcements.form.publish')}
+                        {editId 
+                            ? "บันทึกการแก้ไข" 
+                            : (priority === 'emergency' ? "Broadcast Alert" : t('announcements.form.publish'))}
                     </button>
                 </div>
             </form>

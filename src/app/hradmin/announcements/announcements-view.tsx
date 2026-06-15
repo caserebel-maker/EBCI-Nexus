@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import {
     Megaphone, AlertTriangle, AlertCircle, Info, Calendar, Archive, Filter, X, Clock,
-    Eye, ChevronLeft, ChevronRight, Loader2, UserCircle, Trash2,
+    Eye, ChevronLeft, ChevronRight, Loader2, UserCircle, Trash2, Pencil,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { deleteAnnouncement } from './actions'
@@ -20,6 +21,7 @@ interface Announcement {
     imageUrl: string | null
     created_by?: string | null
     creator_name?: string | null
+    updated_at?: string | null
 }
 
 interface ArchivePayload {
@@ -99,6 +101,14 @@ function PriorityBadge({ priority }: { priority: string }) {
 function AnnouncementModal({ a, onClose }: { a: Announcement; onClose: () => void }) {
     const c = PRIORITY_CONFIG[a.priority] ?? PRIORITY_CONFIG.internal
     const Icon = c.icon
+
+    const showEdited = useMemo(() => {
+        if (!a.updated_at) return false
+        const pub = new Date(a.publish_date).getTime()
+        const upd = new Date(a.updated_at).getTime()
+        return Math.abs(upd - pub) > 1000
+    }, [a.publish_date, a.updated_at])
+
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
         window.addEventListener('keydown', onKey)
@@ -136,10 +146,16 @@ function AnnouncementModal({ a, onClose }: { a: Announcement; onClose: () => voi
                             <Icon size={12} />
                             {c.label}
                         </span>
-                        <span className="text-[11px] text-white/50 inline-flex items-center gap-1">
+                        <span className="text-[11px] text-white/55 inline-flex items-center gap-1">
                             <Calendar size={11} />
                             เผยแพร่ {formatThaiDate(a.publish_date)}
                         </span>
+                        {showEdited && (
+                            <span className="text-[11px] text-amber-300 inline-flex items-center gap-1">
+                                <Clock size={11} />
+                                แก้ไขเมื่อ {formatThaiDate(a.updated_at!)}
+                            </span>
+                        )}
                         {a.expires_at && (
                             <span className="text-[11px] text-white/40 inline-flex items-center gap-1">
                                 <Clock size={11} />
@@ -161,7 +177,7 @@ function AnnouncementModal({ a, onClose }: { a: Announcement; onClose: () => voi
     )
 }
 
-// ─── Row action buttons (ดู + ลบ) ─────────────────────────────────────────────
+// ─── Row action buttons (ดู + แก้ไข + ลบ) ──────────────────────────────────────
 function RowActions({
     a, onView, onDelete, deleting,
 }: {
@@ -181,6 +197,15 @@ function RowActions({
                 <Eye size={13} />
                 ดู
             </button>
+            <Link
+                href={`/hradmin/hr/announcements?edit=${a.id}`}
+                onClick={e => e.stopPropagation()}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-white/5 hover:bg-white/15 text-white/75 hover:text-white text-xs font-semibold transition-all"
+                aria-label={`แก้ไขประกาศ: ${a.headline}`}
+            >
+                <Pencil size={13} />
+                แก้ไข
+            </Link>
             <button
                 type="button"
                 onClick={e => { e.stopPropagation(); onDelete() }}
@@ -487,6 +512,9 @@ export function ManageAnnouncementsView({ activeItems, initialArchive, initialTa
                                             <span className="text-[11px] text-white/45 inline-flex items-center gap-1 whitespace-nowrap">
                                                 <Clock size={10} />
                                                 {relativeTime(a.publish_date)}
+                                                {a.updated_at && Math.abs(new Date(a.updated_at).getTime() - new Date(a.publish_date).getTime()) > 1000 && (
+                                                    <span className="text-amber-300 ml-1">(แก้ไขแล้ว)</span>
+                                                )}
                                             </span>
                                         </div>
                                         <p className="text-white font-semibold truncate" style={{ fontSize: '14px' }}>{a.headline}</p>
