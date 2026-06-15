@@ -55,7 +55,7 @@ export async function POST(
         .select(`
             id, reference_code, email, position_applied, photo_url,
             first_name_th, last_name_th, nickname,
-            phone_mobile, pdpa_consented
+            phone_mobile, pdpa_consented, home_location_url
         `)
         .eq('id', id)
         .single()
@@ -68,6 +68,7 @@ export async function POST(
     if (!row.first_name_th || !row.last_name_th) missing.push('ชื่อ-สกุล')
     if (!row.email) missing.push('email')
     if (!row.phone_mobile) missing.push('เบอร์มือถือ')
+    if (!row.home_location_url) missing.push('ลิงก์แผนที่บ้าน')
     if (!row.photo_url) missing.push('รูปถ่าย')
     if (!row.pdpa_consented) missing.push('ยินยอม PDPA')
     if (missing.length) {

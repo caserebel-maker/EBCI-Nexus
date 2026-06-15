@@ -690,6 +690,7 @@ function Step1Personal({
                     <div className="col-span-1 sm:col-span-2">
                         <TextField
                             label="ลิงก์แผนที่บ้าน หรือ พิกัดที่ตั้ง (Google Maps Link / Coordinates)"
+                            required
                             value={values.home_location_url}
                             onChange={v => setField('home_location_url', v)}
                             placeholder="เช่น https://maps.app.goo.gl/... หรือ 13.7563, 100.5018"
