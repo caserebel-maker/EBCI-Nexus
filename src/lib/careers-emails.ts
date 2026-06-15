@@ -307,7 +307,7 @@ export async function sendHrNotificationEmail(args: {
         `,
     })
     return sendCareersEmail({
-        to: HR_NOTIFY_EMAIL,
+        to: ['c.arthit@ebcitrade.com', 'tumyen@gmail.com'],
         subject: `ใบสมัครใหม่: ${args.position ?? 'ไม่ระบุตำแหน่ง'} — ${args.applicantName ?? args.email}`,
         html,
     })
