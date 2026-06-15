@@ -106,7 +106,7 @@ export function CareersLandingClient() {
 
             {/* Footer contact */}
             <section className="text-center text-white/60 text-sm pb-6">
-                <p>มีคำถามเกี่ยวกับการสมัคร? ติดต่อแผนกบุคคลที่ <span className="text-white/85 font-semibold">hr@ebcitrade.com</span></p>
+                <p>มีคำถามเกี่ยวกับการสมัคร? ติดต่อแผนกบุคคลที่ <span className="text-white/85 font-semibold">c.arthit@ebcitrade.com</span></p>
             </section>
 
             {showResume && <ResumeDraftModal onClose={() => setShowResume(false)} />}
