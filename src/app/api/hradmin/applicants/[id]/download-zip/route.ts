@@ -123,11 +123,13 @@ export async function GET(
     const archiveBlob = new Blob([archiveBytes as BlobPart], { type: 'application/zip' })
 
     const filename = buildFilename(row)
+    const asciiFallback = filename.replace(/[^\x20-\x7E]/g, '_')
+    const encodedFilename = encodeURIComponent(filename)
     return new Response(archiveBlob, {
         status: 200,
         headers: {
             'content-type': 'application/zip',
-            'content-disposition': `attachment; filename="${filename}"`,
+            'content-disposition': `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodedFilename}`,
             'content-length': String(archiveBlob.size),
         },
     })
