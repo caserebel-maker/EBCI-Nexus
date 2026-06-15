@@ -125,6 +125,9 @@ export function HireModal({ open, onClose, applicant }: Props) {
             return
         }
 
+        const confirmSubmit = window.confirm('ยืนยันที่จะจ้างเข้าทำงาน? หากดำเนินการต่อ พนักงานคนนี้จะถูกเพิ่มเข้าระบบฐานข้อมูล Nexus ทันที')
+        if (!confirmSubmit) return
+
         setSubmitting(true)
         try {
             const res = await fetch(`/api/hradmin/applicants/${applicant.id}/hire`, {
@@ -316,9 +319,12 @@ export function HireModal({ open, onClose, applicant }: Props) {
                     </div>
 
                     {/* What will happen note */}
-                    <div className="rounded-lg bg-sky-500/10 border border-sky-500/20 p-3 text-[12px] text-sky-100 leading-relaxed">
-                        <p className="font-bold text-sky-200 mb-1">เมื่อกด "ยืนยันจ้างเข้าทำงาน":</p>
-                        <ol className="list-decimal list-inside space-y-0.5 text-sky-100/85">
+                    <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-[12px] text-amber-200 leading-relaxed">
+                        <p className="font-bold text-amber-300 mb-1 inline-flex items-center gap-1.5">
+                            <AlertTriangle size={13} />
+                            คำเตือน: หากกดปุ่มนี้ จะเป็นการเพิ่มพนักงานคนนี้เข้าระบบฐานข้อมูล Nexus ทันที
+                        </p>
+                        <ol className="list-decimal list-inside space-y-0.5 text-amber-100/80 mt-1">
                             <li>สร้างพนักงานใหม่ ({employeeCode || 'รหัส'}) ในระบบ</li>
                             <li>โควต้าลาทุกประเภท seed อัตโนมัติ (ลาป่วย 30, ลากิจ 3, ลาพ่อแม่เสียชีวิต 5)</li>
                             <li>ใบสมัครอัปเดตเป็นสถานะ <b>hired</b></li>

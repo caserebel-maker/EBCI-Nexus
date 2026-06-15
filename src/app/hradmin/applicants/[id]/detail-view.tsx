@@ -251,11 +251,14 @@ export function ApplicantDetailView({
                             {str(a.position_applied) || 'ไม่ระบุตำแหน่ง'}
                         </p>
                     </div>
-                    <StatusDropdown
-                        applicationId={id}
-                        currentStatus={status}
-                        applicantEmail={str(a.email) || null}
-                    />
+                    <div className="flex flex-col items-start sm:items-end gap-1 shrink-0">
+                        <span className="text-[10px] text-white/50 font-bold uppercase tracking-wider">สถานะใบสมัคร</span>
+                        <StatusDropdown
+                            applicationId={id}
+                            currentStatus={status}
+                            applicantEmail={str(a.email) || null}
+                        />
+                    </div>
                 </div>
 
                 {/* Tab switcher */}
