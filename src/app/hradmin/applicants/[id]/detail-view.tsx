@@ -58,6 +58,113 @@ export function ApplicantDetailView({
 
     return (
         <div className="max-w-5xl mx-auto space-y-5 pb-10">
+            <style dangerouslySetInnerHTML={{ __html: `
+                @media print {
+                    /* 1. Global background reset to white and text to black */
+                    body, html, #__next, main, header, section, div, table, tr, td, th {
+                        background: transparent !important;
+                        background-color: transparent !important;
+                        color: #000000 !important;
+                        backdrop-filter: none !important;
+                        box-shadow: none !important;
+                        text-shadow: none !important;
+                        border-color: #cccccc !important;
+                    }
+                    
+                    /* 2. Hide unwanted interactive elements */
+                    .print\\:hidden, button, a[href*="download-zip"], svg {
+                        display: none !important;
+                    }
+                    
+                    /* 3. Page margins and width resets */
+                    @page {
+                        margin: 1.5cm;
+                    }
+                    .max-w-5xl {
+                        max-width: 100% !important;
+                        width: 100% !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                    }
+                    
+                    /* 4. Section structure styling */
+                    header {
+                        border: none !important;
+                        border-bottom: 2px solid #000000 !important;
+                        border-radius: 0 !important;
+                        padding: 10px 0 !important;
+                        margin-bottom: 20px !important;
+                    }
+                    header h1 {
+                        color: #000000 !important;
+                        font-size: 24px !important;
+                    }
+                    header p {
+                        color: #333333 !important;
+                    }
+                    section {
+                        border: 1px solid #cccccc !important;
+                        border-radius: 8px !important;
+                        padding: 12px !important;
+                        margin-bottom: 15px !important;
+                        page-break-inside: avoid;
+                    }
+                    section h2 {
+                        color: #000000 !important;
+                        border-bottom: 1px solid #eeeeee !important;
+                        padding-bottom: 4px !important;
+                        margin-bottom: 10px !important;
+                        font-size: 15px !important;
+                    }
+                    
+                    /* 5. Custom typography colors for print */
+                    /* Labels (usually upper-case headers) */
+                    p[class*="text-[11px]"], p[class*="text-white/50"], p[class*="text-white/55"] {
+                        color: #444444 !important;
+                        font-size: 10px !important;
+                        font-weight: 700 !important;
+                    }
+                    /* Values */
+                    p[class*="text-sm"], p[class*="text-white"], p[class*="text-white/85"], p[class*="text-white/80"], p[class*="text-white/75"], p[class*="text-white/70"], p[class*="text-white/65"], td {
+                        color: #000000 !important;
+                        font-size: 13px !important;
+                    }
+                    /* Empty dashes/placeholders */
+                    p[class*="text-white/35"] {
+                        color: #888888 !important;
+                    }
+                    
+                    /* 6. Signature box */
+                    .bg-white {
+                        background: #ffffff !important;
+                        border: 1px solid #000000 !important;
+                    }
+                    
+                    /* 7. Score button overrides in InterviewEvaluation */
+                    button[class*="bg-amber-400"] {
+                        display: flex !important;
+                        background-color: #333333 !important;
+                        color: #ffffff !important;
+                        font-weight: bold !important;
+                        border-color: #333333 !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    
+                    /* 8. Table specific overrides */
+                    table {
+                        border-collapse: collapse !important;
+                        width: 100% !important;
+                    }
+                    tr {
+                        page-break-inside: avoid;
+                    }
+                    td, th {
+                        border-bottom: 1px solid #eeeeee !important;
+                    }
+                }
+            `}} />
+
             {/* Back + print row */}
             <div className="flex items-center justify-between gap-3 print:hidden">
                 <Link
@@ -89,10 +196,6 @@ export function ApplicantDetailView({
                     </a>
                     <button
                         type="button"
-                        // INP fix: double rAF so at least one paint cycle
-                        // completes between the click and the print
-                        // dialog opening — setTimeout(0) wasn't enough
-                        // because window.print() still blocks paints.
                         onClick={() => {
                             requestAnimationFrame(() => {
                                 requestAnimationFrame(() => window.print())
@@ -125,9 +228,9 @@ export function ApplicantDetailView({
                 }}
             />
 
-            {/* Sticky header card */}
+            {/* Header card */}
             <header
-                className="sticky top-0 z-20 rounded-2xl border border-white/10 p-4 sm:p-5 shadow-xl"
+                className="rounded-2xl border border-white/10 p-4 sm:p-5 shadow-xl"
                 style={{ background: 'rgba(21,4,10,0.92)', backdropFilter: 'blur(12px)' }}
             >
                 <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
@@ -156,7 +259,7 @@ export function ApplicantDetailView({
                 </div>
 
                 {/* Tab switcher */}
-                <nav className="mt-4 flex items-center gap-1 p-1 rounded-xl border border-white/10 bg-white/5">
+                <nav className="mt-4 flex items-center gap-1 p-1 rounded-xl border border-white/10 bg-white/5 print:hidden">
                     {([
                         { key: 'personal',  label: 'ข้อมูลส่วนตัว',     icon: User },
                         { key: 'education', label: 'การศึกษา + เอกสาร', icon: GraduationCap },
@@ -184,17 +287,19 @@ export function ApplicantDetailView({
 
             {/* Tab body */}
             <main className="space-y-5">
-                {tab === 'personal' && <PersonalTab a={a} photoUrl={photoUrl} />}
-                {tab === 'education' && (
+                <div className={cn(tab === 'personal' ? 'block' : 'hidden print:block', 'space-y-5')}>
+                    <PersonalTab a={a} photoUrl={photoUrl} />
+                </div>
+                <div className={cn(tab === 'education' ? 'block' : 'hidden print:block', 'space-y-5')}>
                     <EducationTab
                         a={a}
                         refreshedFiles={refreshedFiles}
                         otherDocuments={otherDocuments}
                     />
-                )}
-                {tab === 'skills' && (
+                </div>
+                <div className={cn(tab === 'skills' ? 'block' : 'hidden print:block', 'space-y-5')}>
                     <SkillsTab a={a} applicationId={id} savedEvaluation={savedEvaluation} />
-                )}
+                </div>
             </main>
         </div>
     )

@@ -183,8 +183,11 @@ export function InterviewEvaluation({ applicationId, initial }: Props) {
                         rows={3}
                         readOnly={!editing}
                         placeholder="เช่น จุดแข็ง / จุดที่ควรปรับปรุง / คำตอบที่น่าสนใจ"
-                        className="mt-1.5 w-full rounded-lg bg-black/25 border border-white/15 text-white text-sm px-3 py-2 focus:outline-none focus:border-amber-300/50 read-only:opacity-80"
+                        className="mt-1.5 w-full rounded-lg bg-black/25 border border-white/15 text-white text-sm px-3 py-2 focus:outline-none focus:border-amber-300/50 read-only:opacity-80 print:hidden"
                     />
+                    <div className="hidden print:block mt-1.5 w-full text-sm text-black border border-black p-3 rounded-lg bg-white whitespace-pre-wrap">
+                        {notes || '—'}
+                    </div>
                 </label>
             </div>
 

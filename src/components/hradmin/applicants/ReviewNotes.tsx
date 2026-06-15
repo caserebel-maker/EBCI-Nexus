@@ -122,10 +122,13 @@ export function ReviewNotes({ applicationId, initialNotes }: Props) {
                 onBlur={saveNow}
                 placeholder="โน้ต / ข้อสังเกต / สรุปการสัมภาษณ์ ของ HR — บันทึกอัตโนมัติทุก 1.5 วินาทีหลังพิมพ์"
                 rows={6}
-                className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-amber-300/40 resize-y min-h-[120px]"
+                className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-amber-300/40 resize-y min-h-[120px] print:hidden"
             />
+            <div className="hidden print:block text-sm text-black border border-black p-3 rounded-lg bg-white whitespace-pre-wrap">
+                {text || '—'}
+            </div>
 
-            <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px] text-white/40">
+            <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px] text-white/40 print:hidden">
                 <span>
                     Markdown ไม่ render — แค่ข้อความเปล่า · เก็บได้สูงสุด {MAX_LEN.toLocaleString()} ตัวอักษร
                 </span>
