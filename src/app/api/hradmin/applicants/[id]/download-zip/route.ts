@@ -14,7 +14,6 @@ const SINGLE_FIELDS = [
     { col: 'transcript_url',           label: 'transcript' },
     { col: 'id_card_copy_url',         label: 'id-card' },
     { col: 'house_registration_url',   label: 'house-registration' },
-    { col: 'signature_url',            label: 'signature' },
 ] as const
 
 /**
@@ -45,7 +44,7 @@ export async function GET(
 
     const { data: row, error } = await supabaseAdmin
         .from('job_applications')
-        .select('id, reference_code, first_name_th, last_name_th, nickname, photo_url, cv_url, transcript_url, id_card_copy_url, house_registration_url, signature_url, other_documents')
+        .select('id, reference_code, first_name_th, last_name_th, nickname, photo_url, cv_url, transcript_url, id_card_copy_url, house_registration_url, signature_data, other_documents')
         .eq('id', id)
         .maybeSingle()
     if (error) {
@@ -103,6 +102,15 @@ export async function GET(
             skipped.push(`${entry.label}: download exception`)
         }
     }))
+
+    // Add signature image from base64 if present
+    if (row.signature_data && typeof row.signature_data === 'string') {
+        const parts = row.signature_data.split(',')
+        if (parts.length === 2) {
+            const buf = Buffer.from(parts[1], 'base64')
+            zip.file('signature.png', buf)
+        }
+    }
 
     // Add a small README so HR knows what's inside (and what was missing).
     const readme = buildReadme(row, entries.length, skipped)
