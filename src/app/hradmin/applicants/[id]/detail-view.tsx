@@ -71,8 +71,14 @@ export function ApplicantDetailView({
                         border-color: #cccccc !important;
                     }
                     
-                    /* 2. Hide unwanted interactive elements */
-                    .print\\:hidden, button, a[href*="download-zip"], svg {
+                    /* Force layout wrappers to take auto height and overflow visible for multi-page printing */
+                    body, html, #__next, main, div {
+                        height: auto !important;
+                        overflow: visible !important;
+                    }
+                    
+                    /* 2. Hide unwanted interactive elements, sidebars and headers */
+                    .print\\:hidden, button, a[href*="download-zip"], svg, aside {
                         display: none !important;
                     }
                     
@@ -85,6 +91,9 @@ export function ApplicantDetailView({
                         width: 100% !important;
                         padding: 0 !important;
                         margin: 0 !important;
+                    }
+                    main {
+                        padding-left: 0 !important;
                     }
                     
                     /* 4. Section structure styling */
