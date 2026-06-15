@@ -37,12 +37,12 @@ export function CareersLandingClient() {
                 </p>
                 <h1 className="mt-5 text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight leading-tight">
                     ร่วมเป็นส่วนหนึ่งของ<br className="sm:hidden" />
-                    <span className="text-amber-200"> EBCI Trade</span>
+                    <span className="text-amber-200"> EBCI</span>
                 </h1>
                 <p className="mt-4 max-w-2xl mx-auto text-base sm:text-lg text-white/75 leading-relaxed">
                     บริษัทชิปปิ้งและพิธีการศุลกากรชั้นนำของไทย
                     <br className="hidden sm:block" />
-                    ดูแลลูกค้ามากว่า 30 ปี พร้อมเติบโตไปพร้อมกับทีมที่ใส่ใจ
+                    ดูแลลูกค้ามากว่า 40 ปี พร้อมเติบโตไปพร้อมกับทีมที่ใส่ใจ
                 </p>
 
                 <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">

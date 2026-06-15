@@ -31,13 +31,13 @@ export default async function CareersLayout({
                         <img
                             src="/brand/ebci-logo-silver.png"
                             alt="EBCI"
-                            className="h-9 md:h-11 w-auto dark:hidden"
+                            className="h-6 md:h-8 w-auto dark:hidden"
                         />
                         {/* Dark-mode fallback uses the maroon variant on the neutral card bg */}
                         <img
                             src="/brand/ebci-logo-maroon.png"
                             alt="EBCI"
-                            className="hidden dark:block h-9 md:h-11 w-auto"
+                            className="hidden dark:block h-6 md:h-8 w-auto"
                         />
                         <span className="hidden sm:inline text-[11px] font-bold uppercase tracking-[0.28em] text-white/55 dark:text-primary border-l border-white/20 dark:border-border pl-3">
                             Careers
