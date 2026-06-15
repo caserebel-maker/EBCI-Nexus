@@ -237,7 +237,21 @@ function PersonalTab({ a, photoUrl }: { a: Row; photoUrl: string | null }) {
                     <Field label="Email" value={str(a.email)} icon={<Mail size={11} />} />
                     <Field label="เบอร์มือถือ" value={str(a.phone_mobile)} icon={<Phone size={11} />} />
                     <Field label="เบอร์บ้าน" value={str(a.phone_home)} icon={<Phone size={11} />} />
+                    <Field label="Line ID" value={str(a.line_id)} />
                     <Field label="เริ่มงานได้" value={str(a.can_start_date)} />
+                    {str(a.home_location_url) ? (
+                        <div>
+                            <p className="text-[11px] uppercase tracking-wider text-white/50 font-bold">แผนที่บ้าน</p>
+                            <p className="text-sm mt-0.5 inline-flex items-center gap-1.5 text-amber-200 hover:text-amber-100 font-semibold">
+                                <MapPin size={11} />
+                                <a href={str(a.home_location_url)} target="_blank" rel="noopener noreferrer" className="underline">
+                                    เปิด Google Maps
+                                </a>
+                            </p>
+                        </div>
+                    ) : (
+                        <Field label="แผนที่บ้าน" value={null} />
+                    )}
                 </div>
             </SectionCard>
 

@@ -68,6 +68,8 @@ export interface ApplyFormValues {
     email: string
     phone_mobile: string
     phone_home: string
+    line_id: string
+    home_location_url: string
     photo_url: string | null
 
     // ── Step 2: addresses, ID, family ────────────────────────────────────
@@ -191,6 +193,7 @@ export function defaultApplyFormValues(): ApplyFormValues {
         first_name_th: '', last_name_th: '',
         first_name_en: '', last_name_en: '', nickname: '',
         email: '', phone_mobile: '', phone_home: '',
+        line_id: '', home_location_url: '',
         photo_url: null,
 
         // Step 2
@@ -276,7 +279,7 @@ export const SAVABLE_FIELDS: ReadonlyArray<keyof ApplyFormValues> = [
     // Step 1
     'position_applied', 'expected_salary', 'title_th',
     'first_name_th', 'last_name_th', 'first_name_en', 'last_name_en', 'nickname',
-    'email', 'phone_mobile', 'phone_home',
+    'email', 'phone_mobile', 'phone_home', 'line_id', 'home_location_url',
     // Step 2
     'id_card_address_no', 'id_card_address_moo', 'id_card_address_subdistrict',
     'id_card_address_district', 'id_card_address_province', 'id_card_address_postal',

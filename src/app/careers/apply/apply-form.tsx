@@ -681,6 +681,21 @@ function Step1Personal({
                         value={values.phone_home}
                         onChange={v => setField('phone_home', v)}
                     />
+                    <TextField
+                        label="Line ID"
+                        value={values.line_id}
+                        onChange={v => setField('line_id', v)}
+                        placeholder="กรอก Line ID (ถ้ามี)"
+                    />
+                    <div className="col-span-1 sm:col-span-2">
+                        <TextField
+                            label="ลิงก์แผนที่บ้าน หรือ พิกัดที่ตั้ง (Google Maps Link / Coordinates)"
+                            value={values.home_location_url}
+                            onChange={v => setField('home_location_url', v)}
+                            placeholder="เช่น https://maps.app.goo.gl/... หรือ 13.7563, 100.5018"
+                            help="เปิดแอป Google Maps ปักหมุดที่ตั้งบ้านของคุณ กด 'แชร์' แล้วคัดลอกลิงก์มาวางได้"
+                        />
+                    </div>
                 </div>
             </section>
 
@@ -954,6 +969,8 @@ function hydrateValuesFromRow(row: Record<string, unknown>): ApplyFormValues {
         email: str('email'),
         phone_mobile: str('phone_mobile'),
         phone_home: str('phone_home'),
+        line_id: str('line_id'),
+        home_location_url: str('home_location_url'),
         photo_url: row.photo_url ? String(row.photo_url) : null,
 
         // Step 2
