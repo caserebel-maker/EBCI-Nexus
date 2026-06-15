@@ -82,10 +82,48 @@ export async function POST(
         evaluated_at: nowIso,
     }
 
+    // Fetch existing evaluations
+    const { data: app, error: getErr } = await supabaseAdmin
+        .from('job_applications')
+        .select('interview_evaluation')
+        .eq('id', id)
+        .maybeSingle()
+
+    if (getErr) {
+        console.error('[applicants/evaluate] fetch error:', getErr)
+        return NextResponse.json({ error: getErr.message }, { status: 500 })
+    }
+    if (!app) {
+        return NextResponse.json({ error: 'ไม่พบผู้สมัครรายนี้' }, { status: 404 })
+    }
+
+    // Parse existing evaluations
+    const rawEval = app.interview_evaluation
+    let evaluations: any[] = []
+    if (rawEval) {
+        if (Array.isArray(rawEval)) {
+            evaluations = [...rawEval]
+        } else if (typeof rawEval === 'object') {
+            const obj = rawEval as Record<string, unknown>
+            if (Array.isArray(obj.factors)) {
+                evaluations = [rawEval]
+            }
+        }
+    }
+
+    // Upsert current evaluator's evaluation
+    const evaluatorId = session.employeeId ?? session.id
+    const existingIndex = evaluations.findIndex(e => e && e.evaluated_by === evaluatorId)
+    if (existingIndex > -1) {
+        evaluations[existingIndex] = evaluation
+    } else {
+        evaluations.push(evaluation)
+    }
+
     const { error: upErr } = await supabaseAdmin
         .from('job_applications')
         .update({
-            interview_evaluation: evaluation,
+            interview_evaluation: evaluations,
             updated_at: nowIso,
         })
         .eq('id', id)

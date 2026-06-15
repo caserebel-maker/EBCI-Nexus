@@ -32,13 +32,14 @@ interface Props {
         house_registration_url: string | null
     }
     otherDocuments: Array<{ name?: string; url?: string | null }>
-    savedEvaluation: SavedEvaluation | null
+    savedEvaluations: SavedEvaluation[]
+    currentUserId: string
 }
 
 type TabKey = 'personal' | 'education' | 'skills'
 
 export function ApplicantDetailView({
-    application: a, id, refreshedFiles, otherDocuments, savedEvaluation,
+    application: a, id, refreshedFiles, otherDocuments, savedEvaluations, currentUserId,
 }: Props) {
     const [tab, setTab] = useState<TabKey>('personal')
     const [hireOpen, setHireOpen] = useState(false)
@@ -310,7 +311,7 @@ export function ApplicantDetailView({
                     />
                 </div>
                 <div className={cn(tab === 'skills' ? 'block' : 'hidden print:block', 'space-y-5')}>
-                    <SkillsTab a={a} applicationId={id} savedEvaluation={savedEvaluation} />
+                    <SkillsTab a={a} applicationId={id} savedEvaluations={savedEvaluations} currentUserId={currentUserId} />
                 </div>
             </main>
         </div>
@@ -554,11 +555,12 @@ function EducationTab({
 
 // ── Tab 3: Skills + references + eval ───────────────────────────────────
 function SkillsTab({
-    a, applicationId, savedEvaluation,
+    a, applicationId, savedEvaluations, currentUserId,
 }: {
     a: Row
     applicationId: string
-    savedEvaluation: SavedEvaluation | null
+    savedEvaluations: SavedEvaluation[]
+    currentUserId: string
 }) {
     const languages = Array.isArray(a.languages) ? (a.languages as Array<Record<string, string>>) : []
     const vehicles = Array.isArray(a.vehicles) ? (a.vehicles as Array<Record<string, string>>) : []
@@ -705,7 +707,7 @@ function SkillsTab({
                 )}
             </SectionCard>
 
-            <InterviewEvaluation applicationId={applicationId} initial={savedEvaluation} />
+            <InterviewEvaluation applicationId={applicationId} savedEvaluations={savedEvaluations} currentUserId={currentUserId} />
 
             <ReviewNotes
                 applicationId={applicationId}

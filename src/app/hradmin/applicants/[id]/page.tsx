@@ -52,10 +52,8 @@ export default async function ApplicantDetailPage({
         }
     }))
 
-    const savedEvaluation =
-        (a.interview_evaluation && typeof a.interview_evaluation === 'object')
-            ? (a.interview_evaluation as unknown as SavedEvaluation)
-            : null
+    const savedEvaluations = parseEvaluations(a.interview_evaluation)
+    const currentUserId = auth.session.employeeId ?? auth.session.id
 
     return (
         <ApplicantDetailView
@@ -69,7 +67,23 @@ export default async function ApplicantDetailPage({
                 house_registration_url: house,
             }}
             otherDocuments={refreshedOthers}
-            savedEvaluation={savedEvaluation}
+            savedEvaluations={savedEvaluations}
+            currentUserId={currentUserId}
         />
     )
 }
+
+function parseEvaluations(raw: unknown): SavedEvaluation[] {
+    if (!raw) return []
+    if (Array.isArray(raw)) {
+        return raw as SavedEvaluation[]
+    }
+    if (typeof raw === 'object') {
+        const obj = raw as Record<string, unknown>
+        if (Array.isArray(obj.factors)) {
+            return [raw as SavedEvaluation]
+        }
+    }
+    return []
+}
+
