@@ -138,7 +138,6 @@ export default async function AdminDashboard() {
     }
     const deptData = Object.entries(deptMap)
         .sort((a, b) => b[1].value - a[1].value)
-        .slice(0, 8) // top 8 departments
         .map(([name, data]) => ({
             name,
             value: data.value,

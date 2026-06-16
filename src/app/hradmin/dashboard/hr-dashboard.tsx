@@ -48,7 +48,10 @@ const LEAVE_COLORS: Record<string, string> = {
     maternity: '#34D399', // เขียว mint
     ordination:'#FBBF24', // เหลืองทอง
 }
-const CHART_PALETTE = ['#60A5FA', '#34D399', '#FBBF24', '#F472B6', '#A78BFA', '#FB923C']
+const CHART_PALETTE = [
+    '#60A5FA', '#34D399', '#FBBF24', '#F472B6', '#A78BFA',
+    '#FB923C', '#22D3EE', '#F87171', '#C084FC', '#4ADE80',
+]
 const DEPT_COLORS = CHART_PALETTE
 
 // ─── Types ────────────────────────────────────────────────────────────────────
