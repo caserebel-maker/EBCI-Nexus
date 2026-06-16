@@ -353,6 +353,11 @@ function EmployeeRow({ record }: { record: AttendanceRecord }) {
                         )}
                     />
                     <span className="font-semibold text-white text-sm truncate">{displayName}</span>
+                    {record.employeeCode && (
+                        <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-white/10 text-white/70 border border-white/10 leading-none shrink-0">
+                            {record.employeeCode}
+                        </span>
+                    )}
                     {record.workLocation === 'johnson' && (
                         <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-red-600 border border-red-200 leading-none shrink-0">
                             จอห์นสัน

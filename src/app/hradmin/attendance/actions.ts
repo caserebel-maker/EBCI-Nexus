@@ -12,6 +12,7 @@ export interface AttendanceStats {
 
 export interface AttendanceRecord {
     employeeId: string
+    employeeCode: string | null
     employeeName: string
     nickname: string | null
     department: string | null
@@ -40,7 +41,7 @@ export async function getAttendanceForDate(dateStr: string) {
     // 1. Get all active employees
     const { data: employees, error: empError } = await supabaseAdmin
         .from('employees')
-        .select('id, first_name_th, last_name_th, nickname, department, position, photo_url, status, work_location')
+        .select('id, employee_code, first_name_th, last_name_th, nickname, department, position, photo_url, status, work_location')
         .eq('status', 'active')
         .neq('is_advisor', true)
         .order('first_name_th', { ascending: true })
@@ -103,6 +104,7 @@ export async function getAttendanceForDate(dateStr: string) {
 
     const records: AttendanceRecord[] = (employees ?? []).map(emp => ({
         employeeId: emp.id,
+        employeeCode: emp.employee_code ?? null,
         employeeName: `${emp.first_name_th ?? ''} ${emp.last_name_th ?? ''}`.trim() || 'ไม่มีชื่อ',
         nickname: emp.nickname ?? null,
         department: emp.department ?? null,
