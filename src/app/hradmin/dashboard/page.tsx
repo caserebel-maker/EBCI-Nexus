@@ -195,6 +195,7 @@ export default async function AdminDashboard() {
 
     // ─── Work anniversaries this month ───
     const anniversaries = (employees ?? []).filter(e => {
+        if (e.status !== 'active' || e.is_advisor) return false
         if (!e.start_date) return false
         const start = new Date(e.start_date)
         return start.getMonth() + 1 === month && start.getDate() >= now.getDate()
