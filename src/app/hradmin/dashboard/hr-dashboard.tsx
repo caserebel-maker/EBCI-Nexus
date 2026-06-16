@@ -191,7 +191,7 @@ function DeptEmployeesModal({ dept, total, onClose }: { dept: DeptDatum; total: 
             onClick={onClose}
         >
             <div
-                className="w-full max-w-2xl max-h-[84vh] overflow-hidden border border-white/15 shadow-2xl"
+                className="w-full max-w-3xl max-h-[84vh] overflow-hidden border border-white/15 shadow-2xl"
                 style={{
                     background: 'linear-gradient(135deg, rgba(111,39,48,0.96), rgba(78,22,30,0.96))',
                     borderRadius: 16,
@@ -215,7 +215,7 @@ function DeptEmployeesModal({ dept, total, onClose }: { dept: DeptDatum; total: 
                 </div>
 
                 <div className="max-h-[62vh] overflow-y-auto p-3 sm:p-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         {(dept.employees ?? []).map(employee => {
                             const tenure = tenureLabel(employee.start_date)
                             return (
@@ -223,21 +223,21 @@ function DeptEmployeesModal({ dept, total, onClose }: { dept: DeptDatum; total: 
                                     key={employee.id}
                                     className="rounded-xl border border-white/10 bg-white/[0.06] px-3 py-3"
                                 >
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="min-w-0">
-                                            <p className="font-bold text-white truncate">
+                                    <div className="space-y-2">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <p className="font-bold text-white leading-snug min-w-0 break-words">
                                                 {employeeDisplayName(employee)}
                                                 {employee.nickname && (
                                                     <span className="font-semibold text-white/55"> ({employee.nickname})</span>
                                                 )}
                                             </p>
-                                            <p className="text-xs text-white/50 truncate mt-0.5">{employee.title ?? 'ไม่ระบุตำแหน่ง'}</p>
+                                            {employee.employee_code && (
+                                                <span className="text-[11px] font-bold tabular-nums text-white/70 bg-white/10 rounded-md px-2 py-1 shrink-0">
+                                                    {employee.employee_code}
+                                                </span>
+                                            )}
                                         </div>
-                                        {employee.employee_code && (
-                                            <span className="text-[11px] font-bold tabular-nums text-white/70 bg-white/10 rounded-md px-2 py-1 shrink-0">
-                                                {employee.employee_code}
-                                            </span>
-                                        )}
+                                        <p className="text-xs text-white/50 leading-snug break-words">{employee.title ?? 'ไม่ระบุตำแหน่ง'}</p>
                                     </div>
                                     {tenure && <p className="text-[11px] text-white/35 mt-2">{tenure}</p>}
                                 </div>
