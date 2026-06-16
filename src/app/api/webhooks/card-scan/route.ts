@@ -114,8 +114,9 @@ function normalizeScanTime(raw: string): string | null {
  */
 function mapEmployeeCode(code: string): string {
     const trimmed = code.trim()
+    const compact = trimmed.replace(/[\s-]/g, '')
     // Map Arunee's various card scan codes to her DB employee_code '466-64'
-    if (['010466', '010464', '10466', '10464', '0466', '0464', '466', '464'].includes(trimmed)) {
+    if (['010466', '010464', '10466', '10464', '0466', '0464', '466', '464'].includes(compact)) {
         return '466-64'
     }
     return trimmed

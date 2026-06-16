@@ -153,9 +153,15 @@ def format_bangkok_wall_clock(dt):
         return None
     return dt.strftime("%Y-%m-%dT%H:%M:%S")
 
+def map_special_hip_code(raw_code):
+    compact = str(raw_code or "").strip().replace("-", "").replace(" ", "")
+    if compact in {"010466", "010464", "10466", "10464", "0466", "0464", "466", "464"}:
+        return "466-64"
+    return None
+
 def normalize_scan(record, code_map):
     raw_code = str(record.user_id).strip()
-    employee_code = code_map.get(raw_code, raw_code)
+    employee_code = code_map.get(raw_code) or map_special_hip_code(raw_code) or raw_code
     scan_time = format_bangkok_wall_clock(record.timestamp)
     if not employee_code or not scan_time:
         return None

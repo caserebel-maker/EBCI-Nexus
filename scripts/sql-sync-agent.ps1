@@ -68,6 +68,10 @@ if (!$Secret -and !$Once) {
 # Function to parse enrollnumber to employee code
 function Map-EnrollNumber($EnrollNumber) {
     $Str = [string]$EnrollNumber
+    $Compact = $Str.Trim() -replace '[\s-]', ''
+    if (@('010466', '010464', '10466', '10464', '0466', '0464', '466', '464') -contains $Compact) {
+        return '466-64'
+    }
     # Pattern: 700935 -> 009-35
     if ($Str.Length -eq 6 -and $Str.StartsWith("7")) {
         $Code = $Str.Substring(1) # 00935

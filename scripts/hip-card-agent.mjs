@@ -198,6 +198,9 @@ function normalizeHipEmployeeCode(row, codeMap) {
     const mapped = codeMap.get(rawCode) ?? codeMap.get(enroll) ?? codeMap.get(studentCode)
     if (mapped) return { employeeCode: mapped, rawCode }
 
+    const specialMapped = mapSpecialHipCode(rawCode) ?? mapSpecialHipCode(enroll) ?? mapSpecialHipCode(studentCode)
+    if (specialMapped) return { employeeCode: specialMapped, rawCode }
+
     // HIP Ci100S enroll numbers are imported as 6 digits where the first
     // digit is a device prefix and the remaining 5 digits are the EBCI
     // employee code without a hyphen.
@@ -210,6 +213,17 @@ function normalizeHipEmployeeCode(row, codeMap) {
         return { employeeCode: `${studentCode.slice(0, 3)}-${studentCode.slice(3)}`, rawCode }
     }
     return { employeeCode: rawCode, rawCode }
+}
+
+function mapSpecialHipCode(raw) {
+    const value = String(raw || '').trim()
+    const compact = value.replace(/[\s-]/g, '')
+    // Arunee "Annie" Nilbanjong has two physical card IDs from HIP.
+    // Numeric SQL exports can drop the leading zero, so support both shapes.
+    if (['010466', '010464', '10466', '10464', '0466', '0464', '466', '464'].includes(compact)) {
+        return '466-64'
+    }
+    return null
 }
 
 function normalizeHipSqlDate(raw) {
