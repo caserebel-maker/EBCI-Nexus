@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
+import { useEffect, useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
     ArrowLeft, User, Briefcase, Phone, Mail, MapPin,
@@ -41,6 +41,125 @@ function SectionHead({ icon: Icon, label }: { icon: any; label: string }) {
                 <Icon size={16} />
             </div>
             <h2 className="text-[1.05rem] font-semibold text-white tracking-wide">{label}</h2>
+        </div>
+    )
+}
+
+const THAI_MONTHS = [
+    'ม.ค.',
+    'ก.พ.',
+    'มี.ค.',
+    'เม.ย.',
+    'พ.ค.',
+    'มิ.ย.',
+    'ก.ค.',
+    'ส.ค.',
+    'ก.ย.',
+    'ต.ค.',
+    'พ.ย.',
+    'ธ.ค.',
+]
+
+function parseDateParts(value: string) {
+    const [year = '', month = '', day = ''] = value ? value.split('-') : []
+    return { year, month, day }
+}
+
+function getDaysInMonth(year: string, month: string) {
+    const y = Number(year || new Date().getFullYear())
+    const m = Number(month || 1)
+    return new Date(y, m, 0).getDate()
+}
+
+function DatePartsSelect({
+    value,
+    onChange,
+    startYear = 1940,
+    endYear = new Date().getFullYear(),
+}: {
+    value: string
+    onChange: (value: string) => void
+    startYear?: number
+    endYear?: number
+}) {
+    const [parts, setParts] = useState(parseDateParts(value))
+
+    useEffect(() => {
+        setParts(parseDateParts(value))
+    }, [value])
+
+    const years = []
+    for (let year = endYear; year >= startYear; year--) years.push(year)
+
+    const maxDays = getDaysInMonth(parts.year, parts.month)
+    const days = Array.from({ length: maxDays }, (_, i) => i + 1)
+
+    const updatePart = (key: 'day' | 'month' | 'year', rawValue: string) => {
+        const next = { ...parts, [key]: rawValue }
+        const nextMaxDays = getDaysInMonth(next.year, next.month)
+        if (Number(next.day) > nextMaxDays) next.day = String(nextMaxDays).padStart(2, '0')
+        setParts(next)
+
+        if (next.year && next.month && next.day) {
+            onChange(`${next.year}-${next.month}-${next.day}`)
+        } else {
+            onChange('')
+        }
+    }
+
+    return (
+        <div className="space-y-2">
+            <div className="grid grid-cols-3 gap-2">
+                <select
+                    className={selectClass}
+                    value={parts.day}
+                    onChange={(e) => updatePart('day', e.target.value)}
+                    aria-label="วันเกิด: วัน"
+                >
+                    <option value="">วัน</option>
+                    {days.map(day => {
+                        const value = String(day).padStart(2, '0')
+                        return <option key={value} value={value}>{day}</option>
+                    })}
+                </select>
+                <select
+                    className={selectClass}
+                    value={parts.month}
+                    onChange={(e) => updatePart('month', e.target.value)}
+                    aria-label="วันเกิด: เดือน"
+                >
+                    <option value="">เดือน</option>
+                    {THAI_MONTHS.map((month, index) => {
+                        const value = String(index + 1).padStart(2, '0')
+                        return <option key={value} value={value}>{month}</option>
+                    })}
+                </select>
+                <select
+                    className={selectClass}
+                    value={parts.year}
+                    onChange={(e) => updatePart('year', e.target.value)}
+                    aria-label="วันเกิด: ปี ค.ศ."
+                >
+                    <option value="">ปี ค.ศ.</option>
+                    {years.map(year => (
+                        <option key={year} value={year}>
+                            {year}
+                        </option>
+                    ))}
+                </select>
+            </div>
+            {value && (
+                <button
+                    type="button"
+                    onClick={() => {
+                        setParts({ day: '', month: '', year: '' })
+                        onChange('')
+                    }}
+                    className="text-xs font-semibold text-white/55 hover:text-white transition-colors"
+                >
+                    ล้างวันเกิด
+                </button>
+            )}
         </div>
     )
 }
@@ -307,7 +426,10 @@ export function NewEmployeeForm({ departments, supervisors }: Props) {
                     </div>
                     <div>
                         <label className={labelClass}>วันเกิด</label>
-                        <input type="date" className={inputClass} value={form.date_of_birth} onChange={set('date_of_birth')} />
+                        <DatePartsSelect
+                            value={form.date_of_birth}
+                            onChange={(value) => setForm(prev => ({ ...prev, date_of_birth: value }))}
+                        />
                     </div>
                     <div>
                         <label className={labelClass}>เพศ {requiredMark}</label>
