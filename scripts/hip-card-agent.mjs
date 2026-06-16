@@ -209,6 +209,9 @@ function normalizeHipEmployeeCode(row, codeMap) {
         const code = enroll.slice(1)
         return { employeeCode: `${code.slice(0, 3)}-${code.slice(3)}`, rawCode }
     }
+    if (/^\d{5}$/.test(enroll)) {
+        return { employeeCode: `${enroll.slice(0, 3)}-${enroll.slice(3)}`, rawCode }
+    }
     if (/^\d{5}$/.test(studentCode)) {
         return { employeeCode: `${studentCode.slice(0, 3)}-${studentCode.slice(3)}`, rawCode }
     }

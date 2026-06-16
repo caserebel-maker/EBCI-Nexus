@@ -77,6 +77,10 @@ function Map-EnrollNumber($EnrollNumber) {
         $Code = $Str.Substring(1) # 00935
         return "$($Code.Substring(0, 3))-$($Code.Substring(3, 2))" # 009-35
     }
+    # Pattern: 51369 -> 513-69
+    if ($Str.Length -eq 5 -and $Str -match '^\d{5}$') {
+        return "$($Str.Substring(0, 3))-$($Str.Substring(3, 2))"
+    }
     return $Str
 }
 

@@ -161,7 +161,16 @@ def map_special_hip_code(raw_code):
 
 def normalize_scan(record, code_map):
     raw_code = str(record.user_id).strip()
-    employee_code = code_map.get(raw_code) or map_special_hip_code(raw_code) or raw_code
+    mapped = code_map.get(raw_code) or map_special_hip_code(raw_code)
+    if mapped:
+        employee_code = mapped
+    elif len(raw_code) == 6 and raw_code.startswith("7"):
+        code = raw_code[1:]
+        employee_code = f"{code[0:3]}-{code[3:]}"
+    elif len(raw_code) == 5 and raw_code.isdigit():
+        employee_code = f"{raw_code[0:3]}-{raw_code[3:]}"
+    else:
+        employee_code = raw_code
     scan_time = format_bangkok_wall_clock(record.timestamp)
     if not employee_code or not scan_time:
         return None
