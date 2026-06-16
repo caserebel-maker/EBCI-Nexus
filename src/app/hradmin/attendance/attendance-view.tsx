@@ -8,8 +8,9 @@ import { todayBangkokKey } from '@/lib/datetime'
 import { cn } from '@/lib/utils'
 import { formatBangkokTime } from '@/lib/datetime'
 import { getAttendanceForDate, type AttendanceStats, type AttendanceRecord } from './actions'
+import { OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE } from '@/lib/outside-head-office'
 
-type FilterTab = 'all' | 'office' | 'wfh' | 'late' | 'not-checked-in'
+type FilterTab = 'all' | 'office' | 'wfh' | 'outside-head-office' | 'late' | 'not-checked-in'
 
 function isRecordLate(c: any): boolean {
     if (!c) return false
@@ -99,7 +100,7 @@ export function AttendanceView({ initialDate, initialData }: Props) {
         })
     }
 
-    const stats = data?.stats ?? { totalEmployees: 0, officeCount: 0, wfhCount: 0, offsiteCount: 0, notCheckedInCount: 0 }
+    const stats = data?.stats ?? { totalEmployees: 0, officeCount: 0, wfhCount: 0, outsideHeadOfficeCount: 0, offsiteCount: 0, notCheckedInCount: 0 }
     const records = data?.records ?? []
     const lateCount = records.filter(r => isRecordLate(r.checkin)).length
 
@@ -108,6 +109,7 @@ export function AttendanceView({ initialDate, initialData }: Props) {
         if (filter === 'not-checked-in') return !r.checkin
         if (filter === 'office') return r.checkin?.type === 'office'
         if (filter === 'wfh') return r.checkin?.type === 'wfh'
+        if (filter === 'outside-head-office') return r.checkin?.type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
         if (filter === 'late') return isRecordLate(r.checkin)
         return true
     })
@@ -223,10 +225,11 @@ export function AttendanceView({ initialDate, initialData }: Props) {
             </div>
 
             {/* Stats cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
                 <StatCard icon={Users} label="พนักงานทั้งหมด" value={stats.totalEmployees} color="text-white/70" bg="bg-white/5" border="border-white/10" />
                 <StatCard icon={Building} label="เข้าออฟฟิศ" value={stats.officeCount} color="text-emerald-300" bg="bg-emerald-500/10" border="border-emerald-500/30" />
                 <StatCard icon={Home} label="WFH" value={stats.wfhCount} color="text-blue-300" bg="bg-blue-500/10" border="border-blue-500/30" />
+                <StatCard icon={MapPin} label="นอก Head Office" value={stats.outsideHeadOfficeCount} color="text-cyan-300" bg="bg-cyan-500/10" border="border-cyan-500/30" />
                 <StatCard icon={HelpCircle} label="ยังไม่เช็คอิน" value={stats.notCheckedInCount} color="text-amber-300" bg="bg-amber-500/10" border="border-amber-500/30" />
             </div>
 
@@ -241,6 +244,9 @@ export function AttendanceView({ initialDate, initialData }: Props) {
                     </FilterTabBtn>
                     <FilterTabBtn active={filter === 'wfh'} onClick={() => setFilter('wfh')} count={stats.wfhCount}>
                         🏠 WFH
+                    </FilterTabBtn>
+                    <FilterTabBtn active={filter === 'outside-head-office'} onClick={() => setFilter('outside-head-office')} count={stats.outsideHeadOfficeCount}>
+                        📍 นอก Head Office
                     </FilterTabBtn>
                     <FilterTabBtn active={filter === 'late'} onClick={() => setFilter('late')} count={lateCount}>
                         ⏰ เข้างานสาย
@@ -384,6 +390,8 @@ function EmployeeRow({ record }: { record: AttendanceRecord }) {
                                 <><Building size={12} className="text-emerald-300" /><span className="text-emerald-300 font-semibold">ออฟฟิศ</span></>
                             ) : c.type === 'wfh' ? (
                                 <><Home size={12} className="text-blue-300" /><span className="text-blue-300 font-semibold">WFH</span></>
+                            ) : c.type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE ? (
+                                <><MapPin size={12} className="text-cyan-300" /><span className="text-cyan-300 font-semibold">นอก Head Office</span></>
                             ) : (
                                 <span className="text-white/50">{c.type}</span>
                             )}

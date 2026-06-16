@@ -10,6 +10,12 @@ import { checkWfhEligibility } from '@/lib/wfh-eligibility'
 import { bangkokTodayIso } from '@/lib/leave-validations'
 import { resolveLeaveApprover } from '@/lib/leave-approval'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
+import {
+    OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE,
+    isOutsideHeadOfficeEmployee,
+} from '@/lib/outside-head-office'
+
+type CheckInType = 'office' | 'wfh' | 'field' | typeof OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
 
 // Helper: resolve employee_id from session (with email fallback for legacy users)
 async function getEmployeeId(): Promise<string | null> {
@@ -31,7 +37,7 @@ async function getEmployeeId(): Promise<string | null> {
 
 export interface CheckInPayload {
     /**
-     * Three modes:
+     * Four modes:
      *   office — must be inside the office geofence (default).
      *   wfh    — at home, no GPS validation, GPS optional.
      *   field  — anywhere off-site (customer meeting, delivery,
@@ -41,8 +47,11 @@ export interface CheckInPayload {
      *            employee on every day; soft accountability is
      *            handled by the HR review dashboard, not by gating
      *            access at this layer.
+     *   outside_head_office — assigned employees who normally work
+     *            outside EBCI Head Office. Captures GPS, skips WFH
+     *            approval, and is not counted as WFH.
      */
-    type: 'office' | 'wfh' | 'field'
+    type: CheckInType
     // GPS is required for office check-in (gated client-side) but
     // optional for WFH where the user might be on a desktop without
     // location services. Server validates type==='office' branch
@@ -80,6 +89,12 @@ export async function checkIn(payload: CheckInPayload) {
         return { error: 'ไม่พบข้อมูลพนักงาน — กรุณาติดต่อ HR' }
     }
 
+    const { data: employeeForCheckin } = await supabaseAdmin
+        .from('employees')
+        .select('employee_code, work_location')
+        .eq('id', employeeId)
+        .maybeSingle()
+
     // ── §1.3 Leave-day suppression ─────────────────────────────────────────
     // If the employee has an approved (full-day) leave that covers today,
     // refuse the check-in attempt. Half-day leaves still allow check-in
@@ -105,6 +120,15 @@ export async function checkIn(payload: CheckInPayload) {
             return {
                 error: 'วันนี้ยังไม่ได้รับอนุมัติให้ WFH — กรุณาส่งคำขอ WFH ผ่าน /portal/wfh ก่อน',
             }
+        }
+    }
+
+    if (
+        payload.type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE &&
+        !isOutsideHeadOfficeEmployee(employeeForCheckin)
+    ) {
+        return {
+            error: 'บัญชีนี้ยังไม่มีสิทธิ์เช็คอินนอก Head Office — กรุณาติดต่อ HR',
         }
     }
 
@@ -147,6 +171,9 @@ export async function checkIn(payload: CheckInPayload) {
     }
     if (payload.type === 'field' && !hasGps) {
         return { error: 'ต้องมีสัญญาณ GPS สำหรับเช็คอินภาคสนาม — เปิด location services แล้วลองใหม่' }
+    }
+    if (payload.type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE && !hasGps) {
+        return { error: 'ต้องมีสัญญาณ GPS สำหรับเช็คอินนอก Head Office — เปิด location services แล้วลองใหม่' }
     }
     if (hasGps && payload.accuracy !== null && payload.accuracy > 100) {
         return { error: `สัญญาณ GPS ไม่แม่นยำพอ (${Math.round(payload.accuracy)} ม.) กรุณาไปยังที่โล่งแจ้งและลองใหม่` }
@@ -199,7 +226,7 @@ export async function checkIn(payload: CheckInPayload) {
         : null
 
     // Determine actual type based on GPS vs user intent.
-    let actualType: 'office' | 'wfh' | 'field' = payload.type
+    let actualType: CheckInType = payload.type
     if (payload.type === 'office' && distance !== null && distance > location.radius_meters) {
         // User claims office but GPS says not near.
         return {
@@ -222,7 +249,9 @@ export async function checkIn(payload: CheckInPayload) {
             longitude: payload.longitude,
             accuracy_meters: payload.accuracy,
             distance_from_office: distance,
-            notes: trimmedNote || null,
+            notes: payload.type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
+                ? (trimmedNote || 'ประจำงานนอก Head Office')
+                : (trimmedNote || null),
             ip_address: ipAddress,
             source: 'web',
             late_minutes: lateMinutes,

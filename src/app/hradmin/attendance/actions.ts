@@ -1,11 +1,13 @@
 'use server'
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE } from '@/lib/outside-head-office'
 
 export interface AttendanceStats {
     totalEmployees: number
     officeCount: number
     wfhCount: number
+    outsideHeadOfficeCount: number
     offsiteCount: number
     notCheckedInCount: number
 }
@@ -117,6 +119,7 @@ export async function getAttendanceForDate(dateStr: string) {
     // 4. Compute stats
     let officeCount = 0
     let wfhCount = 0
+    let outsideHeadOfficeCount = 0
     let offsiteCount = 0
     let notCheckedInCount = 0
 
@@ -127,6 +130,8 @@ export async function getAttendanceForDate(dateStr: string) {
             officeCount++
         } else if (r.checkin.type === 'wfh') {
             wfhCount++
+        } else if (r.checkin.type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE) {
+            outsideHeadOfficeCount++
         } else {
             offsiteCount++
         }
@@ -136,6 +141,7 @@ export async function getAttendanceForDate(dateStr: string) {
         totalEmployees: records.length,
         officeCount,
         wfhCount,
+        outsideHeadOfficeCount,
         offsiteCount,
         notCheckedInCount,
     }

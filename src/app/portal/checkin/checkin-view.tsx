@@ -16,6 +16,13 @@ import type { WfhEligibility } from '@/lib/wfh-eligibility-shared'
 import { WORK_SCHEDULE, HALF_DAY_RULES } from '@/lib/leave-constants'
 import Link from 'next/link'
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog'
+import {
+    OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE,
+    getCheckinTypeDisplay,
+    getCheckinTypeLabel,
+} from '@/lib/outside-head-office'
+
+type CheckInType = 'office' | 'wfh' | 'field' | typeof OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
 
 interface Office {
     name: string
@@ -57,11 +64,19 @@ interface Props {
      *  to request it. The checkIn server action enforces the same
      *  rule, so this is UX gating, not security. */
     wfhEligibility: WfhEligibility
+    outsideHeadOfficeEligible: boolean
 }
 
 type GPSState = 'idle' | 'requesting' | 'success' | 'error'
 
-export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, wfhEligibility }: Props) {
+export function CheckinView({
+    office,
+    todayCheckin,
+    leaveToday,
+    cardScanToday,
+    wfhEligibility,
+    outsideHeadOfficeEligible,
+}: Props) {
     const confirm = useConfirmDialog()
     const [gpsState, setGpsState] = useState<GPSState>('idle')
     const [gps, setGps] = useState<{ lat: number; lng: number; accuracy: number } | null>(null)
@@ -168,11 +183,34 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
         setTimeout(() => setToast(null), 5000)
     }
 
-    const handleCheckin = async (type: 'office' | 'wfh' | 'field', notes?: string) => {
-        if ((type === 'office' || type === 'field') && !gps) {
+    const handleCheckin = async (type: CheckInType, notes?: string) => {
+        if ((type === 'office' || type === 'field' || type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE) && !gps) {
             showToast('error', 'กรุณารอระบบตรวจตำแหน่งก่อน')
             return
         }
+        const label = getCheckinTypeLabel(type)
+        const ok = await confirm({
+            title: `ยืนยันเช็คอิน${label}?`,
+            body:
+                type === 'wfh'
+                    ? 'ใช้เฉพาะวันที่บริษัทประกาศ WFH หรือคำขอ WFH ของคุณได้รับอนุมัติแล้ว'
+                    : type === 'field'
+                        ? 'ระบบจะบันทึกเวลา ตำแหน่ง GPS และปลายทาง/เหตุผลที่คุณระบุ'
+                        : type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
+                            ? 'สำหรับพนักงานที่ได้รับมอบหมายให้ปฏิบัติงานประจำนอกสำนักงานใหญ่'
+                            : 'ระบบจะบันทึกเวลาเข้างานและตำแหน่ง GPS ของคุณ',
+            summary: (
+                <div className="space-y-1">
+                    <p>📍 ประเภท: {label}</p>
+                    {gps && <p>🎯 ความแม่นยำ GPS: ±{Math.round(gps.accuracy)} ม.</p>}
+                    {notes && <p>📝 หมายเหตุ: {notes}</p>}
+                    {lateMinutes > 0 && <p>⏱ มาสาย {lateMinutes} นาที</p>}
+                </div>
+            ),
+            confirmLabel: 'ยืนยันเช็คอิน',
+        })
+        if (!ok) return
+
         setLoading(true)
         const result = await checkIn({
             type,
@@ -190,6 +228,7 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
             const successMsg =
                 type === 'office' ? 'เช็คอินออฟฟิศสำเร็จ'
               : type === 'wfh'    ? 'เช็คอิน WFH สำเร็จ'
+              : type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE ? 'เช็คอินนอก Head Office สำเร็จ'
               :                     'เช็คอินภาคสนามสำเร็จ'
             showToast('success', successMsg)
             setTimeout(() => window.location.reload(), 1500)
@@ -207,10 +246,7 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
 
     const handleCheckout = async () => {
         if (!todayCheckin) return
-        const checkinLabel =
-            todayCheckin.type === 'office' ? 'ออฟฟิศ'
-          : todayCheckin.type === 'field' ? 'ภาคสนาม'
-          : 'WFH'
+        const checkinLabel = getCheckinTypeLabel(todayCheckin.type)
         const ok = await confirm({
             title: `ยืนยันเช็คเอาท์${checkinLabel}?`,
             body: 'หากเช็คเอาท์ตอนนี้ จะไม่สามารถเช็คอินซ้ำในวันเดียวกัน',
@@ -407,9 +443,7 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
                         <div>
                             <p className="text-sm text-emerald-200/70">เช็คอินแล้ว</p>
                             <p className="text-lg font-bold text-white">
-                                {todayCheckin!.type === 'office' ? '🏢 ออฟฟิศ'
-                                  : todayCheckin!.type === 'field' ? '🚛 ภาคสนาม'
-                                  : '🏠 WFH'}
+                                {getCheckinTypeDisplay(todayCheckin!.type)}
                             </p>
                             <p className="text-xs text-white/50 mt-0.5">
                                 {formatBangkokDateTime(todayCheckin!.checked_in_at)}
@@ -448,9 +482,7 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
                         <div>
                             <p className="text-sm text-slate-200/70">เสร็จสิ้นการทำงานวันนี้แล้ว</p>
                             <p className="text-lg font-bold text-white">
-                                {todayCheckin!.type === 'office' ? '🏢 ออฟฟิศ'
-                                  : todayCheckin!.type === 'field' ? '🚛 ภาคสนาม'
-                                  : '🏠 WFH'}
+                                {getCheckinTypeDisplay(todayCheckin!.type)}
                             </p>
                         </div>
                     </div>
@@ -731,6 +763,22 @@ export function CheckinView({ office, todayCheckin, leaveToday, cardScanToday, w
                                             ส่งคำขอ WFH →
                                         </Link>
                                     </div>
+                                </div>
+                            )}
+
+                            {outsideHeadOfficeEligible && (
+                                <div className="space-y-2">
+                                    <button
+                                        onClick={() => handleCheckin(OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE)}
+                                        disabled={loading || gpsState !== 'success'}
+                                        className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all bg-cyan-600/80 hover:bg-cyan-600 text-white border border-cyan-400/40 disabled:opacity-60 disabled:cursor-not-allowed"
+                                    >
+                                        {loading ? <Loader2 className="animate-spin" size={18} /> : <MapPin size={18} />}
+                                        เช็คอินนอก Head Office
+                                    </button>
+                                    <p className="text-xs text-cyan-100/80 text-center">
+                                        สำหรับพนักงานประจำพื้นที่นอกสำนักงานใหญ่ ไม่ต้องขอ WFH ก่อน
+                                    </p>
                                 </div>
                             )}
 

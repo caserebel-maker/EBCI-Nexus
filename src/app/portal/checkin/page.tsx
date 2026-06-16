@@ -8,6 +8,7 @@ import { checkWfhEligibility } from '@/lib/wfh-eligibility'
 import { bangkokTodayIso } from '@/lib/leave-validations'
 import { CheckinView } from './checkin-view'
 import { getTodayCheckin } from './actions'
+import { isOutsideHeadOfficeEmployee } from '@/lib/outside-head-office'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,13 +40,19 @@ export default async function CheckinPage() {
     // (company-wide announcement OR personal approved request). Stops
     // employees from self-checking-in WFH at random.
     const employeeId = await resolveSessionEmployeeId(session)
-    const [leaveToday, cardScanToday, wfhEligibility] = employeeId
+    const [leaveToday, cardScanToday, wfhEligibility, employeeForCheckin] = employeeId
         ? await Promise.all([
             getLeaveTodayInfo(employeeId),
             getCardScanTodayInfo(employeeId),
             checkWfhEligibility(employeeId, bangkokTodayIso()),
+            supabaseAdmin
+                .from('employees')
+                .select('employee_code, work_location')
+                .eq('id', employeeId)
+                .maybeSingle()
+                .then(({ data }) => data),
         ])
-        : [null, null, { allowed: false, source: null } as const]
+        : [null, null, { allowed: false, source: null } as const, null]
 
     return (
         <CheckinView
@@ -54,6 +61,7 @@ export default async function CheckinPage() {
             leaveToday={leaveToday}
             cardScanToday={cardScanToday}
             wfhEligibility={wfhEligibility}
+            outsideHeadOfficeEligible={isOutsideHeadOfficeEmployee(employeeForCheckin)}
         />
     )
 }
