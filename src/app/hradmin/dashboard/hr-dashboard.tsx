@@ -59,6 +59,23 @@ interface Metrics {
     pendingLeaves: number
     expiringContracts: number
 }
+
+interface DeptEmployee {
+    id: string
+    employee_code: string | null
+    first_name_th: string | null
+    last_name_th: string | null
+    nickname: string | null
+    title: string | null
+    start_date: string | null
+}
+
+interface DeptDatum {
+    name: string
+    value: number
+    employees?: DeptEmployee[]
+}
+
 interface Props {
     metrics: Metrics
     attendanceStats?: {
@@ -68,7 +85,7 @@ interface Props {
         totalActive: number
     }
     leaveChartData: any[]
-    deptData: any[]
+    deptData: DeptDatum[]
     attendanceData: any[]
     pendingLeaves: any[]
     contractsExpiring: any[]
@@ -130,8 +147,109 @@ function LeaveTooltip({ active, payload, label }: any) {
 }
 
 // ─── Donut chart with center label & right legend ─────────────────────────────
-function DeptDonut({ data, total }: { data: any[]; total: number }) {
+function employeeDisplayName(employee: DeptEmployee) {
+    const name = `${employee.first_name_th ?? ''} ${employee.last_name_th ?? ''}`.trim()
+    return name || employee.nickname || employee.employee_code || 'ไม่ระบุชื่อ'
+}
+
+function tenureLabel(startDate: string | null) {
+    if (!startDate) return null
+    const start = new Date(startDate)
+    if (isNaN(start.getTime())) return null
+    const now = new Date()
+    let months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth())
+    if (now.getDate() < start.getDate()) months -= 1
+    if (months < 0) return null
+    const years = Math.floor(months / 12)
+    const remMonths = months % 12
+    if (years > 0 && remMonths > 0) return `อายุงาน ${years} ปี ${remMonths} เดือน`
+    if (years > 0) return `อายุงาน ${years} ปี`
+    return `อายุงาน ${remMonths} เดือน`
+}
+
+function DeptEmployeesModal({ dept, total, onClose }: { dept: DeptDatum; total: number; onClose: () => void }) {
+    const pct = total > 0 ? Math.round(dept.value / total * 100) : 0
+
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+        window.addEventListener('keydown', onKey)
+        const prev = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        return () => {
+            window.removeEventListener('keydown', onKey)
+            document.body.style.overflow = prev
+        }
+    }, [onClose])
+
+    return (
+        <div
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+            style={{ background: 'rgba(20,5,8,0.72)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }}
+            onClick={onClose}
+        >
+            <div
+                className="w-full max-w-2xl max-h-[84vh] overflow-hidden border border-white/15 shadow-2xl"
+                style={{
+                    background: 'linear-gradient(135deg, rgba(111,39,48,0.96), rgba(78,22,30,0.96))',
+                    borderRadius: 16,
+                }}
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4">
+                    <div className="min-w-0">
+                        <p className="text-xs font-bold text-white/45">รายชื่อพนักงานในฝ่าย</p>
+                        <h3 className="text-xl font-black text-white leading-snug mt-1">{dept.name}</h3>
+                        <p className="text-sm text-white/55 mt-1">{dept.value} คน · {pct}% ของพนักงานทั้งหมด</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/18 text-white/70 hover:text-white flex items-center justify-center transition-colors shrink-0"
+                        aria-label="ปิด"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+
+                <div className="max-h-[62vh] overflow-y-auto p-3 sm:p-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {(dept.employees ?? []).map(employee => {
+                            const tenure = tenureLabel(employee.start_date)
+                            return (
+                                <div
+                                    key={employee.id}
+                                    className="rounded-xl border border-white/10 bg-white/[0.06] px-3 py-3"
+                                >
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <p className="font-bold text-white truncate">
+                                                {employeeDisplayName(employee)}
+                                                {employee.nickname && (
+                                                    <span className="font-semibold text-white/55"> ({employee.nickname})</span>
+                                                )}
+                                            </p>
+                                            <p className="text-xs text-white/50 truncate mt-0.5">{employee.title ?? 'ไม่ระบุตำแหน่ง'}</p>
+                                        </div>
+                                        {employee.employee_code && (
+                                            <span className="text-[11px] font-bold tabular-nums text-white/70 bg-white/10 rounded-md px-2 py-1 shrink-0">
+                                                {employee.employee_code}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {tenure && <p className="text-[11px] text-white/35 mt-2">{tenure}</p>}
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function DeptDonut({ data, total }: { data: DeptDatum[]; total: number }) {
     const [activeIndex, setActiveIndex] = useState<number | null>(null)
+    const [selectedDept, setSelectedDept] = useState<DeptDatum | null>(null)
 
     return (
         <div className="flex flex-col items-center gap-4">
@@ -147,6 +265,7 @@ function DeptDonut({ data, total }: { data: any[]; total: number }) {
                             dataKey="value"
                             onMouseEnter={(_, i) => setActiveIndex(i)}
                             onMouseLeave={() => setActiveIndex(null)}
+                            onClick={(_, i) => setSelectedDept(data[i])}
                             strokeWidth={0}
                             isAnimationActive={false}
                         >
@@ -162,7 +281,8 @@ function DeptDonut({ data, total }: { data: any[]; total: number }) {
                         <Tooltip
                             formatter={(v, name) => {
                                 const num = Number(v ?? 0)
-                                return [`${num} คน (${Math.round(num / total * 100)}%)`, String(name ?? '')]
+                                const pct = total > 0 ? Math.round(num / total * 100) : 0
+                                return [`${num} คน (${pct}%)`, String(name ?? '')]
                             }}
                             contentStyle={{ background: 'rgba(20,5,8,0.96)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, fontSize: 13 }}
                             itemStyle={{ color: '#fff' }}
@@ -179,23 +299,34 @@ function DeptDonut({ data, total }: { data: any[]; total: number }) {
             {/* Legend */}
             <div className="flex-1 min-w-0 space-y-1.5 overflow-hidden">
                 {data.map((d, i) => {
-                    const pct = Math.round(d.value / total * 100)
+                    const pct = total > 0 ? Math.round(d.value / total * 100) : 0
                     return (
-                        <div
+                        <button
                             key={i}
-                            className={cn('flex items-center gap-2 rounded-lg px-2 py-1 transition-colors cursor-default',
+                            type="button"
+                            className={cn('w-full flex items-center gap-2 rounded-lg px-2 py-1 transition-colors text-left',
                                 activeIndex === i ? 'bg-white/10' : 'hover:bg-white/5')}
                             onMouseEnter={() => setActiveIndex(i)}
                             onMouseLeave={() => setActiveIndex(null)}
+                            onClick={() => setSelectedDept(d)}
+                            aria-label={`ดูรายชื่อ${d.name}`}
                         >
                             <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: DEPT_COLORS[i % DEPT_COLORS.length] }} />
                             <span className="text-sm text-white/70 truncate flex-1">{d.name}</span>
                             <span className="text-sm font-bold text-white shrink-0">{d.value}</span>
                             <span className="text-xs text-white/40 shrink-0 w-8 text-right">{pct}%</span>
-                        </div>
+                        </button>
                     )
                 })}
             </div>
+
+            {selectedDept && (
+                <DeptEmployeesModal
+                    dept={selectedDept}
+                    total={total}
+                    onClose={() => setSelectedDept(null)}
+                />
+            )}
         </div>
     )
 }

@@ -109,16 +109,45 @@ export default async function AdminDashboard() {
     // so counting people who have already left would inflate departments
     // that had high turnover. Matches the headline metric card which now
     // also uses the active count as its main number.
-    const deptMap: Record<string, number> = {}
+    const deptMap: Record<string, {
+        value: number
+        employees: Array<{
+            id: string
+            employee_code: string | null
+            first_name_th: string | null
+            last_name_th: string | null
+            nickname: string | null
+            title: string | null
+            start_date: string | null
+        }>
+    }> = {}
     for (const e of employees ?? []) {
         if (!e.department) continue
         if (e.status !== 'active' || e.is_advisor) continue
-        deptMap[e.department] = (deptMap[e.department] ?? 0) + 1
+        if (!deptMap[e.department]) deptMap[e.department] = { value: 0, employees: [] }
+        deptMap[e.department].value += 1
+        deptMap[e.department].employees.push({
+            id: e.id,
+            employee_code: e.employee_code,
+            first_name_th: e.first_name_th,
+            last_name_th: e.last_name_th,
+            nickname: e.nickname,
+            title: e.title,
+            start_date: e.start_date,
+        })
     }
     const deptData = Object.entries(deptMap)
-        .sort((a, b) => b[1] - a[1])
+        .sort((a, b) => b[1].value - a[1].value)
         .slice(0, 8) // top 8 departments
-        .map(([name, value]) => ({ name, value }))
+        .map(([name, data]) => ({
+            name,
+            value: data.value,
+            employees: data.employees.sort((a, b) => {
+                const codeA = a.employee_code ?? ''
+                const codeB = b.employee_code ?? ''
+                return codeA.localeCompare(codeB, 'th') || `${a.first_name_th ?? ''}${a.last_name_th ?? ''}`.localeCompare(`${b.first_name_th ?? ''}${b.last_name_th ?? ''}`, 'th')
+            }),
+        }))
 
     // ─── Build monthly leave bar chart ───
     const monthlyLeave: Record<string, Record<string, number>> = {}
