@@ -1,48 +1,22 @@
 /**
- * Canonical department list — source of truth for all dropdowns.
+ * Canonical department list for employee forms and filters.
  *
- * 2026-05-08 — ม๊อด consolidated + renamed per beta feedback:
- *   • +แผนกเอกสารนำเข้า, +แผนกเอกสารส่งออก  (split from แผนกตรวจปล่อย)
- *   • แผนก IT → แผนก MIS
- *   • หน่วยขนส่ง → LSC logistics and supply chain
- *   • แผนกบัญชี + แผนกการเงิน → แผนกบัญชีและการเงิน
- *   • แผนกบริหารงานบุคคล + แผนกธุรการ-แม่บ้าน → Human Resources and Purchasing
- *   • แผนกรับ-ส่งเอกสาร → แผนกเอกสารนำเข้า (merged in)
- *   • โครงการJOHNSON, โครงการเฉพาะกิจ — removed; employees moved to Unassigned
- *
- * The SQL migration `20260508_consolidate_departments.sql` moves every
- * affected `employees.department` row to the new canonical value
- * before this list goes live in prod.
- *
- * Add new departments here and they appear across the system
- * automatically (filter dropdown, edit profile, new-employee form,
- * and any other consumer of `DEPARTMENTS`).
+ * Keep this at the "ฝ่าย/สำนัก" reporting level used by the HR dashboard
+ * donut chart. Do not mix old sub-department labels such as "แผนก MIS" or
+ * "แผนกเอกสารนำเข้า" back into global dropdowns; those make HR pick from
+ * multiple names for the same reporting group.
  */
 export const DEPARTMENTS = [
-    // Largest first — saves a scroll for the most common pick.
-    'แผนกประสานงานเอกสาร',                 // 16 active
-    'แผนกบัญชีและการเงิน',                  // 7  (was: บัญชี 3 + การเงิน 4)
-    'ที่ปรึกษา',                            // 6
-    'Human Resources and Purchasing',       // ~3 (HR + ธุรการ + แม่บ้าน)
-    'แผนกตรวจปล่อย-นำเข้า',                // 4
-    'สำนักกรรมการผู้จัดการ',               // 4
-    'แผนกเอกสารนำเข้า',                    // ~3 (NEW — incl. former รับ-ส่งเอกสาร)
-    'แผนก MIS',                            // 2  (renamed from แผนก IT)
-
-    // Smaller departments — alphabetised within this block so the
-    // order is stable when headcounts shift.
-    'LSC logistics and supply chain',      // renamed from หน่วยขนส่ง
-    'ฝ่ายนวัตกรรมและเทคโนโลยี',
+    'ฝ่ายประสานงานเอกสาร-นำเข้า',
+    'ฝ่ายบัญชี-การเงิน',
+    'ฝ่ายประสานงานเอกสาร-ส่งออก',
     'ฝ่ายปฏิบัติพิธีการศุลกากร',
-    'แผนกการตลาดและการขาย',
-    'แผนกเอกสารส่งออก',                    // NEW
-    'แผนกตรวจปล่อย - ส่งออก',
-    'แผนกทำฟอร์ม',
-    'แผนกโลจิสติกส์และซัพพลายเชน',
-    'สำนักประธานกรรมการ',
-
-    // Catch-all for new hires before HR assigns them a real department.
-    'Unassigned',
+    'สำนักกรรมการผู้จัดการ',
+    'ฝ่ายเทคโนโลยีและสารสนเทศ',
+    'ฝ่ายทรัพยากรบุคคลและธุรการ',
+    'ฝ่ายประสานงานข้อมูลและตรวจสอบ',
+    'ฝ่ายนวัตกรรมและเทคโนโลยี',
+    'ที่ปรึกษา',
 ] as const
 
 export type Department = (typeof DEPARTMENTS)[number]

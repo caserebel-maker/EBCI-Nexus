@@ -18,11 +18,6 @@ export default async function NewEmployeePage() {
         .eq('status', 'active')
         .order('first_name_th', { ascending: true })
 
-    // Merge DB departments with canonical list (dedup + sort)
-    const dbDepts = (empData ?? []).map((e: any) => e.department as string).filter(Boolean)
-    const departments = Array.from(new Set([...DEPARTMENTS, ...dbDepts]))
-        .sort((a, b) => a.localeCompare(b, 'th'))
-
     const supervisors = (empData ?? []).map((e: any) => ({
         id: e.id,
         name: `${e.first_name_th} ${e.last_name_th}`,
@@ -30,7 +25,7 @@ export default async function NewEmployeePage() {
 
     return (
         <div className="space-y-6">
-            <NewEmployeeForm departments={departments} supervisors={supervisors} />
+            <NewEmployeeForm departments={[...DEPARTMENTS]} supervisors={supervisors} />
         </div>
     )
 }

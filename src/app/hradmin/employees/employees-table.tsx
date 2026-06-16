@@ -150,9 +150,7 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
 
     const tabData = activeTab === 'active' ? activeEmployees : inactiveEmployees
 
-    const dbDepts = tabData.map(e => e.department).filter(Boolean)
-    const departments = Array.from(new Set([...DEPARTMENTS, ...dbDepts])).sort((a, b) =>
-        a.localeCompare(b, 'th'))
+    const departments = [...DEPARTMENTS]
 
     // Year + reason filter dropdowns are only meaningful on the inactive
     // tab. Compute their option lists once from the visible tab data so
