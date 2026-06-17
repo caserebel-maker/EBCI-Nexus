@@ -4,7 +4,7 @@
 
 - Repo: `caserebel-maker/EBCI-Nexus`
 - Branch: `main`
-- Latest pushed commit at handoff: `ccacdea fix(hradmin): compact absence dates in insights table`
+- Latest feature commit at handoff: `ee57005 fix(hradmin): compact absence dates in insights table`
 - Production URL: `https://ebci-nexus.vercel.app`
 - Worktree note: unrelated untracked local files are still present and intentionally not committed:
   - `.claude/launch.json`
@@ -132,7 +132,7 @@ Changed:
 
 ### 6. Attendance Insights Table Polish
 
-Commit: `ccacdea fix(hradmin): compact absence dates in insights table`
+Commit: `ee57005 fix(hradmin): compact absence dates in insights table`
 
 Issue found from screenshot:
 
@@ -192,9 +192,9 @@ git pull origin main
 git log --oneline -3
 ```
 
-Expected top commits:
+Expected recent commits include:
 
-- `ccacdea fix(hradmin): compact absence dates in insights table`
+- `ee57005 fix(hradmin): compact absence dates in insights table`
 - `5a24ad1 docs: add Jun 18 HR permissions handoff`
 - `ab69bba chore(nav): surface system permissions settings`
 
