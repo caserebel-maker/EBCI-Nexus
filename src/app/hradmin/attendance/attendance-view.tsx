@@ -162,6 +162,13 @@ export function AttendanceView({ initialDate, initialData }: Props) {
                         <span className="hidden sm:inline">ความผิดปกติ</span>
                     </Link>
                     <Link
+                        href="/hradmin/attendance/card-scans"
+                        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-sky-300/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-200 transition-all"
+                    >
+                        <Clock size={14} />
+                        <span className="hidden sm:inline">ล็อกแตะบัตรดิบ</span>
+                    </Link>
+                    <Link
                         href="/hradmin/attendance/import"
                         className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-amber-300/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-200 transition-all"
                     >
