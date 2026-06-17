@@ -38,6 +38,62 @@ function daysInclusive(start: string, end: string): number {
     return Math.round((e - s) / 86_400_000) + 1
 }
 
+type WfhOverlapStatus = 'pending' | 'approved'
+
+async function findOverlappingWfhRequest(input: {
+    employeeId: string
+    startDate: string
+    endDate: string
+    statuses: WfhOverlapStatus[]
+    excludeId?: string
+}): Promise<{
+    id: string
+    reference_code: string
+    status: WfhOverlapStatus
+    start_date: string
+    end_date: string
+} | null> {
+    let query = supabaseAdmin
+        .from('wfh_requests')
+        .select('id, reference_code, status, start_date, end_date')
+        .eq('employee_id', input.employeeId)
+        .in('status', input.statuses)
+        .lte('start_date', input.endDate)
+        .gte('end_date', input.startDate)
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+    if (input.excludeId) {
+        query = query.neq('id', input.excludeId)
+    }
+
+    const { data, error } = await query.maybeSingle()
+    if (error) {
+        console.error('[wfh] overlap lookup failed:', error)
+        return null
+    }
+    return data as {
+        id: string
+        reference_code: string
+        status: WfhOverlapStatus
+        start_date: string
+        end_date: string
+    } | null
+}
+
+function overlapError(row: {
+    reference_code: string
+    status: WfhOverlapStatus
+    start_date: string
+    end_date: string
+}): string {
+    const statusLabel = row.status === 'approved' ? 'อนุมัติแล้ว' : 'รออนุมัติ'
+    const dateLabel = row.start_date === row.end_date
+        ? row.start_date
+        : `${row.start_date} ถึง ${row.end_date}`
+    return `มีคำขอ WFH ${statusLabel} ที่ทับวันเดียวกันอยู่แล้ว (${row.reference_code}: ${dateLabel}) กรุณายกเลิกคำขอเดิมก่อนส่งใหม่`
+}
+
 export interface SubmitWfhInput {
     employeeId: string
     startDate: string                  // YYYY-MM-DD
@@ -64,6 +120,16 @@ export async function submitWfhRequest(
 
     const totalDays = daysInclusive(input.startDate, input.endDate)
     if (totalDays === 0) return { error: 'จำนวนวันต้องมากกว่า 0' }
+
+    const overlap = await findOverlappingWfhRequest({
+        employeeId: input.employeeId,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        statuses: ['pending', 'approved'],
+    })
+    if (overlap) {
+        return { error: overlapError(overlap), field: 'startDate' }
+    }
 
     // Approver: same chain as leave. If the employee has no approver
     // wired up, surface the same "ติดต่อ HR" message so the user knows
@@ -99,6 +165,9 @@ export async function submitWfhRequest(
         .single()
     if (insErr || !inserted) {
         console.error('[wfh] insert error:', insErr)
+        if (insErr?.message?.includes('duplicate_active_wfh_request')) {
+            return { error: 'มีคำขอ WFH วันที่นี้อยู่แล้ว กรุณายกเลิกคำขอเดิมก่อนส่งใหม่', field: 'startDate' }
+        }
         return { error: 'บันทึกใบขอ WFH ไม่สำเร็จ' }
     }
 
@@ -370,7 +439,7 @@ export async function decideWfhRequest(input: {
 }): Promise<{ ok: true } | { error: string }> {
     const { data: existing, error: lookupErr } = await supabaseAdmin
         .from('wfh_requests')
-        .select('approver_id, status')
+        .select('id, employee_id, approver_id, status, start_date, end_date')
         .eq('id', input.id)
         .maybeSingle()
     if (lookupErr || !existing) return { error: 'ไม่พบใบขอ WFH' }
@@ -379,6 +448,19 @@ export async function decideWfhRequest(input: {
     }
     if (existing.status !== 'pending') {
         return { error: `ใบขอนี้ ${existing.status} แล้ว` }
+    }
+
+    if (input.decision === 'approve') {
+        const overlap = await findOverlappingWfhRequest({
+            employeeId: existing.employee_id as string,
+            startDate: existing.start_date as string,
+            endDate: existing.end_date as string,
+            statuses: ['approved'],
+            excludeId: existing.id as string,
+        })
+        if (overlap) {
+            return { error: overlapError(overlap) }
+        }
     }
 
     const note = input.note?.trim() || null
@@ -403,6 +485,9 @@ export async function decideWfhRequest(input: {
         .eq('id', input.id)
     if (updErr) {
         console.error('[wfh] decision error:', updErr)
+        if (updErr.message?.includes('duplicate_approved_wfh_request')) {
+            return { error: 'อนุมัติไม่ได้ เพราะพนักงานมี WFH ที่อนุมัติแล้วทับวันที่เดียวกัน' }
+        }
         return { error: 'บันทึกการตัดสินใจไม่สำเร็จ' }
     }
 

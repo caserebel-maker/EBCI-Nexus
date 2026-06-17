@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import {
     Home, Plus, X, Loader2, AlertCircle, CheckCircle2, Info, Trash2,
-    Calendar, Clock,
+    Calendar,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -151,6 +151,7 @@ export function WfhView() {
 
             {formOpen && (
                 <NewWfhModal
+                    existingRequests={items}
                     onClose={() => setFormOpen(false)}
                     onSuccess={(msg) => {
                         setFormOpen(false)
@@ -224,8 +225,9 @@ function RequestCard({ request: r, onCancel }: { request: WfhRequest; onCancel?:
 }
 
 function NewWfhModal({
-    onClose, onSuccess,
+    existingRequests, onClose, onSuccess,
 }: {
+    existingRequests: WfhRequest[]
     onClose: () => void
     onSuccess: (msg: string) => void
 }) {
@@ -256,11 +258,22 @@ function NewWfhModal({
     }, [])
 
     const totalDays = daysInclusive(startDate, endDate)
+    const overlappingRequest = useMemo(() => {
+        return existingRequests.find(r => (
+            ['pending', 'approved'].includes(r.status)
+            && r.start_date <= endDate
+            && r.end_date >= startDate
+        )) ?? null
+    }, [endDate, existingRequests, startDate])
     // Submit disabled if no approver wired (chain broken in HR setup) —
     // server would reject anyway, but blocking the button gives a clearer
     // failure mode than waiting for the post-submit error.
     const hasApprover = approver !== null && approver !== 'loading'
-    const canSubmit = totalDays > 0 && reason.trim().length > 0 && totalDays <= 30 && hasApprover
+    const canSubmit = totalDays > 0
+        && reason.trim().length > 0
+        && totalDays <= 30
+        && hasApprover
+        && !overlappingRequest
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -415,6 +428,16 @@ function NewWfhModal({
                         <Info size={14} className="mt-0.5 shrink-0" />
                         <span>เมื่อผู้อนุมัติยืนยันแล้ว สามารถเช็คอิน WFH ผ่านแอปได้ในวันที่กำหนด · ไม่ตัดยอดวันลา</span>
                     </div>
+
+                    {overlappingRequest && (
+                        <div className="rounded-lg p-3 bg-amber-500/15 border border-amber-500/35 text-sm text-amber-100 inline-flex items-start gap-2 w-full leading-relaxed">
+                            <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                            <span>
+                                มีคำขอ WFH วันที่นี้อยู่แล้ว: {overlappingRequest.reference_code}
+                                {' '}({WFH_STATUS_LABEL[overlappingRequest.status]}) กรุณายกเลิกคำขอเดิมก่อนส่งใหม่
+                            </span>
+                        </div>
+                    )}
 
                     {err && (
                         <div className="p-3 rounded-lg border border-red-500/40 bg-red-500/10 text-red-200 text-sm inline-flex items-start gap-2">
