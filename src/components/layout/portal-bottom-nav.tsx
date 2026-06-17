@@ -99,10 +99,12 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         // 4. รับสมัครงาน + 5. ตั้งค่าระบบ group
         { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/hradmin/meeting-room',          icon: DoorOpen, groupLabel: 'อื่น ๆ' },
         { label: 'รับสมัครงาน',   desc: 'จัดการผู้สมัคร',           href: '/hradmin/applicants',            icon: UserPlus },
-        { label: 'ระบบและทรัพยากร', desc: 'Quota + storage',      href: '/hradmin/settings/quota',        icon: Activity },
-        { label: 'รายงาน',         desc: 'CSV exports',           href: '/hradmin/reports',               icon: FileText },
-        { label: 'แบ็กอัพข้อมูล',  desc: 'Download ZIP สำรอง',    href: '/hradmin/settings/backup',       icon: ShieldCheck },
-        { label: 'ตั้งค่าทั่วไป',   desc: 'Permission + ระบบ',     href: '/hradmin/settings',              icon: Settings },
+        { label: 'สิทธิ์การเข้าถึงระบบ', desc: 'กำหนดสิทธิ์แอดมิน', href: '/hradmin/settings/permissions', icon: ShieldCheck },
+        { label: 'Audit log',             desc: 'ประวัติการแก้ไข',    href: '/hradmin/settings/audit',       icon: FileText },
+        { label: 'ระบบและทรัพยากร',      desc: 'Quota + storage',    href: '/hradmin/settings/quota',       icon: Activity },
+        { label: 'รายงาน',                desc: 'CSV exports',        href: '/hradmin/reports',              icon: FileText },
+        { label: 'แบ็กอัพข้อมูล',         desc: 'Download ZIP สำรอง', href: '/hradmin/settings/backup',      icon: ShieldCheck },
+        { label: 'ตั้งค่าทั่วไป',          desc: 'พิกัดออฟฟิศ + ระบบ', href: '/hradmin/settings',             icon: Settings },
         // Mode switching lives in the topbar user-menu dropdown.
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],

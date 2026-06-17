@@ -83,7 +83,7 @@ export function SettingsClient({ initialLocation }: { initialLocation: Location 
                         <ShieldCheck size={18} />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-[15px] font-bold text-white">สิทธิ์ผู้ใช้</p>
+                        <p className="text-[15px] font-bold text-white">สิทธิ์การเข้าถึงระบบ</p>
                         <p className="text-[12px] text-white/55 leading-snug">มอบ/ถอน permission ให้ทีมงาน · มี audit log</p>
                     </div>
                     <ChevronRight size={16} className="text-white/40 group-hover:text-amber-300 transition-colors" />
