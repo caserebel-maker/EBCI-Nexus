@@ -3,7 +3,7 @@ import {
     CalendarDays, ClipboardCheck, ShieldCheck, MapPin, Network, Palmtree,
     ScrollText, BarChart3, Clock, Calendar, Briefcase, User,
     Wallet, CheckCircle, Database, DoorOpen, GitBranch, CalendarHeart, Home,
-    MailWarning, type LucideIcon,
+    MailWarning, AlertTriangle, type LucideIcon,
 } from 'lucide-react'
 import { ROLES, type UserRole } from './roles'
 
@@ -56,6 +56,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
             matchPrefix: ['/hradmin/attendance', '/hradmin/holidays', '/hradmin/reports'],
             children: [
                 { label: 'การเข้างาน',          href: '/hradmin/attendance',                icon: MapPin },
+                { label: 'สถิติขาด ลา มาสาย',  href: '/hradmin/attendance/insights',       icon: AlertTriangle },
                 { label: 'เช็คอินภาคสนาม',      href: '/hradmin/attendance/field',          icon: Briefcase },
                 { label: 'ปฏิทินบริษัท',        href: '/hradmin/holidays',                  icon: CalendarDays },
                 { label: 'ส่งออกข้อมูล (CSV)', href: '/hradmin/reports?tab=attendance',    icon: FileText },

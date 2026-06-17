@@ -687,6 +687,23 @@ export function HRDashboard({
                     {/* Attendance widget */}
                     {attendanceStats && <AttendanceWidget stats={attendanceStats} />}
 
+                    <button
+                        type="button"
+                        onClick={() => router.push('/hradmin/attendance/insights')}
+                        className="w-full rounded-2xl border border-amber-300/20 bg-amber-300/10 hover:bg-amber-300/14 px-4 py-3 text-left transition-colors flex items-center justify-between gap-4"
+                    >
+                        <span className="flex items-center gap-3 min-w-0">
+                            <span className="h-10 w-10 rounded-xl bg-amber-300/14 border border-amber-300/22 flex items-center justify-center shrink-0">
+                                <AlertTriangle size={19} className="text-amber-200" />
+                            </span>
+                            <span className="min-w-0">
+                                <span className="block text-sm font-bold text-white">สถิติขาด ลา มาสาย</span>
+                                <span className="block text-xs text-white/48 mt-0.5 truncate">ดูรายชื่อพนักงานที่ควรติดตามและตักเตือน</span>
+                            </span>
+                        </span>
+                        <span className="text-sm font-bold text-amber-200 shrink-0">เปิดดู →</span>
+                    </button>
+
                     {/* Bar chart – monthly leave */}
                     <div style={glassStyle} className="p-6">
                         <SectionHeader title="สถิติการลารายเดือน (12 เดือนย้อนหลัง)" icon={TrendingUp} />
