@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { UserMinus, Home, Plane, Palmtree, Phone, MapPin, Filter, X, Sparkles } from 'lucide-react'
+import { formatEmployeeName } from '@/lib/format-employee-name'
 
 interface Entry {
     employeeId: string
@@ -193,8 +194,11 @@ function PersonRow({
     entry: Entry
     sectionStyle: typeof SECTION_META[number]
 }) {
-    const fullName = `${e.firstNameTh} ${e.lastNameTh ?? ''}`.trim() || 'พนักงาน'
-    const display = e.nickname?.trim() ? `${e.nickname} (${fullName})` : fullName
+    const display = formatEmployeeName({
+        first_name_th: e.firstNameTh,
+        last_name_th: e.lastNameTh,
+        nickname: e.nickname,
+    }, 'พนักงาน')
 
     return (
         <div className="px-4 py-3 flex items-start gap-3">
@@ -202,7 +206,7 @@ function PersonRow({
                 className="h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
                 style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}
             >
-                {(e.nickname?.trim() || e.firstNameTh).charAt(0)}
+                {(e.firstNameTh || e.lastNameTh || e.nickname || 'พนักงาน').charAt(0)}
             </span>
             <div className="flex-1 min-w-0 space-y-0.5">
                 <p className="text-sm text-white font-semibold truncate">{display}</p>

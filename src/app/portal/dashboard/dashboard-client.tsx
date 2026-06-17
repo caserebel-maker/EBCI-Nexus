@@ -594,8 +594,13 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
     const sickRem     = sick?.remainingDays     ?? 30
     const personalRem = personal?.remainingDays ?? 3
 
-    const totalRemaining = annualRem + sickRem + personalRem
-    const totalEntitled  = (annual?.entitledDays ?? 6) + (sick?.entitledDays ?? 30) + (personal?.entitledDays ?? 3)
+    // The headline "remaining" number is intentionally limited to the
+    // leave types staff actually think of as take-away days: annual +
+    // personal. Sick leave remains visible below, but not mixed into the
+    // main balance number because it reads more like a medical allowance
+    // than a spend-down balance.
+    const mainRemaining = annualRem + personalRem
+    const mainEntitled   = (annual?.entitledDays ?? 6) + (personal?.entitledDays ?? 3)
 
     const female = employee ? isFemale(employee.gender) : false
     const genderType = female ? 'maternity' : 'ordination'
@@ -650,20 +655,23 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
 
                     {/* Right: วันลาคงเหลือ */}
                     <DonutCard
-                        filled={totalRemaining}
-                        total={totalEntitled || 1}
+                        filled={mainRemaining}
+                        total={mainEntitled || 1}
                         color="#34D399"
-                        centerValue={totalRemaining}
-                        centerLabel="คงเหลือ"
+                        centerValue={mainRemaining}
+                        centerLabel="พักร้อน/กิจ"
                         isOpen={openPopup === 'leave'}
                         onOpen={() => setOpenPopup('leave')}
                         onClose={() => setOpenPopup(null)}
                         popupContent={
                             <div className="space-y-2">
-                                <p className="text-white font-bold mb-3" style={{ fontSize: '17px' }}>วันลาคงเหลือ</p>
+                                <p className="text-white font-bold mb-3" style={{ fontSize: '17px' }}>วันพักร้อน/ลากิจคงเหลือ</p>
                                 <PopupRow label="พักร้อน" value={`${annualRem} วัน`}   color="#34D399" />
-                                <PopupRow label="ป่วย"    value={`${sickRem} วัน`}     color="#60A5FA" />
-                                <PopupRow label="กิจ"     value={`${personalRem} วัน`} color="#FBBF24" />
+                                <PopupRow label="ลากิจ"   value={`${personalRem} วัน`} color="#FBBF24" />
+                                <PopupRow label="ลาป่วย"  value={`${sickRem} วัน`}    color="#60A5FA" />
+                                <p className="pt-1 text-[11px] text-white/45">
+                                    ลาป่วยแยกไว้ต่างหาก ไม่รวมในยอดหลัก
+                                </p>
                             </div>
                         }
                     />

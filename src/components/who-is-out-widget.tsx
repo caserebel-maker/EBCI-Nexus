@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { UserMinus, ChevronRight, Loader2, Home, Plane, Palmtree, X, Phone, MapPin, Filter, Sparkles } from 'lucide-react'
+import { formatEmployeeName } from '@/lib/format-employee-name'
 
 /**
  * Compact dashboard card "ใครไม่อยู่วันนี้" + popup detail.
@@ -141,14 +142,18 @@ export function WhoIsOutWidget() {
                 <div className="divide-y divide-white/5">
                     {previewEntries.map(e => {
                         const s = KIND_STYLE[e.kind]
-                        const displayName = e.nickname?.trim() || e.firstNameTh.trim() || 'พนักงาน'
+                        const displayName = formatEmployeeName({
+                            first_name_th: e.firstNameTh,
+                            last_name_th: e.lastNameTh,
+                            nickname: e.nickname,
+                        }, 'พนักงาน')
                         return (
                             <div key={`${e.employeeId}-${e.kind}`} className="px-4 py-2.5 flex items-center gap-3">
                                 <span
                                     className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
                                     style={{ background: 'rgba(255,255,255,0.08)', color: 'white' }}
                                 >
-                                    {displayName.charAt(0)}
+                                    {(e.nickname?.trim() || e.firstNameTh || e.lastNameTh || 'พนักงาน').charAt(0)}
                                 </span>
                                 <span className="text-sm text-white font-medium truncate flex-1">{displayName}</span>
                                 <span
@@ -339,7 +344,7 @@ function PersonRow({
     sectionStyle: typeof KIND_STYLE[Kind]
 }) {
     const fullName = `${e.firstNameTh} ${e.lastNameTh ?? ''}`.trim() || 'พนักงาน'
-    const display = e.nickname?.trim() ? `${e.nickname} (${fullName})` : fullName
+    const display = e.nickname?.trim() ? `${fullName} (${e.nickname.trim()})` : fullName
 
     return (
         <div className="px-3 py-2.5 flex items-start gap-3 min-w-0">
@@ -347,7 +352,7 @@ function PersonRow({
                 className="h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
                 style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}
             >
-                {(e.nickname?.trim() || e.firstNameTh).charAt(0)}
+                {(e.firstNameTh || e.lastNameTh || e.nickname || 'พนักงาน').charAt(0)}
             </span>
             <div className="flex-1 min-w-0 space-y-0.5">
                 <p className="text-sm text-white font-semibold truncate">{display}</p>
