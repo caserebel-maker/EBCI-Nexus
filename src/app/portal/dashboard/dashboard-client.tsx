@@ -12,6 +12,12 @@ import {
 import { DailyGreeting } from '@/components/daily-greeting'
 import { WhoIsOutWidget } from '@/components/who-is-out-widget'
 import type { AnnouncementItem, TodayCalendarEntry } from './page'
+import {
+    DEFAULT_CORE_LEAVE_TOTALS,
+    emptyCoreLeaveBalance,
+    type CoreLeaveType,
+    type DashboardLeaveBalance,
+} from '@/lib/hr-leave-display'
 
 interface Employee {
     firstNameTH: string
@@ -25,13 +31,6 @@ interface Employee {
     avatarUrl: string | null
 }
 
-interface LeaveBalance {
-    leaveType: string
-    entitledDays: number
-    usedDays: number
-    remainingDays: number
-}
-
 interface AttendanceData {
     lateCount: number
     workingDays: number
@@ -41,7 +40,7 @@ interface Props {
     sessionName: string
     employee: Employee | null
     announcements: AnnouncementItem[]
-    leaveBalances: LeaveBalance[]
+    leaveBalances: DashboardLeaveBalance[]
     attendanceData: AttendanceData
     /** Set when today's date matches a row in the company calendar
      *  (`holidays` table). Used to render the WFH/holiday banner. */
@@ -275,9 +274,10 @@ function AnnouncementsCarousel({ announcements }: { announcements: AnnouncementI
 
     useEffect(() => {
         if (!emblaApi) return
-        onSelect()
+        const frame = window.requestAnimationFrame(onSelect)
         emblaApi.on('select', onSelect)
         emblaApi.on('reInit', onSelect)
+        return () => window.cancelAnimationFrame(frame)
     }, [emblaApi, onSelect])
 
     const scrollTo = useCallback((i: number) => emblaApi?.scrollTo(i), [emblaApi])
@@ -487,11 +487,11 @@ function DonutCard({
                         className="fixed inset-0 z-40"
                         onClick={onClose}
                     />
-                    {/* Panel — positioned above the donut. Bumped width
-                        52 → 64 so the larger text inside doesn't wrap
-                        (เลขานุการบริหาร / มาสายในปีนี้ are tight at 52). */}
+                    {/* Panel — positioned above the donut. Wide enough for
+                        the leave detail table while staying inside mobile
+                        viewport bounds. */}
                     <div
-                        className="absolute z-50 bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-64 p-4"
+                        className="absolute z-50 bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-80 max-w-[calc(100vw-2rem)] p-4"
                         style={popupGlass}
                     >
                         {popupContent}
@@ -521,6 +521,95 @@ function PopupRow({ label, value, color }: { label: string; value: string; color
         <div className="flex items-center justify-between gap-3 py-1">
             <span className="text-white/75" style={{ fontSize: '15px' }}>{label}</span>
             <span className="font-bold" style={{ fontSize: '16px', color: color ?? 'white' }}>{value}</span>
+        </div>
+    )
+}
+
+const CORE_LEAVE_UI: Record<CoreLeaveType, {
+    label: string
+    shortLabel: string
+    color: string
+    bg: string
+}> = {
+    annual: {
+        label: 'พักร้อนคงเหลือ',
+        shortLabel: 'พักร้อน',
+        color: '#34D399',
+        bg: 'rgba(52,211,153,0.12)',
+    },
+    personal: {
+        label: 'ลากิจคงเหลือ',
+        shortLabel: 'ลากิจ',
+        color: '#FBBF24',
+        bg: 'rgba(251,191,36,0.13)',
+    },
+    sick: {
+        label: 'ลาป่วยตามสิทธิ์คงเหลือ',
+        shortLabel: 'ลาป่วยตามสิทธิ์',
+        color: '#93C5FD',
+        bg: 'rgba(147,197,253,0.12)',
+    },
+}
+
+function LeaveBalanceSummaryRow({ type, balance, featured = false }: {
+    type: CoreLeaveType
+    balance: DashboardLeaveBalance
+    featured?: boolean
+}) {
+    const ui = CORE_LEAVE_UI[type]
+
+    return (
+        <div
+            className="flex items-center justify-between gap-3 rounded-xl px-3 py-2"
+            style={{
+                background: featured ? ui.bg : 'rgba(255,255,255,0.045)',
+                border: `1px solid ${featured ? ui.color + '55' : 'rgba(255,255,255,0.08)'}`,
+            }}
+        >
+            <span className="text-white/80 font-medium leading-snug" style={{ fontSize: featured ? '15px' : '14px' }}>
+                {ui.label}
+            </span>
+            <span className="font-black tabular-nums whitespace-nowrap" style={{ fontSize: featured ? '21px' : '18px', color: ui.color }}>
+                {balance.remainingDays}
+                <span className="ml-1 font-semibold" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.58)' }}>วัน</span>
+            </span>
+        </div>
+    )
+}
+
+function LeaveBalanceDetailTable({ balances }: { balances: Record<CoreLeaveType, DashboardLeaveBalance> }) {
+    const rows: CoreLeaveType[] = ['annual', 'personal', 'sick']
+
+    return (
+        <div className="overflow-hidden rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.10)' }}>
+            <table className="w-full border-collapse">
+                <thead>
+                    <tr style={{ background: 'rgba(255,255,255,0.07)' }}>
+                        <th className="text-left text-white/55 font-semibold px-2 py-1.5" style={{ fontSize: '11px' }}>ประเภท</th>
+                        <th className="text-right text-white/55 font-semibold px-1 py-1.5" style={{ fontSize: '11px' }}>สิทธิ์</th>
+                        <th className="text-right text-white/55 font-semibold px-1 py-1.5" style={{ fontSize: '11px' }}>ใช้แล้ว</th>
+                        <th className="text-right text-white/55 font-semibold px-1 py-1.5" style={{ fontSize: '11px' }}>รอ</th>
+                        <th className="text-right text-white/55 font-semibold px-2 py-1.5" style={{ fontSize: '11px' }}>คงเหลือ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows.map((type) => {
+                        const balance = balances[type]
+                        const ui = CORE_LEAVE_UI[type]
+                        return (
+                            <tr key={type} style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                                <td className="px-2 py-1.5 font-medium" style={{ fontSize: '12px', color: ui.color }}>
+                                    {ui.shortLabel}
+                                </td>
+                                <td className="px-1 py-1.5 text-right text-white/75 tabular-nums" style={{ fontSize: '12px' }}>{balance.entitledDays}</td>
+                                <td className="px-1 py-1.5 text-right text-white/75 tabular-nums" style={{ fontSize: '12px' }}>{balance.usedDays}</td>
+                                <td className="px-1 py-1.5 text-right text-white/75 tabular-nums" style={{ fontSize: '12px' }}>{balance.pendingDays}</td>
+                                <td className="px-2 py-1.5 text-right font-bold tabular-nums" style={{ fontSize: '12px', color: ui.color }}>{balance.remainingDays}</td>
+                            </tr>
+                        )
+                    })}
+                </tbody>
+            </table>
         </div>
     )
 }
@@ -586,21 +675,13 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
     const onTimeDays = Math.max(0, workingDays - lateCount)
 
     // ── Leave data ────────────────────────────────────────────────────────────
-    const annual   = leaveBalances.find(b => b.leaveType === 'annual')
-    const sick     = leaveBalances.find(b => b.leaveType === 'sick')
-    const personal = leaveBalances.find(b => b.leaveType === 'personal')
+    const annual   = leaveBalances.find(b => b.leaveType === 'annual')   ?? emptyCoreLeaveBalance('annual')
+    const personal = leaveBalances.find(b => b.leaveType === 'personal') ?? emptyCoreLeaveBalance('personal')
+    const sick     = leaveBalances.find(b => b.leaveType === 'sick')     ?? emptyCoreLeaveBalance('sick')
+    const coreLeaveBalances: Record<CoreLeaveType, DashboardLeaveBalance> = { annual, personal, sick }
 
-    const annualRem   = annual?.remainingDays   ?? 6
-    const sickRem     = sick?.remainingDays     ?? 30
-    const personalRem = personal?.remainingDays ?? 3
-
-    // The headline "remaining" number is intentionally limited to the
-    // leave types staff actually think of as take-away days: annual +
-    // personal. Sick leave remains visible below, but not mixed into the
-    // main balance number because it reads more like a medical allowance
-    // than a spend-down balance.
-    const mainRemaining = annualRem + personalRem
-    const mainEntitled   = (annual?.entitledDays ?? 6) + (personal?.entitledDays ?? 3)
+    const annualRem = annual.remainingDays
+    const annualTotal = annual.entitledDays || DEFAULT_CORE_LEAVE_TOTALS.annual
 
     const female = employee ? isFemale(employee.gender) : false
     const genderType = female ? 'maternity' : 'ordination'
@@ -655,22 +736,33 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
 
                     {/* Right: วันลาคงเหลือ */}
                     <DonutCard
-                        filled={mainRemaining}
-                        total={mainEntitled || 1}
-                        color="#34D399"
-                        centerValue={mainRemaining}
-                        centerLabel="พักร้อน/กิจ"
+                        filled={annualRem}
+                        total={annualTotal || 1}
+                        color={CORE_LEAVE_UI.annual.color}
+                        centerValue={annualRem}
+                        centerLabel="พักร้อน"
                         isOpen={openPopup === 'leave'}
                         onOpen={() => setOpenPopup('leave')}
                         onClose={() => setOpenPopup(null)}
                         popupContent={
-                            <div className="space-y-2">
-                                <p className="text-white font-bold mb-3" style={{ fontSize: '17px' }}>วันพักร้อน/ลากิจคงเหลือ</p>
-                                <PopupRow label="พักร้อน" value={`${annualRem} วัน`}   color="#34D399" />
-                                <PopupRow label="ลากิจ"   value={`${personalRem} วัน`} color="#FBBF24" />
-                                <PopupRow label="ลาป่วย"  value={`${sickRem} วัน`}    color="#60A5FA" />
-                                <p className="pt-1 text-[11px] text-white/45">
-                                    ลาป่วยแยกไว้ต่างหาก ไม่รวมในยอดหลัก
+                            <div className="space-y-3">
+                                <div>
+                                    <p className="text-white font-bold" style={{ fontSize: '17px' }}>วันลาคงเหลือ</p>
+                                    <p className="text-white/45 mt-0.5" style={{ fontSize: '11px' }}>
+                                        ไม่รวม WFH ซึ่งเป็นสถานะการทำงาน
+                                    </p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <LeaveBalanceSummaryRow type="annual" balance={annual} featured />
+                                    <LeaveBalanceSummaryRow type="personal" balance={personal} />
+                                    <LeaveBalanceSummaryRow type="sick" balance={sick} />
+                                </div>
+
+                                <LeaveBalanceDetailTable balances={coreLeaveBalances} />
+
+                                <p className="text-[11px] text-white/45 leading-snug">
+                                    คำนวณจากสิทธิ์ประจำปีและรายการลาที่อนุมัติแล้ว/รออนุมัติ
                                 </p>
                             </div>
                         }

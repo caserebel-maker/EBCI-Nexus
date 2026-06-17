@@ -1,23 +1,18 @@
 import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import prisma from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { resolveCreators, displayCreator } from '@/lib/creators'
 import { PortalDashboardClient } from './dashboard-client'
 import { isWorkdaySaturday, getSaturdayIndex } from '@/lib/saturday-rules'
+import {
+    CORE_LEAVE_TYPES,
+    canonicalCoreLeaveType,
+    emptyCoreLeaveBalance,
+    type DashboardLeaveBalance,
+} from '@/lib/hr-leave-display'
+import { computeRemaining, fetchBalancesForEmployee } from '@/lib/leave-balance'
 
 export const dynamic = 'force-dynamic'
-
-const DEFAULT_ENTITLEMENTS: Record<string, number> = {
-    annual: 6,
-    sick: 30,
-    personal: 3,
-    compensation: 0,
-    maternity: 90,
-    ordination: 15,
-}
-
-const ALL_LEAVE_TYPES = ['annual', 'sick', 'personal', 'compensation', 'maternity', 'ordination']
 
 export interface AnnouncementItem {
     id: string
@@ -107,7 +102,7 @@ export default async function PortalDashboardPage() {
     } | null = null
 
     let announcements: AnnouncementItem[] = []
-    let leaveBalances: { leaveType: string; entitledDays: number; usedDays: number; remainingDays: number }[] = []
+    let leaveBalances: DashboardLeaveBalance[] = []
 
     // ── Employee + leave ──────────────────────────────────────────────────────
     try {
@@ -161,18 +156,34 @@ export default async function PortalDashboardPage() {
                 avatarUrl,
             }
 
-            // Leave balances (still using Prisma — table exists there)
+            // Leave balances: use the same Supabase source as the leave
+            // module so pending requests are included in the remaining figure.
             const year = new Date().getFullYear()
-            const stored = await prisma.leaveBalance.findMany({
-                where: { employeeId: emp.id, year },
-            })
+            const stored = await fetchBalancesForEmployee(emp.id, year)
+            const coreByType = new Map(CORE_LEAVE_TYPES.map(type => [type, emptyCoreLeaveBalance(type)]))
+            const otherBalances: DashboardLeaveBalance[] = []
 
-            leaveBalances = ALL_LEAVE_TYPES.map((leaveType) => {
-                const found = stored.find((b) => b.leaveType === leaveType)
-                const entitled = Number(found?.entitledDays ?? DEFAULT_ENTITLEMENTS[leaveType] ?? 0)
-                const used = Number(found?.usedDays ?? 0)
-                return { leaveType, entitledDays: entitled, usedDays: used, remainingDays: entitled - used }
-            })
+            for (const row of stored) {
+                const canonicalType = canonicalCoreLeaveType(row.leave_type_id)
+                const item: DashboardLeaveBalance = {
+                    leaveType: canonicalType ?? row.leave_type_id,
+                    entitledDays: Number(row.total_days ?? 0),
+                    usedDays: Number(row.used_days ?? 0),
+                    pendingDays: Number(row.pending_days ?? 0),
+                    remainingDays: computeRemaining(row),
+                }
+
+                if (canonicalType) {
+                    coreByType.set(canonicalType, item)
+                } else {
+                    otherBalances.push(item)
+                }
+            }
+
+            leaveBalances = [
+                ...CORE_LEAVE_TYPES.map(type => coreByType.get(type) ?? emptyCoreLeaveBalance(type)),
+                ...otherBalances,
+            ]
         }
     } catch (e) {
         console.error('[dashboard] employee/leave query failed:', e)
