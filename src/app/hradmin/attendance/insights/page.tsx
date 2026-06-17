@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getAuth, isHrStaff } from '@/lib/route-auth'
+import { canViewAttendanceInsights, getAuth } from '@/lib/route-auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { bangkokDateKey, todayBangkokKey } from '@/lib/datetime'
 import { isWorkdaySaturday, mergeHolidays } from '@/lib/saturday-rules'
@@ -134,7 +134,7 @@ export default async function AttendanceInsightsPage({
 }) {
     const auth = await getAuth()
     if (!auth) redirect('/login')
-    if (!isHrStaff(auth)) redirect('/portal')
+    if (!canViewAttendanceInsights(auth)) redirect('/hradmin/dashboard')
 
     const sp = await searchParams
     const monthIso = normalizeMonth(sp.month)
@@ -348,4 +348,3 @@ export default async function AttendanceInsightsPage({
 
     return <AttendanceInsightsView data={data} />
 }
-

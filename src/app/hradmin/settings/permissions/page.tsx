@@ -20,6 +20,7 @@ interface RawUser {
     can_manage_system: boolean | null
     can_manage_payroll: boolean | null
     can_view_audit_log: boolean | null
+    can_view_attendance_insights: boolean | null
 }
 
 interface RawAudit {
@@ -49,7 +50,7 @@ export default async function PermissionsSettingsPage() {
     const [usersRes, auditRes, employeesRes] = await Promise.all([
         supabaseAdmin
             .from('User')
-            .select('id, username, name, role, can_view_all_employees, can_edit_employees, can_view_approval_limits, can_edit_approval_limits, can_approve_leave, can_manage_system, can_manage_payroll, can_view_audit_log')
+            .select('id, username, name, role, can_view_all_employees, can_edit_employees, can_view_approval_limits, can_edit_approval_limits, can_approve_leave, can_manage_system, can_manage_payroll, can_view_audit_log, can_view_attendance_insights')
             .order('username', { ascending: true }),
         // Pull last 50 audit entries; the modal slices per-target on click.
         supabaseAdmin
@@ -96,6 +97,7 @@ export default async function PermissionsSettingsPage() {
             can_manage_system:        Boolean(u.can_manage_system),
             can_manage_payroll:       Boolean(u.can_manage_payroll),
             can_view_audit_log:       Boolean(u.can_view_audit_log),
+            can_view_attendance_insights: Boolean(u.can_view_attendance_insights),
         }
         const preset: PresetName | 'custom' = detectPreset(permissions)
         return {

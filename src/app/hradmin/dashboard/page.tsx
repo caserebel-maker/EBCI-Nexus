@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { HRDashboard } from './hr-dashboard'
+import { getCurrentPermissions } from '@/lib/permissions-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,6 +35,7 @@ export default async function AdminDashboard() {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
     const [
+        permissions,
         { data: employees },
         { data: leavesToday },
         { data: leavesPending },
@@ -43,6 +45,7 @@ export default async function AdminDashboard() {
         { data: announcements },
         { data: newsAnnouncements },
     ] = await Promise.all([
+        getCurrentPermissions(),
         // All employees (include date_of_birth for birthday section)
         supabaseAdmin.from('employees').select('id, employee_code, first_name_th, last_name_th, nickname, department, start_date, status, end_date, title, date_of_birth, is_advisor'),
 
@@ -323,6 +326,7 @@ export default async function AdminDashboard() {
             urgentBanners={announcements ?? []}
             newsAnnouncements={newsWithImages}
             birthdays={birthdays}
+            canViewAttendanceInsights={permissions.can_view_attendance_insights}
         />
     )
 }

@@ -73,7 +73,15 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
     // just bolt one extra menu onto the employee that bridges them into a
     // single /hradmin admin page. No mode toggle needed.
     const perms = permissions ?? EMPTY_PERMISSIONS
-    const navItems: NavItem[] = [...baseItems]
+    const navItems: NavItem[] = baseItems
+        .map(item => ({
+            ...item,
+            children: item.children?.filter(child =>
+                child.href !== '/hradmin/attendance/insights'
+                || perms.can_view_attendance_insights,
+            ),
+        }))
+        .filter(item => item.href || (item.children?.length ?? 0) > 0)
     // Payroll bulk upload is an admin action — hide it when an HR admin is
     // previewing /portal so the employee-mode sidebar stays clean. The link
     // would jump them out to /hradmin anyway, which breaks the preview.

@@ -13,6 +13,7 @@ export const PERMISSION_PRESETS = {
             can_manage_system:        true,
             can_manage_payroll:       true,
             can_view_audit_log:       true,
+            can_view_attendance_insights: true,
         },
     },
     executive: {
@@ -27,6 +28,7 @@ export const PERMISSION_PRESETS = {
             can_manage_system:        false,
             can_manage_payroll:       false,
             can_view_audit_log:       false,
+            can_view_attendance_insights: false,
         },
     },
     hr_manager: {
@@ -41,6 +43,7 @@ export const PERMISSION_PRESETS = {
             can_manage_system:        false,
             can_manage_payroll:       false,
             can_view_audit_log:       false,
+            can_view_attendance_insights: false,
         },
     },
     mis_admin: {
@@ -55,6 +58,7 @@ export const PERMISSION_PRESETS = {
             can_manage_system:        false,
             can_manage_payroll:       false,
             can_view_audit_log:       true,
+            can_view_attendance_insights: false,
         },
     },
     payroll_manager: {
@@ -69,6 +73,7 @@ export const PERMISSION_PRESETS = {
             can_manage_system:        false,
             can_manage_payroll:       true,
             can_view_audit_log:       false,
+            can_view_attendance_insights: false,
         },
     },
     employee: {
@@ -83,6 +88,7 @@ export const PERMISSION_PRESETS = {
             can_manage_system:        false,
             can_manage_payroll:       false,
             can_view_audit_log:       false,
+            can_view_attendance_insights: false,
         },
     },
 } as const satisfies Record<string, { label: string; description: string; permissions: UserPermissions }>

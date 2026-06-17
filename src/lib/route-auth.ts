@@ -44,6 +44,7 @@ export const canApproveLeave: AuthCheck = ({ permissions }) => permissions.can_a
 export const canViewApprovalLimits: AuthCheck = ({ permissions }) => permissions.can_view_approval_limits === true
 export const canEditApprovalLimits: AuthCheck = ({ permissions }) => permissions.can_edit_approval_limits === true
 export const canViewAuditLog: AuthCheck = ({ permissions }) => permissions.can_view_audit_log === true
+export const canViewAttendanceInsights: AuthCheck = ({ permissions }) => permissions.can_view_attendance_insights === true
 
 /**
  * Salary-slip access. Standalone allow-list flag — does NOT inherit

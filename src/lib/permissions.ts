@@ -20,6 +20,12 @@ export type UserPermissions = {
      * tables. Default off — only Super Admin sees system-wide audit.
      */
     can_view_audit_log: boolean
+    /**
+     * View HR attendance insights for absence/leave/late coaching.
+     * This is deliberately narrower than HR Admin because the page is
+     * sensitive and not every HR-capable user should see it.
+     */
+    can_view_attendance_insights: boolean
 }
 
 export const EMPTY_PERMISSIONS: UserPermissions = {
@@ -31,6 +37,7 @@ export const EMPTY_PERMISSIONS: UserPermissions = {
     can_manage_system: false,
     can_manage_payroll: false,
     can_view_audit_log: false,
+    can_view_attendance_insights: false,
 }
 
 /**
@@ -52,6 +59,7 @@ export const PERMISSION_FLAGS: Array<{
     { key: 'can_manage_system',        label: 'จัดการระบบ',                description: 'แก้ไขสิทธิ์ของผู้ใช้คนอื่น · ดู system quota · super-admin' },
     { key: 'can_manage_payroll',       label: 'จัดการเงินเดือน (สลิป)',    description: 'อัปโหลด/ดูสลิปเงินเดือนของพนักงานทุกคน' },
     { key: 'can_view_audit_log',       label: 'ดู audit log',              description: 'อ่านประวัติการแก้ไขข้อมูล + เปลี่ยนสิทธิ์' },
+    { key: 'can_view_attendance_insights', label: 'ดูสถิติขาด ลา มาสาย', description: 'เห็นหน้าวิเคราะห์พนักงานที่ควรติดตามเรื่องขาดงาน ลา และมาสาย' },
 ]
 
 export type ApprovalTier = 'small' | 'medium' | 'large' | 'unlimited'

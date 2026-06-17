@@ -10,7 +10,7 @@ export async function getCurrentPermissions(): Promise<UserPermissions> {
     const session = await getSession()
     if (!session) return EMPTY_PERMISSIONS
 
-    const selectClause = 'can_view_all_employees, can_edit_employees, can_view_approval_limits, can_edit_approval_limits, can_approve_leave, can_manage_system, can_manage_payroll, can_view_audit_log'
+    const selectClause = 'can_view_all_employees, can_edit_employees, can_view_approval_limits, can_edit_approval_limits, can_approve_leave, can_manage_system, can_manage_payroll, can_view_audit_log, can_view_attendance_insights'
 
     let { data } = await supabaseAdmin
         .from('User')
@@ -75,5 +75,6 @@ export async function getCurrentPermissions(): Promise<UserPermissions> {
         can_manage_system:        Boolean(data.can_manage_system),
         can_manage_payroll:       Boolean(data.can_manage_payroll),
         can_view_audit_log:       Boolean(data.can_view_audit_log),
+        can_view_attendance_insights: Boolean(data.can_view_attendance_insights),
     }
 }
