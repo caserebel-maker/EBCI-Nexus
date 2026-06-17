@@ -87,6 +87,12 @@ function thaiDate(dateKey: string) {
     return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
 }
 
+function absentDateSummary(dates: string[]) {
+    if (dates.length === 0) return ''
+    const shown = dates.slice(0, 3).map(thaiDate).join(', ')
+    return dates.length > 3 ? `${shown} และอีก ${dates.length - 3} วัน` : shown
+}
+
 function updatedLabel(iso: string) {
     const d = new Date(iso)
     if (isNaN(d.getTime())) return ''
@@ -272,15 +278,9 @@ export function AttendanceInsightsView({ data }: { data: AttendanceInsightsData 
                                                 </div>
                                             </td>
                                             <Td>{e.department ?? 'ไม่ระบุ'}</Td>
-                                            <Td right tone={e.absentDays > 0 ? 'rose' : undefined}>
-                                                {e.absentDays}
-                                                {e.absentDates.length > 0 && (
-                                                    <span className="block text-[10px] text-white/35 font-normal mt-0.5">
-                                                        {e.absentDates.slice(0, 3).map(thaiDate).join(', ')}
-                                                        {e.absentDates.length > 3 ? '...' : ''}
-                                                    </span>
-                                                )}
-                                            </Td>
+                                            <td className="px-4 py-3 text-right tabular-nums">
+                                                <AbsentCell days={e.absentDays} dates={e.absentDates} />
+                                            </td>
                                             <Td right tone={e.lateCount >= 3 ? 'amber' : undefined}>{e.lateCount}</Td>
                                             <Td right>{fmt(e.leaveDays)}</Td>
                                             <Td right tone={e.sickDays >= 3 ? 'sky' : undefined}>{fmt(e.sickDays)}</Td>
@@ -388,6 +388,29 @@ function SegmentedButton({ active, onClick, children }: {
     )
 }
 
+function AbsentCell({ days, dates }: { days: number; dates: string[] }) {
+    const hasAbsence = days > 0
+    const summary = absentDateSummary(dates)
+
+    if (!hasAbsence) {
+        return <span className="text-sm text-white/72">0</span>
+    }
+
+    return (
+        <div className="inline-flex min-w-[4.75rem] flex-col items-end gap-1 whitespace-nowrap">
+            <span className="text-sm font-black leading-none text-rose-200">{days}</span>
+            {summary && (
+                <span
+                    title={dates.map(thaiDate).join(', ')}
+                    className="rounded-full border border-rose-300/15 bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold leading-none text-rose-100/75"
+                >
+                    {dates.length === 1 ? summary : `ดูวันที่ ${dates.length} วัน`}
+                </span>
+            )}
+        </div>
+    )
+}
+
 function SectionTitle({ icon: Icon, title }: { icon: typeof BarChart3; title: string }) {
     return (
         <div className="flex items-center gap-2">
@@ -439,4 +462,3 @@ function Td({ children, right = false, tone }: {
         </td>
     )
 }
-

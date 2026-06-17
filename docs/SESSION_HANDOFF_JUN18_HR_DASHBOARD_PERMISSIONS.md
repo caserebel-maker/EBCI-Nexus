@@ -4,7 +4,7 @@
 
 - Repo: `caserebel-maker/EBCI-Nexus`
 - Branch: `main`
-- Latest pushed commit at handoff: `ab69bba chore(nav): surface system permissions settings`
+- Latest pushed commit at handoff: `ccacdea fix(hradmin): compact absence dates in insights table`
 - Production URL: `https://ebci-nexus.vercel.app`
 - Worktree note: unrelated untracked local files are still present and intentionally not committed:
   - `.claude/launch.json`
@@ -130,6 +130,28 @@ Changed:
   - `สิทธิ์ผู้ใช้`
   - to `สิทธิ์การเข้าถึงระบบ`
 
+### 6. Attendance Insights Table Polish
+
+Commit: `ccacdea fix(hradmin): compact absence dates in insights table`
+
+Issue found from screenshot:
+
+- In the employee follow-up table, the `ขาด` column showed absence dates under the count.
+- Because the column was narrow, Thai month text such as `มิ.ย.` wrapped vertically and became hard to read.
+
+Fix:
+
+- `ขาด` column now keeps the main absence count compact and prominent.
+- Absence dates are no longer rendered as squeezed multi-line text.
+- Rows with absences now show a short badge:
+  - one absence: date text such as `2 มิ.ย.`
+  - multiple absences: `ดูวันที่ X วัน`
+- Full absence dates remain available via browser hover/title.
+
+File changed:
+
+- `src/app/hradmin/attendance/insights/insights-view.tsx`
+
 ## Verification Done
 
 Build passed after the final navigation change:
@@ -172,9 +194,9 @@ git log --oneline -3
 
 Expected top commits:
 
+- `ccacdea fix(hradmin): compact absence dates in insights table`
+- `5a24ad1 docs: add Jun 18 HR permissions handoff`
 - `ab69bba chore(nav): surface system permissions settings`
-- `8925d34 feat(hradmin): gate attendance insights permission`
-- `9c24ce9 feat(hradmin): add attendance insights dashboard`
 
 3. Open as ม๊อด / Super Admin:
 
@@ -210,7 +232,19 @@ Expected:
 - HR Dashboard does not show the shortcut card
 - Direct URL `/hradmin/attendance/insights` redirects back to `/hradmin/dashboard`
 
-6. If another person should see the page:
+6. Check the table layout in Attendance Insights:
+
+Open:
+
+`/hradmin/attendance/insights`
+
+Expected:
+
+- The `ขาด` column no longer shows date text stacked vertically.
+- Rows with many absences show a short badge such as `ดูวันที่ 10 วัน`.
+- Hovering the badge shows the full date list.
+
+7. If another person should see the page:
 
 Go to:
 
