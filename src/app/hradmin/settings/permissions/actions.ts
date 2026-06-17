@@ -1,7 +1,7 @@
 'use server'
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getAuth, canManageSystem, isLegacyHrAdmin } from '@/lib/route-auth'
+import { getAuth, canManageSystem } from '@/lib/route-auth'
 import {
     EMPTY_PERMISSIONS,
     type UserPermissions,
@@ -54,7 +54,7 @@ export async function updateUserPermissions(
 ): Promise<UpdateResult> {
     const auth = await getAuth()
     if (!auth) return { success: false, error: 'Unauthorized' }
-    if (!canManageSystem(auth) && !isLegacyHrAdmin(auth)) {
+    if (!canManageSystem(auth)) {
         return { success: false, error: 'เฉพาะ Super Admin เท่านั้นที่แก้ไขสิทธิ์ของคนอื่นได้' }
     }
 
@@ -207,7 +207,7 @@ interface CreateUserResult {
 export async function createUser(payload: CreateUserPayload): Promise<CreateUserResult> {
     const auth = await getAuth()
     if (!auth) return { success: false, error: 'Unauthorized' }
-    if (!canManageSystem(auth) && !isLegacyHrAdmin(auth)) {
+    if (!canManageSystem(auth)) {
         return { success: false, error: 'เฉพาะ Super Admin เท่านั้นที่สร้างผู้ใช้ใหม่ได้' }
     }
 

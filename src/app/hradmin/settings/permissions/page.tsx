@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getAuth, canManageSystem, isLegacyHrAdmin } from '@/lib/route-auth'
+import { getAuth, canManageSystem } from '@/lib/route-auth'
 import { type UserPermissions } from '@/lib/permissions'
 import { detectPreset, type PresetName } from '@/lib/permission-presets'
 import { PermissionsView, type UserRow, type AuditEntry } from './permissions-view'
@@ -38,12 +38,12 @@ interface RawAudit {
 }
 
 export default async function PermissionsSettingsPage() {
-    // Super-admin territory: only users with can_manage_system or legacy
-    // hr_admin role can edit other users' permissions. Anyone else gets
-    // bounced — hard floor matches /api/hradmin/system/quota's gate.
+    // Super-admin territory: only users with can_manage_system can edit
+    // other users' permissions. Do not allow legacy hr_admin role here:
+    // MIS/HR users may need operational HR access without user-admin power.
     const auth = await getAuth()
     if (!auth) redirect('/login')
-    if (!canManageSystem(auth) && !isLegacyHrAdmin(auth)) {
+    if (!canManageSystem(auth)) {
         redirect('/hradmin/dashboard')
     }
 
