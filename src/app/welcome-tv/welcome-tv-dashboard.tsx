@@ -24,7 +24,7 @@ interface ScanEvent {
     employee_code: string
 }
 
-const DEFAULT_CANVA_SLIDE_URL = 'https://www.canva.com/design/DAHAbWX6Gkw/view?embed'
+const DEFAULT_CANVA_SLIDE_URL = 'https://www.canva.com/design/DAHAbWX6Gkw/CBU-xeqPuB81ynJmYoQn8Q/view?embed'
 
 function normalizeSlideUrl(raw: string) {
     const trimmed = raw.trim()
@@ -34,9 +34,13 @@ function normalizeSlideUrl(raw: string) {
     }
     try {
         const url = new URL(trimmed)
-        const match = url.pathname.match(/^\/design\/([^/]+)/)
-        if (url.hostname.endsWith('canva.com') && match?.[1]) {
-            return `https://www.canva.com/design/${match[1]}/view?embed`
+        const canvaViewMatch = url.pathname.match(/^\/design\/([^/]+)(?:\/([^/]+))?\/view/)
+        if (url.hostname.endsWith('canva.com') && canvaViewMatch?.[1]) {
+            const designId = canvaViewMatch[1]
+            const shareToken = canvaViewMatch[2]
+            return shareToken
+                ? `https://www.canva.com/design/${designId}/${shareToken}/view?embed`
+                : `https://www.canva.com/design/${designId}/view?embed`
         }
     } catch {
         return trimmed
