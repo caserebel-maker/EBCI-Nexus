@@ -9,7 +9,7 @@ import {
     Settings, ChevronRight, ChevronDown, X, UserRound, Network,
     UserPlus, Activity, DoorOpen,
     MapPin, Briefcase, BarChart3, Wallet, ScrollText, ShieldCheck,
-    CalendarHeart, UserMinus,
+    CalendarHeart, UserMinus, AlertTriangle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRole, type Role } from '@/contexts/role-context'
@@ -88,7 +88,7 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         //    sub-page that's NOT in the tab is ผังองค์กร.
         { label: 'ผังองค์กร',     desc: 'โครงสร้างบริษัท',        href: '/hradmin/organization',          icon: Network, groupLabel: 'พนักงาน' },
         // 2. เวลาทำงาน group
-        { label: 'การเข้างาน',     desc: 'Dashboard เช็คอิน',     href: '/hradmin/attendance',            icon: MapPin, groupLabel: 'เวลาทำงาน' },
+        { label: 'การเข้างาน',     desc: 'Dashboard เช็คอิน',     href: '/hradmin/attendance',            icon: MapPin, groupLabel: 'การเข้างาน' },
         { label: 'เช็คอินภาคสนาม', desc: 'พนักงานออกพื้นที่',     href: '/hradmin/attendance/field',      icon: Briefcase },
         { label: 'ปฏิทินบริษัท',   desc: 'วันหยุด + WFH',         href: '/hradmin/holidays',              icon: CalendarDays },
         // 3. การลา group — อนุมัติการลา is in the bottom tab.
@@ -198,9 +198,11 @@ function bucketIntoGroups(items: MoreItem[]): MoreGroup[] {
 
 export function PortalBottomNav({
     canManagePayroll = false,
+    canViewAttendanceInsights = false,
     isApprover = false,
 }: {
     canManagePayroll?: boolean
+    canViewAttendanceInsights?: boolean
     /** True when employees.is_approver is set on the signed-in user.
      *  Drives the dynamic injection of approver inbox items at the top
      *  of the More panel so employee-role approvers can act on requests
@@ -274,6 +276,16 @@ export function PortalBottomNav({
             },
         ]
         : []
+    const attendanceInsightsMoreItems: MoreItem[] = (isHrAdminMode && canViewAttendanceInsights)
+        ? [
+            {
+                label: 'สถิติขาด ลา มาสาย',
+                desc: 'พนักงานที่ควรติดตาม',
+                href: '/hradmin/attendance/insights',
+                icon: AlertTriangle,
+            },
+        ]
+        : []
 
     const navItems = isHrAdminMode
         ? HR_ADMIN_NAV_HRADMIN
@@ -282,7 +294,12 @@ export function PortalBottomNav({
     // employees like สุชาติ may visit /hradmin/payroll/bulk, but their
     // nav should remain a normal employee nav with one extra payroll item.
     const moreItems = isHrAdminMode
-        ? MORE_CONFIG.hr_admin
+        ? [
+            MORE_CONFIG.hr_admin[0],
+            MORE_CONFIG.hr_admin[1],
+            ...attendanceInsightsMoreItems,
+            ...MORE_CONFIG.hr_admin.slice(2),
+        ]
         : [...payrollMoreItems, ...approverMoreItems, ...baseMoreItems]
 
     // Pre-compute group buckets for the collapsible renderer. Memoized so

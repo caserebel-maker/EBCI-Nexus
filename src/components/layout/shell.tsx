@@ -449,6 +449,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                 <div className="print:hidden">
                     <PortalBottomNav
                         canManagePayroll={perms.can_manage_payroll && !inPortalPreview}
+                        canViewAttendanceInsights={perms.can_view_attendance_insights && !inPortalPreview}
                         isApprover={!!profile?.isApprover}
                     />
                 </div>
