@@ -408,75 +408,96 @@ export default function WelcomeTvDashboard() {
                 showOverlay ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-105 pointer-events-none'
             }`}>
                 {employee && currentScan && (
-                    <div className="w-[min(82vw,520px)] max-w-lg backdrop-blur-xl bg-[#2d0b12]/88 border border-white/[0.16] rounded-[2rem] p-7 shadow-[0_30px_70px_rgba(0,0,0,0.55)] flex flex-col items-center text-center relative overflow-hidden transition-all transform animate-[fadeIn_0.5s_ease-out]">
-                        
-                        {/* Glow decorative ring */}
-                        <div className={`absolute -top-28 -left-28 w-72 h-72 rounded-full blur-3xl opacity-30 ${
-                            currentScan.scan_type === 'out' ? 'bg-amber-500' : 'bg-green-500'
-                        }`}></div>
-                        <div className="absolute -bottom-28 -right-28 w-72 h-72 rounded-full blur-3xl opacity-30 bg-rose-500"></div>
+                    <div className="relative flex w-[min(90vw,640px)] flex-col items-center overflow-hidden rounded-[2.1rem] border border-rose-200/28 bg-[radial-gradient(circle_at_50%_20%,rgba(255,141,141,0.26),transparent_34%),linear-gradient(160deg,rgba(26,4,8,0.96),rgba(110,16,35,0.94)_54%,rgba(32,4,10,0.96))] px-8 py-8 text-center shadow-[0_0_0_1px_rgba(255,170,170,0.16),0_0_48px_rgba(255,78,100,0.35),0_36px_90px_rgba(0,0,0,0.66)] backdrop-blur-xl transition-all animate-[fadeIn_0.5s_ease-out] sm:px-10 sm:py-9">
+                        <div className="pointer-events-none absolute inset-0 opacity-40 bg-[linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:44px_44px]" />
+                        <div className="pointer-events-none absolute left-8 right-8 top-24 h-px bg-gradient-to-r from-transparent via-rose-200/80 to-transparent shadow-[0_0_22px_rgba(255,150,150,0.95)]" />
+                        <div className="pointer-events-none absolute -left-24 top-20 h-64 w-64 rounded-full bg-rose-400/18 blur-3xl" />
+                        <div className="pointer-events-none absolute -right-24 bottom-12 h-64 w-64 rounded-full bg-red-500/22 blur-3xl" />
 
-                        {/* Top Badge */}
-                        <div className={`flex items-center gap-2 px-4 py-2 rounded-full border mb-5 text-sm font-semibold tracking-wider ${
-                            currentScan.scan_type === 'out' 
-                                ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' 
-                                : 'bg-green-500/10 border-green-500/30 text-green-400'
-                        }`}>
-                            <CheckCircle2 className="w-5 h-5" />
-                            <span>{currentScan.scan_type === 'out' ? 'สแกนออกงาน (CHECK OUT)' : 'สแกนเข้างาน (CHECK IN)'}</span>
+                        <div className="relative z-10 flex w-full items-start justify-between gap-6">
+                            <div className="text-left">
+                                <div className="text-4xl font-black italic tracking-[0.18em] text-white drop-shadow-[0_0_14px_rgba(255,255,255,0.45)] sm:text-5xl">
+                                    EBCI
+                                </div>
+                                <div className="mt-1 text-xs font-semibold tracking-[0.48em] text-white/45">
+                                    NEXUS
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-4 text-right">
+                                <div className="mt-1 h-14 w-px bg-rose-100/45 shadow-[0_0_18px_rgba(255,170,170,0.85)]" />
+                                <div>
+                                    <div className="font-mono text-4xl font-light leading-none text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.24)] sm:text-5xl">
+                                        {new Date(currentScan.scan_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                    </div>
+                                    <div className="mt-2 text-sm font-medium text-white/78 sm:text-base">
+                                        {new Date(currentScan.scan_time).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Employee Avatar */}
-                        <div className="relative mb-5">
-                            <div className={`w-32 h-32 rounded-full p-1.5 border-2 ${
-                                currentScan.scan_type === 'out' ? 'border-amber-400/50' : 'border-green-400/50'
-                            }`}>
+                        <div className="relative z-10 mt-10">
+                            <h2 className="text-4xl font-bold leading-tight text-white drop-shadow-[0_0_18px_rgba(255,190,190,0.62)] sm:text-5xl">
+                                {currentScan.scan_type === 'out' ? 'ขอบคุณสำหรับวันนี้' : 'ยินดีต้อนรับกลับมา'}
+                            </h2>
+                            <div className="mx-auto mt-4 flex w-[min(84vw,420px)] items-center justify-center gap-3">
+                                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-rose-200/80 to-rose-200/40" />
+                                <div className="h-1.5 w-14 rounded-full bg-rose-100 shadow-[0_0_18px_rgba(255,180,180,0.9)]" />
+                                <div className="h-px flex-1 bg-gradient-to-l from-transparent via-rose-200/80 to-rose-200/40" />
+                            </div>
+                            <div className="mt-5 text-3xl font-semibold text-rose-100/90 sm:text-4xl">
+                                คุณ{employee.nickname || employee.first_name_th}
+                            </div>
+                        </div>
+
+                        <div className="relative z-10 mt-8 w-full max-w-[500px]">
+                            <div className="absolute -inset-3 border border-rose-200/36 shadow-[inset_0_0_24px_rgba(255,127,127,0.24),0_0_26px_rgba(255,90,110,0.58)] [clip-path:polygon(9%_0,91%_0,100%_9%,100%_91%,91%_100%,9%_100%,0_91%,0_9%)]" />
+                            <div className="absolute -inset-5 border border-rose-300/30 [clip-path:polygon(14%_0,86%_0,100%_14%,100%_86%,86%_100%,14%_100%,0_86%,0_14%)]" />
+                            <div className="absolute left-1/2 top-[-18px] h-2 w-32 -translate-x-1/2 rounded-full bg-rose-100 shadow-[0_0_24px_rgba(255,190,190,1)]" />
+                            <div className="absolute bottom-[-18px] left-1/2 h-2 w-40 -translate-x-1/2 rounded-full bg-rose-100 shadow-[0_0_28px_rgba(255,190,190,1)]" />
+
+                            <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-b from-rose-100/8 to-black/20 [clip-path:polygon(9%_0,91%_0,100%_9%,100%_91%,91%_100%,9%_100%,0_91%,0_9%)]">
                                 {getPhotoUrl(employee.photo_url) ? (
                                     // eslint-disable-next-line @next/next/no-img-element
-                                    <img 
-                                        src={getPhotoUrl(employee.photo_url)!} 
+                                    <img
+                                        src={getPhotoUrl(employee.photo_url)!}
                                         alt={employee.first_name_th}
-                                        className="w-full h-full object-cover rounded-full shadow-inner"
+                                        className="h-full w-full object-cover object-top"
                                     />
                                 ) : (
-                                    <div className="w-full h-full rounded-full bg-gradient-to-tr from-amber-500/20 to-red-500/20 flex items-center justify-center">
-                                        <User className="w-16 h-16 text-neutral-400" />
+                                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-tr from-rose-900/70 to-red-700/50">
+                                        <User className="h-28 w-28 text-rose-100/70" />
                                     </div>
                                 )}
-                            </div>
-                            {/* Inner absolute time badge */}
-                            <div className="absolute -bottom-2 right-2 bg-neutral-900 border border-white/20 text-white font-mono text-sm px-4 py-1.5 rounded-full shadow-lg">
-                                {new Date(currentScan.scan_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false })} น.
+                                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#22040a]/32" />
                             </div>
                         </div>
 
-                        {/* Greeting message */}
-                        <h2 className="text-xl font-light text-neutral-200/75 mb-2 tracking-wide">
-                            {greeting}
-                        </h2>
+                        <div className="relative z-10 mt-9 w-full max-w-[500px] rounded-3xl border border-rose-200/44 bg-black/20 px-7 py-5 shadow-[inset_0_0_22px_rgba(255,120,120,0.12),0_0_28px_rgba(255,82,100,0.28)]">
+                            <div className="absolute left-0 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-rose-100 shadow-[0_0_16px_rgba(255,210,210,1)]" />
+                            <div className="absolute right-0 top-1/2 h-2 w-2 -translate-y-1/2 translate-x-1/2 rounded-full bg-rose-100 shadow-[0_0_16px_rgba(255,210,210,1)]" />
+                            <div className="flex items-center gap-5 text-left">
+                                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border border-rose-100/52 bg-rose-500/12 shadow-[0_0_28px_rgba(255,113,113,0.45)]">
+                                    <CheckCircle2 className="h-12 w-12 text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.86)]" />
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="text-2xl font-bold text-white sm:text-3xl">
+                                        {currentScan.scan_type === 'out' ? 'บันทึกเวลาออกงานเรียบร้อยแล้ว' : 'บันทึกเวลาเข้างานเรียบร้อยแล้ว'}
+                                    </div>
+                                    <div className="mt-1 text-lg text-rose-100/78">
+                                        {currentScan.scan_type === 'out' ? 'Check-out successful' : 'Check-in successful'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                        {/* Nickname in huge typography */}
-                        <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-100 to-amber-300 drop-shadow-md tracking-tight mb-2">
-                            คุณ{employee.nickname || employee.first_name_th}
-                        </h1>
-
-                        {/* Full Name & Employee Code */}
-                        <p className="text-lg text-neutral-200 font-medium mb-5">
-                            {employee.first_name_th} {employee.last_name_th} ({employee.employee_code})
-                        </p>
-
-                        {/* Department / Position tags */}
-                        <div className="flex flex-wrap gap-2 justify-center">
-                            {employee.department && (
-                                <span className="bg-white/8 border border-white/12 px-4 py-1.5 rounded-full text-sm font-medium text-neutral-200/85">
-                                    แผนก: {employee.department}
-                                </span>
-                            )}
-                            {employee.position && (
-                                <span className="bg-white/8 border border-white/12 px-4 py-1.5 rounded-full text-sm font-medium text-neutral-200/70">
-                                    {employee.position}
-                                </span>
-                            )}
+                        <div className="relative z-10 mt-5 max-w-[500px] text-center">
+                            <p className="text-lg font-medium text-white/86">
+                                {employee.first_name_th} {employee.last_name_th} ({employee.employee_code})
+                            </p>
+                            <p className="mt-1 text-base text-rose-100/64">
+                                {employee.department || '-'}{employee.position ? ` · ${employee.position}` : ''}
+                            </p>
                         </div>
                     </div>
                 )}
