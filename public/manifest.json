@@ -3,7 +3,7 @@
   "short_name": "EBCI",
   "description": "Internal HR System for EBCI",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#561e23",
   "theme_color": "#561e23",
   "start_url": "/",
