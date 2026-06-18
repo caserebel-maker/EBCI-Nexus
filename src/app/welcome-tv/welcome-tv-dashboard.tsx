@@ -24,7 +24,7 @@ interface ScanEvent {
     employee_code: string
 }
 
-const DEFAULT_CANVA_SLIDE_URL = 'https://www.canva.com/design/DAHAbWX6Gkw/CBU-xeqPuB81ynJmYoQn8Q/view?embed'
+const DEFAULT_CANVA_SLIDE_URL = 'https://www.canva.com/design/DAHAbWX6Gkw/h-gB3FShFUhkScEcy49C3A/view?embed'
 
 function normalizeSlideUrl(raw: string) {
     const trimmed = raw.trim()
