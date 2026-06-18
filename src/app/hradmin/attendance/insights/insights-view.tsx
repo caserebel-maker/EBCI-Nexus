@@ -243,11 +243,10 @@ export function AttendanceInsightsView({ data }: { data: AttendanceInsightsData 
                             <span className="text-xs text-white/45 shrink-0">{filteredEmployees.length} คน</span>
                         </div>
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[960px] border-collapse">
+                            <table className="w-full min-w-[820px] border-collapse">
                                 <thead>
                                     <tr className="bg-white/[0.04] text-left">
                                         <Th>พนักงาน</Th>
-                                        <Th>แผนก</Th>
                                         <Th right>ขาด</Th>
                                         <Th right>มาสาย</Th>
                                         <Th right>ลารวม</Th>
@@ -261,7 +260,7 @@ export function AttendanceInsightsView({ data }: { data: AttendanceInsightsData 
                                 <tbody>
                                     {filteredEmployees.length === 0 ? (
                                         <tr>
-                                            <td colSpan={10} className="px-4 py-12 text-center text-white/40">
+                                            <td colSpan={9} className="px-4 py-12 text-center text-white/40">
                                                 ไม่พบข้อมูลตามตัวกรองนี้
                                             </td>
                                         </tr>
@@ -276,8 +275,10 @@ export function AttendanceInsightsView({ data }: { data: AttendanceInsightsData 
                                                     {e.nickname && <span>({e.nickname})</span>}
                                                     {e.position && <span className="truncate max-w-[220px]">{e.position}</span>}
                                                 </div>
+                                                <div className="mt-1 text-xs text-white/55 leading-snug">
+                                                    {e.department ?? 'ไม่ระบุแผนก'}
+                                                </div>
                                             </td>
-                                            <Td>{e.department ?? 'ไม่ระบุ'}</Td>
                                             <td className="px-4 py-3 text-right tabular-nums">
                                                 <AbsentCell days={e.absentDays} dates={e.absentDates} />
                                             </td>
