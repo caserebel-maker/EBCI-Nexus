@@ -25,6 +25,7 @@ interface ScanEvent {
 }
 
 const DEFAULT_CANVA_SLIDE_URL = 'https://www.canva.com/design/DAHAbWX6Gkw/h-gB3FShFUhkScEcy49C3A/view?embed'
+const POPUP_DURATION_MS = 3000
 
 function normalizeSlideUrl(raw: string) {
     const trimmed = raw.trim()
@@ -141,7 +142,7 @@ export default function WelcomeTvDashboard() {
         playChime()
         dismissTimeoutRef.current = setTimeout(() => {
             setShowOverlay(false)
-        }, 8000)
+        }, POPUP_DURATION_MS)
     }, [playChime])
 
     // Update digital clock every second
@@ -234,10 +235,10 @@ export default function WelcomeTvDashboard() {
                         // Trigger welcome chime sound
                         playChime()
 
-                        // Auto dismiss after 8 seconds and fade back to clock
+                        // Auto dismiss quickly so the TV returns to the slide.
                         dismissTimeoutRef.current = setTimeout(() => {
                             setShowOverlay(false)
-                        }, 8000)
+                        }, POPUP_DURATION_MS)
                     } else {
                         addLog(`ไม่พบข้อมูลพนักงานสำหรับ ID: ${newScan.employee_id} (อาจติด RLS Policy หรือข้อมูลไม่ตรง)`)
                     }
