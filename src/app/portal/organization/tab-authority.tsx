@@ -3,45 +3,32 @@
 import { useMemo, useState } from 'react'
 import {
     ShieldCheck, User, Scale, ChevronDown, ChevronUp, Star,
-    CalendarDays, Wallet, Users, Calendar, Clock, DollarSign, UserCog,
-    Droplet, Gem, Flame, Infinity as InfinityIcon,
+    CalendarDays, Users, Calendar, UserCog,
     Crown, AlertTriangle,
     type LucideIcon,
 } from 'lucide-react'
 import type { OrgEmployee } from './view-department'
 import type { UserPermissions } from '@/lib/permissions'
-import { limitToTier, TIER_LABELS, type ApprovalTier } from '@/lib/permissions'
 
-// Tier → Lucide icon + Tailwind text color
-const TIER_VISUAL: Record<ApprovalTier, { Icon: LucideIcon; color: string }> = {
-    small:     { Icon: Droplet,      color: 'text-sky-300' },
-    medium:    { Icon: Gem,          color: 'text-emerald-300' },
-    large:     { Icon: Flame,        color: 'text-orange-300' },
-    unlimited: { Icon: InfinityIcon, color: 'text-amber-300' },
-}
+// OT and budget approval are intentionally hidden until those modules go live.
+const ACTIVE_APPROVAL_SCOPES = new Set(['leave', 'hr'])
 
 // Scope → Lucide icon
 const SCOPE_ICON: Record<string, LucideIcon> = {
     leave:  Calendar,
-    ot:     Clock,
-    budget: DollarSign,
     hr:     UserCog,
 }
 
-type ScopeFilter = 'all' | 'leave' | 'ot' | 'budget' | 'hr'
+type ScopeFilter = 'all' | 'leave' | 'hr'
 
 const FILTERS: Array<{ key: ScopeFilter; label: string; Icon: LucideIcon }> = [
     { key: 'all',    label: 'ทั้งหมด',  Icon: ShieldCheck },
     { key: 'leave',  label: 'การลา',    Icon: Calendar },
-    { key: 'ot',     label: 'OT',       Icon: Clock },
-    { key: 'budget', label: 'เบิกเงิน',  Icon: DollarSign },
     { key: 'hr',     label: 'HR',       Icon: UserCog },
 ]
 
 const SCOPE_META: Record<string, { label: string; bg: string; text: string; border: string }> = {
     leave:  { label: 'การลา',   bg: 'bg-emerald-500/20', text: 'text-emerald-200', border: 'border-emerald-400/40' },
-    ot:     { label: 'OT',      bg: 'bg-amber-500/20',   text: 'text-amber-200',   border: 'border-amber-400/40' },
-    budget: { label: 'เบิกเงิน', bg: 'bg-sky-500/20',     text: 'text-sky-200',     border: 'border-sky-400/40' },
     hr:     { label: 'HR',      bg: 'bg-rose-500/20',    text: 'text-rose-200',    border: 'border-rose-400/40' },
 }
 
@@ -63,7 +50,7 @@ export function TabAuthority({
     const canSeeExact = permissions.can_view_approval_limits
 
     // Derive personal chains + org-wide lists from the employee snapshot.
-    const { me, leaveOt, budget, hr, all } = useMemo(
+    const { me, leaveOt, hr, all } = useMemo(
         () => deriveApprovers(employees, currentEmployeeId),
         [employees, currentEmployeeId],
     )
@@ -115,7 +102,7 @@ export function TabAuthority({
             )}
 
             {/* Warning: non-president with an empty chain */}
-            {me && (me.approvalLevel ?? 0) < 5 && leaveOt.length === 0 && budget.length === 0 && (
+            {me && (me.approvalLevel ?? 0) < 5 && leaveOt.length === 0 && (
                 <div
                     className="p-4 rounded-xl border border-amber-400/40 flex items-start gap-3"
                     style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.14), rgba(245,158,11,0.04))' }}
@@ -133,14 +120,14 @@ export function TabAuthority({
             {/* L5 skips the personal chain sections — they don't need approval */}
             {me && (me.approvalLevel ?? 0) >= 5 ? null : <>
 
-            {/* Section 1: การลา / OT */}
+            {/* Section 1: การลา */}
             <AuthoritySection
                 Icon={CalendarDays}
                 iconColor="text-emerald-300"
-                title="การลา / OT"
+                title="การลา"
                 subtitle={
                     me
-                        ? 'ผู้อนุมัติคำขอลา / OT ของคุณ (เรียงตามลำดับการอนุมัติ)'
+                        ? 'ผู้อนุมัติคำขอลาของคุณ (เรียงตามลำดับการอนุมัติ)'
                         : undefined
                 }
             >
@@ -153,7 +140,6 @@ export function TabAuthority({
                                 key={`leave-${a.id}`}
                                 approver={a}
                                 canSeeExact={canSeeExact}
-                                showAmount={false}
                                 showLevel={canSeeExact}
                             />
                         ))}
@@ -161,37 +147,7 @@ export function TabAuthority({
                 )}
             </AuthoritySection>
 
-            {/* Section 2: เบิกเงิน */}
-            <AuthoritySection
-                Icon={Wallet}
-                iconColor="text-sky-300"
-                title="เบิกเงิน"
-                subtitle={
-                    me
-                        ? canSeeExact
-                            ? 'สายอนุมัติเบิกเงิน แสดงวงเงินเต็มของแต่ละคน'
-                            : 'สายอนุมัติเบิกเงิน วงเงินแสดงเป็นระดับ (💧/💎/🔥/♾️)'
-                        : undefined
-                }
-            >
-                {budget.length === 0 ? (
-                    <EmptyBox>{me ? 'ยังไม่มีผู้อนุมัติเบิกเงินในสายของคุณ' : 'โปรดเข้าสู่ระบบเพื่อดู'}</EmptyBox>
-                ) : (
-                    <div className="space-y-2">
-                        {budget.map(a => (
-                            <ApproverCard
-                                key={`budget-${a.id}`}
-                                approver={a}
-                                canSeeExact={canSeeExact}
-                                showAmount={true}
-                                showLevel={canSeeExact}
-                            />
-                        ))}
-                    </div>
-                )}
-            </AuthoritySection>
-
-            {/* Section 3: HR — hidden for L1/L2 (sensitive HR workflows) */}
+            {/* Section 2: HR — hidden for L1/L2 (sensitive HR workflows) */}
             {canSeeFullOrg && (
                 <AuthoritySection
                     Icon={Users}
@@ -208,7 +164,6 @@ export function TabAuthority({
                                     key={`hr-${a.id}`}
                                     approver={a}
                                     canSeeExact={canSeeExact}
-                                    showAmount={false}
                                     showLevel={canSeeExact}
                                 />
                             ))}
@@ -282,7 +237,6 @@ export function TabAuthority({
                                             key={`all-${a.id}`}
                                             approver={a}
                                             canSeeExact={canSeeExact}
-                                            showAmount={true}
                                             showLevel={canSeeExact}
                                         />
                                     ))}
@@ -338,27 +292,18 @@ function EmptyBox({ children }: { children: React.ReactNode }) {
 
 function ApproverCard({
     approver,
-    canSeeExact,
-    showAmount,
+    canSeeExact: _canSeeExact,
     showLevel,
 }: {
     approver: WalkedApprover
     canSeeExact: boolean
-    showAmount: boolean
     showLevel: boolean
 }) {
-    const scopes = approver.approvalScopes ?? []
+    void _canSeeExact
+    const scopes = (approver.approvalScopes ?? []).filter(s => ACTIVE_APPROVAL_SCOPES.has(s))
     const displayName = approver.nickname
         ? `${approver.firstName} (${approver.nickname})`
         : approver.firstName
-
-    const hasBudget = scopes.includes('budget')
-    const tier = showAmount && hasBudget ? limitToTier(approver.approvalLimitThb ?? undefined) : null
-    const tierVisual = tier ? TIER_VISUAL[tier] : null
-    const tierLabel = tier ? TIER_LABELS[tier].th : null
-    const exactText = showAmount && canSeeExact && approver.approvalLimitThb
-        ? `≤ ${approver.approvalLimitThb.toLocaleString('th-TH')} บาท`
-        : null
 
     const isOverride = Boolean(approver.isOverride)
 
@@ -425,18 +370,6 @@ function ApproverCard({
                 </div>
             )}
 
-            {(exactText || tierVisual) && (
-                <div className="flex items-center gap-1.5 pt-2 border-t border-white/10">
-                    {tierVisual ? (
-                        <tierVisual.Icon size={14} className={`flex-shrink-0 ${tierVisual.color}`} />
-                    ) : (
-                        <ShieldCheck size={12} className="text-amber-300 flex-shrink-0" />
-                    )}
-                    <span className="text-xs text-white/85 font-semibold">
-                        {exactText ?? tierLabel}
-                    </span>
-                </div>
-            )}
         </div>
     )
 }
@@ -447,7 +380,7 @@ function deriveApprovers(employees: OrgEmployee[], currentEmployeeId: string | n
     const byId = new Map(employees.map(e => [e.id, e]))
     const me = currentEmployeeId ? byId.get(currentEmployeeId) ?? null : null
 
-    // Leave/OT: prefer leave_approver_id, stop after L≥4.
+    // Leave: prefer leave_approver_id, stop after L≥4.
     // Hard rule: the president (L5) never enters this chain unless the
     // employee was explicitly routed there via leave_approver_id.
     const leaveOt: WalkedApprover[] = []
@@ -480,39 +413,6 @@ function deriveApprovers(employees: OrgEmployee[], currentEmployeeId: string | n
         }
     }
 
-    // Budget: walk manager_id, collect every budget approver, include self,
-    // and ensure ประธาน is always the tail (safety net).
-    const budget: WalkedApprover[] = []
-    if (me) {
-        if (me.isApprover && (me.approvalScopes ?? []).includes('budget')) {
-            budget.push({ ...me })
-        }
-        const visited = new Set<string>([me.id])
-        let cursor: OrgEmployee | undefined = me
-        let guard = 0
-        while (cursor && guard < 20) {
-            guard++
-            const nextId = cursor.managerId
-            if (!nextId || visited.has(nextId)) break
-            visited.add(nextId)
-            const next = byId.get(nextId)
-            if (!next) break
-            if (next.isApprover && (next.approvalScopes ?? []).includes('budget')) {
-                budget.push({ ...next })
-            }
-            cursor = next
-        }
-        const president = employees.find(
-            e =>
-                (e.approvalLevel ?? 0) === 5 &&
-                e.isApprover &&
-                (e.approvalScopes ?? []).includes('budget'),
-        )
-        if (president && !budget.some(b => b.id === president.id)) {
-            budget.push({ ...president })
-        }
-    }
-
     // HR: fixed list (anyone with hr scope)
     const hr = employees.filter(
         e => e.isApprover && (e.approvalScopes ?? []).includes('hr'),
@@ -520,7 +420,10 @@ function deriveApprovers(employees: OrgEmployee[], currentEmployeeId: string | n
 
     // All approvers — sorted by level desc
     const all = employees
-        .filter(e => e.isApprover)
+        .filter(e =>
+            e.isApprover &&
+            (e.approvalScopes ?? []).some(s => ACTIVE_APPROVAL_SCOPES.has(s)),
+        )
         .sort((a, b) => {
             const la = a.approvalLevel ?? 0
             const lb = b.approvalLevel ?? 0
@@ -529,5 +432,5 @@ function deriveApprovers(employees: OrgEmployee[], currentEmployeeId: string | n
                 a.employeeCode.localeCompare(b.employeeCode)
         })
 
-    return { me, leaveOt, budget, hr, all }
+    return { me, leaveOt, hr, all }
 }

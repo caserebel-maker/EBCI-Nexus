@@ -55,7 +55,7 @@ export function TabMyChain({ employees, currentEmployeeId, permissions: _permiss
                     สายอนุมัติของคุณ
                 </div>
                 <p className="text-white/75 text-xs">
-                    เมื่อคุณยื่นคำขอลา / OT / เบิกเงิน คำขอจะถูกส่งตามลำดับด้านล่าง
+                    เมื่อคุณยื่นคำขอลา คำขอจะถูกส่งตามลำดับด้านล่าง
                 </p>
                 <p className="text-white/55 text-[11px] italic">
                     💡 สายอนุมัติอาจต่างจากผู้บังคับบัญชาตรง สำหรับบางตำแหน่งพิเศษ (เช่น เลขาประธาน → ประธานโดยตรง)
