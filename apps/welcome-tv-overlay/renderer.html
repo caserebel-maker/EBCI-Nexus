@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EBCI Welcome TV Overlay</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: transparent;
+        color: white;
+        font-family: "Segoe UI", "Noto Sans Thai", Arial, sans-serif;
+        user-select: none;
+      }
+
+      #status {
+        position: fixed;
+        left: 18px;
+        bottom: 18px;
+        max-width: 360px;
+        padding: 12px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.5);
+        color: rgba(255, 255, 255, 0.68);
+        font: 11px/1.4 Consolas, monospace;
+        opacity: 0.82;
+      }
+
+      #overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px;
+        opacity: 0;
+        transform: scale(1.035);
+        transition: opacity 220ms ease, transform 220ms ease;
+        pointer-events: none;
+      }
+
+      #overlay.show {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      .popup {
+        position: relative;
+        aspect-ratio: 1187 / 1672;
+        height: min(88vh, 760px);
+        max-width: 90vw;
+        overflow: hidden;
+        border-radius: 24px;
+        filter: drop-shadow(0 0 54px rgba(255, 80, 96, 0.44)) drop-shadow(0 34px 90px rgba(0, 0, 0, 0.72));
+      }
+
+      #photoSlot {
+        position: absolute;
+        z-index: 10;
+        left: 22.6%;
+        right: 22.6%;
+        top: 22.7%;
+        height: 45.8%;
+        overflow: hidden;
+        background: #28070d;
+        clip-path: polygon(7% 0, 93% 0, 100% 7%, 100% 93%, 93% 100%, 7% 100%, 0 93%, 0 7%);
+      }
+
+      #photo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top center;
+        display: none;
+      }
+
+      #fallbackAvatar {
+        width: 100%;
+        height: 100%;
+        display: grid;
+        place-items: center;
+        font-size: min(18vh, 120px);
+        color: rgba(255, 230, 230, 0.72);
+        background: linear-gradient(135deg, rgba(90, 10, 24, 0.9), rgba(160, 26, 45, 0.72));
+      }
+
+      #frame {
+        position: absolute;
+        inset: 0;
+        z-index: 20;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        pointer-events: none;
+      }
+
+      .topbar {
+        position: absolute;
+        z-index: 30;
+        left: 7.5%;
+        right: 7.5%;
+        top: 3.4%;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+      }
+
+      #logo {
+        width: clamp(104px, 15.5vh, 158px);
+        height: auto;
+        margin-top: 4px;
+        filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.45));
+      }
+
+      .clockWrap {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        text-align: right;
+      }
+
+      .divider {
+        width: 1px;
+        height: 44px;
+        margin-top: 4px;
+        background: rgba(255, 225, 225, 0.5);
+        box-shadow: 0 0 18px rgba(255, 170, 170, 0.9);
+      }
+
+      #time {
+        font-family: Consolas, "SFMono-Regular", monospace;
+        font-size: clamp(1.65rem, 3.25vh, 2.65rem);
+        font-weight: 300;
+        line-height: 1;
+        text-shadow: 0 0 18px rgba(255, 255, 255, 0.3);
+      }
+
+      #date {
+        margin-top: 8px;
+        font-size: clamp(0.6rem, 1.12vh, 0.82rem);
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.82);
+      }
+
+      .headline {
+        position: absolute;
+        z-index: 30;
+        left: 8%;
+        right: 8%;
+        top: 15.5%;
+        text-align: center;
+      }
+
+      #title {
+        font-size: clamp(1.8rem, 3.8vh, 3rem);
+        font-weight: 800;
+        line-height: 1.05;
+        text-shadow: 0 0 18px rgba(255, 190, 190, 0.72);
+      }
+
+      #nickname {
+        margin-top: 12px;
+        font-size: clamp(1.25rem, 2.8vh, 2.2rem);
+        font-weight: 700;
+        color: rgba(255, 231, 231, 0.92);
+      }
+
+      .statusText {
+        position: absolute;
+        z-index: 30;
+        left: 32%;
+        right: 11%;
+        top: 75.4%;
+        text-align: left;
+      }
+
+      #statusThai {
+        font-size: clamp(0.95rem, 1.72vh, 1.32rem);
+        font-weight: 800;
+        line-height: 1.15;
+        text-shadow: 0 0 12px rgba(255, 255, 255, 0.36);
+      }
+
+      #statusEnglish {
+        margin-top: 4px;
+        font-size: clamp(0.72rem, 1.25vh, 0.92rem);
+        color: rgba(255, 231, 231, 0.78);
+      }
+
+      .details {
+        position: absolute;
+        z-index: 30;
+        left: 10%;
+        right: 10%;
+        bottom: 6.8%;
+        text-align: center;
+      }
+
+      #fullName {
+        font-size: clamp(0.75rem, 1.4vh, 1rem);
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.84);
+      }
+
+      #meta {
+        margin-top: 4px;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        font-size: clamp(0.65rem, 1.15vh, 0.85rem);
+        color: rgba(255, 231, 231, 0.58);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="overlay">
+      <div class="popup">
+        <div id="photoSlot">
+          <img id="photo" alt="" />
+          <div id="fallbackAvatar">👤</div>
+        </div>
+        <img id="frame" alt="" />
+        <div class="topbar">
+          <img id="logo" alt="EBCI Nexus" />
+          <div class="clockWrap">
+            <div class="divider"></div>
+            <div>
+              <div id="time">00:00</div>
+              <div id="date">-</div>
+            </div>
+          </div>
+        </div>
+        <div class="headline">
+          <div id="title">ยินดีต้อนรับกลับมา</div>
+          <div id="nickname">คุณพนักงาน</div>
+        </div>
+        <div class="statusText">
+          <div id="statusThai">บันทึกเวลาเข้างานเรียบร้อยแล้ว</div>
+          <div id="statusEnglish">Check-in successful</div>
+        </div>
+        <div class="details">
+          <div id="fullName">-</div>
+          <div id="meta">-</div>
+        </div>
+      </div>
+    </div>
+    <div id="status">Starting overlay...</div>
+    <script src="./renderer.js"></script>
+  </body>
+</html>

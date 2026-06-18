@@ -32,6 +32,9 @@ hip-sql-sync*.log
 welcome-server*.log
 .sql-sync-state.json
 scripts/.sql-sync-state.json
+apps/welcome-tv-overlay/config.json
+apps/welcome-tv-overlay/node_modules/
+apps/welcome-tv-overlay/dist/
 
 # debug
 npm-debug.log*

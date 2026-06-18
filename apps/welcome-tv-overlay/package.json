@@ -1,0 +1,28 @@
+{
+  "name": "ebci-welcome-tv-overlay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Transparent always-on-top welcome popup overlay for EBCI TV.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack:win": "electron-builder --win portable"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.93.3"
+  },
+  "devDependencies": {
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.ebci.nexus.welcomeOverlay",
+    "productName": "EBCI Welcome TV Overlay",
+    "files": [
+      "**/*"
+    ],
+    "win": {
+      "target": "portable"
+    }
+  }
+}
