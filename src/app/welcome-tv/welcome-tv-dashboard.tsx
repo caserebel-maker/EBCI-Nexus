@@ -24,7 +24,7 @@ interface ScanEvent {
     employee_code: string
 }
 
-const DEFAULT_CANVA_SLIDE_URL = 'https://www.canva.com/design/DAHAbWX6Gkw/h-gB3FShFUhkScEcy49C3A/view?embed'
+const DEFAULT_CANVA_SLIDE_URL = 'https://www.canva.com/design/DAHAbWX6Gkw/h-gB3FShFUhkScEcy49C3A/view?embed&autoplay=1&loop=1'
 const POPUP_DURATION_MS = 3000
 
 function normalizeSlideUrl(raw: string) {
@@ -39,9 +39,13 @@ function normalizeSlideUrl(raw: string) {
         if (url.hostname.endsWith('canva.com') && canvaViewMatch?.[1]) {
             const designId = canvaViewMatch[1]
             const shareToken = canvaViewMatch[2]
-            return shareToken
-                ? `https://www.canva.com/design/${designId}/${shareToken}/view?embed`
-                : `https://www.canva.com/design/${designId}/view?embed`
+            const embedUrl = new URL(shareToken
+                ? `https://www.canva.com/design/${designId}/${shareToken}/view`
+                : `https://www.canva.com/design/${designId}/view`)
+            embedUrl.searchParams.set('embed', '')
+            embedUrl.searchParams.set('autoplay', '1')
+            embedUrl.searchParams.set('loop', '1')
+            return embedUrl.toString()
         }
     } catch {
         return trimmed
@@ -297,7 +301,7 @@ export default function WelcomeTvDashboard() {
                             src={slideUrl}
                             title="EBCI TV slide"
                             className="h-full w-full border-0"
-                            allow="fullscreen"
+                            allow="autoplay; fullscreen"
                         />
                     ) : (
                         <div className="relative h-full w-full overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(253,186,116,0.20),_transparent_33%),linear-gradient(180deg,_#25070b_0%,_#7b2031_52%,_#2a070d_100%)]">
