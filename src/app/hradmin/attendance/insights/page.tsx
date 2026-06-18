@@ -64,6 +64,15 @@ const MONTH_LABELS_TH = [
     'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม',
 ]
 
+const ATTENDANCE_INSIGHTS_EXCLUDED_EMPLOYEE_CODES = new Set([
+    '001-29', // สายัณห์ จันทร์วิภาสวงศ์
+    '009-35', // ชรินทร์ทิพย์ ชมชูเวชช์
+    '021-42', // ศุภดล แสนทวีสุข
+    '048-45', // พันธ์ทิพย์ สร้อยมณี
+    '161-51', // ราเชนทร์ เข้มกลม
+    '491-67', // ชยุต กุลธนาวัฒน์
+])
+
 function normalizeMonth(raw: string | undefined) {
     const today = todayBangkokKey()
     const fallback = today.slice(0, 7)
@@ -117,6 +126,13 @@ function isLateBangkokTime(raw: string, source: 'utc' | 'bangkok') {
 function fullName(e: EmployeeRow) {
     const name = `${e.first_name_th ?? ''} ${e.last_name_th ?? ''}`.trim()
     return name || e.nickname || e.employee_code || 'ไม่ระบุชื่อ'
+}
+
+function isExcludedFromAttendanceInsights(e: EmployeeRow) {
+    return Boolean(
+        e.is_advisor ||
+        (e.employee_code && ATTENDANCE_INSIGHTS_EXCLUDED_EMPLOYEE_CODES.has(e.employee_code)),
+    )
 }
 
 function addRangeDays(map: Map<string, Set<string>>, employeeId: string, start: string, end: string) {
@@ -200,7 +216,7 @@ export default async function AttendanceInsightsPage({
     if (wfhRes.error) throw new Error(wfhRes.error.message)
     if (holidaysRes.error) throw new Error(holidaysRes.error.message)
 
-    const employees = ((employeesRes.data ?? []) as EmployeeRow[]).filter(e => !e.is_advisor)
+    const employees = ((employeesRes.data ?? []) as EmployeeRow[]).filter(e => !isExcludedFromAttendanceInsights(e))
     const employeeIds = new Set(employees.map(e => e.id))
     const holidays = mergeHolidays((holidaysRes.data ?? []) as HolidayRow[], year) as HolidayRow[]
     const holidayByDate = new Map(holidays.map(h => [h.date, h]))
@@ -328,8 +344,8 @@ export default async function AttendanceInsightsPage({
         monthLabel: `${MONTH_LABELS_TH[month - 1]} ${year + 543}`,
         generatedAt: new Date().toISOString(),
         policyNote: isCurrentMonth
-            ? 'การขาดงานนับเฉพาะวันทำงานที่ผ่านไปแล้ว ไม่รวมวันนี้ระหว่างวัน'
-            : 'การขาดงานนับจากวันทำงานของเดือนที่เลือก',
+            ? 'การขาดงานนับเฉพาะวันทำงานที่ผ่านไปแล้ว ไม่รวมวันนี้ระหว่างวัน และไม่รวมพนักงานกรณีพิเศษ'
+            : 'การขาดงานนับจากวันทำงานของเดือนที่เลือก และไม่รวมพนักงานกรณีพิเศษ',
         summary: {
             activeEmployees: employees.length,
             workdaysElapsed: absenceWorkdayKeys.length,
