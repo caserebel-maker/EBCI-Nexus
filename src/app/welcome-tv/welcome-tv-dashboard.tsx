@@ -437,29 +437,29 @@ export default function WelcomeTvDashboard() {
                             className="pointer-events-none absolute inset-0 z-20 h-full w-full object-cover"
                         />
 
-                        <div className="absolute left-[8%] right-[8%] top-[6%] z-30 flex items-start justify-between gap-5">
-                            <div className="text-left">
-                                <div className="text-[clamp(1.6rem,3.2vh,2.6rem)] font-black italic tracking-[0.18em] text-white drop-shadow-[0_0_14px_rgba(255,255,255,0.55)]">
-                                    EBCI
-                                </div>
-                                <div className="mt-1 text-[clamp(0.5rem,1vh,0.75rem)] font-semibold tracking-[0.48em] text-white/48">
-                                    NEXUS
-                                </div>
+                        <div className="absolute left-[7.5%] right-[7.5%] top-[3.4%] z-30 flex items-start justify-between gap-5">
+                            <div className="pt-1">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src="/brand/ebci-logo-silver.png"
+                                    alt="EBCI Nexus"
+                                    className="h-auto w-[clamp(104px,15.5vh,158px)] drop-shadow-[0_0_14px_rgba(255,255,255,0.45)]"
+                                />
                             </div>
                             <div className="flex items-start gap-4 text-right">
-                                <div className="mt-1 h-12 w-px bg-rose-100/50 shadow-[0_0_18px_rgba(255,170,170,0.9)]" />
+                                <div className="mt-1 h-11 w-px bg-rose-100/50 shadow-[0_0_18px_rgba(255,170,170,0.9)]" />
                                 <div>
-                                    <div className="font-mono text-[clamp(1.7rem,3.6vh,3rem)] font-light leading-none text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.3)]">
+                                    <div className="font-mono text-[clamp(1.65rem,3.25vh,2.65rem)] font-light leading-none text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.3)]">
                                         {new Date(currentScan.scan_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false })}
                                     </div>
-                                    <div className="mt-2 text-[clamp(0.65rem,1.25vh,0.9rem)] font-medium text-white/82">
+                                    <div className="mt-2 text-[clamp(0.6rem,1.12vh,0.82rem)] font-medium text-white/82">
                                         {new Date(currentScan.scan_time).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="absolute left-[8%] right-[8%] top-[16%] z-30 text-center">
+                        <div className="absolute left-[8%] right-[8%] top-[15.5%] z-30 text-center">
                             <h2 className="text-[clamp(1.8rem,3.8vh,3rem)] font-bold leading-tight text-white drop-shadow-[0_0_18px_rgba(255,190,190,0.72)]">
                                 {currentScan.scan_type === 'out' ? 'ขอบคุณสำหรับวันนี้' : 'ยินดีต้อนรับกลับมา'}
                             </h2>
@@ -468,16 +468,16 @@ export default function WelcomeTvDashboard() {
                             </div>
                         </div>
 
-                        <div className="absolute left-[28%] right-[11%] top-[76.6%] z-30 text-left">
-                            <div className="text-[clamp(1.1rem,2.15vh,1.75rem)] font-bold leading-tight text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.36)]">
+                        <div className="absolute left-[32%] right-[11%] top-[75.4%] z-30 text-left">
+                            <div className="text-[clamp(0.95rem,1.72vh,1.32rem)] font-bold leading-tight text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.36)]">
                                 {currentScan.scan_type === 'out' ? 'บันทึกเวลาออกงานเรียบร้อยแล้ว' : 'บันทึกเวลาเข้างานเรียบร้อยแล้ว'}
                             </div>
-                            <div className="mt-1 text-[clamp(0.85rem,1.55vh,1.15rem)] text-rose-100/78">
+                            <div className="mt-1 text-[clamp(0.72rem,1.25vh,0.92rem)] text-rose-100/78">
                                 {currentScan.scan_type === 'out' ? 'Check-out successful' : 'Check-in successful'}
                             </div>
                         </div>
 
-                        <div className="absolute bottom-[7.5%] left-[10%] right-[10%] z-30 text-center">
+                        <div className="absolute bottom-[6.8%] left-[10%] right-[10%] z-30 text-center">
                             <p className="text-[clamp(0.75rem,1.4vh,1rem)] font-medium text-white/82">
                                 {employee.first_name_th} {employee.last_name_th} ({employee.employee_code})
                             </p>
