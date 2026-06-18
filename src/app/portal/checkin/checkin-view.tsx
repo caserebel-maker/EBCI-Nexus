@@ -110,7 +110,8 @@ export function CheckinView({
     //     it's the more interesting context to surface)
     // Manual escape hatch for "I tapped someone else's card by mistake"
     // is `showManualOverride` below — defaults off, click to reveal CTA.
-    const cardScanSuppressed = !!cardScanToday && !isCheckedIn && !isFullyCheckedOut
+    const cardScanSuppressed = !outsideHeadOfficeEligible
+        && !!cardScanToday && !isCheckedIn && !isFullyCheckedOut
         && !(leaveToday?.blocksCheckin)
     const [showManualOverride, setShowManualOverride] = useState(false)
 
@@ -694,79 +695,7 @@ export function CheckinView({
                                 </div>
                             )}
 
-                            {/* Office checkin button */}
-                            <button
-                                onClick={() => handleCheckin('office')}
-                                disabled={loading || gpsState !== 'success' || !isAtOffice}
-                                className={cn(
-                                    "w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all border",
-                                    isAtOffice
-                                        ? "bg-emerald-600/80 hover:bg-emerald-600 text-white border-emerald-500/40"
-                                        : "bg-white/5 text-white/40 border-white/10 cursor-not-allowed"
-                                )}
-                            >
-                                {loading ? <Loader2 className="animate-spin" size={18} /> : <Building size={18} />}
-                                เช็คอินที่ออฟฟิศ
-                            </button>
-
-                            {/* Divider */}
-                            <div className="flex items-center gap-3 text-white/30 text-xs">
-                                <div className="flex-1 h-px bg-white/10" />
-                                <span>หรือ</span>
-                                <div className="flex-1 h-px bg-white/10" />
-                            </div>
-
-                            {/* WFH button — gated by §3.1 Layer 3 eligibility.
-                                When `wfhEligibility.allowed=false` the button is
-                                disabled and a helper card below explains how to
-                                request WFH. The checkIn() server action enforces
-                                the same rule, so this is just UX (security is
-                                server-side). When allowed, the qualifying source
-                                is surfaced as a small chip ("ประกาศบริษัท" /
-                                "คำขอที่อนุมัติแล้ว") so the user knows why
-                                they can hit the button today. */}
-                            {wfhEligibility.allowed ? (
-                                <div className="space-y-2">
-                                    <button
-                                        onClick={() => handleCheckin('wfh')}
-                                        disabled={loading}
-                                        className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all bg-blue-600/80 hover:bg-blue-600 text-white border border-blue-500/40 disabled:opacity-60"
-                                    >
-                                        {loading ? <Loader2 className="animate-spin" size={18} /> : <Home size={18} />}
-                                        เช็คอิน Work From Home
-                                    </button>
-                                    <p className="text-xs text-emerald-200/85 text-center inline-flex items-center justify-center gap-1.5 w-full">
-                                        <CheckCircle2 size={11} />
-                                        {wfhEligibility.source === 'company'
-                                            ? `วันนี้บริษัทประกาศ WFH${wfhEligibility.label ? ` — ${wfhEligibility.label}` : ''}`
-                                            : 'คำขอ WFH ของคุณได้รับอนุมัติแล้ว'}
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    <button
-                                        type="button"
-                                        disabled
-                                        title="วันนี้ยังไม่ได้รับอนุมัติให้ WFH — ขอผ่าน /portal/wfh ก่อน"
-                                        className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 bg-blue-600/25 text-white/55 border border-blue-500/20 cursor-not-allowed"
-                                    >
-                                        <Home size={18} />
-                                        เช็คอิน Work From Home
-                                    </button>
-                                    <div className="rounded-lg p-3 bg-white/5 border border-white/10 text-xs text-white/65">
-                                        <p className="font-semibold text-white/85 mb-0.5">วันนี้ยังไม่ได้รับอนุมัติให้ WFH</p>
-                                        <p>ปุ่ม WFH ใช้ได้เฉพาะ (1) วันที่บริษัทประกาศ WFH หรือ (2) คุณมีคำขอ WFH ที่อนุมัติแล้วครอบวันนี้</p>
-                                        <Link
-                                            href="/portal/wfh"
-                                            className="mt-1.5 inline-flex items-center gap-1 text-blue-300 hover:text-blue-200 font-semibold"
-                                        >
-                                            ส่งคำขอ WFH →
-                                        </Link>
-                                    </div>
-                                </div>
-                            )}
-
-                            {outsideHeadOfficeEligible && (
+                            {outsideHeadOfficeEligible ? (
                                 <div className="space-y-2">
                                     <button
                                         onClick={() => handleCheckin(OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE)}
@@ -777,24 +706,98 @@ export function CheckinView({
                                         เช็คอินนอก Head Office
                                     </button>
                                     <p className="text-xs text-cyan-100/80 text-center">
-                                        สำหรับพนักงานประจำพื้นที่นอกสำนักงานใหญ่ ไม่ต้องขอ WFH ก่อน
+                                        สำหรับพนักงานประจำพื้นที่นอกสำนักงานใหญ่ ไม่ต้องขอ WFH หรือเลือกภาคสนาม
                                     </p>
                                 </div>
-                            )}
+                            ) : (
+                                <>
+                                    {/* Office checkin button */}
+                                    <button
+                                        onClick={() => handleCheckin('office')}
+                                        disabled={loading || gpsState !== 'success' || !isAtOffice}
+                                        className={cn(
+                                            "w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all border",
+                                            isAtOffice
+                                                ? "bg-emerald-600/80 hover:bg-emerald-600 text-white border-emerald-500/40"
+                                                : "bg-white/5 text-white/40 border-white/10 cursor-not-allowed"
+                                        )}
+                                    >
+                                        {loading ? <Loader2 className="animate-spin" size={18} /> : <Building size={18} />}
+                                        เช็คอินที่ออฟฟิศ
+                                    </button>
 
-                            {/* Field button — same row size as the others, amber
-                                tone to match the HR Admin "preview" mode chip in
-                                the sidebar. Visible to every employee on every
-                                day (intentional: occasional office workers also
-                                have customer meetings). */}
-                            <button
-                                onClick={() => setFieldMode(true)}
-                                disabled={loading || gpsState !== 'success'}
-                                className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all bg-amber-500/85 hover:bg-amber-500 text-[#1a0a0d] border border-amber-400/50 disabled:opacity-60"
-                            >
-                                <Briefcase size={18} />
-                                เช็คอินภาคสนาม / ออกประชุม
-                            </button>
+                                    {/* Divider */}
+                                    <div className="flex items-center gap-3 text-white/30 text-xs">
+                                        <div className="flex-1 h-px bg-white/10" />
+                                        <span>หรือ</span>
+                                        <div className="flex-1 h-px bg-white/10" />
+                                    </div>
+
+                                    {/* WFH button — gated by §3.1 Layer 3 eligibility.
+                                        When `wfhEligibility.allowed=false` the button is
+                                        disabled and a helper card below explains how to
+                                        request WFH. The checkIn() server action enforces
+                                        the same rule, so this is just UX (security is
+                                        server-side). When allowed, the qualifying source
+                                        is surfaced as a small chip ("ประกาศบริษัท" /
+                                        "คำขอที่อนุมัติแล้ว") so the user knows why
+                                        they can hit the button today. */}
+                                    {wfhEligibility.allowed ? (
+                                        <div className="space-y-2">
+                                            <button
+                                                onClick={() => handleCheckin('wfh')}
+                                                disabled={loading}
+                                                className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all bg-blue-600/80 hover:bg-blue-600 text-white border border-blue-500/40 disabled:opacity-60"
+                                            >
+                                                {loading ? <Loader2 className="animate-spin" size={18} /> : <Home size={18} />}
+                                                เช็คอิน Work From Home
+                                            </button>
+                                            <p className="text-xs text-emerald-200/85 text-center inline-flex items-center justify-center gap-1.5 w-full">
+                                                <CheckCircle2 size={11} />
+                                                {wfhEligibility.source === 'company'
+                                                    ? `วันนี้บริษัทประกาศ WFH${wfhEligibility.label ? ` — ${wfhEligibility.label}` : ''}`
+                                                    : 'คำขอ WFH ของคุณได้รับอนุมัติแล้ว'}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <button
+                                                type="button"
+                                                disabled
+                                                title="วันนี้ยังไม่ได้รับอนุมัติให้ WFH — ขอผ่าน /portal/wfh ก่อน"
+                                                className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 bg-blue-600/25 text-white/55 border border-blue-500/20 cursor-not-allowed"
+                                            >
+                                                <Home size={18} />
+                                                เช็คอิน Work From Home
+                                            </button>
+                                            <div className="rounded-lg p-3 bg-white/5 border border-white/10 text-xs text-white/65">
+                                                <p className="font-semibold text-white/85 mb-0.5">วันนี้ยังไม่ได้รับอนุมัติให้ WFH</p>
+                                                <p>ปุ่ม WFH ใช้ได้เฉพาะ (1) วันที่บริษัทประกาศ WFH หรือ (2) คุณมีคำขอ WFH ที่อนุมัติแล้วครอบวันนี้</p>
+                                                <Link
+                                                    href="/portal/wfh"
+                                                    className="mt-1.5 inline-flex items-center gap-1 text-blue-300 hover:text-blue-200 font-semibold"
+                                                >
+                                                    ส่งคำขอ WFH →
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Field button — same row size as the others, amber
+                                        tone to match the HR Admin "preview" mode chip in
+                                        the sidebar. Visible to every employee on every
+                                        day (intentional: occasional office workers also
+                                        have customer meetings). */}
+                                    <button
+                                        onClick={() => setFieldMode(true)}
+                                        disabled={loading || gpsState !== 'success'}
+                                        className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all bg-amber-500/85 hover:bg-amber-500 text-[#1a0a0d] border border-amber-400/50 disabled:opacity-60"
+                                    >
+                                        <Briefcase size={18} />
+                                        เช็คอินภาคสนาม / ออกประชุม
+                                    </button>
+                                </>
+                            )}
 
                             <p className="text-xs text-white/40 text-center">
                                 ระบบจะบันทึกตำแหน่ง GPS เพื่อตรวจสอบการทำงาน
