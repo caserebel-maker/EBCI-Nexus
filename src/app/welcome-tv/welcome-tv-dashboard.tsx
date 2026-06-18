@@ -413,94 +413,75 @@ export default function WelcomeTvDashboard() {
                 showOverlay ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-105 pointer-events-none'
             }`}>
                 {employee && currentScan && (
-                    <div className="relative flex w-[min(84vw,520px)] flex-col items-center overflow-hidden rounded-[2rem] border border-rose-200/28 bg-[radial-gradient(circle_at_50%_20%,rgba(255,141,141,0.26),transparent_34%),linear-gradient(160deg,rgba(26,4,8,0.96),rgba(110,16,35,0.94)_54%,rgba(32,4,10,0.96))] px-7 py-6 text-center shadow-[0_0_0_1px_rgba(255,170,170,0.16),0_0_48px_rgba(255,78,100,0.35),0_36px_90px_rgba(0,0,0,0.66)] backdrop-blur-xl transition-all animate-[fadeIn_0.5s_ease-out] sm:px-8 sm:py-7">
-                        <div className="pointer-events-none absolute inset-0 opacity-40 bg-[linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:44px_44px]" />
-                        <div className="pointer-events-none absolute left-8 right-8 top-20 h-px bg-gradient-to-r from-transparent via-rose-200/80 to-transparent shadow-[0_0_22px_rgba(255,150,150,0.95)]" />
-                        <div className="pointer-events-none absolute -left-24 top-20 h-64 w-64 rounded-full bg-rose-400/18 blur-3xl" />
-                        <div className="pointer-events-none absolute -right-24 bottom-12 h-64 w-64 rounded-full bg-red-500/22 blur-3xl" />
+                    <div className="relative aspect-[1187/1672] h-[min(88vh,760px)] overflow-hidden rounded-[1.4rem] shadow-[0_0_54px_rgba(255,80,96,0.44),0_34px_90px_rgba(0,0,0,0.72)] transition-all animate-[fadeIn_0.5s_ease-out]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src="/assets/welcome-tv-popup-frame.png"
+                            alt=""
+                            className="absolute inset-0 h-full w-full object-cover"
+                        />
 
-                        <div className="relative z-10 flex w-full items-start justify-between gap-6">
+                        <div className="absolute left-[8%] right-[8%] top-[6%] z-10 flex items-start justify-between gap-5">
                             <div className="text-left">
-                                <div className="text-3xl font-black italic tracking-[0.18em] text-white drop-shadow-[0_0_14px_rgba(255,255,255,0.45)] sm:text-4xl">
+                                <div className="text-[clamp(1.6rem,3.2vh,2.6rem)] font-black italic tracking-[0.18em] text-white drop-shadow-[0_0_14px_rgba(255,255,255,0.55)]">
                                     EBCI
                                 </div>
-                                <div className="mt-1 text-xs font-semibold tracking-[0.48em] text-white/45">
+                                <div className="mt-1 text-[clamp(0.5rem,1vh,0.75rem)] font-semibold tracking-[0.48em] text-white/48">
                                     NEXUS
                                 </div>
                             </div>
                             <div className="flex items-start gap-4 text-right">
-                                <div className="mt-1 h-14 w-px bg-rose-100/45 shadow-[0_0_18px_rgba(255,170,170,0.85)]" />
+                                <div className="mt-1 h-12 w-px bg-rose-100/50 shadow-[0_0_18px_rgba(255,170,170,0.9)]" />
                                 <div>
-                                    <div className="font-mono text-3xl font-light leading-none text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.24)] sm:text-4xl">
+                                    <div className="font-mono text-[clamp(1.7rem,3.6vh,3rem)] font-light leading-none text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.3)]">
                                         {new Date(currentScan.scan_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false })}
                                     </div>
-                                    <div className="mt-2 text-sm font-medium text-white/78 sm:text-base">
+                                    <div className="mt-2 text-[clamp(0.65rem,1.25vh,0.9rem)] font-medium text-white/82">
                                         {new Date(currentScan.scan_time).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="relative z-10 mt-7">
-                            <h2 className="text-3xl font-bold leading-tight text-white drop-shadow-[0_0_18px_rgba(255,190,190,0.62)] sm:text-4xl">
+                        <div className="absolute left-[8%] right-[8%] top-[16%] z-10 text-center">
+                            <h2 className="text-[clamp(1.8rem,3.8vh,3rem)] font-bold leading-tight text-white drop-shadow-[0_0_18px_rgba(255,190,190,0.72)]">
                                 {currentScan.scan_type === 'out' ? 'ขอบคุณสำหรับวันนี้' : 'ยินดีต้อนรับกลับมา'}
                             </h2>
-                            <div className="mx-auto mt-4 flex w-[min(84vw,420px)] items-center justify-center gap-3">
-                                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-rose-200/80 to-rose-200/40" />
-                                <div className="h-1.5 w-14 rounded-full bg-rose-100 shadow-[0_0_18px_rgba(255,180,180,0.9)]" />
-                                <div className="h-px flex-1 bg-gradient-to-l from-transparent via-rose-200/80 to-rose-200/40" />
-                            </div>
-                            <div className="mt-4 text-2xl font-semibold text-rose-100/90 sm:text-3xl">
+                            <div className="mt-3 text-[clamp(1.25rem,2.8vh,2.2rem)] font-semibold text-rose-100/90">
                                 คุณ{employee.nickname || employee.first_name_th}
                             </div>
                         </div>
 
-                        <div className="relative z-10 mt-6 w-full max-w-[430px]">
-                            <div className="absolute -inset-3 border border-rose-200/36 shadow-[inset_0_0_24px_rgba(255,127,127,0.24),0_0_26px_rgba(255,90,110,0.58)] [clip-path:polygon(9%_0,91%_0,100%_9%,100%_91%,91%_100%,9%_100%,0_91%,0_9%)]" />
-                            <div className="absolute -inset-5 border border-rose-300/30 [clip-path:polygon(14%_0,86%_0,100%_14%,100%_86%,86%_100%,14%_100%,0_86%,0_14%)]" />
-                            <div className="absolute left-1/2 top-[-18px] h-2 w-32 -translate-x-1/2 rounded-full bg-rose-100 shadow-[0_0_24px_rgba(255,190,190,1)]" />
-                            <div className="absolute bottom-[-18px] left-1/2 h-2 w-40 -translate-x-1/2 rounded-full bg-rose-100 shadow-[0_0_28px_rgba(255,190,190,1)]" />
+                        <div className="absolute left-[21%] right-[21%] top-[30%] z-10 h-[39%] overflow-hidden rounded-[0.55rem] bg-[#28070d] [clip-path:polygon(7%_0,93%_0,100%_7%,100%_93%,93%_100%,7%_100%,0_93%,0_7%)]">
+                            {getPhotoUrl(employee.photo_url) ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                    src={getPhotoUrl(employee.photo_url)!}
+                                    alt={employee.first_name_th}
+                                    className="h-full w-full object-cover object-top"
+                                />
+                            ) : (
+                                <div className="flex h-full w-full items-center justify-center bg-gradient-to-tr from-rose-900/70 to-red-700/50">
+                                    <User className="h-28 w-28 text-rose-100/70" />
+                                </div>
+                            )}
+                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#22040a]/22" />
+                        </div>
 
-                            <div className="relative aspect-[1.35/1] overflow-hidden bg-gradient-to-b from-rose-100/8 to-black/20 [clip-path:polygon(9%_0,91%_0,100%_9%,100%_91%,91%_100%,9%_100%,0_91%,0_9%)]">
-                                {getPhotoUrl(employee.photo_url) ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
-                                        src={getPhotoUrl(employee.photo_url)!}
-                                        alt={employee.first_name_th}
-                                        className="h-full w-full object-cover object-top"
-                                    />
-                                ) : (
-                                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-tr from-rose-900/70 to-red-700/50">
-                                        <User className="h-28 w-28 text-rose-100/70" />
-                                    </div>
-                                )}
-                                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#22040a]/32" />
+                        <div className="absolute left-[28%] right-[11%] top-[76.6%] z-10 text-left">
+                            <div className="text-[clamp(1.1rem,2.15vh,1.75rem)] font-bold leading-tight text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.36)]">
+                                {currentScan.scan_type === 'out' ? 'บันทึกเวลาออกงานเรียบร้อยแล้ว' : 'บันทึกเวลาเข้างานเรียบร้อยแล้ว'}
+                            </div>
+                            <div className="mt-1 text-[clamp(0.85rem,1.55vh,1.15rem)] text-rose-100/78">
+                                {currentScan.scan_type === 'out' ? 'Check-out successful' : 'Check-in successful'}
                             </div>
                         </div>
 
-                        <div className="relative z-10 mt-7 w-full max-w-[430px] rounded-3xl border border-rose-200/44 bg-black/20 px-5 py-4 shadow-[inset_0_0_22px_rgba(255,120,120,0.12),0_0_28px_rgba(255,82,100,0.28)]">
-                            <div className="absolute left-0 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-rose-100 shadow-[0_0_16px_rgba(255,210,210,1)]" />
-                            <div className="absolute right-0 top-1/2 h-2 w-2 -translate-y-1/2 translate-x-1/2 rounded-full bg-rose-100 shadow-[0_0_16px_rgba(255,210,210,1)]" />
-                            <div className="flex items-center gap-4 text-left">
-                                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-rose-100/52 bg-rose-500/12 shadow-[0_0_28px_rgba(255,113,113,0.45)]">
-                                    <CheckCircle2 className="h-10 w-10 text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.86)]" />
-                                </div>
-                                <div className="min-w-0">
-                                    <div className="text-xl font-bold leading-tight text-white sm:text-2xl">
-                                        {currentScan.scan_type === 'out' ? 'บันทึกเวลาออกงานเรียบร้อยแล้ว' : 'บันทึกเวลาเข้างานเรียบร้อยแล้ว'}
-                                    </div>
-                                    <div className="mt-1 text-base text-rose-100/78">
-                                        {currentScan.scan_type === 'out' ? 'Check-out successful' : 'Check-in successful'}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="relative z-10 mt-4 max-w-[430px] text-center">
-                            <p className="text-base font-medium text-white/86">
+                        <div className="absolute bottom-[7.5%] left-[10%] right-[10%] z-10 text-center">
+                            <p className="text-[clamp(0.75rem,1.4vh,1rem)] font-medium text-white/82">
                                 {employee.first_name_th} {employee.last_name_th} ({employee.employee_code})
                             </p>
-                            <p className="mt-1 text-sm text-rose-100/64">
+                            <p className="mt-1 truncate text-[clamp(0.65rem,1.15vh,0.85rem)] text-rose-100/56">
                                 {employee.department || '-'}{employee.position ? ` · ${employee.position}` : ''}
                             </p>
                         </div>
