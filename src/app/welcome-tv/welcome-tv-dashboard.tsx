@@ -24,14 +24,35 @@ interface ScanEvent {
     employee_code: string
 }
 
+const DEFAULT_CANVA_SLIDE_URL = 'https://www.canva.com/design/DAHAbWX6Gkw/view?embed'
+
+function normalizeSlideUrl(raw: string) {
+    const trimmed = raw.trim()
+    if (!trimmed) return ''
+    if (trimmed.includes('canva.link/k8z8s2bztmqdixx')) {
+        return DEFAULT_CANVA_SLIDE_URL
+    }
+    try {
+        const url = new URL(trimmed)
+        const match = url.pathname.match(/^\/design\/([^/]+)/)
+        if (url.hostname.endsWith('canva.com') && match?.[1]) {
+            return `https://www.canva.com/design/${match[1]}/view?embed`
+        }
+    } catch {
+        return trimmed
+    }
+    return trimmed
+}
+
 export default function WelcomeTvDashboard() {
     const searchParams = useSearchParams()
     const key = searchParams.get('key')
     const isAuthorized = key === 'ebci2026'
-    const slideUrl = searchParams.get('slide')
+    const rawSlideUrl = searchParams.get('slide')
         ?? searchParams.get('canva')
         ?? process.env.NEXT_PUBLIC_WELCOME_TV_SLIDE_URL
-        ?? ''
+        ?? DEFAULT_CANVA_SLIDE_URL
+    const slideUrl = normalizeSlideUrl(rawSlideUrl)
     const slideMode = searchParams.get('mode') === 'slide' || Boolean(slideUrl)
     const showControls = searchParams.get('controls') !== '0'
 
