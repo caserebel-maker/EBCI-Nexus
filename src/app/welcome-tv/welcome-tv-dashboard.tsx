@@ -414,14 +414,30 @@ export default function WelcomeTvDashboard() {
             }`}>
                 {employee && currentScan && (
                     <div className="relative aspect-[1187/1672] h-[min(88vh,760px)] overflow-hidden rounded-[1.4rem] shadow-[0_0_54px_rgba(255,80,96,0.44),0_34px_90px_rgba(0,0,0,0.72)] transition-all animate-[fadeIn_0.5s_ease-out]">
+                        <div className="absolute left-[22.6%] right-[22.6%] top-[22.7%] z-10 h-[45.8%] overflow-hidden rounded-[0.6rem] bg-[#28070d] [clip-path:polygon(7%_0,93%_0,100%_7%,100%_93%,93%_100%,7%_100%,0_93%,0_7%)]">
+                            {getPhotoUrl(employee.photo_url) ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                    src={getPhotoUrl(employee.photo_url)!}
+                                    alt={employee.first_name_th}
+                                    className="h-full w-full object-cover object-top"
+                                />
+                            ) : (
+                                <div className="flex h-full w-full items-center justify-center bg-gradient-to-tr from-rose-900/70 to-red-700/50">
+                                    <User className="h-28 w-28 text-rose-100/70" />
+                                </div>
+                            )}
+                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#22040a]/22" />
+                        </div>
+
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                            src="/assets/welcome-tv-popup-frame.png"
+                            src="/frame1.png"
                             alt=""
-                            className="absolute inset-0 h-full w-full object-cover"
+                            className="pointer-events-none absolute inset-0 z-20 h-full w-full object-cover"
                         />
 
-                        <div className="absolute left-[8%] right-[8%] top-[6%] z-10 flex items-start justify-between gap-5">
+                        <div className="absolute left-[8%] right-[8%] top-[6%] z-30 flex items-start justify-between gap-5">
                             <div className="text-left">
                                 <div className="text-[clamp(1.6rem,3.2vh,2.6rem)] font-black italic tracking-[0.18em] text-white drop-shadow-[0_0_14px_rgba(255,255,255,0.55)]">
                                     EBCI
@@ -443,7 +459,7 @@ export default function WelcomeTvDashboard() {
                             </div>
                         </div>
 
-                        <div className="absolute left-[8%] right-[8%] top-[16%] z-10 text-center">
+                        <div className="absolute left-[8%] right-[8%] top-[16%] z-30 text-center">
                             <h2 className="text-[clamp(1.8rem,3.8vh,3rem)] font-bold leading-tight text-white drop-shadow-[0_0_18px_rgba(255,190,190,0.72)]">
                                 {currentScan.scan_type === 'out' ? 'ขอบคุณสำหรับวันนี้' : 'ยินดีต้อนรับกลับมา'}
                             </h2>
@@ -452,23 +468,7 @@ export default function WelcomeTvDashboard() {
                             </div>
                         </div>
 
-                        <div className="absolute left-[21%] right-[21%] top-[30%] z-10 h-[39%] overflow-hidden rounded-[0.55rem] bg-[#28070d] [clip-path:polygon(7%_0,93%_0,100%_7%,100%_93%,93%_100%,7%_100%,0_93%,0_7%)]">
-                            {getPhotoUrl(employee.photo_url) ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                    src={getPhotoUrl(employee.photo_url)!}
-                                    alt={employee.first_name_th}
-                                    className="h-full w-full object-cover object-top"
-                                />
-                            ) : (
-                                <div className="flex h-full w-full items-center justify-center bg-gradient-to-tr from-rose-900/70 to-red-700/50">
-                                    <User className="h-28 w-28 text-rose-100/70" />
-                                </div>
-                            )}
-                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#22040a]/22" />
-                        </div>
-
-                        <div className="absolute left-[28%] right-[11%] top-[76.6%] z-10 text-left">
+                        <div className="absolute left-[28%] right-[11%] top-[76.6%] z-30 text-left">
                             <div className="text-[clamp(1.1rem,2.15vh,1.75rem)] font-bold leading-tight text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.36)]">
                                 {currentScan.scan_type === 'out' ? 'บันทึกเวลาออกงานเรียบร้อยแล้ว' : 'บันทึกเวลาเข้างานเรียบร้อยแล้ว'}
                             </div>
@@ -477,7 +477,7 @@ export default function WelcomeTvDashboard() {
                             </div>
                         </div>
 
-                        <div className="absolute bottom-[7.5%] left-[10%] right-[10%] z-10 text-center">
+                        <div className="absolute bottom-[7.5%] left-[10%] right-[10%] z-30 text-center">
                             <p className="text-[clamp(0.75rem,1.4vh,1rem)] font-medium text-white/82">
                                 {employee.first_name_th} {employee.last_name_th} ({employee.employee_code})
                             </p>
