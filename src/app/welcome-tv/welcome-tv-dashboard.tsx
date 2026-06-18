@@ -28,6 +28,11 @@ export default function WelcomeTvDashboard() {
     const searchParams = useSearchParams()
     const key = searchParams.get('key')
     const isAuthorized = key === 'ebci2026'
+    const slideUrl = searchParams.get('slide')
+        ?? searchParams.get('canva')
+        ?? process.env.NEXT_PUBLIC_WELCOME_TV_SLIDE_URL
+        ?? ''
+    const slideMode = searchParams.get('mode') === 'slide' || Boolean(slideUrl)
 
     // Clock state
     const [timeStr, setTimeStr] = useState('')
@@ -83,6 +88,35 @@ export default function WelcomeTvDashboard() {
             console.error('[WelcomeTV] Chime failed:', e)
         }
     }, [audioEnabled])
+
+    const showDemoPopup = useCallback(() => {
+        if (dismissTimeoutRef.current) {
+            clearTimeout(dismissTimeoutRef.current)
+        }
+        setEmployee({
+            id: 'demo',
+            employee_code: '466-64',
+            first_name_th: 'อรุณี',
+            last_name_th: 'นิลบรรจง',
+            nickname: 'แอนนี่',
+            photo_url: null,
+            department: 'ฝ่ายบัญชี-การเงิน',
+            position: 'รักษาการผู้จัดการฝ่ายบัญชี-การเงิน',
+        })
+        setCurrentScan({
+            id: 'demo-scan',
+            employee_id: 'demo',
+            employee_code: '466-64',
+            scan_time: new Date().toISOString(),
+            scan_type: 'in',
+        })
+        setGreeting('สวัสดีตอนเช้า ยินดีต้อนรับเข้าทำงาน!')
+        setShowOverlay(true)
+        playChime()
+        dismissTimeoutRef.current = setTimeout(() => {
+            setShowOverlay(false)
+        }, 8000)
+    }, [playChime])
 
     // Update digital clock every second
     useEffect(() => {
@@ -222,44 +256,90 @@ export default function WelcomeTvDashboard() {
 
     return (
         <div className="h-screen w-screen bg-[#070709] bg-[radial-gradient(circle_at_center,_rgba(86,30,35,0.16)_0%,_transparent_65%)] text-white overflow-hidden flex flex-col justify-between items-center p-12 relative font-sans select-none">
+            {slideMode && (
+                <div className="absolute inset-0 z-0 bg-[#160407]">
+                    {slideUrl ? (
+                        <iframe
+                            src={slideUrl}
+                            title="EBCI TV slide"
+                            className="h-full w-full border-0"
+                            allow="fullscreen"
+                        />
+                    ) : (
+                        <div className="h-full w-full overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.24),_transparent_34%),linear-gradient(135deg,_#1c0508_0%,_#5d1722_52%,_#130406_100%)]">
+                            <div className="absolute inset-0 opacity-35 bg-[linear-gradient(90deg,_rgba(255,255,255,0.08)_1px,_transparent_1px),linear-gradient(0deg,_rgba(255,255,255,0.06)_1px,_transparent_1px)] bg-[size:88px_88px]" />
+                            <div className="relative flex h-full flex-col items-center justify-center px-16 text-center">
+                                <div className="mb-6 text-2xl font-semibold tracking-[0.45em] text-amber-100/70">EBCI NEXUS</div>
+                                <h1 className="max-w-5xl text-7xl font-black leading-tight text-white drop-shadow-2xl">
+                                    Company News & Welcome Screen
+                                </h1>
+                                <p className="mt-8 max-w-3xl text-3xl font-light leading-relaxed text-white/70">
+                                    พื้นที่นี้จะแสดง Canva slide เต็มจอ และ popup ต้อนรับจะเด้งทับเมื่อพนักงานแตะบัตร
+                                </p>
+                                <div className="mt-12 grid w-full max-w-5xl grid-cols-3 gap-5">
+                                    {['ประกาศบริษัท', 'กิจกรรมประจำเดือน', 'สวัสดีวันทำงาน'].map(label => (
+                                        <div key={label} className="rounded-3xl border border-white/12 bg-white/8 p-8 backdrop-blur-sm">
+                                            <div className="text-xl font-bold text-amber-100">{label}</div>
+                                            <div className="mt-4 h-2 rounded-full bg-white/18">
+                                                <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-amber-200 to-rose-200" />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/28" />
+                </div>
+            )}
             {/* Top Bar controls */}
             <div className="w-full flex justify-between items-center z-20">
                 <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-4 py-2 rounded-full backdrop-blur-md">
                     <Tv className="w-5 h-5 text-amber-400" />
-                    <span className="text-sm font-semibold tracking-wider text-neutral-300">EBCI TV SYSTEM</span>
+                    <span className="text-sm font-semibold tracking-wider text-neutral-300">
+                        {slideMode ? 'EBCI TV OVERLAY MODE' : 'EBCI TV SYSTEM'}
+                    </span>
                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                 </div>
 
-                <button 
-                    onClick={() => {
-                        setAudioEnabled(!audioEnabled)
-                        // Trigger play check to satisfy gesture requirement
-                        if (!audioEnabled) {
-                            setTimeout(playChime, 100)
-                        }
-                    }}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-full border transition-all active:scale-95 ${
-                        audioEnabled 
-                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20' 
-                            : 'bg-white/5 border-white/10 text-neutral-400 hover:bg-white/10 hover:text-white'
-                    }`}
-                >
-                    {audioEnabled ? (
-                        <>
-                            <Volume2 className="w-4 h-4" />
-                            <span className="text-sm font-medium">เปิดเสียงต้อนรับแล้ว</span>
-                        </>
-                    ) : (
-                        <>
-                            <VolumeX className="w-4 h-4" />
-                            <span className="text-sm font-medium">คลิกเพื่อเปิดเสียงต้อนรับ</span>
-                        </>
-                    )}
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={showDemoPopup}
+                        className="flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-500/10 px-5 py-2.5 text-sm font-semibold text-emerald-100 transition-all hover:bg-emerald-500/20 active:scale-95"
+                    >
+                        ทดลอง popup
+                    </button>
+                    <button
+                        onClick={() => {
+                            setAudioEnabled(!audioEnabled)
+                            // Trigger play check to satisfy gesture requirement
+                            if (!audioEnabled) {
+                                setTimeout(playChime, 100)
+                            }
+                        }}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-full border transition-all active:scale-95 ${
+                            audioEnabled
+                                ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
+                                : 'bg-white/5 border-white/10 text-neutral-400 hover:bg-white/10 hover:text-white'
+                        }`}
+                    >
+                        {audioEnabled ? (
+                            <>
+                                <Volume2 className="w-4 h-4" />
+                                <span className="text-sm font-medium">เปิดเสียงต้อนรับแล้ว</span>
+                            </>
+                        ) : (
+                            <>
+                                <VolumeX className="w-4 h-4" />
+                                <span className="text-sm font-medium">คลิกเพื่อเปิดเสียงต้อนรับ</span>
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {/* Standby Digital Clock & Date */}
-            <div className={`flex flex-col items-center justify-center flex-1 transition-all duration-700 ${showOverlay ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
+            <div className={`flex flex-col items-center justify-center flex-1 transition-all duration-700 ${slideMode ? 'opacity-0 pointer-events-none' : showOverlay ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
                 <div className="text-[9vw] text-7xl md:text-8xl lg:text-[9vw] font-black tracking-tighter text-white drop-shadow-[0_0_50px_rgba(255,255,255,0.06)] font-mono tabular-nums leading-none text-center">
                     {timeStr || '00:00:00'}
                 </div>
@@ -272,7 +352,9 @@ export default function WelcomeTvDashboard() {
             </div>
 
             {/* Animated Welcome Overlay Card */}
-            <div className={`absolute inset-0 z-10 flex items-center justify-center p-12 transition-all duration-500 bg-[#070709]/80 backdrop-blur-md ${
+            <div className={`absolute inset-0 z-10 flex items-center justify-center p-12 transition-all duration-500 ${
+                slideMode ? 'bg-black/30 backdrop-blur-[2px]' : 'bg-[#070709]/80 backdrop-blur-md'
+            } ${
                 showOverlay ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-105 pointer-events-none'
             }`}>
                 {employee && currentScan && (
@@ -362,7 +444,7 @@ export default function WelcomeTvDashboard() {
             </div>
 
             {/* General Banner Footer */}
-            <div className="w-full text-center z-20">
+            <div className={`w-full text-center z-20 ${slideMode ? 'opacity-0' : ''}`}>
                 <p className="text-sm tracking-widest text-neutral-600 font-medium uppercase">
                     EBCI Nexus · Digital Welcomer
                 </p>
