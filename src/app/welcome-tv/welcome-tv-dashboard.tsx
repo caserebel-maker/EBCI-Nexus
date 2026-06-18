@@ -33,6 +33,7 @@ export default function WelcomeTvDashboard() {
         ?? process.env.NEXT_PUBLIC_WELCOME_TV_SLIDE_URL
         ?? ''
     const slideMode = searchParams.get('mode') === 'slide' || Boolean(slideUrl)
+    const showControls = searchParams.get('controls') !== '0'
 
     // Clock state
     const [timeStr, setTimeStr] = useState('')
@@ -255,9 +256,16 @@ export default function WelcomeTvDashboard() {
     }
 
     return (
-        <div className="h-screen w-screen bg-[#070709] bg-[radial-gradient(circle_at_center,_rgba(86,30,35,0.16)_0%,_transparent_65%)] text-white overflow-hidden flex flex-col justify-between items-center p-12 relative font-sans select-none">
+        <div className="h-screen w-screen bg-[#070709] bg-[radial-gradient(circle_at_center,_rgba(86,30,35,0.16)_0%,_transparent_65%)] text-white overflow-hidden flex flex-col justify-between items-center p-6 sm:p-12 relative font-sans select-none">
             {slideMode && (
-                <div className="absolute inset-0 z-0 bg-[#160407]">
+                <div
+                    className="absolute left-1/2 top-1/2 z-0 overflow-hidden bg-[#160407] shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_28px_90px_rgba(0,0,0,0.55)]"
+                    style={{
+                        width: 'min(100vw, 56.25vh)',
+                        height: 'min(100vh, 177.78vw)',
+                        transform: 'translate(-50%, -50%)',
+                    }}
+                >
                     {slideUrl ? (
                         <iframe
                             src={slideUrl}
@@ -266,25 +274,42 @@ export default function WelcomeTvDashboard() {
                             allow="fullscreen"
                         />
                     ) : (
-                        <div className="h-full w-full overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(248,113,113,0.24),_transparent_34%),linear-gradient(135deg,_#1c0508_0%,_#5d1722_52%,_#130406_100%)]">
-                            <div className="absolute inset-0 opacity-35 bg-[linear-gradient(90deg,_rgba(255,255,255,0.08)_1px,_transparent_1px),linear-gradient(0deg,_rgba(255,255,255,0.06)_1px,_transparent_1px)] bg-[size:88px_88px]" />
-                            <div className="relative flex h-full flex-col items-center justify-center px-16 text-center">
-                                <div className="mb-6 text-2xl font-semibold tracking-[0.45em] text-amber-100/70">EBCI NEXUS</div>
-                                <h1 className="max-w-5xl text-7xl font-black leading-tight text-white drop-shadow-2xl">
-                                    Company News & Welcome Screen
-                                </h1>
-                                <p className="mt-8 max-w-3xl text-3xl font-light leading-relaxed text-white/70">
-                                    พื้นที่นี้จะแสดง Canva slide เต็มจอ และ popup ต้อนรับจะเด้งทับเมื่อพนักงานแตะบัตร
-                                </p>
-                                <div className="mt-12 grid w-full max-w-5xl grid-cols-3 gap-5">
-                                    {['ประกาศบริษัท', 'กิจกรรมประจำเดือน', 'สวัสดีวันทำงาน'].map(label => (
-                                        <div key={label} className="rounded-3xl border border-white/12 bg-white/8 p-8 backdrop-blur-sm">
-                                            <div className="text-xl font-bold text-amber-100">{label}</div>
-                                            <div className="mt-4 h-2 rounded-full bg-white/18">
-                                                <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-amber-200 to-rose-200" />
+                        <div className="relative h-full w-full overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(253,186,116,0.20),_transparent_33%),linear-gradient(180deg,_#25070b_0%,_#7b2031_52%,_#2a070d_100%)]">
+                            <div className="absolute inset-0 opacity-30 bg-[linear-gradient(90deg,_rgba(255,255,255,0.08)_1px,_transparent_1px),linear-gradient(0deg,_rgba(255,255,255,0.06)_1px,_transparent_1px)] bg-[size:54px_54px]" />
+                            <div className="relative flex h-full flex-col px-10 py-14 text-center">
+                                <div className="text-left">
+                                    <div className="text-4xl font-black italic tracking-[0.14em] text-white drop-shadow-lg">EBCI</div>
+                                    <div className="mt-1 text-sm font-semibold tracking-[0.45em] text-white/55">NEXUS</div>
+                                </div>
+                                <div className="flex flex-1 flex-col items-center justify-center">
+                                    <div className="mb-5 rounded-full border border-amber-200/25 bg-amber-100/10 px-5 py-2 text-sm font-bold tracking-[0.3em] text-amber-100">
+                                        TV SLIDE PREVIEW
+                                    </div>
+                                    <h1 className="text-5xl font-black leading-tight text-white drop-shadow-2xl">
+                                        Company News
+                                    </h1>
+                                    <h2 className="mt-2 text-4xl font-light text-amber-100/90">
+                                        & Welcome Screen
+                                    </h2>
+                                    <p className="mt-8 max-w-sm text-lg leading-relaxed text-white/68">
+                                        ตรงนี้จะเป็น Canva slide แนวตั้งจริง และ popup ต้อนรับจะลอยทับเมื่อพนักงานแตะบัตร
+                                    </p>
+                                    <div className="mt-10 grid w-full grid-cols-1 gap-4">
+                                        {['ประกาศบริษัท', 'กิจกรรมประจำเดือน', 'สวัสดีวันทำงาน'].map((label, index) => (
+                                            <div key={label} className="rounded-3xl border border-white/12 bg-white/9 p-5 text-left backdrop-blur-sm">
+                                                <div className="flex items-center justify-between gap-4">
+                                                    <div>
+                                                        <div className="text-lg font-bold text-white">{label}</div>
+                                                        <div className="mt-1 text-xs text-white/45">ตัวอย่างสไลด์แนวตั้ง #{index + 1}</div>
+                                                    </div>
+                                                    <div className="h-10 w-10 rounded-2xl bg-amber-200/20" />
+                                                </div>
+                                                <div className="mt-4 h-2 rounded-full bg-white/18">
+                                                    <div className="h-full rounded-full bg-gradient-to-r from-amber-200 to-rose-200" style={{ width: `${66 - index * 12}%` }} />
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -293,7 +318,7 @@ export default function WelcomeTvDashboard() {
                 </div>
             )}
             {/* Top Bar controls */}
-            <div className="w-full flex justify-between items-center z-20">
+            {showControls && <div className="w-full flex justify-between items-center z-20">
                 <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-4 py-2 rounded-full backdrop-blur-md">
                     <Tv className="w-5 h-5 text-amber-400" />
                     <span className="text-sm font-semibold tracking-wider text-neutral-300">
@@ -336,7 +361,7 @@ export default function WelcomeTvDashboard() {
                         )}
                     </button>
                 </div>
-            </div>
+            </div>}
 
             {/* Standby Digital Clock & Date */}
             <div className={`flex flex-col items-center justify-center flex-1 transition-all duration-700 ${slideMode ? 'opacity-0 pointer-events-none' : showOverlay ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
@@ -352,22 +377,22 @@ export default function WelcomeTvDashboard() {
             </div>
 
             {/* Animated Welcome Overlay Card */}
-            <div className={`absolute inset-0 z-10 flex items-center justify-center p-12 transition-all duration-500 ${
-                slideMode ? 'bg-black/30 backdrop-blur-[2px]' : 'bg-[#070709]/80 backdrop-blur-md'
+            <div className={`absolute inset-0 z-10 flex items-center justify-center p-6 transition-all duration-500 ${
+                slideMode ? 'bg-transparent' : 'bg-[#070709]/80 backdrop-blur-md'
             } ${
                 showOverlay ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-105 pointer-events-none'
             }`}>
                 {employee && currentScan && (
-                    <div className="w-full max-w-4xl backdrop-blur-xl bg-white/[0.04] border border-white/[0.12] rounded-[2.5rem] p-12 shadow-[0_30px_70px_rgba(0,0,0,0.6)] flex flex-col items-center text-center relative overflow-hidden transition-all transform animate-[fadeIn_0.5s_ease-out]">
+                    <div className="w-[min(82vw,520px)] max-w-lg backdrop-blur-xl bg-[#2d0b12]/88 border border-white/[0.16] rounded-[2rem] p-7 shadow-[0_30px_70px_rgba(0,0,0,0.55)] flex flex-col items-center text-center relative overflow-hidden transition-all transform animate-[fadeIn_0.5s_ease-out]">
                         
                         {/* Glow decorative ring */}
-                        <div className={`absolute -top-40 -left-40 w-96 h-96 rounded-full blur-3xl opacity-30 ${
+                        <div className={`absolute -top-28 -left-28 w-72 h-72 rounded-full blur-3xl opacity-30 ${
                             currentScan.scan_type === 'out' ? 'bg-amber-500' : 'bg-green-500'
                         }`}></div>
-                        <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full blur-3xl opacity-30 bg-maroon-500"></div>
+                        <div className="absolute -bottom-28 -right-28 w-72 h-72 rounded-full blur-3xl opacity-30 bg-rose-500"></div>
 
                         {/* Top Badge */}
-                        <div className={`flex items-center gap-2 px-5 py-2 rounded-full border mb-8 text-lg font-semibold tracking-wider ${
+                        <div className={`flex items-center gap-2 px-4 py-2 rounded-full border mb-5 text-sm font-semibold tracking-wider ${
                             currentScan.scan_type === 'out' 
                                 ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' 
                                 : 'bg-green-500/10 border-green-500/30 text-green-400'
@@ -377,8 +402,8 @@ export default function WelcomeTvDashboard() {
                         </div>
 
                         {/* Employee Avatar */}
-                        <div className="relative mb-6">
-                            <div className={`w-52 h-52 rounded-full p-1.5 border-2 ${
+                        <div className="relative mb-5">
+                            <div className={`w-32 h-32 rounded-full p-1.5 border-2 ${
                                 currentScan.scan_type === 'out' ? 'border-amber-400/50' : 'border-green-400/50'
                             }`}>
                                 {getPhotoUrl(employee.photo_url) ? (
@@ -390,7 +415,7 @@ export default function WelcomeTvDashboard() {
                                     />
                                 ) : (
                                     <div className="w-full h-full rounded-full bg-gradient-to-tr from-amber-500/20 to-red-500/20 flex items-center justify-center">
-                                        <User className="w-24 h-24 text-neutral-400" />
+                                        <User className="w-16 h-16 text-neutral-400" />
                                     </div>
                                 )}
                             </div>
@@ -401,29 +426,29 @@ export default function WelcomeTvDashboard() {
                         </div>
 
                         {/* Greeting message */}
-                        <h2 className="text-4xl font-light text-neutral-400 mb-3 tracking-wide">
+                        <h2 className="text-xl font-light text-neutral-200/75 mb-2 tracking-wide">
                             {greeting}
                         </h2>
 
                         {/* Nickname in huge typography */}
-                        <h1 className="text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-400 drop-shadow-md tracking-tight mb-2">
+                        <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-100 to-amber-300 drop-shadow-md tracking-tight mb-2">
                             คุณ{employee.nickname || employee.first_name_th}
                         </h1>
 
                         {/* Full Name & Employee Code */}
-                        <p className="text-2xl text-neutral-300 font-medium mb-6">
+                        <p className="text-lg text-neutral-200 font-medium mb-5">
                             {employee.first_name_th} {employee.last_name_th} ({employee.employee_code})
                         </p>
 
                         {/* Department / Position tags */}
-                        <div className="flex gap-3 justify-center">
+                        <div className="flex flex-wrap gap-2 justify-center">
                             {employee.department && (
-                                <span className="bg-white/5 border border-white/10 px-5 py-1.5 rounded-full text-base font-medium text-neutral-300">
+                                <span className="bg-white/8 border border-white/12 px-4 py-1.5 rounded-full text-sm font-medium text-neutral-200/85">
                                     แผนก: {employee.department}
                                 </span>
                             )}
                             {employee.position && (
-                                <span className="bg-white/5 border border-white/10 px-5 py-1.5 rounded-full text-base font-medium text-neutral-400">
+                                <span className="bg-white/8 border border-white/12 px-4 py-1.5 rounded-full text-sm font-medium text-neutral-200/70">
                                     {employee.position}
                                 </span>
                             )}
@@ -433,7 +458,7 @@ export default function WelcomeTvDashboard() {
             </div>
 
             {/* Debug logs (subtle at bottom left) */}
-            <div className="absolute bottom-4 left-4 text-[10px] font-mono text-neutral-500 max-w-xs text-left z-30 pointer-events-auto bg-black/50 p-3 rounded-xl border border-white/5 hover:border-white/10 transition-all max-h-36 overflow-y-auto">
+            {showControls && <div className="absolute bottom-4 left-4 text-[10px] font-mono text-neutral-500 max-w-xs text-left z-30 pointer-events-auto bg-black/50 p-3 rounded-xl border border-white/5 hover:border-white/10 transition-all max-h-36 overflow-y-auto">
                 <div className="font-bold text-neutral-400 mb-1 flex items-center justify-between gap-4">
                     <span>TV STATUS LOGS</span>
                     <button className="text-[8px] bg-white/5 hover:bg-white/10 px-1.5 py-0.5 rounded text-neutral-400" onClick={() => setLogs([])}>clear</button>
@@ -441,7 +466,7 @@ export default function WelcomeTvDashboard() {
                 {logs.map((log, i) => (
                     <div key={i} className="leading-tight mt-0.5 truncate">{log}</div>
                 ))}
-            </div>
+            </div>}
 
             {/* General Banner Footer */}
             <div className={`w-full text-center z-20 ${slideMode ? 'opacity-0' : ''}`}>
