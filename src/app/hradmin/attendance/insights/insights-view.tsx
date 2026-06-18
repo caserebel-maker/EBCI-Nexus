@@ -390,6 +390,7 @@ function SegmentedButton({ active, onClick, children }: {
 }
 
 function AbsentCell({ days, dates }: { days: number; dates: string[] }) {
+    const [open, setOpen] = useState(false)
     const hasAbsence = days > 0
     const summary = absentDateSummary(dates)
 
@@ -398,15 +399,37 @@ function AbsentCell({ days, dates }: { days: number; dates: string[] }) {
     }
 
     return (
-        <div className="inline-flex min-w-[4.75rem] flex-col items-end gap-1 whitespace-nowrap">
+        <div className="group relative inline-flex min-w-[5.5rem] flex-col items-end gap-1 whitespace-nowrap">
             <span className="text-sm font-black leading-none text-rose-200">{days}</span>
             {summary && (
-                <span
+                <button
+                    type="button"
+                    onClick={() => setOpen(value => !value)}
+                    onBlur={() => window.setTimeout(() => setOpen(false), 150)}
                     title={dates.map(thaiDate).join(', ')}
-                    className="rounded-full border border-rose-300/15 bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold leading-none text-rose-100/75"
+                    className="rounded-full border border-rose-300/15 bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold leading-none text-rose-100/75 transition-colors hover:bg-rose-500/18 hover:text-rose-50"
                 >
-                    {dates.length === 1 ? summary : `ดูวันที่ ${dates.length} วัน`}
-                </span>
+                    {dates.length === 1 ? summary : `ดูรายละเอียด ${dates.length} วัน`}
+                </button>
+            )}
+            {summary && (
+                <div
+                    className={cn(
+                        'pointer-events-none absolute right-0 top-[calc(100%+0.4rem)] z-30 w-44 rounded-xl border border-white/12 bg-[#3b1118]/95 p-2 text-left shadow-2xl shadow-black/30 opacity-0 transition-opacity group-hover:opacity-100',
+                        open && 'opacity-100',
+                    )}
+                >
+                    <div className="mb-1 border-b border-white/10 pb-1 text-[10px] font-bold text-white/55">
+                        วันที่ขาดงาน
+                    </div>
+                    <div className="max-h-40 space-y-1 overflow-y-auto">
+                        {dates.map(date => (
+                            <div key={date} className="rounded-lg bg-white/6 px-2 py-1 text-[11px] font-semibold text-white/80">
+                                {thaiDate(date)}
+                            </div>
+                        ))}
+                    </div>
+                </div>
             )}
         </div>
     )
