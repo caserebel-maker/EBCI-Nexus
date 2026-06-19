@@ -11,6 +11,8 @@ import { SuccessPopup } from "@/components/success-popup"
 import { useTranslation } from "@/contexts/language-context"
 
 const LIST_PATH = '/hradmin/announcements'
+const FIELD_CLASS = "w-full rounded-xl border border-white/15 bg-white/12 px-4 py-3 text-white shadow-inner shadow-black/10 outline-none transition focus:border-blue-400/70 focus:bg-white/16 focus:ring-2 focus:ring-blue-400/35 placeholder:text-white/45"
+const LABEL_CLASS = "text-sm font-bold text-white/75 uppercase tracking-wider"
 
 export default function AnnouncementPage() {
     const { t } = useTranslation()
@@ -267,19 +269,19 @@ export default function AnnouncementPage() {
                 )}
 
                 <div className="space-y-2">
-                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">{t('announcements.form.headline')}</label>
+                    <label className={LABEL_CLASS}>{t('announcements.form.headline')}</label>
                     <input
                         name="headline"
                         required
                         value={headline}
                         onChange={e => setHeadline(e.target.value)}
                         placeholder={priority === 'emergency' ? "e.g., FIRE ALARM: EVACUATE IMMEDIATELY" : "e.g., Annual Town Hall Meeting"}
-                        className="w-full bg-black/5 border border-black/10 rounded-xl px-4 py-3 text-lg font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-gray-400"
+                        className={cn(FIELD_CLASS, "text-lg font-bold")}
                     />
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">{t('announcements.form.content')}</label>
+                    <label className={LABEL_CLASS}>{t('announcements.form.content')}</label>
                     <textarea
                         name="content"
                         required
@@ -287,12 +289,12 @@ export default function AnnouncementPage() {
                         value={content}
                         onChange={e => setContent(e.target.value)}
                         placeholder={t('announcements.form.content')}
-                        className="w-full bg-black/5 border border-black/10 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-gray-400"
+                        className={cn(FIELD_CLASS, "min-h-[150px] resize-y leading-relaxed")}
                     />
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+                    <label className={LABEL_CLASS}>
                         วันหมดอายุ (Optional)
                     </label>
                     <input
@@ -300,15 +302,15 @@ export default function AnnouncementPage() {
                         name="expires_at"
                         value={expiresAt}
                         onChange={e => setExpiresAt(e.target.value)}
-                        className="w-full bg-black/5 border border-black/10 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        className={FIELD_CLASS}
                     />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-white/55">
                         ถ้าไม่ระบุ ประกาศ emergency จะหมดอายุภายใน 7 วัน • ประกาศทั่วไปจะยังแสดงในหน้ารวมประกาศ
                     </p>
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">{t('announcements.form.image')}</label>
+                    <label className={LABEL_CLASS}>{t('announcements.form.image')}</label>
                     <div className="bg-gray-200 text-gray-900 rounded-xl p-6 text-center hover:bg-white transition-all group cursor-pointer relative flex flex-col items-center justify-center gap-2 border-2 border-transparent hover:border-primary/20 shadow-lg active:scale-[0.99] min-h-48 overflow-hidden">
                         <input
                             type="file"
