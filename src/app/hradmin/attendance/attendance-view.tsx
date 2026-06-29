@@ -255,10 +255,10 @@ export function AttendanceView({ initialDate, initialData }: Props) {
                     <FilterTabBtn active={filter === 'outside-head-office'} onClick={() => setFilter('outside-head-office')} count={stats.outsideHeadOfficeCount}>
                         📍 นอก Head Office
                     </FilterTabBtn>
-                    <FilterTabBtn active={filter === 'late'} onClick={() => setFilter('late')} count={lateCount}>
+                    <FilterTabBtn active={filter === 'late'} onClick={() => setFilter('late')} count={lateCount} variant="late">
                         ⏰ เข้างานสาย
                     </FilterTabBtn>
-                    <FilterTabBtn active={filter === 'not-checked-in'} onClick={() => setFilter('not-checked-in')} count={stats.notCheckedInCount}>
+                    <FilterTabBtn active={filter === 'not-checked-in'} onClick={() => setFilter('not-checked-in')} count={stats.notCheckedInCount} variant="not-checked-in">
                         ❓ ยังไม่เช็คอิน
                     </FilterTabBtn>
                 </div>
@@ -320,19 +320,31 @@ function StatCard({ icon: Icon, label, value, color, bg, border }: any) {
     )
 }
 
-function FilterTabBtn({ active, onClick, count, children }: any) {
+function FilterTabBtn({ active, onClick, count, children, variant = 'default' }: any) {
+    let activeClass = "bg-[#882136] text-white shadow-lg shadow-[#882136]/40"
+    let inactiveClass = "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border border-white/10"
+
+    if (variant === 'not-checked-in') {
+        activeClass = "bg-[#ff0000] text-white shadow-lg shadow-[#ff0000]/40"
+        inactiveClass = "bg-[#ff0000]/10 text-[#ff0000] hover:bg-[#ff0000]/20 border border-[#ff0000]/30"
+    } else if (variant === 'late') {
+        activeClass = "bg-[#ffff00] text-black shadow-lg shadow-[#ffff00]/40"
+        inactiveClass = "bg-[#ffff00]/10 text-[#ffff00] hover:bg-[#ffff00]/20 border border-[#ffff00]/30"
+    }
+
     return (
         <button
             onClick={onClick}
             className={cn(
                 "text-xs px-3 py-1.5 rounded-full font-semibold transition-all flex items-center gap-1.5",
-                active
-                    ? "bg-[#882136] text-white shadow-lg shadow-[#882136]/40"
-                    : "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border border-white/10"
+                active ? activeClass : inactiveClass
             )}
         >
             {children}
-            <span className="bg-black/20 px-1.5 py-0.5 rounded text-[10px]">{count}</span>
+            <span className={cn(
+                "px-1.5 py-0.5 rounded text-[10px]",
+                variant === 'late' && active ? "bg-black/10" : "bg-black/20"
+            )}>{count}</span>
         </button>
     )
 }
