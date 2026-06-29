@@ -21,6 +21,7 @@ type EmployeeRow = {
     email: string | null
     department: string | null
     position: string | null
+    photo_url: string | null
 }
 
 type LoginAttemptRow = {
@@ -31,7 +32,10 @@ type LoginAttemptRow = {
 
 type MonitorRow = EmployeeRow & {
     displayName: string
+    shortName: string
     emailLower: string | null
+    photoUrl: string | null
+    initials: string
     loggedIn: boolean
     firstLoginAt: string | null
     lastLoginAt: string | null
@@ -60,6 +64,23 @@ function employeeName(row: EmployeeRow): string {
     return row.nickname ? `${fullName} (${row.nickname})` : fullName || row.email || 'ไม่พบชื่อ'
 }
 
+function shortEmployeeName(row: EmployeeRow): string {
+    return row.nickname || row.first_name_th || row.email?.split('@')[0] || '—'
+}
+
+function employeeInitials(row: EmployeeRow): string {
+    const base = row.nickname || row.first_name_th || row.email || '?'
+    return base.trim().slice(0, 2).toUpperCase()
+}
+
+function resolvePhotoUrl(photoUrl: string | null): string | null {
+    if (!photoUrl) return null
+    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) return photoUrl
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (!supabaseUrl) return null
+    return `${supabaseUrl}/storage/v1/object/public/employee-photos/${photoUrl}`
+}
+
 function percent(value: number, total: number): number {
     if (!total) return 0
     return Math.round((value / total) * 100)
@@ -81,7 +102,7 @@ export default async function LaunchLoginMonitorPage({ searchParams }: PageProps
 
     const { data: employeeRows, error: employeeError } = await supabaseAdmin
         .from('employees')
-        .select('id, employee_code, first_name_th, last_name_th, nickname, email, department, position')
+        .select('id, employee_code, first_name_th, last_name_th, nickname, email, department, position, photo_url')
         .eq('status', 'active')
         .order('employee_code', { ascending: true })
 
@@ -125,7 +146,10 @@ export default async function LaunchLoginMonitorPage({ searchParams }: PageProps
         return {
             ...employee,
             displayName: employeeName(employee),
+            shortName: shortEmployeeName(employee),
             emailLower,
+            photoUrl: resolvePhotoUrl(employee.photo_url),
+            initials: employeeInitials(employee),
             loggedIn: successes.length > 0,
             firstLoginAt: successes[0]?.attempted_at ?? null,
             lastLoginAt: successes.at(-1)?.attempted_at ?? null,
@@ -206,6 +230,82 @@ export default async function LaunchLoginMonitorPage({ searchParams }: PageProps
                         className="h-full rounded-full bg-gradient-to-r from-emerald-300 via-cyan-300 to-sky-400 transition-all"
                         style={{ width: `${completion}%` }}
                     />
+                </div>
+            </section>
+
+            <section className="rounded-2xl border border-white/12 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.12),transparent_38%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.035))] p-3 sm:p-4 shadow-2xl shadow-black/20">
+                <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <h2 className="text-lg font-black text-white">ภาพรวมแบบรูปพนักงาน</h2>
+                        <p className="text-xs text-white/50">รูปสี = เข้าระบบแล้ว · ขาวดำ = ยังไม่เข้า</p>
+                    </div>
+                    <div className="hidden text-xs font-bold text-white/50 lg:block">
+                        Desktop แสดงครบทุกคนในแผงเดียว
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12">
+                    {rows.map(row => (
+                        <div
+                            key={`face-${row.id}`}
+                            className={[
+                                'group relative min-w-0 rounded-xl border p-2 text-center transition-all duration-300',
+                                row.loggedIn
+                                    ? 'border-emerald-300/35 bg-emerald-300/10 shadow-[0_0_22px_rgba(52,211,153,0.14)]'
+                                    : 'border-white/8 bg-black/18 opacity-70',
+                            ].join(' ')}
+                            title={`${row.displayName}${row.loggedIn && row.lastLoginAt ? ` · ${formatBangkokDateTime(row.lastLoginAt)}` : ' · ยังไม่เข้า'}`}
+                        >
+                            <div className="relative mx-auto h-12 w-12 sm:h-14 sm:w-14 lg:h-12 lg:w-12 xl:h-14 xl:w-14">
+                                <div
+                                    className={[
+                                        'absolute inset-0 rounded-full',
+                                        row.loggedIn
+                                            ? 'bg-emerald-300/35 blur-md animate-pulse'
+                                            : 'bg-white/5',
+                                    ].join(' ')}
+                                />
+                                <div
+                                    className={[
+                                        'relative h-full w-full overflow-hidden rounded-full border-2',
+                                        row.loggedIn ? 'border-emerald-300' : 'border-white/15',
+                                    ].join(' ')}
+                                >
+                                    {row.photoUrl ? (
+                                        <img
+                                            src={row.photoUrl}
+                                            alt={row.displayName}
+                                            className={[
+                                                'h-full w-full object-cover transition-all duration-500',
+                                                row.loggedIn ? 'grayscale-0 scale-105' : 'grayscale contrast-90 brightness-75',
+                                            ].join(' ')}
+                                        />
+                                    ) : (
+                                        <div
+                                            className={[
+                                                'flex h-full w-full items-center justify-center text-sm font-black',
+                                                row.loggedIn ? 'bg-emerald-300/20 text-emerald-50' : 'bg-white/10 text-white/45',
+                                            ].join(' ')}
+                                        >
+                                            {row.initials}
+                                        </div>
+                                    )}
+                                </div>
+                                {row.loggedIn && (
+                                    <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-300 text-[#082018] shadow-lg shadow-emerald-950/30">
+                                        <CheckCircle2 size={13} strokeWidth={3} />
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="mt-1.5 min-w-0">
+                                <p className={['truncate text-xs font-black', row.loggedIn ? 'text-white' : 'text-white/55'].join(' ')}>
+                                    {row.shortName}
+                                </p>
+                                <p className="truncate text-[10px] font-bold text-white/35">{row.employee_code ?? '—'}</p>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </section>
 
