@@ -4,6 +4,7 @@ import { CheckCircle2, Clock, RefreshCw, Search, ShieldCheck, UserCheck, UserX }
 import { getSession } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { formatBangkokDateTime, todayBangkokKey } from '@/lib/datetime'
+import { AutoRefresh } from './auto-refresh'
 
 export const dynamic = 'force-dynamic'
 
@@ -151,6 +152,7 @@ export default async function LaunchLoginMonitorPage({ searchParams }: PageProps
                         <UserCheck size={14} />
                         Launch monitor
                     </div>
+                    <AutoRefresh />
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-black text-white">ตรวจล็อกอินวันอบรม</h1>
                         <p className="mt-1 text-sm text-white/60">
