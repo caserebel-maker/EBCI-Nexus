@@ -1591,7 +1591,18 @@ function Step1TypePicker({
                     </div>
                     <div className="mt-2.5 space-y-1">
                         {selected.advance_notice_days > 0 && (
-                            <p className="text-sm text-amber-200">ขอล่วงหน้า ≥ {selected.advance_notice_days} วัน</p>
+                            <div className="rounded-lg bg-yellow-300 px-3 py-2 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.08)]">
+                                <p className="text-sm font-black leading-snug">
+                                    {selected.leave_type_id === 'annual'
+                                        ? `ลาพักผ่อนประจำปีต้องยื่นล่วงหน้าอย่างน้อย ${selected.advance_notice_days} วันก่อนวันลา`
+                                        : `ต้องยื่นล่วงหน้าอย่างน้อย ${selected.advance_notice_days} วันก่อนวันลา`}
+                                </p>
+                                {selected.leave_type_id === 'personal' && (
+                                    <p className="mt-0.5 text-xs font-semibold leading-snug text-black/75">
+                                        หากเป็นเหตุจำเป็นหรือฉุกเฉิน ให้ระบุเหตุผลให้ชัดเจนเพื่อให้ผู้อนุมัติพิจารณา
+                                    </p>
+                                )}
+                            </div>
                         )}
                         {!selected.same_day_allowed && selected.leave_type_id === 'sick' && (
                             <p className="text-sm text-rose-200">ต้องเป็นวันที่ผ่านไปแล้ว</p>
