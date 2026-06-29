@@ -24,11 +24,10 @@ export const maxDuration = 60
  * desk yet at 09:00. Past noon and we're nudging too late to save
  * the workday's data.
  *
- * Cooldown: per-day. We use the existing wfh_requests.last_reminded_at
- * (already stamped by the leave-reminders cron when nagging the
- * approver). Filter: only nudge if last_reminded_at is older than
- * "today's start in Bangkok" — that way the same approval-pending
- * reminder vs check-in nudge don't accidentally suppress each other.
+ * Cooldown: per-day. We use wfh_requests.last_reminded_at for this
+ * employee check-in nudge only. Pending-approval reminders use
+ * approval_reminded_at, so these two reminder flows cannot suppress
+ * each other.
  *
  * Auth: same Bearer CRON_SECRET pattern as /api/cron/leave-reminders.
  */
