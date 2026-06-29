@@ -1541,9 +1541,12 @@ function Step1TypePicker({
                         — เลือกประเภทการลา —
                     </option>
                     {balances.map(b => {
+                        const hasNoEntitlement = !b.is_unlimited && b.total_days <= 0
                         const exhausted = !b.is_unlimited && b.remaining_days <= 0
                         const remainingLabel = b.is_unlimited
                             ? 'ไม่จำกัด'
+                            : hasNoEntitlement
+                                ? 'ยังไม่ได้กำหนดสิทธิ์'
                             : `เหลือ ${b.remaining_days} / ${b.total_days} วัน`
                         return (
                             <option
@@ -1553,7 +1556,7 @@ function Step1TypePicker({
                                 className="text-black"
                             >
                                 {b.name_th} · {remainingLabel}
-                                {exhausted ? ' (วันลาหมดแล้ว)' : ''}
+                                {exhausted && !hasNoEntitlement ? ' (วันลาหมดแล้ว)' : ''}
                             </option>
                         )
                     })}
