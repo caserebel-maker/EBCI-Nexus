@@ -162,13 +162,13 @@ export function LeavePolicyView({ leaveTypes }: Props) {
                                         {type.description && (
                                             <p>{type.description}</p>
                                         )}
+                                        {(type.advance_notice_days ?? 0) > 0 && (
+                                            <AdvanceNoticeBanner
+                                                typeId={type.id}
+                                                days={type.advance_notice_days ?? 0}
+                                            />
+                                        )}
                                         <div className="flex flex-wrap gap-2 pt-1">
-                                            {(type.advance_notice_days ?? 0) > 0 && (
-                                                <PolicyChip
-                                                    label={`ขอล่วงหน้า ≥ ${type.advance_notice_days} วัน`}
-                                                    color="text-amber-200 bg-amber-500/15 border-amber-400/25"
-                                                />
-                                            )}
                                             {type.id === 'sick' && (
                                                 <PolicyChip
                                                     label={`≥ ${SICK_LEAVE_RULES.medicalCertificateThreshold} วัน ต้องแนบใบรับรองแพทย์`}
@@ -231,6 +231,23 @@ export function LeavePolicyView({ leaveTypes }: Props) {
                     กลับไปหน้าการลา
                 </Link>
             </div>
+        </div>
+    )
+}
+
+function AdvanceNoticeBanner({ typeId, days }: { typeId: string; days: number }) {
+    const label = typeId === 'annual'
+        ? `ลาพักผ่อนประจำปีต้องยื่นล่วงหน้าอย่างน้อย ${days} วันก่อนวันลา`
+        : `ต้องยื่นล่วงหน้าอย่างน้อย ${days} วันก่อนวันลา`
+
+    return (
+        <div className="rounded-lg bg-yellow-300 px-3 py-2 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.08)]">
+            <p className="text-sm font-black leading-snug">{label}</p>
+            {typeId === 'personal' && (
+                <p className="mt-0.5 text-xs font-semibold leading-snug text-black/75">
+                    หากเป็นเหตุจำเป็นหรือฉุกเฉิน ให้ระบุเหตุผลให้ชัดเจนเพื่อให้ผู้อนุมัติพิจารณา
+                </p>
+            )}
         </div>
     )
 }
