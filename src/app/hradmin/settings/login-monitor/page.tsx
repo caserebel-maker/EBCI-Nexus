@@ -9,7 +9,7 @@ import { AutoRefresh } from './auto-refresh'
 export const dynamic = 'force-dynamic'
 
 type PageProps = {
-    searchParams?: Promise<{ date?: string }>
+    searchParams?: Promise<{ date?: string; fromTime?: string }>
 }
 
 type EmployeeRow = {
@@ -44,14 +44,38 @@ type MonitorRow = EmployeeRow & {
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+const TIME_RE = /^\d{2}:\d{2}$/
 
 function sanitizeDate(value: string | undefined): string {
     if (value && DATE_RE.test(value)) return value
     return todayBangkokKey()
 }
 
-function bangkokDateRangeUtc(dateKey: string) {
-    const start = new Date(`${dateKey}T00:00:00+07:00`)
+function sanitizeTime(value: string | undefined): string {
+    if (value && TIME_RE.test(value)) return value
+    return '00:00'
+}
+
+function bangkokNowParts() {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Bangkok',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+    }).formatToParts(new Date())
+
+    const get = (type: string) => parts.find(p => p.type === type)?.value ?? ''
+    return {
+        date: `${get('year')}-${get('month')}-${get('day')}`,
+        time: `${get('hour')}:${get('minute')}`,
+    }
+}
+
+function bangkokDateRangeUtc(dateKey: string, fromTime: string) {
+    const start = new Date(`${dateKey}T${fromTime}:00+07:00`)
     const end = new Date(start.getTime() + 24 * 60 * 60 * 1000)
     return {
         startIso: start.toISOString(),
@@ -98,7 +122,11 @@ export default async function LaunchLoginMonitorPage({ searchParams }: PageProps
 
     const params = await searchParams
     const selectedDate = sanitizeDate(params?.date)
-    const { startIso, endIso } = bangkokDateRangeUtc(selectedDate)
+    const selectedFromTime = sanitizeTime(params?.fromTime)
+    const { startIso, endIso } = bangkokDateRangeUtc(selectedDate, selectedFromTime)
+    const nowParts = bangkokNowParts()
+    const startNowHref = `/hradmin/settings/login-monitor?date=${nowParts.date}&fromTime=${nowParts.time}`
+    const refreshHref = `/hradmin/settings/login-monitor?date=${selectedDate}&fromTime=${selectedFromTime}`
 
     const { data: employeeRows, error: employeeError } = await supabaseAdmin
         .from('employees')
@@ -180,7 +208,7 @@ export default async function LaunchLoginMonitorPage({ searchParams }: PageProps
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-black text-white">ตรวจล็อกอินวันอบรม</h1>
                         <p className="mt-1 text-sm text-white/60">
-                            ดูว่าพนักงาน active คนไหนเข้าระบบแล้วบ้างจากบันทึก login จริงของระบบ
+                            ดูว่าพนักงาน active คนไหนเข้าระบบแล้วบ้างจากบันทึก login จริงของระบบ · เริ่มนับ {selectedDate} เวลา {selectedFromTime} น.
                         </p>
                     </div>
                 </div>
@@ -193,12 +221,26 @@ export default async function LaunchLoginMonitorPage({ searchParams }: PageProps
                         defaultValue={selectedDate}
                         className="h-11 rounded-xl border border-white/15 bg-black/25 px-3 text-sm font-semibold text-white outline-none focus:border-emerald-300/60"
                     />
+                    <label className="text-xs font-bold uppercase tracking-[0.14em] text-white/45">เริ่มนับ</label>
+                    <input
+                        type="time"
+                        name="fromTime"
+                        defaultValue={selectedFromTime}
+                        className="h-11 rounded-xl border border-white/15 bg-black/25 px-3 text-sm font-semibold text-white outline-none focus:border-emerald-300/60"
+                    />
                     <button className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 text-sm font-black text-[#07130d] shadow-lg shadow-emerald-950/30 transition hover:bg-emerald-300">
                         <Search size={16} />
                         ตรวจสอบ
                     </button>
                     <Link
-                        href={`/hradmin/settings/login-monitor?date=${selectedDate}`}
+                        href={startNowHref}
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-300/10 px-4 text-sm font-bold text-cyan-100 hover:bg-cyan-300/15"
+                    >
+                        <Clock size={16} />
+                        เริ่มนับจากตอนนี้
+                    </Link>
+                    <Link
+                        href={refreshHref}
                         className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/8 px-4 text-sm font-bold text-white hover:bg-white/12"
                     >
                         <RefreshCw size={16} />
@@ -371,8 +413,9 @@ export default async function LaunchLoginMonitorPage({ searchParams }: PageProps
                     <div className="space-y-1">
                         <h2 className="font-black text-white">หมายเหตุสำหรับวันอบรม</h2>
                         <p className="text-sm leading-6 text-white/60">
-                            หน้านี้นับเฉพาะพนักงานสถานะ active และอ้างอิงจาก login ที่สำเร็จในวันที่เลือกตามเวลาไทย
-                            ถ้าพนักงานเปิดค้างจากวันก่อน ให้กดออกจากระบบแล้วเข้าใหม่เพื่อให้ระบบบันทึกว่าเข้าวันอบรมแล้ว
+                            หน้านี้นับเฉพาะพนักงานสถานะ active และอ้างอิงจากการล็อกอินเข้า EBCI Nexus สำเร็จ
+                            ไม่เกี่ยวกับการแตะบัตรหรือเช็คอินเข้างาน ถ้ามี log ทดสอบปน ให้กด “เริ่มนับจากตอนนี้”
+                            ก่อนเริ่มรอบอบรม โดย audit log เดิมยังถูกเก็บไว้ครบ
                         </p>
                     </div>
                 </div>
