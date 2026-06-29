@@ -9,7 +9,7 @@ import {
     Settings, ChevronRight, ChevronDown, X, UserRound, Network,
     UserPlus, Activity, DoorOpen,
     MapPin, Briefcase, BarChart3, Wallet, ScrollText, ShieldCheck,
-    CalendarHeart, UserMinus, AlertTriangle,
+    CalendarHeart, UserMinus, AlertTriangle, UserCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRole, type Role } from '@/contexts/role-context'
@@ -102,6 +102,7 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'สิทธิ์การเข้าถึงระบบ', desc: 'กำหนดสิทธิ์แอดมิน', href: '/hradmin/settings/permissions', icon: ShieldCheck },
         { label: 'Audit log',             desc: 'ประวัติการแก้ไข',    href: '/hradmin/settings/audit',       icon: FileText },
         { label: 'ระบบและทรัพยากร',      desc: 'Quota + storage',    href: '/hradmin/settings/quota',       icon: Activity },
+        { label: 'ตรวจล็อกอินวันอบรม',    desc: 'ใครเข้าระบบแล้วบ้าง', href: '/hradmin/settings/login-monitor', icon: UserCheck },
         { label: 'รายงาน',                desc: 'CSV exports',        href: '/hradmin/reports',              icon: FileText },
         { label: 'แบ็กอัพข้อมูล',         desc: 'Download ZIP สำรอง', href: '/hradmin/settings/backup',      icon: ShieldCheck },
         { label: 'ตั้งค่าทั่วไป',          desc: 'พิกัดออฟฟิศ + ระบบ', href: '/hradmin/settings',             icon: Settings },

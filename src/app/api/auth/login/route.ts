@@ -13,14 +13,18 @@ import {
 // Rate-limit thresholds. Tuned to block credential-stuffing without
 // frustrating legitimate users who fat-finger a password a few times.
 //   - 5 fails per email in 5 min  → block that email for 15 min
-//   - 20 fails per IP in 5 min     → block that IP for 15 min
+//   - 80 fails per IP in 5 min     → block that IP for 15 min
 // Both windows roll: the count is "fails in last 5 min", not "fails
 // since last reset", so a successful login doesn't free up an attacker
 // who's still spraying.
 const RL_WINDOW_MIN = 5
 const RL_BLOCK_MIN  = 15
 const RL_EMAIL_MAX  = 5
-const RL_IP_MAX     = 20
+// Launch/training days can have 40+ employees behind the same office
+// public IP. Keep the per-email bucket strict, but make the shared-IP
+// bucket tolerant enough that normal first-day typos do not block the
+// whole office.
+const RL_IP_MAX     = 80
 
 function createAuthClient() {
     return createClient(
