@@ -325,11 +325,11 @@ function FilterTabBtn({ active, onClick, count, children, variant = 'default' }:
     let inactiveClass = "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border border-white/10"
 
     if (variant === 'not-checked-in') {
-        activeClass = "bg-[#ff0000] text-white shadow-lg shadow-[#ff0000]/40"
-        inactiveClass = "bg-[#ff0000]/10 text-[#ff0000] hover:bg-[#ff0000]/20 border border-[#ff0000]/30"
+        activeClass = "bg-[#ff0000] text-white border-2 border-white scale-105 shadow-lg shadow-[#ff0000]/50"
+        inactiveClass = "bg-[#ff0000] text-white opacity-75 hover:opacity-100 border border-transparent"
     } else if (variant === 'late') {
-        activeClass = "bg-[#ffff00] text-black shadow-lg shadow-[#ffff00]/40"
-        inactiveClass = "bg-[#ffff00]/10 text-[#ffff00] hover:bg-[#ffff00]/20 border border-[#ffff00]/30"
+        activeClass = "bg-[#ffff00] text-black border-2 border-black scale-105 shadow-lg shadow-[#ffff00]/50"
+        inactiveClass = "bg-[#ffff00] text-black opacity-75 hover:opacity-100 border border-transparent"
     }
 
     return (
