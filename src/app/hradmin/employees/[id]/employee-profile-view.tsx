@@ -179,8 +179,58 @@ interface EmployeeOption {
     last_name_th: string
     position: string
 }
+interface EmployeeProfileRecord {
+    id: string
+    employee_code: string | null
+    first_name_th: string | null
+    last_name_th: string | null
+    first_name_en: string | null
+    last_name_en: string | null
+    nickname: string | null
+    position: string | null
+    department: string | null
+    secondary_department: string | null
+    work_location: string | null
+    phone: string | null
+    email: string | null
+    employment_type: string | null
+    status: string | null
+    start_date: string | null
+    probation_end_date: string | null
+    date_of_birth: string | null
+    gender: string | null
+    quit_date: string | null
+    quit_reason: string | null
+    emergency_contact_name: string | null
+    emergency_contact_phone: string | null
+    emergency_contact_relation: string | null
+    emergency_contact_address: string | null
+    approval_level: number | null
+    manager_id: string | null
+    leave_approver_id: string | null
+    telegram_chat_id: string | null
+    home_latitude: number | string | null
+    home_longitude: number | string | null
+    home_location_label: string | null
+    home_location_note: string | null
+    home_location_updated_at: string | null
+    applicants?: {
+        current_address?: string | null
+        phone?: string | null
+    } | null
+}
+type ChartPayloadItem = {
+    name?: string
+    value?: number | string
+    fill?: string
+}
+type ChartTooltipProps = {
+    active?: boolean
+    payload?: ChartPayloadItem[]
+    label?: string
+}
 interface Props {
-    employee: any
+    employee: EmployeeProfileRecord
     photoUrl: string | null
     displayName: string
     supervisorName: string
@@ -264,7 +314,7 @@ interface FormState {
 }
 
 // ─── Section header ───────────────────────────────────────────────────────────
-function SHead({ icon: Icon, label }: { icon: any; label: string }) {
+function SHead({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
     return (
         <div className="flex items-center gap-3 mb-5 pb-3 border-b border-white/10">
             <div className="h-8 w-8 rounded-lg bg-white/15 ring-1 ring-white/25 flex items-center justify-center text-white shrink-0">
@@ -277,7 +327,7 @@ function SHead({ icon: Icon, label }: { icon: any; label: string }) {
 
 // ─── Info row ─────────────────────────────────────────────────────────────────
 function InfoRow({ label, value, icon: Icon, editing, editNode }: {
-    label: string; value: string; icon: any; editing?: boolean; editNode?: React.ReactNode
+    label: string; value: string; icon: LucideIcon; editing?: boolean; editNode?: React.ReactNode
 }) {
     return (
         <div data-info-row className="flex items-start justify-between py-3 border-b border-white/5 last:border-0 px-3 hover:bg-white/5 rounded-lg transition-colors gap-4">
@@ -294,12 +344,12 @@ function InfoRow({ label, value, icon: Icon, editing, editNode }: {
 }
 
 // ─── Recharts custom tooltip ──────────────────────────────────────────────────
-function LeaveTooltip({ active, payload, label }: any) {
+function LeaveTooltip({ active, payload, label }: ChartTooltipProps) {
     if (!active || !payload?.length) return null
     return (
         <div style={{ background: 'rgba(20,4,10,0.95)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '10px 14px' }}>
             <p className="text-white font-bold text-sm mb-1">{label}</p>
-            {payload.map((p: any) => (
+            {payload.map((p) => (
                 <p key={p.name} className="text-xs" style={{ color: p.fill }}>
                     {p.name}: <span className="font-bold">{p.value} วัน</span>
                 </p>
@@ -308,14 +358,14 @@ function LeaveTooltip({ active, payload, label }: any) {
     )
 }
 
-function WfhTooltip({ active, payload, label }: any) {
+function WfhTooltip({ active, payload, label }: ChartTooltipProps) {
     if (!active || !payload?.length) return null
-    const visible = payload.filter((p: any) => Number(p.value ?? 0) > 0)
+    const visible = payload.filter((p) => Number(p.value ?? 0) > 0)
     if (visible.length === 0) return null
     return (
         <div style={{ background: 'rgba(20,4,10,0.95)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '10px 14px' }}>
             <p className="text-white font-bold text-sm mb-1">{label}</p>
-            {visible.map((p: any) => (
+            {visible.map((p) => (
                 <p key={p.name} className="text-xs" style={{ color: p.fill }}>
                     {p.name}: <span className="font-bold">{p.value} วัน</span>
                 </p>
@@ -1251,6 +1301,16 @@ export function EmployeeProfileView({
                         />
                         <InfoRow label="ตำแหน่ง" icon={Briefcase}
                             value={employee.position || '—'}
+                            editing={isEditing && isHrAdmin}
+                            editNode={
+                                <input
+                                    type="text"
+                                    className={inp}
+                                    value={form.position}
+                                    onChange={set('position')}
+                                    placeholder="เช่น ผู้จัดการ, รองผู้จัดการ, เจ้าหน้าที่"
+                                />
+                            }
                         />
                         <InfoRow label="สถานที่ปฏิบัติงาน" icon={MapPin}
                             value={
