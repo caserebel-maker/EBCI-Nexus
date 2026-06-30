@@ -213,38 +213,45 @@ export default async function LaunchLoginMonitorPage({ searchParams }: PageProps
                     </div>
                 </div>
 
-                <form className="flex flex-col gap-2 sm:flex-row sm:items-center" action="/hradmin/settings/login-monitor">
-                    <label className="text-xs font-bold uppercase tracking-[0.14em] text-white/45">วันที่ตรวจ</label>
-                    <input
-                        type="date"
-                        name="date"
-                        defaultValue={selectedDate}
-                        className="h-11 rounded-xl border border-white/15 bg-black/25 px-3 text-sm font-semibold text-white outline-none focus:border-emerald-300/60"
-                    />
-                    <label className="text-xs font-bold uppercase tracking-[0.14em] text-white/45">เริ่มนับ</label>
-                    <input
-                        type="time"
-                        name="fromTime"
-                        defaultValue={selectedFromTime}
-                        className="h-11 rounded-xl border border-white/15 bg-black/25 px-3 text-sm font-semibold text-white outline-none focus:border-emerald-300/60"
-                    />
-                    <button className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 text-sm font-black text-[#07130d] shadow-lg shadow-emerald-950/30 transition hover:bg-emerald-300">
+                <form
+                    className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:w-auto lg:grid-cols-[180px_130px_auto_auto_auto] lg:items-end"
+                    action="/hradmin/settings/login-monitor"
+                >
+                    <label className="space-y-1">
+                        <span className="block text-xs font-bold uppercase tracking-[0.14em] text-white/45">วันที่ตรวจ</span>
+                        <input
+                            type="date"
+                            name="date"
+                            defaultValue={selectedDate}
+                            className="h-11 w-full rounded-xl border border-white/15 bg-black/25 px-3 text-sm font-semibold text-white outline-none focus:border-emerald-300/60"
+                        />
+                    </label>
+                    <label className="space-y-1">
+                        <span className="block text-xs font-bold uppercase tracking-[0.14em] text-white/45">เริ่มนับ</span>
+                        <input
+                            type="time"
+                            name="fromTime"
+                            defaultValue={selectedFromTime}
+                            className="h-11 w-full rounded-xl border border-white/15 bg-black/25 px-3 text-sm font-semibold text-white outline-none focus:border-emerald-300/60"
+                        />
+                    </label>
+                    <button className="inline-flex h-11 min-w-max items-center justify-center gap-2 self-end rounded-xl bg-emerald-400 px-5 text-sm font-black text-[#07130d] shadow-lg shadow-emerald-950/30 transition hover:bg-emerald-300">
                         <Search size={16} />
                         ตรวจสอบ
                     </button>
                     <Link
                         href={startNowHref}
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-300/10 px-4 text-sm font-bold text-cyan-100 hover:bg-cyan-300/15"
+                        className="inline-flex h-11 min-w-max items-center justify-center gap-2 self-end rounded-xl border border-cyan-300/25 bg-cyan-300/10 px-5 text-sm font-bold text-cyan-100 hover:bg-cyan-300/15"
                     >
                         <Clock size={16} />
-                        เริ่มนับจากตอนนี้
+                        <span className="whitespace-nowrap">เริ่มนับตอนนี้</span>
                     </Link>
                     <Link
                         href={refreshHref}
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/8 px-4 text-sm font-bold text-white hover:bg-white/12"
+                        className="inline-flex h-11 min-w-max items-center justify-center gap-2 self-end rounded-xl border border-white/15 bg-white/8 px-5 text-sm font-bold text-white hover:bg-white/12"
                     >
                         <RefreshCw size={16} />
-                        รีเฟรช
+                        <span className="whitespace-nowrap">รีเฟรช</span>
                     </Link>
                 </form>
             </div>
