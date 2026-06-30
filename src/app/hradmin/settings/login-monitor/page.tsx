@@ -45,6 +45,15 @@ type MonitorRow = EmployeeRow & {
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const TIME_RE = /^\d{2}:\d{2}$/
+const TRAINING_EXCLUDED_EMPLOYEE_CODES = new Set([
+    '002-29',   // แมว — ที่ปรึกษา
+    '056-47',   // ปราโมท — ที่ปรึกษา
+    '090-48',   // สมบัติ — ที่ปรึกษา
+    '105-49',   // อำนาจ — ที่ปรึกษา
+    '106-49',   // วัชระ — ที่ปรึกษา
+    '193-52',   // เรศ — ที่ปรึกษา
+    'TEST-ANT', // ANT — บัญชีทดสอบ
+])
 
 function sanitizeDate(value: string | undefined): string {
     if (value && DATE_RE.test(value)) return value
@@ -138,7 +147,10 @@ export default async function LaunchLoginMonitorPage({ searchParams }: PageProps
         throw new Error(`Load employees failed: ${employeeError.message}`)
     }
 
-    const employees = (employeeRows ?? []) as EmployeeRow[]
+    const employees = ((employeeRows ?? []) as EmployeeRow[]).filter(employee => {
+        const code = employee.employee_code?.trim().toUpperCase()
+        return !code || !TRAINING_EXCLUDED_EMPLOYEE_CODES.has(code)
+    })
     const emailLowers = employees
         .map(e => e.email?.trim().toLowerCase())
         .filter((email): email is string => Boolean(email))
@@ -257,7 +269,7 @@ export default async function LaunchLoginMonitorPage({ searchParams }: PageProps
             </div>
 
             <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-                <MetricCard label="พนักงาน active" value={total} sub="คน" tone="blue" />
+                <MetricCard label="ผู้เข้าอบรม" value={total} sub="คน" tone="blue" />
                 <MetricCard label="ล็อกอินแล้ว" value={loggedInCount} sub={`${completion}%`} tone="green" />
                 <MetricCard label="ยังไม่ล็อกอิน" value={pendingCount} sub="คน" tone="amber" />
                 <MetricCard label="ล็อกอินผิด" value={failedAttemptCount} sub="ครั้ง" tone="rose" />
@@ -420,9 +432,9 @@ export default async function LaunchLoginMonitorPage({ searchParams }: PageProps
                     <div className="space-y-1">
                         <h2 className="font-black text-white">หมายเหตุสำหรับวันอบรม</h2>
                         <p className="text-sm leading-6 text-white/60">
-                            หน้านี้นับเฉพาะพนักงานสถานะ active และอ้างอิงจากการล็อกอินเข้า EBCI Nexus สำเร็จ
+                            หน้านี้นับเฉพาะพนักงานสถานะ active ที่ต้องเข้าอบรม และอ้างอิงจากการล็อกอินเข้า EBCI Nexus สำเร็จ
                             ไม่เกี่ยวกับการแตะบัตรหรือเช็คอินเข้างาน ถ้ามี log ทดสอบปน ให้กด “เริ่มนับจากตอนนี้”
-                            ก่อนเริ่มรอบอบรม โดย audit log เดิมยังถูกเก็บไว้ครบ
+                            ก่อนเริ่มรอบอบรม โดย audit log เดิมยังถูกเก็บไว้ครบ ที่ปรึกษาและบัญชีทดสอบ ANT ถูกตัดออกจากหน้านี้แล้ว
                         </p>
                     </div>
                 </div>
