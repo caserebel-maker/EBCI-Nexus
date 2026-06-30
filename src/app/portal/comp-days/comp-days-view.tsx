@@ -106,12 +106,16 @@ export function CompDaysView() {
                     <CheckCircle2 size={16} />
                     ใช้สิทธิ์หยุดงาน
                 </button>
-                {summary.available === 0 && summary.total === 0 && (
-                    <p className="mt-3 text-[11px] text-white/45 inline-flex items-center gap-1">
-                        <Info size={11} />
-                        HR เป็นคนให้สิทธิ์เมื่อคุณทำงานในวันหยุด
+                <div className="mt-4 rounded-xl p-3 bg-white/5 border border-white/10 text-xs text-white/70 space-y-1">
+                    <p className="font-bold text-amber-300 inline-flex items-center gap-1">
+                        <Info size={13} />
+                        ข้อกำหนดสำคัญเพื่อรักษาสิทธิ์ของท่าน:
                     </p>
-                )}
+                    <ul className="list-disc list-inside space-y-1.5 pl-1 text-[11px] leading-relaxed text-white/80">
+                        <li>หากต้องมาทำงานในวันหยุด <strong>ต้องแจ้ง HR ทุกครั้ง</strong> เพื่อทำการบันทึกสิทธิ์สะสมวันหยุดเข้าสู่ระบบ</li>
+                        <li>สิทธิ์วันหยุดสะสมที่ได้รับ <strong>ต้องใช้ภายใน 90 วัน</strong> นับจากวันที่มาทำงานในวันหยุดนั้นๆ (หากเกินกำหนดสิทธิ์จะหมดอายุอัตโนมัติ)</li>
+                    </ul>
+                </div>
             </div>
 
             {/* History list */}
