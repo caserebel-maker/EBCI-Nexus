@@ -4,15 +4,15 @@ import { useEffect, useState, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { publishAnnouncement } from "../actions"
-import { AlertTriangle, Send, Megaphone, Info, Loader2, ArrowLeft, X, ChevronRight } from "lucide-react"
+import { AlertTriangle, Send, Megaphone, Info, Loader2, ArrowLeft, X, ChevronRight, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SuccessPopup } from "@/components/success-popup"
 
 import { useTranslation } from "@/contexts/language-context"
 
 const LIST_PATH = '/hradmin/announcements'
-const FIELD_CLASS = "w-full rounded-xl border border-white/15 bg-white/12 px-4 py-3 text-white shadow-inner shadow-black/10 outline-none transition focus:border-blue-400/70 focus:bg-white/16 focus:ring-2 focus:ring-blue-400/35 placeholder:text-white/45"
-const LABEL_CLASS = "text-sm font-bold text-white/75 uppercase tracking-wider"
+const FIELD_CLASS = "w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-950 shadow-inner shadow-slate-900/5 outline-none transition focus:border-blue-500/80 focus:bg-white focus:ring-2 focus:ring-blue-400/25 placeholder:text-slate-400"
+const LABEL_CLASS = "text-sm font-bold text-slate-700 uppercase tracking-wider"
 
 export default function AnnouncementPage() {
     const { t } = useTranslation()
@@ -208,7 +208,7 @@ export default function AnnouncementPage() {
                 action={handleSubmit}
                 onInput={() => setIsDirty(true)}
                 onChange={() => setIsDirty(true)}
-                className="bg-card border border-white/10 p-4 lg:p-8 rounded-2xl shadow-xl space-y-6"
+                className="rounded-2xl border border-slate-200 bg-slate-100 p-4 shadow-2xl shadow-black/20 space-y-6 lg:p-8"
             >
 
                 {/* Priority Selection */}
@@ -253,8 +253,8 @@ export default function AnnouncementPage() {
                     <div className={cn(
                         "p-4 rounded-xl flex gap-3",
                         priority === 'emergency'
-                            ? "bg-red-500/10 border border-red-500/30 text-red-400"
-                            : "bg-amber-500/10 border border-amber-500/30 text-amber-400"
+                            ? "bg-red-50 border border-red-200 text-red-700"
+                            : "bg-amber-50 border border-amber-200 text-amber-800"
                     )}>
                         <AlertTriangle className="shrink-0" size={20} />
                         <div className="text-sm">
@@ -304,14 +304,14 @@ export default function AnnouncementPage() {
                         onChange={e => setExpiresAt(e.target.value)}
                         className={FIELD_CLASS}
                     />
-                    <p className="text-xs text-white/55">
+                    <p className="text-xs text-slate-500">
                         ถ้าไม่ระบุ ประกาศ emergency จะหมดอายุภายใน 7 วัน • ประกาศทั่วไปจะยังแสดงในหน้ารวมประกาศ
                     </p>
                 </div>
 
                 <div className="space-y-2">
                     <label className={LABEL_CLASS}>{t('announcements.form.image')}</label>
-                    <div className="bg-gray-200 text-gray-900 rounded-xl p-6 text-center hover:bg-white transition-all group cursor-pointer relative flex flex-col items-center justify-center gap-2 border-2 border-transparent hover:border-primary/20 shadow-lg active:scale-[0.99] min-h-48 overflow-hidden">
+                    <div className="bg-slate-200 text-slate-900 rounded-xl p-6 text-center hover:bg-slate-50 transition-all group cursor-pointer relative flex flex-col items-center justify-center gap-2 border-2 border-slate-300 hover:border-blue-300/70 shadow-lg shadow-slate-900/10 active:scale-[0.99] min-h-48 overflow-hidden">
                         <input
                             type="file"
                             name="image"
@@ -331,11 +331,11 @@ export default function AnnouncementPage() {
                             }}
                         />
                         <div id="upload-placeholder" style={{ display: (existingImageUrl || previewUrl) ? 'none' : 'flex' }} className="pointer-events-none flex flex-col items-center">
-                            <div className="h-12 w-12 rounded-full bg-gray-900/10 flex items-center justify-center mb-2 text-gray-900 group-hover:scale-110 transition-transform">
+                            <div className="h-12 w-12 rounded-full bg-slate-900/10 flex items-center justify-center mb-2 text-slate-900 group-hover:scale-110 transition-transform">
                                 <Megaphone size={24} className="-rotate-12" />
                             </div>
-                            <span className="text-gray-900 font-bold uppercase tracking-wider text-sm">Click to Upload Image</span>
-                            <span className="text-[10px] text-gray-600 mt-1">PNG, JPG up to 10MB · แนะนำ 16:9 (1920×1080)</span>
+                            <span className="text-slate-900 font-bold uppercase tracking-wider text-sm">Click to Upload Image</span>
+                            <span className="text-[10px] text-slate-600 mt-1">PNG, JPG up to 10MB · แนะนำ 16:9 (1920×1080)</span>
                         </div>
                         <div id="preview-container" style={{ display: (existingImageUrl || previewUrl) ? 'block' : 'none' }} className="relative z-0 pointer-events-none w-full">
                             <img id="preview-image" src={previewUrl || existingImageUrl || ""} alt="Preview" className="max-h-40 rounded-lg mx-auto shadow-lg object-contain w-auto" />
@@ -369,7 +369,16 @@ export default function AnnouncementPage() {
     )
 }
 
-function PriorityOption({ id, label, icon: Icon, color, current, onClick }: any) {
+type PriorityOptionProps = {
+    id: string
+    label: string
+    icon: LucideIcon
+    color: string
+    current: string
+    onClick: (id: string) => void
+}
+
+function PriorityOption({ id, label, icon: Icon, color, current, onClick }: PriorityOptionProps) {
     const isSelected = current === id
     return (
         <button
@@ -379,7 +388,7 @@ function PriorityOption({ id, label, icon: Icon, color, current, onClick }: any)
                 "flex flex-col items-center gap-2 p-4 rounded-xl border transition-all",
                 isSelected
                     ? `${color} border-transparent text-white shadow-lg scale-105`
-                    : "bg-black/20 border-white/5 text-muted-foreground hover:bg-black/30 hover:text-white"
+                    : "bg-slate-200 border-slate-300 text-slate-700 shadow-sm shadow-slate-900/5 hover:bg-slate-100 hover:text-slate-950"
             )}
         >
             <Icon size={24} />
