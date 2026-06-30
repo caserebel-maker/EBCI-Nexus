@@ -142,11 +142,7 @@ export function WhoIsOutWidget() {
                 <div className="divide-y divide-white/5">
                     {previewEntries.map(e => {
                         const s = KIND_STYLE[e.kind]
-                        const displayName = formatEmployeeName({
-                            first_name_th: e.firstNameTh,
-                            last_name_th: e.lastNameTh,
-                            nickname: e.nickname,
-                        }, 'พนักงาน')
+                        const displayName = formatEmployeeName(e, 'พนักงาน')
                         return (
                             <div key={`${e.employeeId}-${e.kind}`} className="px-4 py-2.5 flex items-center gap-3">
                                 <span
@@ -343,8 +339,7 @@ function PersonRow({
     entry: Entry
     sectionStyle: typeof KIND_STYLE[Kind]
 }) {
-    const fullName = `${e.firstNameTh} ${e.lastNameTh ?? ''}`.trim() || 'พนักงาน'
-    const display = e.nickname?.trim() ? `${fullName} (${e.nickname.trim()})` : fullName
+    const display = formatEmployeeName(e, 'พนักงาน')
 
     return (
         <div className="px-3 py-2.5 flex items-start gap-3 min-w-0">

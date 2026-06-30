@@ -194,11 +194,7 @@ function PersonRow({
     entry: Entry
     sectionStyle: typeof SECTION_META[number]
 }) {
-    const display = formatEmployeeName({
-        first_name_th: e.firstNameTh,
-        last_name_th: e.lastNameTh,
-        nickname: e.nickname,
-    }, 'พนักงาน')
+    const display = formatEmployeeName(e, 'พนักงาน')
 
     return (
         <div className="px-4 py-3 flex items-start gap-3">

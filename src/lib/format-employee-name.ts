@@ -23,6 +23,8 @@ export interface NameSource {
     // Camel-case (occasionally present on older props)
     firstName?: string | null
     lastName?: string | null
+    firstNameTh?: string | null
+    lastNameTh?: string | null
 
     // A concatenated full name, if the caller already has one prepared.
     fullName?: string | null
@@ -31,9 +33,10 @@ export interface NameSource {
     nickname?: string | null
 }
 
-const pick = <T,>(a: T | null | undefined, b: T | null | undefined): T | null => {
+const pick = <T,>(a: T | null | undefined, b: T | null | undefined, c?: T | null | undefined): T | null => {
     if (a !== undefined && a !== null) return a
     if (b !== undefined && b !== null) return b
+    if (c !== undefined && c !== null) return c
     return null
 }
 
@@ -53,8 +56,8 @@ export function formatEmployeeName(
     fallback = '—',
 ): string {
     if (!emp) return fallback
-    const first = pick(emp.first_name_th, emp.firstName)
-    const last = pick(emp.last_name_th, emp.lastName)
+    const first = pick(emp.first_name_th, emp.firstName, emp.firstNameTh)
+    const last = pick(emp.last_name_th, emp.lastName, emp.lastNameTh)
     const full = (emp.fullName ?? `${first ?? ''} ${last ?? ''}`).trim()
     const nick = emp.nickname?.trim() || null
     if (full && nick) return `${full} (${nick})`
