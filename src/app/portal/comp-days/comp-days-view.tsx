@@ -161,25 +161,57 @@ export function CompDaysView() {
     )
 }
 
+function getDaysUntilExpiry(expiresAt: string, today: string): number {
+    const exp = new Date(expiresAt + 'T00:00:00')
+    const t = new Date(today + 'T00:00:00')
+    const diffTime = exp.getTime() - t.getTime()
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+}
+
 function CompDayRowCard({ row, today }: { row: CompDayRow; today: string }) {
     const status = computeStatus(row, today)
+
+    let countdownText = ''
+    let countdownStyle = ''
+    if (row.expires_at && status === 'available') {
+        const daysLeft = getDaysUntilExpiry(row.expires_at, today)
+        if (daysLeft <= 0) {
+            countdownText = 'หมดอายุแล้ววันนี้'
+            countdownStyle = 'text-rose-300 bg-rose-500/15 border-rose-500/25 font-semibold'
+        } else if (daysLeft <= 7) {
+            countdownText = `เหลืออีก ${daysLeft} วัน (ด่วนมาก!)`
+            countdownStyle = 'text-rose-200 bg-rose-500/20 border-rose-500/30 font-bold animate-pulse'
+        } else if (daysLeft <= 30) {
+            countdownText = `เหลืออีก ${daysLeft} วัน`
+            countdownStyle = 'text-orange-300 bg-orange-500/15 border-orange-500/25 font-semibold'
+        } else {
+            countdownText = `เหลืออีก ${daysLeft} วัน`
+            countdownStyle = 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20 font-semibold'
+        }
+    }
+
     return (
         <li className="rounded-xl border border-white/10 bg-white/5 p-4">
-            <div className="flex items-center gap-3 flex-wrap">
-                <span className={cn(
-                    'inline-flex items-center px-2.5 py-1 rounded-md border text-[11px] font-semibold',
-                    COMP_DAY_STATUS_BADGE[status],
-                )}>
-                    {COMP_DAY_STATUS_LABEL[status]}
-                </span>
-                <p className="text-sm text-white">
-                    ทำงานเมื่อ <strong>{formatThaiDate(row.worked_on)}</strong>
-                </p>
-                {row.expires_at && status === 'available' && (
-                    <p className="text-[11px] text-amber-200/80 inline-flex items-center gap-1">
-                        <Clock size={11} />
-                        หมดอายุ {formatThaiDate(row.expires_at)}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3 flex-wrap">
+                    <span className={cn(
+                        'inline-flex items-center px-2.5 py-1 rounded-md border text-[11px] font-semibold',
+                        COMP_DAY_STATUS_BADGE[status],
+                    )}>
+                        {COMP_DAY_STATUS_LABEL[status]}
+                    </span>
+                    <p className="text-sm text-white">
+                        ทำงานเมื่อ <strong>{formatThaiDate(row.worked_on)}</strong>
                     </p>
+                </div>
+                {row.expires_at && status === 'available' && (
+                    <span className={cn(
+                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs',
+                        countdownStyle,
+                    )}>
+                        <Clock size={12} />
+                        <span>{countdownText} (หมดอายุ {formatThaiDate(row.expires_at)})</span>
+                    </span>
                 )}
             </div>
             {row.earned_reason && (
