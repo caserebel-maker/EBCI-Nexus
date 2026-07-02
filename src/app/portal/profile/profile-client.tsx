@@ -290,7 +290,7 @@ function StreakCard({ streak }: { streak: StreakInfo }) {
                         {' '}(ก่อนหน้า: <span style={{ color: '#FCA5A5' }}>{lastResetEvent.label}</span>)
                     </>
                 ) : (
-                    <>🌱 เริ่มนับตั้งแต่เริ่มงาน <strong style={{ color: 'rgba(255,255,255,0.7)' }}>{startedThai}</strong> — ยังไม่เคย reset เลย</>
+                    <>🌱 เริ่มนับรางวัลตั้งแต่ <strong style={{ color: 'rgba(255,255,255,0.7)' }}>{startedThai}</strong> — ยังไม่เคย reset เลย</>
                 )}
             </p>
         </div>
