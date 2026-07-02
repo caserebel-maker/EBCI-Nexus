@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { CalendarDays, UserCircle, LogOut, ChevronRight } from 'lucide-react'
+import { CalendarDays, UserCircle, LogOut, ChevronRight, MessageSquare } from 'lucide-react'
 
 const MENU_ITEMS = [
     {
@@ -15,6 +15,12 @@ const MENU_ITEMS = [
         desc: 'ข้อมูลส่วนตัว',
         href: '/portal/profile',
         icon: UserCircle,
+    },
+    {
+        label: 'เสนอแนะ',
+        desc: 'ติชม ปรับปรุง หรือแจ้งปัญหาการใช้งาน',
+        href: '/portal/feedback',
+        icon: MessageSquare,
     },
 ]
 

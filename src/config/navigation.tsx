@@ -3,7 +3,7 @@ import {
     CalendarDays, ClipboardCheck, ShieldCheck, MapPin, Network, Palmtree,
     ScrollText, BarChart3, Clock, Calendar, Briefcase, User,
     Wallet, CheckCircle, Database, DoorOpen, GitBranch, CalendarHeart, Home,
-    MailWarning, AlertTriangle, UserCheck, type LucideIcon,
+    MailWarning, AlertTriangle, UserCheck, MessageSquare, type LucideIcon,
 } from 'lucide-react'
 import { ROLES, type UserRole } from './roles'
 
@@ -139,11 +139,12 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         {
             label: 'บริษัท',
             icon: Network,
-            matchPrefix: ['/portal/announcements', '/portal/organization', '/portal/meeting-room'],
+            matchPrefix: ['/portal/announcements', '/portal/organization', '/portal/meeting-room', '/portal/feedback'],
             children: [
                 { label: 'ประกาศข่าวสาร',  href: '/portal/announcements',  icon: Megaphone },
                 { label: 'ผังองค์กร',      href: '/portal/organization',   icon: Network },
                 { label: 'จองห้องประชุม',  href: '/portal/meeting-room',   icon: DoorOpen },
+                { label: 'เสนอแนะ',        href: '/portal/feedback',       icon: MessageSquare },
             ],
         },
         { label: 'ตั้งค่า', href: '/portal/settings', icon: Settings },
@@ -184,11 +185,12 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         {
             label: 'บริษัท',
             icon: Network,
-            matchPrefix: ['/portal/announcements', '/portal/organization', '/portal/meeting-room'],
+            matchPrefix: ['/portal/announcements', '/portal/organization', '/portal/meeting-room', '/portal/feedback'],
             children: [
                 { label: 'dashboard.announcements', href: '/portal/announcements', icon: Megaphone },
                 { label: 'ผังองค์กร',                href: '/portal/organization',  icon: Network },
                 { label: 'จองห้องประชุม',           href: '/portal/meeting-room',  icon: DoorOpen },
+                { label: 'เสนอแนะ',                 href: '/portal/feedback',      icon: MessageSquare },
             ],
         },
         { label: 'ตั้งค่า', href: '/portal/settings', icon: Settings },

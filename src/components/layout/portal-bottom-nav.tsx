@@ -10,6 +10,7 @@ import {
     UserPlus, Activity, DoorOpen,
     MapPin, Briefcase, BarChart3, Wallet, ScrollText, ShieldCheck,
     CalendarHeart, UserMinus, AlertTriangle, UserCheck,
+    MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRole, type Role } from '@/contexts/role-context'
@@ -123,7 +124,8 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'ใครไม่อยู่วันนี้', desc: 'ลา · WFH · ออกพื้นที่',      href: '/portal/who-is-out',      icon: UserMinus,       groupLabel: 'บริษัท' },
         { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',    icon: Network },
         { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/portal/meeting-room',    icon: DoorOpen },
-        { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',        icon: Settings,        groupLabel: 'อื่น ๆ' },
+        { label: 'เสนอแนะ',       desc: 'ติชม ปรับปรุง หรือแจ้งปัญหา', href: '/portal/feedback',      icon: MessageSquare,   groupLabel: 'อื่น ๆ' },
+        { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',        icon: Settings },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     employee: [
@@ -141,7 +143,8 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'ใครไม่อยู่วันนี้', desc: 'ลา · WFH · ออกพื้นที่',     href: '/portal/who-is-out',     icon: UserMinus,       groupLabel: 'บริษัท' },
         { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',   icon: Network },
         { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/portal/meeting-room',   icon: DoorOpen },
-        { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',       icon: Settings,        groupLabel: 'อื่น ๆ' },
+        { label: 'เสนอแนะ',       desc: 'ติชม ปรับปรุง หรือแจ้งปัญหา', href: '/portal/feedback',     icon: MessageSquare,   groupLabel: 'อื่น ๆ' },
+        { label: 'ตั้งค่า',         desc: 'เปลี่ยนรหัสผ่านและบัญชี', href: '/portal/settings',       icon: Settings },
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
 }
@@ -219,14 +222,14 @@ export function PortalBottomNav({
      * user who always opens "การลาและ WFH" doesn't have to re-expand
      * it every time.
      */
-    const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
-    // Load on mount (next-tick so SSR doesn't fight with localStorage).
-    useEffect(() => {
+    const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
+        if (typeof window === 'undefined') return {}
         try {
             const raw = window.localStorage.getItem(MORE_GROUPS_LS_KEY)
-            if (raw) setExpandedGroups(JSON.parse(raw) as Record<string, boolean>)
+            return raw ? JSON.parse(raw) as Record<string, boolean> : {}
         } catch { /* localStorage disabled / private mode — ignore */ }
-    }, [])
+        return {}
+    })
     const toggleGroup = useCallback((label: string) => {
         setExpandedGroups(prev => {
             const next = { ...prev, [label]: !prev[label] }
