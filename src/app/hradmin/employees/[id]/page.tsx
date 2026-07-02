@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { EmployeeProfileView } from "./employee-profile-view"
 import { getCurrentPermissions } from "@/lib/permissions-server"
 import { getSession } from "@/lib/auth"
+import { getEmployeeAttendanceSummary } from "@/lib/attendance-summary"
 import type { BalanceCell } from "@/components/hradmin/leave/types"
 
 export const dynamic = 'force-dynamic'
@@ -23,16 +24,14 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
     // id (UUID): legacy links may still use this
     const SELECT = `*, applicants (photo_path, nickname, phone, email, current_address)`
 
-    let employee: any = null
     const { data: byCode, error: codeError } = await supabaseAdmin
         .from('employees')
         .select(SELECT)
         .eq('employee_code', id)
         .maybeSingle()
 
-    if (byCode) {
-        employee = byCode
-    } else {
+    let employee = byCode
+    if (!employee) {
         console.error(`[employee-detail] employee_code lookup failed for "${id}":`, JSON.stringify(codeError))
         // Fallback: try UUID (old links)
         const { data: byUuid, error: uuidError } = await supabaseAdmin
@@ -327,6 +326,8 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
         else if (row.status === 'cancelled') bucket.cancelled += days
     }
 
+    const attendanceSummary = await getEmployeeAttendanceSummary(employee.id)
+
     // ── Tenure ─────────────────────────────────────────────────────────────────
     const startDate = new Date(employee.start_date)
     const now = new Date()
@@ -349,6 +350,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             leaveTypes={leaveTypes}
             balanceYear={currentYear}
             recentLeaves={recentLeaves}
+            attendanceSummary={attendanceSummary}
             wfhStats={wfhStats}
             wfhMonthly={Object.values(wfhMonthly)}
             allEmployees={allEmployees}

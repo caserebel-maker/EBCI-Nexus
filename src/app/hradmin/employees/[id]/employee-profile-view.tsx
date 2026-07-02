@@ -20,6 +20,7 @@ import { LocationSection, LocationEmpty } from "@/components/hradmin/employees/L
 import { SalarySlipsCard, type SalarySlip } from "@/components/hradmin/employees/SalarySlipsCard"
 import { AdjustBalanceModal } from "@/components/hradmin/leave/AdjustBalanceModal"
 import type { BalanceCell, LeaveTypeLite, EmployeeRowLite } from "@/components/hradmin/leave/types"
+import type { EmployeeAttendanceSummary } from "@/lib/attendance-summary"
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList
 } from "recharts"
@@ -246,6 +247,7 @@ interface Props {
     /** Year the balanceCells reflect — drives the modal title + audit log. */
     balanceYear: number
     recentLeaves: LeaveRequest[]
+    attendanceSummary: EmployeeAttendanceSummary
     wfhStats: WfhStats
     wfhMonthly: WfhMonth[]
     allEmployees: EmployeeOption[]
@@ -393,6 +395,12 @@ function WfhStatTile({
     )
 }
 
+function formatAttendanceDate(dateKey: string) {
+    const d = new Date(`${dateKey}T00:00:00+07:00`)
+    if (Number.isNaN(d.getTime())) return dateKey
+    return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
+}
+
 function ChartLegend({ color, label }: { color: string; label: string }) {
     return (
         <span className="inline-flex items-center gap-2">
@@ -504,7 +512,7 @@ function LeaveHistory({ leaves }: { leaves: LeaveRequest[] }) {
 export function EmployeeProfileView({
     employee, photoUrl, displayName, supervisorName, tenure,
     leaveBalances, balanceCells, leaveTypes, balanceYear,
-    recentLeaves, wfhStats, wfhMonthly, allEmployees, id, isHrAdmin,
+    recentLeaves, attendanceSummary, wfhStats, wfhMonthly, allEmployees, id, isHrAdmin,
     contracts, canViewPayroll, salarySlips,
 }: Props) {
     const router = useRouter()
@@ -1620,6 +1628,28 @@ export function EmployeeProfileView({
                         </div>
                     </div>
                 )}
+            </div>
+
+            {/* ── 4b. Attendance Summary ──────────────────────────────────── */}
+            <div style={glass} className="p-4 shadow-xl print:hidden">
+                <SHead icon={AlertCircle} label={`สถิติขาด ลา มาสาย (${attendanceSummary.monthLabel})`} />
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <WfhStatTile label="ขาดงาน" value={attendanceSummary.absentDays} tone="text-rose-200" />
+                    <WfhStatTile label="มาสาย" value={attendanceSummary.lateCount} suffix="ครั้ง" tone="text-amber-200" />
+                    <WfhStatTile label="ลาอนุมัติ" value={attendanceSummary.leaveDays} tone="text-violet-200" />
+                    <WfhStatTile label="WFH อนุมัติ" value={attendanceSummary.wfhDays} tone="text-sky-200" />
+                </div>
+                <div className="mt-4 rounded-xl border border-white/10 bg-black/10 px-3 py-3 text-[0.82rem] text-white/70">
+                    <p>
+                        นับจากวันทำงานที่ผ่านไปแล้ว {attendanceSummary.workdaysElapsed} วัน
+                        {' '}· ไม่รวมวันที่มีใบลา/WFH อนุมัติและวัน WFH บริษัท
+                    </p>
+                    {attendanceSummary.absentDates.length > 0 && (
+                        <p className="mt-2 text-rose-100">
+                            วันที่ขาด: {attendanceSummary.absentDates.map(formatAttendanceDate).join(', ')}
+                        </p>
+                    )}
+                </div>
             </div>
 
             {/* ── 4b. Leave + WFH Statistics ──────────────────────────────── */}
