@@ -7,6 +7,7 @@ import { sendLeaveRejected } from '@/lib/email-leave'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
 import { findHrNotifyTargets } from '@/lib/hr-notify'
 import { sendTelegram, escapeTelegramHtml } from '@/lib/telegram'
+import { canActOnLeaveRequest } from '@/lib/leave-delegate-approvers'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,7 +55,12 @@ export async function POST(
     if (readErr) return NextResponse.json({ error: readErr.message }, { status: 500 })
     if (!row) return NextResponse.json({ error: 'ไม่พบใบลา' }, { status: 404 })
 
-    if (row.approver_id !== approverEmployeeId) {
+    const canAct = await canActOnLeaveRequest({
+        approverEmployeeId,
+        applicantEmployeeId: row.employee_id as string,
+        primaryApproverId: row.approver_id as string | null,
+    })
+    if (!canAct) {
         return NextResponse.json({ error: 'คุณไม่ใช่ผู้อนุมัติของใบลานี้' }, { status: 403 })
     }
     if (row.status !== 'pending') {

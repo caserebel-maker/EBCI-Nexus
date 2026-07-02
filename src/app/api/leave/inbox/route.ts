@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
 import { resolveSessionEmployeeId } from '@/lib/session-employee'
+import { getDelegateApplicantIdsForApprover } from '@/lib/leave-delegate-approvers'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,16 +29,18 @@ export async function GET() {
     // pending (initial decision) AND cancellation_requested (the §1.4
     // approved-leave cancel flow) so the approver sees their full
     // action queue in one place.
+    const inboxSelect = `
+        id, reference_code, status, leave_type_id, start_date, end_date,
+        total_days, is_half_day, half_day_period, reason,
+        contact_during_leave, attachment_url, attachment_name,
+        cancellation_reason, cancellation_requested_at,
+        submitted_at, created_at,
+        employee_id
+    `
+
     const primary = await supabaseAdmin
         .from('leave_requests')
-        .select(`
-            id, reference_code, status, leave_type_id, start_date, end_date,
-            total_days, is_half_day, half_day_period, reason,
-            contact_during_leave, attachment_url, attachment_name,
-            cancellation_reason, cancellation_requested_at,
-            submitted_at, created_at,
-            employee_id
-        `)
+        .select(inboxSelect)
         .eq('approver_id', approverId)
         .in('status', ['pending', 'cancellation_requested'])
         .order('submitted_at', { ascending: true, nullsFirst: false })
@@ -49,6 +52,25 @@ export async function GET() {
 
     let rows = primary.data ?? []
 
+    const delegateApplicantIds = await getDelegateApplicantIdsForApprover(approverId)
+    if (delegateApplicantIds.length > 0) {
+        const delegated = await supabaseAdmin
+            .from('leave_requests')
+            .select(inboxSelect)
+            .in('employee_id', delegateApplicantIds)
+            .in('status', ['pending', 'cancellation_requested'])
+            .order('submitted_at', { ascending: true, nullsFirst: false })
+            .order('created_at', { ascending: true })
+        if (delegated.error) {
+            console.error('[leave/inbox] delegated query error:', delegated.error)
+            return NextResponse.json({ error: delegated.error.message }, { status: 500 })
+        }
+        const byId = new Map<string, typeof rows[number]>()
+        for (const row of rows) byId.set(row.id as string, row)
+        for (const row of delegated.data ?? []) byId.set(row.id as string, row)
+        rows = Array.from(byId.values())
+    }
+
     // Secondary fallback: a small number of older rows were inserted
     // when approver_id referenced a different id (user_id instead of
     // employees.id, depending on the era). If the primary lookup came
@@ -57,14 +79,7 @@ export async function GET() {
     if (rows.length === 0 && session.id && session.id !== approverId) {
         const secondary = await supabaseAdmin
             .from('leave_requests')
-            .select(`
-                id, reference_code, status, leave_type_id, start_date, end_date,
-                total_days, is_half_day, half_day_period, reason,
-                contact_during_leave, attachment_url, attachment_name,
-                cancellation_reason, cancellation_requested_at,
-                submitted_at, created_at,
-                employee_id
-            `)
+            .select(inboxSelect)
             .eq('approver_id', session.id)
             .in('status', ['pending', 'cancellation_requested'])
             .order('submitted_at', { ascending: true, nullsFirst: false })
@@ -81,6 +96,7 @@ export async function GET() {
         sessionId: session.id,
         approverId,
         rowCount: rows.length,
+        delegatedApplicantCount: delegateApplicantIds.length,
     })
 
     // Join applicant details + leave-type meta + current year's balance
