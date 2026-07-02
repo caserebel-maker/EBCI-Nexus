@@ -107,9 +107,9 @@ function formatThaiFull(iso: string): string {
 }
 
 function getShortCellLabel(
-    dayHolidays: any[],
-    dayLeaves: any[],
-    dayBookings: any[],
+    dayHolidays: Holiday[],
+    dayLeaves: LeaveDay[],
+    dayBookings: CalendarBooking[],
 ): string {
     if (dayHolidays.length > 0) {
         const h = dayHolidays[0]
@@ -185,37 +185,39 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
         else setViewMonth(m => m + 1)
     }
 
+    const weekCount = cells.length / 7
+
     return (
-        <div className="max-w-5xl mx-auto space-y-5 pb-10">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 pb-8 lg:h-[calc(100vh-260px)] lg:min-h-[560px] lg:pb-0 xl:h-[calc(100vh-245px)]">
             {/* Header */}
-            <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-[#882136]/60 flex items-center justify-center text-[#ad5f6c] border border-[#ad5f6c]/20">
-                    <CalendarIcon size={20} />
+            <div className="flex shrink-0 items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#ad5f6c]/20 bg-[#882136]/60 text-[#ad5f6c] lg:h-8 lg:w-8">
+                    <CalendarIcon size={18} />
                 </div>
                 <div>
-                    <h1 className="text-xl font-bold text-white">ปฏิทิน</h1>
-                    <p className="text-sm text-white/50">วันหยุดบริษัท · ใบลาของฉัน · ห้องประชุมที่จอง</p>
+                    <h1 className="text-xl font-bold text-white lg:text-lg">ปฏิทิน</h1>
+                    <p className="text-sm text-white/50 lg:text-xs">วันหยุดบริษัท · ใบลาของฉัน · ห้องประชุมที่จอง</p>
                 </div>
             </div>
 
-            <div className="rounded-2xl p-3 sm:p-4 space-y-3"
+            <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-2xl p-3 sm:p-4 lg:p-3"
                 style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)' }}>
 
                 {/* Month nav */}
-                <div className="flex items-center justify-between">
+                <div className="flex shrink-0 items-center justify-between">
                     <button
                         onClick={goPrev}
-                        className="h-9 w-9 inline-flex items-center justify-center rounded-md bg-white/5 hover:bg-white/10 text-white"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-white/5 text-white hover:bg-white/10 lg:h-8 lg:w-8"
                         aria-label="เดือนก่อนหน้า"
                     >
                         <ChevronLeft size={16} />
                     </button>
-                    <p className="text-white font-bold text-base">
+                    <p className="text-base font-bold text-white lg:text-sm">
                         {THAI_MONTHS[viewMonth]} {viewYear + 543}
                     </p>
                     <button
                         onClick={goNext}
-                        className="h-9 w-9 inline-flex items-center justify-center rounded-md bg-white/5 hover:bg-white/10 text-white"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-white/5 text-white hover:bg-white/10 lg:h-8 lg:w-8"
                         aria-label="เดือนถัดไป"
                     >
                         <ChevronRight size={16} />
@@ -223,17 +225,20 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                 </div>
 
                 {/* Weekday headers */}
-                <div className="grid grid-cols-7 gap-1 text-center text-xs uppercase tracking-wider text-white/70 font-bold">
+                <div className="grid shrink-0 grid-cols-7 gap-1 text-center text-xs font-bold uppercase tracking-wider text-white/70">
                     {DAY_HEADERS.map((d, i) => (
-                        <div key={i} className={`py-1.5 ${i === 0 || i === 6 ? 'text-amber-200' : ''}`}>{d}</div>
+                        <div key={i} className={`py-1 lg:py-0.5 ${i === 0 || i === 6 ? 'text-amber-200' : ''}`}>{d}</div>
                     ))}
                 </div>
 
                 {/* Cells */}
-                <div className="grid grid-cols-7 gap-1.5">
+                <div
+                    className="grid min-h-0 flex-1 grid-cols-7 gap-1.5 lg:gap-1"
+                    style={{ gridTemplateRows: `repeat(${weekCount}, minmax(0, 1fr))` }}
+                >
                     {cells.map((d, i) => {
                         if (d === null) {
-                            return <div key={i} className="aspect-square rounded-lg bg-white/[0.02]" />
+                            return <div key={i} className="aspect-square rounded-lg bg-white/[0.02] lg:aspect-auto lg:min-h-0" />
                         }
                         const dateStr = toDateStr(viewYear, viewMonth, d)
                         const dayHolidays = holidayMap.get(dateStr) ?? []
@@ -280,8 +285,8 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                             ? { background: palette.bg, color: palette.text }
                             : {}
                         const cellClass = palette
-                            ? 'aspect-square rounded-lg flex flex-col items-center justify-center p-1 gap-0.5 transition-all cursor-pointer hover:brightness-110 relative'
-                            : `aspect-square rounded-lg flex flex-col items-center justify-center p-1 gap-0.5 transition-all relative ${
+                            ? 'relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg p-1 transition-all hover:brightness-110 lg:aspect-auto lg:min-h-0 lg:rounded-md'
+                            : `relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg p-1 transition-all lg:aspect-auto lg:min-h-0 lg:rounded-md ${
                                 isToday
                                     ? 'bg-amber-400/15 border border-amber-400/60'
                                     : 'bg-white/[0.04] border border-white/10 cursor-default'
@@ -307,14 +312,14 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                                 }}
                             >
                                 <span
-                                    className="text-sm sm:text-base font-bold tabular-nums leading-none"
+                                    className="text-sm font-bold leading-none tabular-nums sm:text-base lg:text-sm"
                                     style={{ color: dayNumberColor }}
                                 >
                                     {d}
                                 </span>
                                 {hasEvents && (
                                     <span
-                                        className="text-[8px] sm:text-[9px] md:text-[10px] font-semibold leading-tight text-center truncate max-w-full px-0.5 select-none opacity-90 mt-0.5"
+                                        className="mt-0.5 max-w-full select-none truncate px-0.5 text-center text-[8px] font-semibold leading-tight opacity-90 sm:text-[9px] md:text-[10px] lg:text-[9px]"
                                         style={{ color: dayNumberColor }}
                                     >
                                         {getShortCellLabel(dayHolidays, dayLeaves, dayBookings)}
@@ -340,13 +345,13 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                     the user can read "yellow square = วันสำคัญทางศาสนา"
                     by glance, not by hovering for tooltips. Order matches
                     CELL_PRIORITY so the most-dominant colour reads first. */}
-                <div className="pt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+                <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 pt-2 text-sm lg:pt-1 lg:text-xs">
                     {CELL_PRIORITY.map(k => {
                         const c = CELL_PALETTE[k]
                         return (
                             <span key={k} className="inline-flex items-center gap-1.5">
                                 <span
-                                    className="block h-3.5 w-3.5 rounded ring-1 ring-black/20"
+                                    className="block h-3.5 w-3.5 rounded ring-1 ring-black/20 lg:h-2.5 lg:w-2.5"
                                     style={{ background: c.bg }}
                                 />
                                 <span className="text-white/85 font-medium">{c.label}</span>
