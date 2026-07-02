@@ -1,5 +1,6 @@
 import 'server-only'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { bangkokDateKey, formatBangkokTime, toDate } from '@/lib/datetime'
 import { bangkokTodayIso } from '@/lib/leave-validations'
 import { WORK_SCHEDULE } from '@/lib/leave-constants'
 import {
@@ -28,13 +29,28 @@ import {
  *        we don't yet have a reliable absent aggregator (NEXT.md §3.11)
  *
  * Algorithm:
- *   1. Find the most recent reset event since employee.start_date
- *   2. streak_start = max(employee.start_date, last_reset_date + 1)
+ *   1. Find the most recent reset event since the trusted data floor
+ *   2. streak_start = max(trusted floor, last_reset_date + 1)
  *   3. streak_days = today - streak_start
  *   4. Convert to months + days, pick current/next tier
  */
 
 const RESET_LEAVE_TYPES = ['sick', 'personal']
+
+/**
+ * Attendance reward/streak data before the beta reconciliation period is
+ * too noisy to use as an employee-facing reset reason. HIP historical
+ * imports can have missing morning scans, so a single late-looking row
+ * from months ago should not erase trust in the streak card.
+ */
+const DEFAULT_STREAK_TRUSTED_FROM = '2026-06-17'
+
+function getStreakTrustedFrom(): string {
+    const value = process.env.STREAK_TRUSTED_FROM?.trim()
+    return value && /^\d{4}-\d{2}-\d{2}$/.test(value)
+        ? value
+        : DEFAULT_STREAK_TRUSTED_FROM
+}
 
 /** Late = check-in time (HH:MM) strictly later than this. Pulled from
  *  WORK_SCHEDULE.fullDayStart so a future config change cascades. */
@@ -43,14 +59,16 @@ function getLateCutoff(): { h: number; m: number } {
     return { h: h ?? 8, m: m ?? 30 }
 }
 
-/** Bangkok wall-clock check: is the time of day in `iso` later than the
- *  cutoff? `iso` is treated as Bangkok local (matches how we store
- *  scan_time + check_in elsewhere — see card-scan-today.ts). */
-function isLateBangkok(iso: string, cutoff: { h: number; m: number }): boolean {
-    const m = /T(\d{2}):(\d{2})/.exec(iso)
-    if (!m) return false
-    const h = parseInt(m[1], 10)
-    const min = parseInt(m[2], 10)
+/** Bangkok wall-clock check: is the time of day later than the cutoff? */
+function isLateBangkok(
+    raw: string,
+    source: 'utc' | 'bangkok',
+    cutoff: { h: number; m: number },
+): boolean {
+    const time = formatBangkokTime(raw, source)
+    if (time === '—') return false
+    const [h, min] = time.split(':').map(Number)
+    if (Number.isNaN(h) || Number.isNaN(min)) return false
     if (h > cutoff.h) return true
     if (h === cutoff.h && min > cutoff.m) return true
     return false
@@ -109,7 +127,7 @@ async function findLatestStreakBreakingLeave(employeeId: string, sinceDate: stri
  * either was late.
  */
 async function findLatestLateCheckin(employeeId: string, sinceDate: string):
-    Promise<{ date: string; iso: string } | null>
+    Promise<{ date: string; iso: string; source: 'utc' | 'bangkok'; time: string } | null>
 {
     const cutoff = getLateCutoff()
     const today = bangkokTodayIso()
@@ -140,27 +158,42 @@ async function findLatestLateCheckin(employeeId: string, sinceDate: string):
         .limit(2000)
     const scans = (scanRaw ?? []) as Array<{ scan_time: string }>
 
-    // Group scans by date, keep earliest per day
-    const earliestPerDay = new Map<string, string>()
+    // Group scans by Bangkok date, keep earliest per day. Card scans are
+    // stored as Thai local wall-clock; mobile checkins are UTC wall-clock.
+    const earliestScanPerDay = new Map<string, string>()
     for (const s of scans) {
-        const date = s.scan_time.slice(0, 10)
-        if (!earliestPerDay.has(date)) earliestPerDay.set(date, s.scan_time)
+        const date = bangkokDateKey(s.scan_time, 'bangkok')
+        if (date && !earliestScanPerDay.has(date)) earliestScanPerDay.set(date, s.scan_time)
+    }
+
+    const earliestMobilePerDay = new Map<string, string>()
+    for (const m of mobile) {
+        const date = bangkokDateKey(m.checked_in_at, 'utc')
+        if (!date) continue
+        const previous = earliestMobilePerDay.get(date)
+        const currentInstant = toDate(m.checked_in_at, 'utc')?.getTime() ?? Infinity
+        const previousInstant = toDate(previous, 'utc')?.getTime() ?? Infinity
+        if (!previous || currentInstant < previousInstant) {
+            earliestMobilePerDay.set(date, m.checked_in_at)
+        }
     }
 
     // Combine candidates: mobile arrivals + earliest-per-day scans.
-    const candidates: Array<{ date: string; iso: string }> = []
-    for (const m of mobile) {
-        candidates.push({ date: m.checked_in_at.slice(0, 10), iso: m.checked_in_at })
+    const candidates: Array<{ date: string; iso: string; source: 'utc' | 'bangkok' }> = []
+    for (const [date, iso] of earliestMobilePerDay) {
+        candidates.push({ date, iso, source: 'utc' })
     }
-    for (const [date, iso] of earliestPerDay) {
-        candidates.push({ date, iso })
+    for (const [date, iso] of earliestScanPerDay) {
+        candidates.push({ date, iso, source: 'bangkok' })
     }
 
     // Find latest late one. Sort descending by date, return first that
     // crosses cutoff. (We can't pre-filter at DB level — see comment above.)
     candidates.sort((a, b) => b.date.localeCompare(a.date))
     for (const c of candidates) {
-        if (isLateBangkok(c.iso, cutoff)) return c
+        if (isLateBangkok(c.iso, c.source, cutoff)) {
+            return { ...c, time: formatBangkokTime(c.iso, c.source) }
+        }
     }
     return null
 }
@@ -191,13 +224,17 @@ export async function getStreakInfo(employeeId: string): Promise<StreakInfo> {
         .maybeSingle()
     const rawStart = (emp as { start_date: string | null } | null)?.start_date
     const startDate = rawStart ? rawStart.slice(0, 10) : today
+    const streakFloorDate = startDate > getStreakTrustedFrom()
+        ? startDate
+        : getStreakTrustedFrom()
 
-    // Look back from the employee's start_date for any reset event.
+    // Look back from the trusted floor date for any reset event.
     // (We never look further back than start_date because anything
-    // before that is pre-employment and irrelevant.)
+    // before that is pre-employment and irrelevant. We also don't use
+    // pre-launch imported HIP noise as an employee-facing reset reason.)
     const [leaveBreak, lateBreak] = await Promise.all([
-        findLatestStreakBreakingLeave(employeeId, startDate),
-        findLatestLateCheckin(employeeId, startDate),
+        findLatestStreakBreakingLeave(employeeId, streakFloorDate),
+        findLatestLateCheckin(employeeId, streakFloorDate),
     ])
 
     // Pick the more recent of the two events as the reset point.
@@ -206,17 +243,17 @@ export async function getStreakInfo(employeeId: string): Promise<StreakInfo> {
         lastResetEvent = leaveBreak.date >= lateBreak.date
             ? { type: leaveBreak.type, date: leaveBreak.date, label: leaveBreak.label }
             : { type: 'late_checkin', date: lateBreak.date,
-                label: `มาสาย ${lateBreak.iso.slice(11, 16)}` }
+                label: `มาสาย ${lateBreak.time}` }
     } else if (leaveBreak) {
         lastResetEvent = { type: leaveBreak.type, date: leaveBreak.date, label: leaveBreak.label }
     } else if (lateBreak) {
         lastResetEvent = { type: 'late_checkin', date: lateBreak.date,
-            label: `มาสาย ${lateBreak.iso.slice(11, 16)}` }
+            label: `มาสาย ${lateBreak.time}` }
     }
 
     const streakStart = lastResetEvent
         ? nextDayIso(lastResetEvent.date)
-        : startDate
+        : streakFloorDate
 
     // If the reset event is in the future for some reason (shouldn't
     // happen but guard against bad data), or streak start is after today,
