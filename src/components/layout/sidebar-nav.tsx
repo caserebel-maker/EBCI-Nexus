@@ -225,10 +225,10 @@ export function SidebarNav({ items, onNavigate }: Props) {
 
                 const rowClass = cn(
                     'flex items-center gap-3 px-3 py-2.5 rounded-md transition-all duration-200',
-                    'hover:bg-white/10 dark:hover:bg-accent dark:hover:text-accent-foreground',
+                    'hover:bg-white/10 text-white font-bold',
                     highlighted
-                        ? 'bg-white/15 text-white shadow-lg shadow-black/5 ring-1 ring-white/10'
-                        : 'text-white hover:text-white dark:text-muted-foreground dark:hover:text-foreground',
+                        ? 'bg-white/15 shadow-lg shadow-black/5 ring-1 ring-white/10'
+                        : '',
                 )
 
                 if (!hasChildren) {
@@ -239,8 +239,8 @@ export function SidebarNav({ items, onNavigate }: Props) {
                             onClick={onNavigate}
                             className={rowClass}
                         >
-                            <item.icon size={20} className={cn(highlighted && 'text-white')} />
-                            <span className={cn('flex-1 truncate', highlighted && 'font-semibold')}>
+                            <item.icon size={20} className="text-white shrink-0" />
+                            <span className="flex-1 truncate">
                                 {label}
                             </span>
                             {badge > 0 && <BadgePill count={badge} />}
@@ -259,8 +259,8 @@ export function SidebarNav({ items, onNavigate }: Props) {
                                     onClick={onNavigate}
                                     className="flex items-center gap-3 flex-1 min-w-0"
                                 >
-                                    <item.icon size={20} className={cn(highlighted && 'text-white')} />
-                                    <span className={cn('flex-1 truncate', highlighted && 'font-semibold')}>
+                                    <item.icon size={20} className="text-white shrink-0" />
+                                    <span className="flex-1 truncate">
                                         {label}
                                     </span>
                                     {badge > 0 && <BadgePill count={badge} />}
@@ -285,8 +285,8 @@ export function SidebarNav({ items, onNavigate }: Props) {
                                 aria-expanded={isOpen}
                                 className={cn(rowClass, 'w-full text-left')}
                             >
-                                <item.icon size={20} className={cn(highlighted && 'text-white')} />
-                                <span className={cn('flex-1 truncate', highlighted && 'font-semibold')}>
+                                <item.icon size={20} className="text-white shrink-0" />
+                                <span className="flex-1 truncate">
                                     {label}
                                 </span>
                                 {badge > 0 && <BadgePill count={badge} />}
@@ -294,7 +294,7 @@ export function SidebarNav({ items, onNavigate }: Props) {
                                     size={16}
                                     className={cn(
                                         'transition-transform shrink-0',
-                                        isOpen ? 'rotate-180 text-white/80' : 'text-white/40',
+                                        isOpen ? 'rotate-180 text-white/80' : 'text-white/45',
                                     )}
                                 />
                             </button>
@@ -312,20 +312,20 @@ export function SidebarNav({ items, onNavigate }: Props) {
                                             href={child.href || '#'}
                                             onClick={onNavigate}
                                             className={cn(
-                                                'flex items-center gap-2.5 px-3 py-2 rounded-md text-xs transition-all duration-150',
+                                                'flex items-center gap-2.5 px-3 py-2 rounded-md text-xs transition-all duration-150 font-normal',
                                                 'hover:bg-white/10',
                                                 childActive
                                                     ? 'bg-white/10 text-white'
-                                                    : 'text-white/85 hover:text-white',
+                                                    : 'text-white/90 hover:text-white',
                                             )}
                                         >
                                             {child.icon && (
                                                 <child.icon
                                                     size={15}
-                                                    className={cn('shrink-0', childActive && 'text-white')}
+                                                    className="shrink-0 text-white/80"
                                                 />
                                             )}
-                                            <span className={cn('flex-1 truncate', childActive && 'font-semibold')}>
+                                            <span className="flex-1 truncate">
                                                 {t(child.label)}
                                             </span>
                                             {childBadge > 0 && <BadgePill count={childBadge} compact />}
