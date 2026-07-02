@@ -250,6 +250,12 @@ export default async function AttendanceInsightsPage({
         }
     }
 
+    // HIP card data can contain several scans per day (morning in,
+    // lunch, afternoon, evening out) and older sync rows do not always
+    // carry a reliable scan_type. For lateness, only the FIRST scan of
+    // each employee/day is an arrival signal. Later scans still prove
+    // attendance but must not be counted as "มาสาย".
+    const firstCardScanByEmployeeDate = new Map<string, CardScanRow>()
     for (const row of (cardScansRes.data ?? []) as CardScanRow[]) {
         if (!employeeIds.has(row.employee_id)) continue
         const dateKey = bangkokDateKey(row.scan_time, 'bangkok')
@@ -258,7 +264,16 @@ export default async function AttendanceInsightsPage({
         attended.add(dateKey)
         attendedByEmployee.set(row.employee_id, attended)
 
-        if (isLateBangkokTime(row.scan_time, 'bangkok')) {
+        const key = `${row.employee_id}:${dateKey}`
+        const existing = firstCardScanByEmployeeDate.get(key)
+        if (!existing || row.scan_time < existing.scan_time) {
+            firstCardScanByEmployeeDate.set(key, row)
+        }
+    }
+
+    for (const [key, row] of firstCardScanByEmployeeDate.entries()) {
+        const [employeeId, dateKey] = key.split(':')
+        if (employeeId && dateKey && isLateBangkokTime(row.scan_time, 'bangkok')) {
             const perDay = lateByEmployee.get(row.employee_id) ?? new Map<string, number>()
             perDay.set(dateKey, Math.max(perDay.get(dateKey) ?? 0, 1))
             lateByEmployee.set(row.employee_id, perDay)
