@@ -228,7 +228,7 @@ export function SidebarNav({ items, onNavigate }: Props) {
                     'hover:bg-white/10 dark:hover:bg-accent dark:hover:text-accent-foreground',
                     highlighted
                         ? 'bg-white/15 text-white shadow-lg shadow-black/5 ring-1 ring-white/10'
-                        : 'text-white/70 hover:text-white dark:text-muted-foreground dark:hover:text-foreground',
+                        : 'text-white hover:text-white dark:text-muted-foreground dark:hover:text-foreground',
                 )
 
                 if (!hasChildren) {
@@ -316,7 +316,7 @@ export function SidebarNav({ items, onNavigate }: Props) {
                                                 'hover:bg-white/10',
                                                 childActive
                                                     ? 'bg-white/10 text-white'
-                                                    : 'text-white/60 hover:text-white/90',
+                                                    : 'text-white/85 hover:text-white',
                                             )}
                                         >
                                             {child.icon && (

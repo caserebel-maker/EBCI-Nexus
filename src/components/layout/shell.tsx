@@ -311,7 +311,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                         }}
                         className={cn(
                             "flex items-center gap-3 w-full px-3 py-2.5 rounded-md transition-all duration-200",
-                            "text-red-300 hover:bg-red-500/20 hover:text-red-200 font-semibold"
+                            "text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 font-semibold"
                         )}
                     >
                         <LogOut size={16} />
