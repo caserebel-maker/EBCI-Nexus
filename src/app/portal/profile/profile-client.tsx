@@ -488,11 +488,11 @@ export function ProfileClient({
                 )}
             </div>
 
-            {/* ── 2b. ขาด ลา มาสาย ──────────────────────────────────────── */}
-            {attendanceSummary && <AttendanceSummaryCard summary={attendanceSummary} />}
-
             {/* ── 3. นับเดือนต่อเนื่อง (§2.3 streak meter) ────────────────── */}
             {streak && <StreakCard streak={streak} />}
+
+            {/* ── 3b. ขาด ลา มาสาย ──────────────────────────────────────── */}
+            {attendanceSummary && <AttendanceSummaryCard summary={attendanceSummary} />}
 
             {/* ── 4. ประวัติใบลาล่าสุด ───────────────────────────────────── */}
             <div style={glass} className="p-5">
