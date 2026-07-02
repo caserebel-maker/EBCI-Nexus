@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { Mail, Phone, User, Briefcase, Calendar, Award, AlertCircle } from 'lucide-react'
+import { Mail, Phone, User, Calendar, AlertCircle, Clock, Umbrella } from 'lucide-react'
+import type { EmployeeAttendanceSummary } from '@/lib/attendance-summary'
 import type { StreakInfo } from '@/lib/streak-shared'
 import { STREAK_TIERS } from '@/lib/streak-shared'
 
@@ -122,6 +123,62 @@ function Badge({ children, accent }: { children: React.ReactNode; accent?: boole
             }}>
             {children}
         </span>
+    )
+}
+
+function AttendanceTile({
+    label, value, suffix = 'วัน', color,
+}: {
+    label: string
+    value: number
+    suffix?: string
+    color: string
+}) {
+    return (
+        <div className="rounded-2xl px-3 py-3 text-center"
+            style={{ background: 'rgba(255,255,255,0.11)', border: '1px solid rgba(255,255,255,0.18)' }}>
+            <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.62)', fontWeight: 700 }}>{label}</p>
+            <p className="tabular-nums" style={{ fontSize: '32px', lineHeight: 1.1, color, fontWeight: 900, marginTop: 4 }}>
+                {value}
+                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', fontWeight: 600, marginLeft: 4 }}>{suffix}</span>
+            </p>
+        </div>
+    )
+}
+
+function fmtShortDate(dateKey: string): string {
+    const d = new Date(`${dateKey}T00:00:00+07:00`)
+    if (Number.isNaN(d.getTime())) return dateKey
+    return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
+}
+
+function AttendanceSummaryCard({ summary }: { summary: EmployeeAttendanceSummary }) {
+    return (
+        <div style={glass} className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+                <Clock size={18} style={{ color: '#fcd34d' }} />
+                <p style={sectionTitle} className="!mb-0">สถิติขาด ลา มาสาย ({summary.monthLabel})</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+                <AttendanceTile label="ขาดงาน" value={summary.absentDays} color="#fecdd3" />
+                <AttendanceTile label="มาสาย" value={summary.lateCount} suffix="ครั้ง" color="#fde68a" />
+                <AttendanceTile label="ลาอนุมัติ" value={summary.leaveDays} color="#ddd6fe" />
+            </div>
+            <div className="mt-3 rounded-2xl px-3 py-3"
+                style={{ background: 'rgba(0,0,0,0.10)', border: '1px solid rgba(255,255,255,0.14)' }}>
+                <div className="flex items-start gap-2">
+                    <Umbrella size={15} style={{ color: '#93c5fd', marginTop: 3 }} />
+                    <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.68)', lineHeight: 1.5 }}>
+                        WFH อนุมัติ {summary.wfhDays} วัน · นับจากวันทำงานที่ผ่านไปแล้ว {summary.workdaysElapsed} วัน
+                    </p>
+                </div>
+                {summary.absentDates.length > 0 && (
+                    <p style={{ fontSize: '14px', color: '#fecdd3', marginTop: 8 }}>
+                        วันที่ขาด: {summary.absentDates.map(fmtShortDate).join(', ')}
+                    </p>
+                )}
+            </div>
+        </div>
     )
 }
 
@@ -271,6 +328,7 @@ interface Props {
     /** §2.3 — Attendance streak info. Null when no employee row found
      *  (rare edge case during account-link race). */
     streak: StreakInfo | null
+    attendanceSummary: EmployeeAttendanceSummary | null
 }
 
 /** Map any gender value (English code or legacy Thai literal) to the
@@ -294,7 +352,7 @@ export function ProfileClient({
     position, department, secondaryDepartment,
     emergencyContactName, emergencyContactPhone, emergencyContactRelation,
     employeeCode, employmentType, tenure, startDate, email, phone,
-    managerName, leaveBalances, recentLeaves, streak,
+    managerName, leaveBalances, recentLeaves, streak, attendanceSummary,
 }: Props) {
     const genderText = genderLabel(gender)
     // Concatenate title + gender into a single line so the meta block
@@ -429,6 +487,9 @@ export function ProfileClient({
                     </div>
                 )}
             </div>
+
+            {/* ── 2b. ขาด ลา มาสาย ──────────────────────────────────────── */}
+            {attendanceSummary && <AttendanceSummaryCard summary={attendanceSummary} />}
 
             {/* ── 3. นับเดือนต่อเนื่อง (§2.3 streak meter) ────────────────── */}
             {streak && <StreakCard streak={streak} />}

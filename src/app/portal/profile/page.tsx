@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import prisma from '@/lib/prisma'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getStreakInfo } from '@/lib/streak'
+import { getEmployeeAttendanceSummary } from '@/lib/attendance-summary'
 import { ProfileClient } from './profile-client'
 
 export const dynamic = 'force-dynamic'
@@ -178,6 +179,7 @@ export default async function ProfilePage() {
     // streak meter card that replaces the old "รอเชื่อมต่อระบบลงเวลา"
     // placeholder. Computed server-side; see lib/streak.ts for rules.
     const streak = emp ? await getStreakInfo(emp.id) : null
+    const attendanceSummary = emp ? await getEmployeeAttendanceSummary(emp.id) : null
 
     // ── Derived values ────────────────────────────────────────────────────────
     const firstName   = emp?.first_name_th ?? session.name
@@ -220,6 +222,7 @@ export default async function ProfilePage() {
                 status: r.status,
             }))}
             streak={streak}
+            attendanceSummary={attendanceSummary}
         />
     )
 }
