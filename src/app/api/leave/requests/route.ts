@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { resolveSessionEmployeeId } from '@/lib/session-employee'
+import { calculateWorkingLeaveDays } from '@/lib/leave-days'
 
 type EmployeeJoin = {
     id: string
@@ -211,7 +212,10 @@ export async function POST(req: NextRequest) {
         if (!employee) return NextResponse.json({ error: 'ไม่พบข้อมูลพนักงาน' }, { status: 404 })
 
         // Calculate working days
-        const totalDays = isHalfDay ? 0.5 : calcWorkingDays(start, end)
+        const totalDays = calculateWorkingLeaveDays(startDate, endDate, Boolean(isHalfDay))
+        if (totalDays <= 0) {
+            return NextResponse.json({ error: 'ช่วงวันที่เลือกไม่มีวันทำงาน กรุณาเลือกวันจันทร์-ศุกร์' }, { status: 400 })
+        }
 
         // Generate reference code
         const year = start.getFullYear()
@@ -249,19 +253,4 @@ export async function POST(req: NextRequest) {
         console.error('/api/leave/requests POST:', err)
         return NextResponse.json({ error: 'เกิดข้อผิดพลาด' }, { status: 500 })
     }
-}
-
-// Calculate working days between two dates (excluding weekends)
-function calcWorkingDays(start: Date, end: Date): number {
-    let count = 0
-    const cur = new Date(start)
-    cur.setHours(0, 0, 0, 0)
-    const endDay = new Date(end)
-    endDay.setHours(0, 0, 0, 0)
-    while (cur <= endDay) {
-        const dow = cur.getDay()
-        if (dow !== 0 && dow !== 6) count++
-        cur.setDate(cur.getDate() + 1)
-    }
-    return count
 }

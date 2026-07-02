@@ -2,6 +2,7 @@ import 'server-only'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import type { LeaveType } from '@/lib/leave-balance'
 import { computeRemaining, type LeaveBalanceRow } from '@/lib/leave-balance'
+import { calculateWorkingLeaveDays, toEpochDay } from '@/lib/leave-days'
 
 export interface ValidateLeaveArgs {
     leaveType: LeaveType
@@ -30,16 +31,9 @@ export function leaveAttachmentDescription(leaveType: LeaveType, totalDays: numb
 }
 
 // ── Date helpers ───────────────────────────────────────────────────────────
-/** parses YYYY-MM-DD as an arithmetic epoch-day to avoid timezone surprises */
-function toEpochDay(d: string): number {
-    const [y, m, day] = d.split('-').map(Number)
-    if (!y || !m || !day) return NaN
-    return Date.UTC(y, m - 1, day) / 86400000
-}
-
 /**
- * Count calendar days inclusive between start and end.
- * Weekends are *included* (spec note: "รวมเสาร์-อาทิตย์ด้วยตามค่า default").
+ * Count working days inclusive between start and end.
+ * Weekends are excluded so Fri-Mon leave deducts 2 days, not 4.
  * Half-day short-circuits to 0.5 regardless of range (UI restricts to 1 day).
  */
 export function calculateLeaveDays(
@@ -47,11 +41,7 @@ export function calculateLeaveDays(
     endDate: string,
     isHalfDay: boolean,
 ): number {
-    if (isHalfDay) return 0.5
-    const s = toEpochDay(startDate)
-    const e = toEpochDay(endDate)
-    if (!Number.isFinite(s) || !Number.isFinite(e)) return 0
-    return Math.max(1, e - s + 1)
+    return calculateWorkingLeaveDays(startDate, endDate, isHalfDay)
 }
 
 // ── Overlap check ──────────────────────────────────────────────────────────
@@ -179,6 +169,13 @@ export async function validateLeaveRequest(
     }
 
     const totalDays = calculateLeaveDays(startDate, endDate, isHalfDay)
+    if (totalDays <= 0) {
+        return {
+            ok: false,
+            field: 'date',
+            error: 'ช่วงวันที่เลือกไม่มีวันทำงาน กรุณาเลือกวันจันทร์-ศุกร์',
+        }
+    }
 
     if (leaveType.id === 'marriage') {
         const eligible = await hasCompletedOneYear(employeeId, startDate)

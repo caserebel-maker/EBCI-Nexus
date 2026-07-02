@@ -10,6 +10,7 @@ import {
 import { cn } from '@/lib/utils'
 import { ValidationToast } from '@/components/ui/validation-toast'
 import { WORK_SCHEDULE, HALF_DAY_RULES } from '@/lib/leave-constants'
+import { calculateWorkingLeaveDays } from '@/lib/leave-days'
 
 // ── Validation field IDs + Thai labels ────────────────────────────────────────
 // Used by both validate() and the per-input red-border styling so the toast
@@ -175,11 +176,7 @@ function todayBangkokIso(): string {
     return now.toISOString().slice(0, 10)
 }
 function daysInclusive(start: string, end: string, half: boolean): number {
-    if (half) return 0.5
-    const s = new Date(start + 'T00:00:00').getTime()
-    const e = new Date(end + 'T00:00:00').getTime()
-    if (isNaN(s) || isNaN(e) || e < s) return 0
-    return Math.round((e - s) / 86400000) + 1
+    return calculateWorkingLeaveDays(start, end, half)
 }
 
 // ── Main view ─────────────────────────────────────────────────────────────────
