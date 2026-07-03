@@ -9,6 +9,7 @@ import {
 } from "lucide-react"
 import type { LucideIcon } from 'lucide-react'
 import type { StreakInfo } from "@/lib/streak-shared"
+import { STREAK_TIERS } from "@/lib/streak-shared"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -1658,6 +1659,102 @@ export function EmployeeProfileView({
                     </div>
                 )}
             </div>
+
+            {/* ── Streak Card ─────────────────────────────────────────── */}
+            {streak && (
+                <div style={glass} className="p-4 shadow-xl print:hidden">
+                    <SHead icon={Flame} label="นับเดือนต่อเนื่อง — ไม่ลาป่วย ไม่ลากิจ ไม่สาย" />
+
+                    {/* Headline — months + days */}
+                    <div className="text-center mt-2">
+                        <div className="inline-flex items-baseline gap-2">
+                            <span className="text-[3.5rem] font-extrabold text-white/95 leading-none">
+                                {streak.months}
+                            </span>
+                            <span className="text-[1.3rem] text-white/55">เดือน</span>
+                            {streak.days > 0 && (
+                                <>
+                                    <span className="text-[2.2rem] font-extrabold text-white/85 ml-1.5">
+                                        {streak.days}
+                                    </span>
+                                    <span className="text-[1.2rem] text-white/55">วัน</span>
+                                </>
+                            )}
+                        </div>
+                        {streak.nextTier ? (
+                            <p className="text-[0.95rem] text-white/60 mt-1.5">
+                                เป้าหมายถัดไป: <strong className="text-white/85">{streak.nextTier.label}</strong>
+                                {' '}— อีก{' '}
+                                <strong className="text-amber-300">{streak.daysToNextTier} วัน</strong>
+                            </p>
+                        ) : (
+                            <p className="text-[0.95rem] text-amber-300 mt-1.5">
+                                ✨ พนักงานถึงเป้าหมายสูงสุดแล้ว (12 เดือน) — เก่งมาก!
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="mt-4 h-2.5 rounded-full overflow-hidden bg-white/10">
+                        <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                                width: `${Math.min(1, streak.totalDays / ((streak.nextTier?.months ?? STREAK_TIERS[STREAK_TIERS.length - 1].months) * 30)) * 100}%`,
+                                background: Math.min(1, streak.totalDays / ((streak.nextTier?.months ?? STREAK_TIERS[STREAK_TIERS.length - 1].months) * 30)) >= 1
+                                    ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
+                                    : 'linear-gradient(90deg, #34d399, #fbbf24)',
+                            }}
+                        />
+                    </div>
+
+                    {/* Tier badges row */}
+                    <div className="mt-4 grid grid-cols-4 gap-2">
+                        {STREAK_TIERS.map(tier => {
+                            const earned = !!streak.currentTier && streak.currentTier.months >= tier.months
+                            return (
+                                <div
+                                    key={tier.months}
+                                    className="flex flex-col items-center justify-center rounded-xl py-2"
+                                    style={{
+                                        background: earned ? 'rgba(252,211,77,0.15)' : 'rgba(255,255,255,0.06)',
+                                        border: earned ? '1px solid rgba(252,211,77,0.45)' : '1px solid rgba(255,255,255,0.12)',
+                                    }}
+                                >
+                                    <span className="text-xl">{tier.emoji}</span>
+                                    <span className={cn(
+                                        "text-xs font-bold mt-0.5",
+                                        earned ? "text-amber-300" : "text-white/80"
+                                    )}>
+                                        {tier.months} ด.
+                                    </span>
+                                </div>
+                            )
+                        })}
+                    </div>
+
+                    {/* Footnote */}
+                    <p className="mt-4 text-center text-xs text-white/50">
+                        {streak.lastResetEvent ? (
+                            <>
+                                💡 เริ่มนับใหม่ตั้งแต่ <strong className="text-white/70">
+                                    {(streak.startedOn ?? '').slice(0, 10)
+                                        ? new Date((streak.startedOn ?? '').slice(0, 10) + 'T00:00:00')
+                                            .toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+                                        : '—'}
+                                </strong>
+                                {' '}(ก่อนหน้า: <span className="text-red-300">{streak.lastResetEvent.label}</span>)
+                            </>
+                        ) : (
+                            <>🌱 เริ่มนับรางวัลตั้งแต่ <strong className="text-white/70">
+                                    {(streak.startedOn ?? '').slice(0, 10)
+                                        ? new Date((streak.startedOn ?? '').slice(0, 10) + 'T00:00:00')
+                                            .toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
+                                        : '—'}
+                                </strong></>
+                        )}
+                    </p>
+                </div>
+            )}
 
             {/* ── 4b. Attendance Summary ──────────────────────────────────── */}
             <div style={glass} className="p-4 shadow-xl print:hidden">
