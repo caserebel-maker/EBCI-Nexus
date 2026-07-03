@@ -28,7 +28,7 @@ const THAI_DOWS = ['อาทิตย์','จันทร์','อังคา
 const HOLIDAY_CONFIG: Record<string, { label: string; color: string; emoji: string }> = {
     public:    { label: 'นักขัตฤกษ์',      color: '#F87171', emoji: '🇹🇭' },
     religious: { label: 'วันสำคัญทางศาสนา', color: '#F472B6', emoji: '🛕' },
-    company:   { label: 'บริษัทกำหนด',     color: '#60A5FA', emoji: '📌' },
+    company:   { label: 'บริษัทกำหนด',     color: '#22C55E', emoji: '📌' },
     wfh:       { label: 'WFH',             color: '#60A5FA', emoji: '🏠' },
     work:      { label: 'วันทำงาน (ออฟฟิศ)', color: '#C084FC', emoji: '🏢' },
 }
@@ -50,9 +50,9 @@ const LEAVE_CONFIG: Record<string, { label: string; color: string; emoji: string
 // Mod-defined colour scheme:
 //   public    → ขาว     (highest priority, all-company off day)
 //   religious → เหลือง
-//   company   → ส้ม
+//   company   → เขียวเต็ม
 //   wfh       → น้ำเงิน
-//   leave     → เขียว    (any leave type the user has)
+//   leave     → กรอบเขียว (any leave type the user has)
 //   booking   → ชมพู
 //
 // Priority: when a cell has multiple kinds, the FIRST one in
@@ -64,10 +64,10 @@ type CellKind = 'public' | 'religious' | 'company' | 'wfh' | 'work' | 'leave' | 
 const CELL_PALETTE: Record<CellKind, { bg: string; text: string; label: string }> = {
     public:    { bg: '#F4F4F5', text: '#000000', label: 'นักขัตฤกษ์' },     // white / black
     religious: { bg: '#FBBF24', text: '#000000', label: 'วันสำคัญทางศาสนา' }, // yellow / black
-    company:   { bg: '#10B981', text: '#FFFFFF', label: 'บริษัทกำหนด' },     // green / white
+    company:   { bg: '#22C55E', text: '#07130C', label: 'บริษัทกำหนด' },     // green / dark
     wfh:       { bg: '#2563EB', text: '#FFFFFF', label: 'WFH' },             // rich blue / white
     work:      { bg: '#9333EA', text: '#FFFFFF', label: 'วันทำงาน (ออฟฟิศ)' }, // vibrant purple / white
-    leave:     { bg: '#10B981', text: '#FFFFFF', label: 'ใบลา' },            // green / white
+    leave:     { bg: '#34D399', text: '#34D399', label: 'ใบลา' },            // green outline
     booking:   { bg: '#EC4899', text: '#FFFFFF', label: 'จองห้องประชุม' },   // pink / white
 }
 
@@ -284,7 +284,7 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                         const isLeave = dominantKind === 'leave'
                         const cellStyle: React.CSSProperties = palette
                             ? isLeave
-                                ? { border: '2px solid #10B981', background: 'rgba(16, 185, 129, 0.08)', color: '#10B981' }
+                                ? { border: '2px solid #34D399', background: 'rgba(52, 211, 153, 0.08)', color: '#34D399' }
                                 : { background: palette.bg, color: palette.text }
                             : {}
                         const cellClass = palette
@@ -296,7 +296,7 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                             }`
 
                         const dayNumberColor = palette
-                            ? isLeave ? '#10B981' : palette.text
+                            ? isLeave ? '#34D399' : palette.text
                             : isToday ? '#FCD34D'
                             : isWeekend ? '#FCD34D'
                             : 'rgba(255,255,255,0.55)'
@@ -357,7 +357,7 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                                 <span
                                     className="block h-3.5 w-3.5 rounded ring-1 ring-black/20 lg:h-2.5 lg:w-2.5"
                                     style={isLeaveLegend 
-                                        ? { border: '2.5px solid #10B981', background: 'rgba(16, 185, 129, 0.08)' } 
+                                        ? { border: '2.5px solid #34D399', background: 'rgba(52, 211, 153, 0.08)' } 
                                         : { background: c.bg }
                                     }
                                 />
