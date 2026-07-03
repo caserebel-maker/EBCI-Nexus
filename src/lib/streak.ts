@@ -43,7 +43,7 @@ const RESET_LEAVE_TYPES = ['sick', 'personal']
  * imports can have missing morning scans, so a single late-looking row
  * from months ago should not erase trust in the streak card.
  */
-const DEFAULT_STREAK_TRUSTED_FROM = '2026-06-17'
+const DEFAULT_STREAK_TRUSTED_FROM = '2026-01-01'
 
 function getStreakTrustedFrom(): string {
     const value = process.env.STREAK_TRUSTED_FROM?.trim()
