@@ -398,10 +398,17 @@ function WfhStatTile({
     )
 }
 
-function formatAttendanceDate(dateKey: string) {
-    const d = new Date(`${dateKey}T00:00:00+07:00`)
-    if (Number.isNaN(d.getTime())) return dateKey
-    return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', timeZone: 'Asia/Bangkok' })
+function formatAttendanceDate(dateKey: string): string {
+    if (!dateKey || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return dateKey
+    const [yStr, mStr, dStr] = dateKey.split('-')
+    const day = parseInt(dStr, 10)
+    const month = parseInt(mStr, 10)
+    const monthsTh = [
+        'ม.ค.', 'ก.พ.', 'มี.ย.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+        'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
+    ]
+    const monthLabel = monthsTh[month - 1] || mStr
+    return `${day} ${monthLabel}`
 }
 
 function ChartLegend({ color, label }: { color: string; label: string }) {
