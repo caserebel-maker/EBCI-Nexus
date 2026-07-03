@@ -990,13 +990,18 @@ export function EmployeeProfileView({
                             </div>
                         ) : (
                             <div>
-                                <div className="flex flex-wrap items-center gap-3">
-                                    <h1 className="text-[1.8rem] font-black text-white leading-tight">
-                                        {displayName}
-                                        {employee.nickname && (
-                                            <span className="text-white/78 font-normal text-base ml-2">({employee.nickname})</span>
-                                        )}
-                                    </h1>
+                                <h1 className="text-[1.8rem] font-black text-white leading-tight">
+                                    {displayName}
+                                    {employee.nickname && (
+                                        <span className="text-white/78 font-normal text-base ml-2">({employee.nickname})</span>
+                                    )}
+                                </h1>
+                                {employee.date_of_birth && calcAgeText(employee.date_of_birth) && (
+                                    <p className="text-amber-200/80 text-[0.95rem] font-semibold mt-1">
+                                        อายุ {calcAgeText(employee.date_of_birth)}
+                                    </p>
+                                )}
+                                <div className="flex flex-wrap items-center gap-3 mt-2.5">
                                     <span className={cn("px-2.5 py-1 rounded-lg text-xs font-bold border", levelColor)}>
                                         {levelLabel}
                                     </span>
@@ -1023,7 +1028,7 @@ export function EmployeeProfileView({
                                 </div>
                                 {isEditing
                                     ? <input className={cn(inp, 'mt-2 max-w-xs text-sm')} value={form.position} onChange={set('position')} placeholder="ตำแหน่ง" />
-                                    : <p className="text-amber-100/90 font-bold text-[1rem] mt-0.5">{employee.position} — {employee.department}</p>
+                                    : <p className="text-amber-100/90 font-bold text-[1rem] mt-2">{employee.position} — {employee.department}</p>
                                 }
                             </div>
                         )}
@@ -1041,12 +1046,6 @@ export function EmployeeProfileView({
                                     <Clock size={13} className="text-amber-300" />
                                     อายุงาน {tenure}
                                 </span>
-                                {employee.date_of_birth && calcAgeText(employee.date_of_birth) && (
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/92 text-[0.85rem] font-semibold">
-                                        <Cake size={13} className="text-amber-300" />
-                                        อายุ {calcAgeText(employee.date_of_birth)}
-                                    </span>
-                                )}
                                 {streak && (
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/92 text-[0.85rem] font-semibold">
                                         <Flame size={13} className={cn(streak.months > 0 ? "text-orange-500 fill-orange-500" : "text-white/40")} />
