@@ -5,9 +5,10 @@ import {
     ArrowLeft, User, Phone, Mail, MapPin, Building, Briefcase,
     Calendar, Shield, ChevronRight, Pencil, X, Check,
     AlertCircle, CheckCircle2, Camera, Trash2, Clock, FileText,
-    Lock, LogOut, Printer, Send, Home,
+    Lock, LogOut, Printer, Send, Home, Cake, Flame,
 } from "lucide-react"
 import type { LucideIcon } from 'lucide-react'
+import type { StreakInfo } from "@/lib/streak-shared"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -237,6 +238,7 @@ interface Props {
     supervisorName: string
     tenure: string
     leaveBalances: LeaveBalance[]
+    streak?: StreakInfo | null
     /** Cells for the AdjustBalanceModal — keyed by leave_type_id.
      *  Same shape used by /hradmin/leave?tab=balances so the modal works
      *  identically here. */
@@ -513,7 +515,7 @@ export function EmployeeProfileView({
     employee, photoUrl, displayName, supervisorName, tenure,
     leaveBalances, balanceCells, leaveTypes, balanceYear,
     recentLeaves, attendanceSummary, wfhStats, wfhMonthly, allEmployees, id, isHrAdmin,
-    contracts, canViewPayroll, salarySlips,
+    contracts, canViewPayroll, salarySlips, streak,
 }: Props) {
     const router = useRouter()
     const [balanceModalOpen, setBalanceModalOpen] = useState(false)
@@ -1039,6 +1041,18 @@ export function EmployeeProfileView({
                                     <Clock size={13} className="text-amber-300" />
                                     อายุงาน {tenure}
                                 </span>
+                                {employee.date_of_birth && calcAgeText(employee.date_of_birth) && (
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/92 text-[0.85rem] font-semibold">
+                                        <Cake size={13} className="text-amber-300" />
+                                        อายุ {calcAgeText(employee.date_of_birth)}
+                                    </span>
+                                )}
+                                {streak && (
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/92 text-[0.85rem] font-semibold">
+                                        <Flame size={13} className={cn(streak.months > 0 ? "text-orange-500 fill-orange-500" : "text-white/40")} />
+                                        Streak {streak.months} เดือน
+                                    </span>
+                                )}
                                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/6 border border-white/12 text-white/92 text-[0.85rem] font-semibold">
                                     <User size={13} className="text-amber-300" />
                                     {EMPLOYMENT_LABELS[employee.employment_type] ?? employee.employment_type}
@@ -1060,6 +1074,22 @@ export function EmployeeProfileView({
                                         อายุงาน {tenure}
                                         <span className="text-white/30 ml-1">(คำนวณอัตโนมัติ)</span>
                                     </span>
+                                    {employee.date_of_birth && calcAgeText(employee.date_of_birth) && (
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/8 text-white/55 text-[0.78rem]">
+                                            <Lock size={11} />
+                                            <Cake size={11} />
+                                            อายุ {calcAgeText(employee.date_of_birth)}
+                                            <span className="text-white/30 ml-1">(คำนวณอัตโนมัติ)</span>
+                                        </span>
+                                    )}
+                                    {streak && (
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/8 text-white/55 text-[0.78rem]">
+                                            <Lock size={11} />
+                                            <Flame size={11} className={streak.months > 0 ? "text-orange-400 fill-orange-400/20" : "text-white/30"} />
+                                            Streak {streak.months} เดือน
+                                            <span className="text-white/30 ml-1">(คำนวณอัตโนมัติ)</span>
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* Editable controls — labelled + chevron-bearing dropdowns */}
