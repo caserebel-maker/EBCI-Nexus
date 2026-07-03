@@ -47,6 +47,7 @@ const LEAVE_CONFIG: Record<string, { label: string; color: string; emoji: string
 }
 
 // CELL palette — what shows in the calendar GRID (cell bg color).
+// 2026-07-03: keep company holidays green and personal leave as a green outline.
 // Mod-defined colour scheme:
 //   public    → ขาว     (highest priority, all-company off day)
 //   religious → เหลือง
