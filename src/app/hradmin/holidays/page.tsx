@@ -24,7 +24,7 @@ const YEARS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - 1 + i)
 const TYPE_CONFIG: Record<string, { label: string; color: string; emoji: string }> = {
     public:    { label: 'นักขัตฤกษ์',      color: '#F87171', emoji: '🇹🇭' },
     religious: { label: 'วันสำคัญทางศาสนา', color: '#F472B6', emoji: '🛕' },
-    company:   { label: 'บริษัทกำหนด',     color: '#60A5FA', emoji: '📌' },
+    company:   { label: 'บริษัทกำหนด',     color: '#22C55E', emoji: '📌' },
     wfh:       { label: 'WFH',             color: '#60A5FA', emoji: '🏠' },
     work:      { label: 'วันทำงาน (ออฟฟิศ)', color: '#C084FC', emoji: '🏢' },
 }
@@ -36,7 +36,7 @@ type CellKind = 'public' | 'religious' | 'company' | 'wfh' | 'work'
 const CELL_PALETTE: Record<CellKind, { bg: string; text: string; label: string }> = {
     public:    { bg: '#F4F4F5', text: '#000000', label: 'นักขัตฤกษ์' },
     religious: { bg: '#FBBF24', text: '#000000', label: 'วันสำคัญทางศาสนา' },
-    company:   { bg: '#10B981', text: '#FFFFFF', label: 'บริษัทกำหนด' },
+    company:   { bg: '#22C55E', text: '#07130C', label: 'บริษัทกำหนด' },
     wfh:       { bg: '#2563EB', text: '#FFFFFF', label: 'WFH' },
     work:      { bg: '#9333EA', text: '#FFFFFF', label: 'วันทำงาน (ออฟฟิศ)' },
 }
