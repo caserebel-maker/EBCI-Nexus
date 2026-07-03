@@ -1,11 +1,232 @@
 "use client"
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Loader2, IdCard, Lock, Eye, EyeOff } from 'lucide-react'
 import { LanguageToggle } from '@/components/ui/language-toggle'
 import { useTranslation } from '@/contexts/language-context'
+
+type LoginBackgroundTheme = 'night-city' | 'legacy-video'
+
+// Keep the old Pexels wireframe login background available. Switch this
+// constant back to 'legacy-video' if the new city-at-night theme feels too busy.
+const LOGIN_BACKGROUND_THEME: LoginBackgroundTheme = 'night-city'
+
+const CITY_TOWERS = [
+    { left: '4%', top: '22%', width: '7.6rem', height: '18rem', rise: '124px', glow: 'rgba(14,165,233,0.40)', delay: '-4s' },
+    { left: '14%', top: '38%', width: '5.8rem', height: '13rem', rise: '96px', glow: 'rgba(251,191,36,0.30)', delay: '-12s' },
+    { left: '24%', top: '16%', width: '8.8rem', height: '22rem', rise: '150px', glow: 'rgba(45,212,191,0.34)', delay: '-18s' },
+    { left: '36%', top: '34%', width: '6.6rem', height: '16rem', rise: '108px', glow: 'rgba(248,113,113,0.28)', delay: '-7s' },
+    { left: '48%', top: '12%', width: '9.2rem', height: '25rem', rise: '166px', glow: 'rgba(96,165,250,0.38)', delay: '-15s' },
+    { left: '62%', top: '30%', width: '7rem', height: '18rem', rise: '126px', glow: 'rgba(244,114,182,0.27)', delay: '-9s' },
+    { left: '74%', top: '18%', width: '8rem', height: '21rem', rise: '145px', glow: 'rgba(34,197,94,0.30)', delay: '-22s' },
+    { left: '84%', top: '42%', width: '5.4rem', height: '13rem', rise: '92px', glow: 'rgba(250,204,21,0.30)', delay: '-2s' },
+    { left: '9%', top: '64%', width: '6.2rem', height: '12rem', rise: '82px', glow: 'rgba(56,189,248,0.32)', delay: '-19s' },
+    { left: '22%', top: '72%', width: '8rem', height: '15rem', rise: '104px', glow: 'rgba(251,146,60,0.28)', delay: '-6s' },
+    { left: '39%', top: '60%', width: '7.2rem', height: '14rem', rise: '98px', glow: 'rgba(45,212,191,0.30)', delay: '-13s' },
+    { left: '55%', top: '68%', width: '9rem', height: '17rem', rise: '118px', glow: 'rgba(147,197,253,0.34)', delay: '-25s' },
+    { left: '70%', top: '58%', width: '6.4rem', height: '15rem', rise: '102px', glow: 'rgba(248,113,113,0.26)', delay: '-11s' },
+    { left: '86%', top: '70%', width: '7.4rem', height: '14rem', rise: '98px', glow: 'rgba(52,211,153,0.30)', delay: '-17s' },
+] as const
+
+function LoginBackground() {
+    return LOGIN_BACKGROUND_THEME === 'night-city'
+        ? <NightCityBackground />
+        : <LegacyVideoBackground />
+}
+
+function LegacyVideoBackground() {
+    return (
+        <div className="absolute inset-0 z-0">
+            <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+            >
+                <source src="https://videos.pexels.com/video-files/3129671/3129671-uhd_2560_1440_30fps.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+            </video>
+            <div className="absolute inset-0 bg-black/50 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#561e23] to-[#ad5f6c] mix-blend-color opacity-90 pointer-events-none" />
+        </div>
+    )
+}
+
+function NightCityBackground() {
+    return (
+        <div className="absolute inset-0 z-0 overflow-hidden bg-[#080609]" aria-hidden="true">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_15%,rgba(15,118,110,0.34),transparent_32%),radial-gradient(circle_at_82%_24%,rgba(251,191,36,0.18),transparent_24%),linear-gradient(140deg,#05060b_0%,#1b0810_42%,#4a151e_72%,#0b0b12_100%)]" />
+            <div className="login-city-camera">
+                <div className="login-city-deck">
+                    <div className="login-city-road login-city-road-a" />
+                    <div className="login-city-road login-city-road-b" />
+                    <div className="login-city-road login-city-road-c" />
+                    {CITY_TOWERS.map((tower, index) => (
+                        <div
+                            key={`${tower.left}-${tower.top}`}
+                            className="login-city-tower"
+                            style={{
+                                '--left': tower.left,
+                                '--top': tower.top,
+                                '--width': tower.width,
+                                '--height': tower.height,
+                                '--rise': tower.rise,
+                                '--glow': tower.glow,
+                                '--delay': tower.delay,
+                                '--window-shift': `${index % 4}px`,
+                            } as CSSProperties}
+                        >
+                            <span className="login-city-roof" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,7,18,0.62)_0%,rgba(3,7,18,0.12)_35%,rgba(86,30,35,0.20)_64%,rgba(3,7,18,0.68)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.12)_48%,rgba(0,0,0,0.74)_100%)]" />
+            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#180409]/90 via-[#4b151f]/34 to-transparent" />
+            <style>{`
+                .login-city-camera {
+                    position: absolute;
+                    inset: -18% -12%;
+                    perspective: 980px;
+                    transform-style: preserve-3d;
+                }
+
+                .login-city-deck {
+                    position: absolute;
+                    inset: 0;
+                    transform-style: preserve-3d;
+                    transform: rotateX(60deg) rotateZ(-14deg) translate3d(-2%, 2%, 0);
+                    animation: loginCityOrbit 46s ease-in-out infinite alternate;
+                }
+
+                .login-city-road {
+                    position: absolute;
+                    border-radius: 999px;
+                    background: linear-gradient(90deg, transparent, rgba(252, 211, 77, 0.30), rgba(56, 189, 248, 0.22), transparent);
+                    box-shadow: 0 0 34px rgba(56, 189, 248, 0.18);
+                    opacity: 0.7;
+                }
+
+                .login-city-road-a {
+                    left: -8%;
+                    right: -8%;
+                    top: 49%;
+                    height: 18px;
+                }
+
+                .login-city-road-b {
+                    left: 48%;
+                    top: -8%;
+                    width: 18px;
+                    bottom: -8%;
+                    background: linear-gradient(180deg, transparent, rgba(244, 114, 182, 0.24), rgba(45, 212, 191, 0.25), transparent);
+                }
+
+                .login-city-road-c {
+                    left: 12%;
+                    right: 6%;
+                    top: 24%;
+                    height: 10px;
+                    transform: rotateZ(24deg);
+                    opacity: 0.46;
+                }
+
+                .login-city-tower {
+                    position: absolute;
+                    left: var(--left);
+                    top: var(--top);
+                    width: var(--width);
+                    height: var(--height);
+                    overflow: hidden;
+                    border-radius: 8px 8px 3px 3px;
+                    transform: translateZ(var(--rise));
+                    transform-origin: center bottom;
+                    background:
+                        linear-gradient(90deg, rgba(255,255,255,0.14), rgba(255,255,255,0.02) 22%, rgba(0,0,0,0.34) 100%),
+                        repeating-linear-gradient(
+                            180deg,
+                            rgba(255,255,255,0.00) 0 13px,
+                            rgba(255,255,255,0.26) 13px 15px,
+                            rgba(255,255,255,0.00) 15px 28px
+                        ),
+                        repeating-linear-gradient(
+                            90deg,
+                            rgba(255,255,255,0.00) 0 calc(14px + var(--window-shift)),
+                            rgba(251,191,36,0.42) calc(14px + var(--window-shift)) calc(17px + var(--window-shift)),
+                            rgba(255,255,255,0.00) calc(17px + var(--window-shift)) 30px
+                        ),
+                        linear-gradient(180deg, rgba(148,163,184,0.68) 0%, rgba(30,41,59,0.92) 25%, rgba(8,13,27,0.98) 100%);
+                    box-shadow:
+                        inset 0 0 0 1px rgba(255,255,255,0.16),
+                        inset -18px 0 34px rgba(0,0,0,0.30),
+                        0 24px 54px rgba(0,0,0,0.48),
+                        0 0 42px var(--glow);
+                    animation: loginTowerPulse 8s ease-in-out infinite;
+                    animation-delay: var(--delay);
+                }
+
+                .login-city-tower::before {
+                    content: "";
+                    position: absolute;
+                    inset: 0;
+                    background: linear-gradient(180deg, rgba(255,255,255,0.20), transparent 22%, rgba(0,0,0,0.28) 100%);
+                    pointer-events: none;
+                }
+
+                .login-city-roof {
+                    position: absolute;
+                    left: 8%;
+                    right: 8%;
+                    top: 7px;
+                    height: 12px;
+                    border-radius: 999px;
+                    background: linear-gradient(90deg, rgba(255,255,255,0.40), rgba(45,212,191,0.34), rgba(251,191,36,0.30));
+                    box-shadow: 0 0 24px var(--glow);
+                    opacity: 0.72;
+                }
+
+                @keyframes loginCityOrbit {
+                    0% {
+                        transform: rotateX(62deg) rotateZ(-18deg) translate3d(-3%, 3%, 0);
+                    }
+                    100% {
+                        transform: rotateX(56deg) rotateZ(13deg) translate3d(2%, -2%, 0);
+                    }
+                }
+
+                @keyframes loginTowerPulse {
+                    0%, 100% {
+                        filter: brightness(0.92) saturate(1);
+                    }
+                    50% {
+                        filter: brightness(1.08) saturate(1.15);
+                    }
+                }
+
+                @media (max-width: 640px) {
+                    .login-city-camera {
+                        inset: -24% -64%;
+                    }
+
+                    .login-city-deck {
+                        animation-duration: 58s;
+                    }
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                    .login-city-deck,
+                    .login-city-tower {
+                        animation: none;
+                    }
+                }
+            `}</style>
+        </div>
+    )
+}
 
 function LoginForm() {
     const [error, setError] = useState<string | null>(null)
@@ -20,24 +241,7 @@ function LoginForm() {
 
     return (
         <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
-            {/* 1. Background Video (Blue Wireframe - Local/Pexels) */}
-            <div className="absolute inset-0 z-0">
-                <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover"
-                >
-                    {/* Tech/Network Abstract Blue Wireframe */}
-                    <source src="https://videos.pexels.com/video-files/3129671/3129671-uhd_2560_1440_30fps.mp4" type="video/mp4" />
-                    Your browser does not support the video tag.
-                </video>
-                {/* Dark Overlay for Readability */}
-                <div className="absolute inset-0 bg-black/50 pointer-events-none" />
-                {/* Maroon Gradient Overlay to tint the Blue Video (CI Matching) */}
-                <div className="absolute inset-0 bg-gradient-to-b from-[#561e23] to-[#ad5f6c] mix-blend-color opacity-90 pointer-events-none" />
-            </div>
+            <LoginBackground />
 
             {/* Language Toggle (Floating Top Right) */}
             <div className="absolute top-4 right-4 z-20">
