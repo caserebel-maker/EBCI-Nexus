@@ -49,6 +49,12 @@ export const OUTSIDE_HEAD_OFFICE_EMPLOYEES = [
         department: 'ฝ่ายประสานงานเอกสาร-นำเข้า',
         remark: 'Sign Contract',
     },
+    {
+        employeeCode: '999-69',
+        name: 'อนุทวย คงควรคอย',
+        department: 'ฝ่ายทรัพยากรบุคคลและธุรการ',
+        remark: 'บัญชีทดสอบสิทธิ์นอก Head Office',
+    },
 ] as const
 
 const OUTSIDE_HEAD_OFFICE_EMPLOYEE_CODES = new Set<string>(
