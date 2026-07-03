@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
     Users, CalendarDays, Clock, AlertTriangle, TrendingUp,
     CheckCircle, XCircle, Cake, Building2, Loader2, Megaphone, Gift, X
@@ -829,7 +830,11 @@ export function HRDashboard({
                                             {e.first_name_th?.charAt(0)}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-xs 2xl:text-sm font-bold text-white leading-tight">{fullName(e.first_name_th, e.last_name_th, e.nickname)}</p>
+                                            <p className="text-xs 2xl:text-sm font-bold text-white leading-tight">
+                                                <Link href={`/hradmin/employees/${e.id}`} className="hover:underline hover:text-amber-200 transition-colors">
+                                                    {fullName(e.first_name_th, e.last_name_th, e.nickname)}
+                                                </Link>
+                                            </p>
                                             <p className="text-xs 2xl:text-sm font-semibold text-white mt-1">{e.department}</p>
                                         </div>
                                         <span className="text-xs 2xl:text-sm font-black text-amber-300 shrink-0">{e.years} ปี</span>
@@ -874,7 +879,11 @@ export function HRDashboard({
                                             {e.first_name_th?.charAt(0)}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-xs 2xl:text-sm font-bold text-white leading-tight">{fullName(e.first_name_th, e.last_name_th, e.nickname)}</p>
+                                            <p className="text-xs 2xl:text-sm font-bold text-white leading-tight">
+                                                <Link href={`/hradmin/employees/${e.id}`} className="hover:underline hover:text-amber-200 transition-colors">
+                                                    {fullName(e.first_name_th, e.last_name_th, e.nickname)}
+                                                </Link>
+                                            </p>
                                             <p className="text-xs 2xl:text-sm font-semibold text-white mt-1">{e.dobDay} {MONTHS_TH[e.dobMonth]}</p>
                                         </div>
                                         <span className="text-xs 2xl:text-sm font-black text-white/90 shrink-0">{e.age} ปี</span>
