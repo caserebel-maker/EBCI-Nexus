@@ -398,7 +398,7 @@ function WfhStatTile({
 function formatAttendanceDate(dateKey: string) {
     const d = new Date(`${dateKey}T00:00:00+07:00`)
     if (Number.isNaN(d.getTime())) return dateKey
-    return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
+    return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', timeZone: 'Asia/Bangkok' })
 }
 
 function ChartLegend({ color, label }: { color: string; label: string }) {

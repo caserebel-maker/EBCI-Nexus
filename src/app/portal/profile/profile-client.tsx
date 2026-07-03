@@ -149,7 +149,7 @@ function AttendanceTile({
 function fmtShortDate(dateKey: string): string {
     const d = new Date(`${dateKey}T00:00:00+07:00`)
     if (Number.isNaN(d.getTime())) return dateKey
-    return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
+    return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', timeZone: 'Asia/Bangkok' })
 }
 
 function AttendanceSummaryCard({ summary }: { summary: EmployeeAttendanceSummary }) {
