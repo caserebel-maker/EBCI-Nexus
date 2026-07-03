@@ -64,7 +64,7 @@ type CellKind = 'public' | 'religious' | 'company' | 'wfh' | 'work' | 'leave' | 
 const CELL_PALETTE: Record<CellKind, { bg: string; text: string; label: string }> = {
     public:    { bg: '#F4F4F5', text: '#000000', label: 'นักขัตฤกษ์' },     // white / black
     religious: { bg: '#FBBF24', text: '#000000', label: 'วันสำคัญทางศาสนา' }, // yellow / black
-    company:   { bg: '#FB923C', text: '#000000', label: 'บริษัทกำหนด' },     // orange / black
+    company:   { bg: '#10B981', text: '#FFFFFF', label: 'บริษัทกำหนด' },     // green / white
     wfh:       { bg: '#2563EB', text: '#FFFFFF', label: 'WFH' },             // rich blue / white
     work:      { bg: '#9333EA', text: '#FFFFFF', label: 'วันทำงาน (ออฟฟิศ)' }, // vibrant purple / white
     leave:     { bg: '#10B981', text: '#FFFFFF', label: 'ใบลา' },            // green / white
@@ -281,8 +281,11 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                         // dots overlay absolutely at the bottom-right so
                         // they don't push the number off-center.
                         const palette = dominantKind ? CELL_PALETTE[dominantKind] : null
+                        const isLeave = dominantKind === 'leave'
                         const cellStyle: React.CSSProperties = palette
-                            ? { background: palette.bg, color: palette.text }
+                            ? isLeave
+                                ? { border: '2px solid #10B981', background: 'rgba(16, 185, 129, 0.08)', color: '#10B981' }
+                                : { background: palette.bg, color: palette.text }
                             : {}
                         const cellClass = palette
                             ? 'relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg p-1 transition-all hover:brightness-110 lg:aspect-auto lg:min-h-0 lg:rounded-md'
@@ -293,7 +296,7 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                             }`
 
                         const dayNumberColor = palette
-                            ? palette.text
+                            ? isLeave ? '#10B981' : palette.text
                             : isToday ? '#FCD34D'
                             : isWeekend ? '#FCD34D'
                             : 'rgba(255,255,255,0.55)'
@@ -348,11 +351,15 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                 <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 pt-2 text-sm lg:pt-1 lg:text-xs">
                     {CELL_PRIORITY.map(k => {
                         const c = CELL_PALETTE[k]
+                        const isLeaveLegend = k === 'leave'
                         return (
                             <span key={k} className="inline-flex items-center gap-1.5">
                                 <span
                                     className="block h-3.5 w-3.5 rounded ring-1 ring-black/20 lg:h-2.5 lg:w-2.5"
-                                    style={{ background: c.bg }}
+                                    style={isLeaveLegend 
+                                        ? { border: '2.5px solid #10B981', background: 'rgba(16, 185, 129, 0.08)' } 
+                                        : { background: c.bg }
+                                    }
                                 />
                                 <span className="text-white/85 font-medium">{c.label}</span>
                             </span>

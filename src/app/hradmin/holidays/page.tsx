@@ -36,7 +36,7 @@ type CellKind = 'public' | 'religious' | 'company' | 'wfh' | 'work'
 const CELL_PALETTE: Record<CellKind, { bg: string; text: string; label: string }> = {
     public:    { bg: '#F4F4F5', text: '#000000', label: 'นักขัตฤกษ์' },
     religious: { bg: '#FBBF24', text: '#000000', label: 'วันสำคัญทางศาสนา' },
-    company:   { bg: '#FB923C', text: '#000000', label: 'บริษัทกำหนด' },
+    company:   { bg: '#10B981', text: '#FFFFFF', label: 'บริษัทกำหนด' },
     wfh:       { bg: '#2563EB', text: '#FFFFFF', label: 'WFH' },
     work:      { bg: '#9333EA', text: '#FFFFFF', label: 'วันทำงาน (ออฟฟิศ)' },
 }
