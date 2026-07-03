@@ -29,6 +29,7 @@ interface InitialData {
     stats: AttendanceStats
     records: AttendanceRecord[]
     fetchedAt: string
+    lastSyncTime?: string | null
 }
 
 interface Props {
@@ -81,6 +82,7 @@ export function AttendanceView({ initialDate, initialData }: Props) {
                     stats: result.stats,
                     records: result.records,
                     fetchedAt: result.fetchedAt,
+                    lastSyncTime: result.lastSyncTime,
                 })
             }
         })
@@ -95,6 +97,7 @@ export function AttendanceView({ initialDate, initialData }: Props) {
                     stats: result.stats,
                     records: result.records,
                     fetchedAt: result.fetchedAt,
+                    lastSyncTime: result.lastSyncTime,
                 })
             }
         })
@@ -230,6 +233,31 @@ export function AttendanceView({ initialDate, initialData }: Props) {
                     className="text-xs px-3 py-1.5 rounded-full bg-white/5 text-white/70 border border-white/10 hover:bg-white/10"
                 />
             </div>
+
+            {/* Last Sync Status Banner */}
+            {data?.lastSyncTime && (() => {
+                const delayMs = Date.now() - new Date(data.lastSyncTime).getTime()
+                const isStalled = delayMs > 2 * 3600 * 1000 // 2 hours
+                return (
+                    <div className={cn(
+                        "flex items-center gap-2 text-xs px-4 py-2.5 rounded-xl border backdrop-blur-md transition-all shadow-sm",
+                        isStalled 
+                            ? "bg-rose-500/10 border-rose-500/30 text-rose-200 font-medium" 
+                            : "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
+                    )}>
+                        <span className={cn(
+                            "h-2 w-2 rounded-full",
+                            isStalled ? "bg-rose-400 animate-ping" : "bg-emerald-400 animate-pulse"
+                        )} />
+                        <span>
+                            {isStalled 
+                                ? `⚠️ การเชื่อมต่อเครื่องสแกนบัตรขัดข้อง! ไม่พบการอัปเดตข้อมูล (Sync ล่าสุดเมื่อ: ${formatThaiDate(data.lastSyncTime)} เวลา ${formatTime(data.lastSyncTime)} น.)` 
+                                : `เครื่องสแกนบัตรออนไลน์ปกติ (Sync ล่าสุดเมื่อ: ${formatThaiDate(data.lastSyncTime)} เวลา ${formatTime(data.lastSyncTime)} น.)`
+                            }
+                        </span>
+                    </div>
+                )
+            })()}
 
             {/* Stats cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">

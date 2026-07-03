@@ -146,10 +146,19 @@ export async function getAttendanceForDate(dateStr: string) {
         notCheckedInCount,
     }
 
+    // Fetch last sync time from card_scans
+    const { data: lastScan } = await supabaseAdmin
+        .from('card_scans')
+        .select('created_at')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
     return {
         success: true,
         stats,
         records,
         fetchedAt: new Date().toISOString(),
+        lastSyncTime: lastScan?.created_at ?? null,
     }
 }
