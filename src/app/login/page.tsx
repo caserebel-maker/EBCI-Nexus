@@ -7,11 +7,13 @@ import { Loader2, IdCard, Lock, Eye, EyeOff } from 'lucide-react'
 import { LanguageToggle } from '@/components/ui/language-toggle'
 import { useTranslation } from '@/contexts/language-context'
 
-type LoginBackgroundTheme = 'night-city' | 'legacy-video'
+type LoginBackgroundTheme = 'night-city' | 'legacy-video' | 'city-night-video'
 
-// Keep the old Pexels wireframe login background available. Switch this
-// constant back to 'legacy-video' if the new city-at-night theme feels too busy.
-const LOGIN_BACKGROUND_THEME: LoginBackgroundTheme = 'legacy-video'
+// Keep the old backgrounds available. Switch this constant to:
+// - 'city-night-video' for the night city aerial/traffic drone video
+// - 'night-city' for the 3D animated CSS city towers
+// - 'legacy-video' for the abstract geometrical lines video
+const LOGIN_BACKGROUND_THEME: LoginBackgroundTheme = 'city-night-video'
 
 const CITY_TOWERS = [
     { left: '4%', top: '22%', width: '7.6rem', height: '18rem', rise: '124px', glow: 'rgba(14,165,233,0.40)', delay: '-4s' },
@@ -31,9 +33,36 @@ const CITY_TOWERS = [
 ] as const
 
 function LoginBackground() {
-    return LOGIN_BACKGROUND_THEME === 'night-city'
-        ? <NightCityBackground />
-        : <LegacyVideoBackground />
+    if (LOGIN_BACKGROUND_THEME === 'night-city') {
+        return <NightCityBackground />
+    }
+    if (LOGIN_BACKGROUND_THEME === 'city-night-video') {
+        return <CityNightVideoBackground />
+    }
+    return <LegacyVideoBackground />
+}
+
+function CityNightVideoBackground() {
+    return (
+        <div className="absolute inset-0 z-0 bg-black">
+            <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover opacity-80"
+            >
+                <source src="https://videos.pexels.com/video-files/5992517/5992517-hd_1920_1080_30fps.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+            </video>
+            {/* Vignette & Contrast Overlay */}
+            <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0)_10%,rgba(0,0,0,0.75)_100%)] pointer-events-none" />
+            
+            {/* Brand Mix-Blend Color Overlay (matching Burgundy theme) */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#561e23]/40 to-[#ad5f6c]/30 mix-blend-color pointer-events-none" />
+        </div>
+    )
 }
 
 function LegacyVideoBackground() {
