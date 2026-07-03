@@ -7,6 +7,17 @@ import { GET as monitorSync } from './monitor-sync/route'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60 // Allow up to 60 seconds for multiple tasks
 
+async function runCronTask(name: string, req: NextRequest, handler: (req: NextRequest) => Promise<Response>) {
+    try {
+        console.log(`[cron-router] Triggering ${name}...`)
+        const res = await handler(req)
+        return await res.json().catch(() => ({ status: res.status }))
+    } catch (e) {
+        console.error(`[cron-router] ${name} error:`, e)
+        return { error: String(e) }
+    }
+}
+
 export async function GET(req: NextRequest) {
     const cronSecret = process.env.CRON_SECRET
     if (!cronSecret) {
@@ -21,62 +32,19 @@ export async function GET(req: NextRequest) {
     }
 
     const now = new Date()
-    const utcHour = now.getUTCHours()
-    const utcMin = now.getUTCMinutes()
-
-    console.log(`[cron-router] Executing at UTC ${utcHour}:${utcMin}`)
+    console.log(`[cron-router] Executing Hobby-safe daily bundle at ${now.toISOString()}`)
     const results: Record<string, any> = {}
 
-    // 1. Sync Monitor (Always runs every 30 minutes)
-    try {
-        const res = await monitorSync(req)
-        results.monitorSync = await res.json().catch(() => null)
-    } catch (e) {
-        results.monitorSync = { error: String(e) }
-        console.error('[cron-router] monitorSync error:', e)
-    }
-
-    // 2. Leave Reminders (Runs daily at 02:00 UTC / 09:00 Bangkok)
-    // Checking window [0, 15] to account for any minor trigger latency
-    if (utcHour === 2 && utcMin >= 0 && utcMin < 15) {
-        try {
-            console.log('[cron-router] Triggering leaveReminders...')
-            const res = await leaveReminders(req)
-            results.leaveReminders = await res.json().catch(() => null)
-        } catch (e) {
-            results.leaveReminders = { error: String(e) }
-            console.error('[cron-router] leaveReminders error:', e)
-        }
-    }
-
-    // 3. WFH Checkin Nudge (Runs daily at 03:00 UTC / 10:00 Bangkok)
-    // Checking window [0, 15]
-    if (utcHour === 3 && utcMin >= 0 && utcMin < 15) {
-        try {
-            console.log('[cron-router] Triggering wfhCheckinNudge...')
-            const res = await wfhCheckinNudge(req)
-            results.wfhCheckinNudge = await res.json().catch(() => null)
-        } catch (e) {
-            results.wfhCheckinNudge = { error: String(e) }
-            console.error('[cron-router] wfhCheckinNudge error:', e)
-        }
-    }
-
-    // 4. Auto Checkout (Runs daily at 11:30 UTC / 18:30 Bangkok)
-    // Checking window [25, 40]
-    if (utcHour === 11 && utcMin >= 25 && utcMin < 40) {
-        try {
-            console.log('[cron-router] Triggering autoCheckout...')
-            const res = await autoCheckout(req)
-            results.autoCheckout = await res.json().catch(() => null)
-        } catch (e) {
-            results.autoCheckout = { error: String(e) }
-            console.error('[cron-router] autoCheckout error:', e)
-        }
-    }
+    // Vercel Hobby allows only one scheduled cron per day. Bundle the jobs so
+    // critical notifications still work while staying inside the free-plan limit.
+    results.monitorSync = await runCronTask('monitorSync', req, monitorSync)
+    results.leaveReminders = await runCronTask('leaveReminders', req, leaveReminders)
+    results.wfhCheckinNudge = await runCronTask('wfhCheckinNudge', req, wfhCheckinNudge)
+    results.autoCheckout = await runCronTask('autoCheckout', req, autoCheckout)
 
     return NextResponse.json({
         success: true,
+        mode: 'hobby_daily_bundle',
         timestamp: now.toISOString(),
         results
     })
