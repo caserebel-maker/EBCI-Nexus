@@ -65,27 +65,27 @@ function normalizeMonth(raw?: string) {
 function monthBounds(monthIso: string) {
     const [year, month] = monthIso.split('-').map(Number)
     const startKey = `${monthIso}-01`
-    const monthEndDate = new Date(year, month, 0)
-    const endKey = `${monthIso}-${String(monthEndDate.getDate()).padStart(2, '0')}`
+    const monthEndDate = new Date(Date.UTC(year, month, 0))
+    const endKey = `${monthIso}-${String(monthEndDate.getUTCDate()).padStart(2, '0')}`
     return { year, month, startKey, endKey }
 }
 
 function eachDateKey(startKey: string, endKey: string) {
     const dates: string[] = []
-    const cur = new Date(`${startKey}T00:00:00+07:00`)
-    const end = new Date(`${endKey}T00:00:00+07:00`)
+    const cur = new Date(`${startKey}T00:00:00Z`)
+    const end = new Date(`${endKey}T00:00:00Z`)
     while (cur <= end) {
         dates.push(
-            `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`,
+            `${cur.getUTCFullYear()}-${String(cur.getUTCMonth() + 1).padStart(2, '0')}-${String(cur.getUTCDate()).padStart(2, '0')}`,
         )
-        cur.setDate(cur.getDate() + 1)
+        cur.setUTCDate(cur.getUTCDate() + 1)
     }
     return dates
 }
 
 function isRegularWorkday(dateKey: string) {
-    const d = new Date(`${dateKey}T00:00:00+07:00`)
-    const day = d.getDay()
+    const d = new Date(`${dateKey}T00:00:00Z`)
+    const day = d.getUTCDay()
     if (day === 0) return false
     if (day === 6) return isWorkdaySaturday(dateKey)
     return true

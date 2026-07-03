@@ -14,13 +14,16 @@ export interface SaturdayHoliday {
 }
 
 export function getSaturdayIndex(dateInput: Date | string): number {
-    const date = typeof dateInput === 'string' 
-        ? new Date(dateInput + 'T00:00:00+07:00') 
-        : dateInput;
+    let date: Date;
+    if (typeof dateInput === 'string') {
+        date = new Date(dateInput + 'T00:00:00Z');
+    } else {
+        date = new Date(Date.UTC(dateInput.getFullYear(), dateInput.getMonth(), dateInput.getDate()));
+    }
     
-    if (date.getDay() !== 6) return 0; // Not a Saturday
+    if (date.getUTCDay() !== 6) return 0; // Not a Saturday
     
-    return Math.ceil(date.getDate() / 7);
+    return Math.ceil(date.getUTCDate() / 7);
 }
 
 export function isWorkdaySaturday(dateInput: Date | string): boolean {
@@ -43,13 +46,13 @@ export function getSaturdaysForYear(year: number): SaturdayHoliday[] {
     
     for (let m = 0; m < 12; m++) {
         // Month is 0-indexed in JS Date
-        const date = new Date(year, m, 1)
+        const date = new Date(Date.UTC(year, m, 1))
         let satCount = 0
         
-        while (date.getMonth() === m) {
-            if (date.getDay() === 6) { // Saturday
+        while (date.getUTCMonth() === m) {
+            if (date.getUTCDay() === 6) { // Saturday
                 satCount++
-                const dateStr = `${year}-${String(m + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+                const dateStr = `${year}-${String(m + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`
                 
                 if (satCount === 1) {
                     holidays.push({
@@ -77,7 +80,7 @@ export function getSaturdaysForYear(year: number): SaturdayHoliday[] {
                     })
                 }
             }
-            date.setDate(date.getDate() + 1)
+            date.setUTCDate(date.getUTCDate() + 1)
         }
     }
     
