@@ -59,7 +59,8 @@ interface Props {
     cardScanToday: CardScanTodayInfo | null
     /** §3.1 Layer 3 — gates the WFH check-in button. allowed=true means
      *  one of the upstream sources qualifies the user for WFH today
-     *  (company-wide announcement OR personal approved request).
+     *  (company-wide announcement, personal approved request, or same-day
+     *  personal request still pending approval).
      *  allowed=false disables the button + tells the user where to go
      *  to request it. The checkIn server action enforces the same
      *  rule, so this is UX gating, not security. */
@@ -68,6 +69,16 @@ interface Props {
 }
 
 type GPSState = 'idle' | 'requesting' | 'success' | 'error'
+
+function wfhEligibilityHelperText(wfhEligibility: WfhEligibility) {
+    if (wfhEligibility.source === 'company') {
+        return `วันนี้บริษัทประกาศ WFH${wfhEligibility.label ? ` — ${wfhEligibility.label}` : ''}`
+    }
+    if (wfhEligibility.source === 'pending_personal') {
+        return 'เช็คอิน WFH แบบรออนุมัติ — เมื่อหัวหน้าอนุมัติ ระบบจะนับเวลาเช็คอินนี้ย้อนหลัง'
+    }
+    return 'คำขอ WFH ของคุณได้รับอนุมัติแล้ว'
+}
 
 export function CheckinView({
     office,
@@ -194,7 +205,9 @@ export function CheckinView({
             title: `ยืนยันเช็คอิน${label}?`,
             body:
                 type === 'wfh'
-                    ? 'ใช้เฉพาะวันที่บริษัทประกาศ WFH หรือคำขอ WFH ของคุณได้รับอนุมัติแล้ว'
+                    ? wfhEligibility.source === 'pending_personal'
+                        ? 'ระบบจะบันทึกเวลาเช็คอิน WFH ไว้ก่อน ขณะคำขอของคุณยังรอหัวหน้าอนุมัติ'
+                        : 'ใช้เฉพาะวันที่บริษัทประกาศ WFH หรือคำขอ WFH ของคุณได้รับอนุมัติแล้ว'
                     : type === 'field'
                         ? 'ระบบจะบันทึกเวลา ตำแหน่ง GPS และปลายทาง/เหตุผลที่คุณระบุ'
                         : type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
@@ -740,23 +753,35 @@ export function CheckinView({
                                         the same rule, so this is just UX (security is
                                         server-side). When allowed, the qualifying source
                                         is surfaced as a small chip ("ประกาศบริษัท" /
-                                        "คำขอที่อนุมัติแล้ว") so the user knows why
-                                        they can hit the button today. */}
+                                        "คำขอที่อนุมัติแล้ว" / "รออนุมัติ") so the user
+                                        knows why they can hit the button today. */}
                                     {wfhEligibility.allowed ? (
                                         <div className="space-y-2">
                                             <button
                                                 onClick={() => handleCheckin('wfh')}
                                                 disabled={loading}
-                                                className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all bg-blue-600/80 hover:bg-blue-600 text-white border border-blue-500/40 disabled:opacity-60"
+                                                className={cn(
+                                                    "w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all text-white border disabled:opacity-60",
+                                                    wfhEligibility.source === 'pending_personal'
+                                                        ? "bg-amber-500/85 hover:bg-amber-500 border-amber-300/45"
+                                                        : "bg-blue-600/80 hover:bg-blue-600 border-blue-500/40",
+                                                )}
                                             >
                                                 {loading ? <Loader2 className="animate-spin" size={18} /> : <Home size={18} />}
-                                                เช็คอิน Work From Home
+                                                {wfhEligibility.source === 'pending_personal'
+                                                    ? 'เช็คอิน WFH (รออนุมัติ)'
+                                                    : 'เช็คอิน Work From Home'}
                                             </button>
-                                            <p className="text-xs text-emerald-200/85 text-center inline-flex items-center justify-center gap-1.5 w-full">
-                                                <CheckCircle2 size={11} />
-                                                {wfhEligibility.source === 'company'
-                                                    ? `วันนี้บริษัทประกาศ WFH${wfhEligibility.label ? ` — ${wfhEligibility.label}` : ''}`
-                                                    : 'คำขอ WFH ของคุณได้รับอนุมัติแล้ว'}
+                                            <p className={cn(
+                                                "text-xs text-center inline-flex items-center justify-center gap-1.5 w-full",
+                                                wfhEligibility.source === 'pending_personal'
+                                                    ? "text-amber-100/90"
+                                                    : "text-emerald-200/85",
+                                            )}>
+                                                {wfhEligibility.source === 'pending_personal'
+                                                    ? <AlertCircle size={11} />
+                                                    : <CheckCircle2 size={11} />}
+                                                {wfhEligibilityHelperText(wfhEligibility)}
                                             </p>
                                         </div>
                                     ) : (
@@ -764,15 +789,15 @@ export function CheckinView({
                                             <button
                                                 type="button"
                                                 disabled
-                                                title="วันนี้ยังไม่ได้รับอนุมัติให้ WFH — ขอผ่าน /portal/wfh ก่อน"
+                                                title="วันนี้ยังไม่มีคำขอหรือสิทธิ์ WFH — ขอผ่าน /portal/wfh ก่อน"
                                                 className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 bg-blue-600/25 text-white/55 border border-blue-500/20 cursor-not-allowed"
                                             >
                                                 <Home size={18} />
                                                 เช็คอิน Work From Home
                                             </button>
                                             <div className="rounded-lg p-3 bg-white/5 border border-white/10 text-xs text-white/65">
-                                                <p className="font-semibold text-white/85 mb-0.5">วันนี้ยังไม่ได้รับอนุมัติให้ WFH</p>
-                                                <p>ปุ่ม WFH ใช้ได้เฉพาะ (1) วันที่บริษัทประกาศ WFH หรือ (2) คุณมีคำขอ WFH ที่อนุมัติแล้วครอบวันนี้</p>
+                                                <p className="font-semibold text-white/85 mb-0.5">วันนี้ยังไม่มีคำขอหรือสิทธิ์ WFH</p>
+                                                <p>ถ้าเป็นเหตุฉุกเฉินตอนเช้า ให้ส่งคำขอ WFH ก่อน จากนั้นปุ่มนี้จะเปิดให้เช็คอินแบบรออนุมัติได้ทันที</p>
                                                 <Link
                                                     href="/portal/wfh"
                                                     className="mt-1.5 inline-flex items-center gap-1 text-blue-300 hover:text-blue-200 font-semibold"

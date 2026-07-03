@@ -426,7 +426,7 @@ function NewWfhModal({
 
                     <div className="rounded-lg p-3 bg-blue-400/10 border border-blue-400/30 text-sm text-blue-100 inline-flex items-start gap-2 w-full leading-relaxed">
                         <Info size={14} className="mt-0.5 shrink-0" />
-                        <span>เมื่อผู้อนุมัติยืนยันแล้ว สามารถเช็คอิน WFH ผ่านแอปได้ในวันที่กำหนด · ไม่ตัดยอดวันลา</span>
+                        <span>ถ้าเป็นคำขอ WFH ของวันนี้ หลังส่งคำขอแล้วสามารถเช็คอิน WFH แบบรออนุมัติได้ทันที · เมื่อผู้อนุมัติยืนยัน ระบบจะนับเวลานั้นย้อนหลัง · ไม่ตัดยอดวันลา</span>
                     </div>
 
                     {overlappingRequest && (

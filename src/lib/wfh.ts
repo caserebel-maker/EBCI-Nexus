@@ -639,3 +639,27 @@ export async function hasApprovedWfhOn(employeeId: string, dateIso: string): Pro
     }
     return !!data
 }
+
+/**
+ * Same-day emergency WFH support: once an employee has submitted a WFH
+ * request for today, allow them to check in provisionally while the
+ * approver is still driving / unavailable. HR reports still treat only
+ * `approved` requests as approved WFH; this just records the punctual
+ * work check-in.
+ */
+export async function hasPendingWfhOn(employeeId: string, dateIso: string): Promise<boolean> {
+    const { data, error } = await supabaseAdmin
+        .from('wfh_requests')
+        .select('id')
+        .eq('employee_id', employeeId)
+        .eq('status', 'pending')
+        .lte('start_date', dateIso)
+        .gte('end_date', dateIso)
+        .limit(1)
+        .maybeSingle()
+    if (error) {
+        console.error('[wfh] hasPendingWfhOn error:', error)
+        return false
+    }
+    return !!data
+}

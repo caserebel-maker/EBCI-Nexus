@@ -37,8 +37,9 @@ export default async function CheckinPage() {
     // check in.
     //
     // §3.1 (Layer 3) — gate the WFH check-in button on actual eligibility
-    // (company-wide announcement OR personal approved request). Stops
-    // employees from self-checking-in WFH at random.
+    // (company-wide announcement, approved personal request, or a same-day
+    // request still pending approval). Stops employees from self-checking-in
+    // WFH at random while keeping emergency mornings workable.
     const employeeId = await resolveSessionEmployeeId(session)
     const [leaveToday, cardScanToday, wfhEligibility, employeeForCheckin] = employeeId
         ? await Promise.all([

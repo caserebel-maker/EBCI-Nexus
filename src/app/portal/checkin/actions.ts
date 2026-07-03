@@ -73,8 +73,7 @@ export interface CheckInPayload {
 // Official workday start (Bangkok wall-clock minutes from midnight).
 // 08:00 = 8*60 = 480. Anything past this counts as late.
 const OFFICIAL_START_MIN = 8 * 60
-// Tier thresholds for late-check-in UX (minutes past OFFICIAL_START_MIN).
-const LATE_TIER2_MIN = 30   // > 30 min = "please explain"
+// Tier threshold for late-check-in manager notification.
 const LATE_TIER3_MIN = 60   // > 60 min = manager notified
 
 /** Minimum character count enforced on the field-checkin note. Long
@@ -111,14 +110,16 @@ export async function checkIn(payload: CheckInPayload) {
     // ── §3.1 Layer 3: WFH eligibility enforcement ──────────────────────────
     // The UI already disables the WFH button when the user isn't eligible,
     // but the button could be bypassed via a tampered POST. Re-check
-    // server-side: WFH is allowed only when (a) HR has announced a
-    // company-wide WFH for today, OR (b) this employee has an approved
-    // personal request covering today.
+    // server-side: WFH is allowed when (a) HR has announced a company-wide
+    // WFH for today, (b) this employee has an approved personal request
+    // covering today, OR (c) this employee has already submitted a same-day
+    // WFH request that is still pending. Case (c) is provisional: it
+    // records their working check-in while the approver catches up.
     if (payload.type === 'wfh') {
         const eligibility = await checkWfhEligibility(employeeId, bangkokTodayIso())
         if (!eligibility.allowed) {
             return {
-                error: 'วันนี้ยังไม่ได้รับอนุมัติให้ WFH — กรุณาส่งคำขอ WFH ผ่าน /portal/wfh ก่อน',
+                error: 'วันนี้ยังไม่มีคำขอหรือสิทธิ์ WFH — กรุณาส่งคำขอ WFH ผ่าน /portal/wfh ก่อน',
             }
         }
     }
@@ -226,7 +227,7 @@ export async function checkIn(payload: CheckInPayload) {
         : null
 
     // Determine actual type based on GPS vs user intent.
-    let actualType: CheckInType = payload.type
+    const actualType: CheckInType = payload.type
     if (payload.type === 'office' && distance !== null && distance > location.radius_meters) {
         // User claims office but GPS says not near.
         return {

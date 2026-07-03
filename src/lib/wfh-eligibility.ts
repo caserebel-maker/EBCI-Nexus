@@ -1,6 +1,6 @@
 import 'server-only'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { hasApprovedWfhOn } from '@/lib/wfh'
+import { hasApprovedWfhOn, hasPendingWfhOn } from '@/lib/wfh'
 import type { WfhEligibility } from '@/lib/wfh-eligibility-shared'
 
 /**
@@ -15,13 +15,16 @@ import type { WfhEligibility } from '@/lib/wfh-eligibility-shared'
  *      via /hradmin/holidays/wfh-announce for short-notice org-wide
  *      events (oil spike, flooding, COVID).
  *   2. Personal approved WFH: an approved row in `wfh_requests` whose
- *      date range covers `dateIso` for THIS employee. This is the path
- *      individual employees use via /portal/wfh for ad-hoc reasons
- *      (ช่างมาล้างแอร์ · พาลูกหาหมอ).
- *   3. (Deferred §3.10) Field/flexible employees via
+ *      date range covers `dateIso` for THIS employee.
+ *   3. Personal pending WFH: a pending row covering `dateIso`. This is
+ *      the emergency path for same-morning issues (flooding, car
+ *      trouble, sudden household incident) where the approver may not
+ *      see the request before 08:00. The check-in is provisional; HR
+ *      still treats only approved WFH requests as approved WFH.
+ *   4. (Deferred §3.10) Field/flexible employees via
  *      employees.work_mode_default — not implemented yet.
  *
- * If neither source allows it, the WFH button on /portal/checkin is
+ * If none of these sources allows it, the WFH button on /portal/checkin is
  * disabled and the user is told to request WFH first. The checkIn
  * server action also enforces this so a tampered POST can't bypass.
  *
@@ -68,6 +71,18 @@ export async function checkWfhEligibility(
     const personal = await hasApprovedWfhOn(employeeId, dateIso)
     if (personal) {
         return { allowed: true, source: 'personal', label: 'คำขอ WFH ที่อนุมัติแล้ว' }
+    }
+
+    // Emergency path: employee has already submitted a WFH request for
+    // this date, but the approver hasn't acted yet. Let them record the
+    // punctual WFH check-in while making the pending state visible in UI.
+    const pendingPersonal = await hasPendingWfhOn(employeeId, dateIso)
+    if (pendingPersonal) {
+        return {
+            allowed: true,
+            source: 'pending_personal',
+            label: 'คำขอ WFH รออนุมัติ',
+        }
     }
 
     return { allowed: false, source: null }
