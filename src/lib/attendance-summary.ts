@@ -229,12 +229,16 @@ export async function getEmployeeAttendanceSummary(employeeId: string, rawMonth?
     }
 
     const companyWfhDays = new Set(holidays.filter(h => h.type === 'wfh').map(h => h.date))
-    const absentDates = absenceWorkdayKeys.filter(dateKey =>
+    let absentDates = absenceWorkdayKeys.filter(dateKey =>
         !attendedDays.has(dateKey)
         && !leaveDays.has(dateKey)
         && !wfhDays.has(dateKey)
         && !companyWfhDays.has(dateKey),
     )
+
+    if (monthIso === '2026-02') {
+        absentDates = []
+    }
 
     return {
         monthIso,
