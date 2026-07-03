@@ -39,6 +39,10 @@ const sectionTitle: React.CSSProperties = {
     marginBottom: '16px',
 }
 
+function formatDays(value: number): string {
+    return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, '')
+}
+
 // ─── SVG Donut ────────────────────────────────────────────────────────────────
 function LeaveDonut({
     used, entitled, color, label,
@@ -52,6 +56,7 @@ function LeaveDonut({
     const remaining = Math.max(0, entitled - used)
     const pct = entitled > 0 ? Math.min(remaining / entitled, 1) : 0
     const filledDash = pct * circ
+    const hasEntitlement = entitled > 0
 
     return (
         <div className="flex flex-col items-center gap-2">
@@ -75,16 +80,30 @@ function LeaveDonut({
                 {/* Center text */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="font-black leading-none" style={{ fontSize: '22px', color }}>
-                        {remaining}
+                        {hasEntitlement ? formatDays(remaining) : '—'}
                     </span>
-                    <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>คงเหลือ</span>
+                    <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
+                        {hasEntitlement ? 'คงเหลือ' : 'ไม่มีสิทธิ์'}
+                    </span>
                 </div>
             </div>
             <div className="text-center">
                 <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.80)', fontWeight: 600 }}>{label}</p>
                 <p style={{ fontSize: '19px', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
-                    ใช้ {used} / {entitled} วัน
+                    {hasEntitlement
+                        ? `เหลือ ${formatDays(remaining)} จาก ${formatDays(entitled)} วัน`
+                        : 'ไม่อยู่ในสิทธิ์ของคุณ'}
                 </p>
+                {hasEntitlement && used > 0 && (
+                    <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.52)', marginTop: 2 }}>
+                        ใช้แล้ว {formatDays(used)} วัน
+                    </p>
+                )}
+                {hasEntitlement && used <= 0 && (
+                    <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.40)', marginTop: 2 }}>
+                        ยังไม่ใช้สิทธิ์
+                    </p>
+                )}
             </div>
         </div>
     )
@@ -148,7 +167,7 @@ function AttendanceTile({
 
 function fmtShortDate(dateKey: string): string {
     if (!dateKey || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return dateKey
-    const [yStr, mStr, dStr] = dateKey.split('-')
+    const [, mStr, dStr] = dateKey.split('-')
     const day = parseInt(dStr, 10)
     const month = parseInt(mStr, 10)
     const monthsTh = [

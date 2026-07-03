@@ -146,6 +146,27 @@ function attachmentHint(type: BalanceEntry, totalDays: number): string {
     return 'เอกสารแนบเป็น optional — ข้ามไปยังขั้นตอนถัดไปได้'
 }
 
+function formatDays(value: number): string {
+    return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, '')
+}
+
+function leaveQuotaLabel(type: BalanceEntry, options: { compact?: boolean } = {}): string {
+    if (type.is_unlimited) return 'ไม่จำกัดวัน'
+    if (type.total_days <= 0) return 'ไม่อยู่ในสิทธิ์ของคุณ'
+
+    const remaining = formatDays(type.remaining_days)
+    const total = formatDays(type.total_days)
+    return options.compact
+        ? `เหลือ ${remaining}/${total} วัน`
+        : `เหลือ ${remaining} จาก ${total} วัน`
+}
+
+function leaveUsedLabel(type: BalanceEntry): string | null {
+    if (type.is_unlimited || type.total_days <= 0) return null
+    const used = formatDays(type.used_days)
+    return type.used_days > 0 ? `ใช้แล้ว ${used} วัน` : null
+}
+
 // ── Small style tokens ────────────────────────────────────────────────────────
 const glass: React.CSSProperties = {
     background: 'rgba(255,255,255,0.06)',
@@ -470,7 +491,7 @@ function DraftRow({
  * pushed the "ยื่นใบลาใหม่" button off-screen on mobile when the
  * leave-type roster grew to 11 categories. Each leave type is now
  * one short row with: icon + name + horizontal progress bar + the
- * raw "remaining / total" number. Same click-to-filter interaction
+ * explicit "remaining from entitlement" wording. Same click-to-filter interaction
  * as the tiles. Mobile: 1-col; desktop: 2-col so wide screens still
  * pack the rows side-by-side.
  */
@@ -496,6 +517,8 @@ function BalanceList({
             {balances.map(b => {
                 const Icon = LEAVE_ICON[b.leave_type_id] ?? CalendarDays
                 const isSelected = selectedId === b.leave_type_id
+                const hasNoEntitlement = !b.is_unlimited && b.total_days <= 0
+                const usedLabel = leaveUsedLabel(b)
                 const percent = b.is_unlimited || b.total_days === 0
                     ? 0
                     : Math.min(100, ((b.used_days + b.pending_days) / b.total_days) * 100)
@@ -527,14 +550,13 @@ function BalanceList({
                                 <p className="text-sm font-semibold text-white truncate">
                                     {b.name_th}
                                 </p>
-                                <p className="text-sm tabular-nums shrink-0">
+                                <p className="text-xs tabular-nums shrink-0 text-right">
                                     {b.is_unlimited ? (
                                         <span className="font-bold text-emerald-200">ไม่จำกัด</span>
+                                    ) : hasNoEntitlement ? (
+                                        <span className="font-semibold text-white/55">ไม่มีสิทธิ์</span>
                                     ) : (
-                                        <>
-                                            <span className="font-bold text-white">{b.remaining_days}</span>
-                                            <span className="text-white/50"> / {b.total_days}</span>
-                                        </>
+                                        <span className="font-bold text-white">{leaveQuotaLabel(b, { compact: true })}</span>
                                     )}
                                 </p>
                             </div>
@@ -551,6 +573,11 @@ function BalanceList({
                             {b.pending_days > 0 && (
                                 <p className="text-[10px] text-amber-200 mt-0.5 leading-none">
                                     รอ {b.pending_days} วัน
+                                </p>
+                            )}
+                            {usedLabel && (
+                                <p className="text-[10px] text-white/45 mt-0.5 leading-none">
+                                    {usedLabel}
                                 </p>
                             )}
                         </div>
@@ -1540,11 +1567,7 @@ function Step1TypePicker({
                     {balances.map(b => {
                         const hasNoEntitlement = !b.is_unlimited && b.total_days <= 0
                         const exhausted = !b.is_unlimited && b.remaining_days <= 0
-                        const remainingLabel = b.is_unlimited
-                            ? 'ไม่จำกัด'
-                            : hasNoEntitlement
-                                ? 'ยังไม่ได้กำหนดสิทธิ์'
-                            : `เหลือ ${b.remaining_days} / ${b.total_days} วัน`
+                        const remainingLabel = hasNoEntitlement ? 'ไม่อยู่ในสิทธิ์ของคุณ' : leaveQuotaLabel(b)
                         return (
                             <option
                                 key={b.leave_type_id}
@@ -1578,11 +1601,8 @@ function Step1TypePicker({
                         <div className="flex-1 min-w-0">
                             <p className="text-white font-bold text-[15px] leading-tight">{selected.name_th}</p>
                             <p className="text-xs text-white/65 mt-0.5">
-                                {selected.is_unlimited ? (
-                                    <>คงเหลือ: <span className="text-emerald-200 font-semibold">ไม่จำกัด</span></>
-                                ) : (
-                                    <>เหลือ <span className="text-white font-semibold">{selected.remaining_days}</span> / {selected.total_days} วัน</>
-                                )}
+                                {leaveQuotaLabel(selected)}
+                                {leaveUsedLabel(selected) ? ` · ${leaveUsedLabel(selected)}` : ''}
                             </p>
                         </div>
                     </div>
@@ -1669,7 +1689,7 @@ function Step2Dates({
                     <strong>{type.name_th}</strong>
                     {type.advance_notice_days > 0 && ` · ขอล่วงหน้าอย่างน้อย ${type.advance_notice_days} วัน`}
                     {type.leave_type_id === 'sick' && ' · ต้องเป็นวันที่ผ่านไปแล้ว'}
-                    {!type.is_unlimited && ` · คงเหลือ ${type.remaining_days} / ${type.total_days} วัน${type.is_lifetime ? ' (ตลอดอายุงาน)' : ''}`}
+                    {!type.is_unlimited && ` · ${leaveQuotaLabel(type)}${type.is_lifetime ? ' (ตลอดอายุงาน)' : ''}`}
                 </span>
             </div>
 
@@ -1996,7 +2016,11 @@ function Step4Review({
                     </span>
                     <div>
                         <p className="text-white font-bold">{type.name_th}</p>
-                        <p className="text-xs text-white/55">{type.is_unlimited ? 'ไม่จำกัดวัน' : `คงเหลือ ${type.remaining_days} / ${type.total_days} วัน${type.is_lifetime ? ' · ตลอดอายุงาน' : ''}`}</p>
+                        <p className="text-xs text-white/55">
+                            {leaveQuotaLabel(type)}
+                            {type.is_lifetime && !type.is_unlimited ? ' · ตลอดอายุงาน' : ''}
+                            {leaveUsedLabel(type) ? ` · ${leaveUsedLabel(type)}` : ''}
+                        </p>
                     </div>
                 </div>
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">

@@ -498,6 +498,10 @@ function DetailField({
     )
 }
 
+function formatDays(value: number): string {
+    return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, '')
+}
+
 function BalanceBar({ item }: { item: InboxItem }) {
     const lt = item.leave_type
     const b = item.balance
@@ -506,6 +510,7 @@ function BalanceBar({ item }: { item: InboxItem }) {
     const thisReq = Number(item.total_days)
     const remainingBeforeApproval = b.remaining_days
     const remainingAfterApproval = Math.max(0, remainingBeforeApproval - thisReq)
+    const hasEntitlement = total > 0
 
     if (lt?.is_unlimited) {
         return (
@@ -525,7 +530,15 @@ function BalanceBar({ item }: { item: InboxItem }) {
                     ยอด {lt?.name_th ?? item.leave_type_id}
                 </span>
                 <span className="text-white/75 tabular-nums">
-                    ใช้ไป {b.used_days} · รอ {b.pending_days} · คงเหลือ <span className="text-white font-bold">{remainingBeforeApproval}</span> / {total} วัน
+                    {hasEntitlement ? (
+                        <>
+                            เหลือ <span className="text-white font-bold">{formatDays(remainingBeforeApproval)}</span> จาก {formatDays(total)} วัน
+                            {b.used_days > 0 && ` · ใช้แล้ว ${formatDays(b.used_days)} วัน`}
+                            {b.pending_days > 0 && ` · รออนุมัติ ${formatDays(b.pending_days)} วัน`}
+                        </>
+                    ) : (
+                        'ไม่อยู่ในสิทธิ์ของพนักงาน'
+                    )}
                 </span>
             </div>
             <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
@@ -535,7 +548,7 @@ function BalanceBar({ item }: { item: InboxItem }) {
                 />
             </div>
             <p className="text-[11px] text-white/55">
-                ถ้าอนุมัติ จะเหลือ <span className="text-white font-semibold tabular-nums">{remainingAfterApproval}</span> วัน
+                ถ้าอนุมัติ จะเหลือ <span className="text-white font-semibold tabular-nums">{formatDays(remainingAfterApproval)}</span> วัน
                 {remainingAfterApproval === 0 && ' (ใช้ครบแล้ว)'}
             </p>
         </div>
