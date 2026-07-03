@@ -11,7 +11,7 @@ type LoginBackgroundTheme = 'night-city' | 'legacy-video'
 
 // Keep the old Pexels wireframe login background available. Switch this
 // constant back to 'legacy-video' if the new city-at-night theme feels too busy.
-const LOGIN_BACKGROUND_THEME: LoginBackgroundTheme = 'night-city'
+const LOGIN_BACKGROUND_THEME: LoginBackgroundTheme = 'legacy-video'
 
 const CITY_TOWERS = [
     { left: '4%', top: '22%', width: '7.6rem', height: '18rem', rise: '124px', glow: 'rgba(14,165,233,0.40)', delay: '-4s' },
