@@ -487,17 +487,18 @@ function DonutCard({
                         className="fixed inset-0 z-40"
                         onClick={onClose}
                     />
-                    {/* Panel — positioned above the donut. Wide enough for
-                        the leave detail table while staying inside mobile
-                        viewport bounds. */}
+                    {/* Mobile uses a viewport-centered panel so edge donuts
+                        cannot push the popup off-screen. Desktop keeps the
+                        anchored tooltip behavior above the donut. */}
                     <div
-                        className="absolute z-50 bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-80 max-w-[calc(100vw-2rem)] p-4"
+                        className="fixed left-1/2 top-1/2 z-50 max-h-[72vh] w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 overflow-y-auto p-4 sm:absolute sm:bottom-[calc(100%+8px)] sm:top-auto sm:w-80 sm:max-w-[calc(100vw-2rem)] sm:translate-y-0"
                         style={popupGlass}
+                        onClick={(event) => event.stopPropagation()}
                     >
                         {popupContent}
                         {/* Caret */}
                         <div
-                            className="absolute left-1/2 -translate-x-1/2 -bottom-[7px]"
+                            className="hidden sm:block absolute left-1/2 -translate-x-1/2 -bottom-[7px]"
                             style={{
                                 width: 0, height: 0,
                                 borderLeft: '7px solid transparent',
