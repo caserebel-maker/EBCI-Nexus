@@ -4,13 +4,13 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-    Home, Users, Megaphone, MoreHorizontal, Clock, CalendarDays, Palmtree,
+    Home, Users, Megaphone, MoreHorizontal, CalendarDays, Palmtree,
     ClipboardCheck, LogOut, FileText,
     Settings, ChevronRight, ChevronDown, X, UserRound, Network,
     UserPlus, Activity, DoorOpen,
     MapPin, Briefcase, BarChart3, Wallet, ScrollText, ShieldCheck,
-    CalendarHeart, UserMinus, AlertTriangle, UserCheck,
-    MessageSquare,
+    CalendarHeart, UserMinus, AlertTriangle, UserCheck, MessageSquare,
+    Calendar, GitBranch, MailWarning,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRole, type Role } from '@/contexts/role-context'
@@ -96,6 +96,9 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'ภาพรวมการลา',   desc: 'แดชบอร์ดสรุปลา',         href: '/hradmin/leave',                 icon: BarChart3, groupLabel: 'การลา' },
         { label: 'ใบลาทั้งหมด',    desc: 'รายการใบลา',             href: '/hradmin/leave?tab=requests',    icon: FileText },
         { label: 'วันลาพนักงาน',   desc: 'Balance ของพนักงาน',     href: '/hradmin/leave?tab=balances',    icon: Wallet },
+        { label: 'ปฏิทินการลา',   desc: 'ปฏิทินสรุปการลา',        href: '/hradmin/leave?tab=calendar',    icon: CalendarDays },
+        { label: 'ตรวจสายอนุมัติ', desc: 'ดูผู้มีอำนาจอนุมัติ',     href: '/hradmin/leave/approval-audit', icon: GitBranch },
+        { label: 'วันหยุดสะสม',   desc: 'วันหยุดชดเชยสะสม',       href: '/hradmin/comp-days',             icon: CalendarHeart },
         { label: 'นโยบายการลา',    desc: 'จัดการสิทธิ์การลา',      href: '/hradmin/leave/policies',        icon: ScrollText },
         // 4. รับสมัครงาน + 5. ตั้งค่าระบบ group
         { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/hradmin/meeting-room',          icon: DoorOpen, groupLabel: 'อื่น ๆ' },
@@ -104,6 +107,7 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'Audit log',             desc: 'ประวัติการแก้ไข',    href: '/hradmin/settings/audit',       icon: FileText },
         { label: 'ระบบและทรัพยากร',      desc: 'Quota + storage',    href: '/hradmin/settings/quota',       icon: Activity },
         { label: 'ตรวจล็อกอินวันอบรม',    desc: 'ใครเข้าระบบแล้วบ้าง', href: '/hradmin/settings/login-monitor', icon: UserCheck },
+        { label: 'Email Audit',          desc: 'ตรวจสอบประวัติอีเมล', href: '/hradmin/settings/email',        icon: MailWarning },
         { label: 'รายงาน',                desc: 'CSV exports',        href: '/hradmin/reports',              icon: FileText },
         { label: 'แบ็กอัพข้อมูล',         desc: 'Download ZIP สำรอง', href: '/hradmin/settings/backup',      icon: ShieldCheck },
         { label: 'ตั้งค่าทั่วไป',          desc: 'พิกัดออฟฟิศ + ระบบ', href: '/hradmin/settings',             icon: Settings },
@@ -119,6 +123,12 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         // can reach them in one tap from More.
         { label: 'อนุมัติการลา', desc: 'พิจารณาคำขอลาลูกทีม',     href: '/portal/leave/inbox',     icon: ClipboardCheck,  groupLabel: 'การอนุมัติ' },
         { label: 'อนุมัติ WFH',  desc: 'พิจารณาคำขอ WFH ลูกทีม',  href: '/portal/wfh/inbox',       icon: ClipboardCheck },
+        // "การลาและ WFH" group
+        { label: 'ใบลาของฉัน',    desc: 'ประวัติและยื่นใบลา',     href: '/portal/leave',           icon: Palmtree,        groupLabel: 'การลาและ WFH' },
+        { label: 'ขอ WFH',        desc: 'ประวัติและขอ WFH',      href: '/portal/wfh',             icon: Home },
+        { label: 'วันหยุดสะสม',   desc: 'วันหยุดพักผ่อนและสิทธิ์',  href: '/portal/comp-days',       icon: CalendarHeart },
+        { label: 'ปฏิทิน',        desc: 'ปฏิทินการลาส่วนตัว',     href: '/portal/calendar',        icon: Calendar },
+        { label: 'นโยบายการลา',  desc: 'ระเบียบการลาบริษัท',     href: '/portal/leave-policy',    icon: ScrollText },
         // "ส่วนตัว" group: profile + (manager has no payroll mgmt by default).
         { label: 'โปรไฟล์',        desc: 'ข้อมูลส่วนตัวและตำแหน่ง',  href: '/portal/profile',         icon: UserRound,       groupLabel: 'ส่วนตัว' },
         { label: 'ใครไม่อยู่วันนี้', desc: 'ลา · WFH · ออกพื้นที่',      href: '/portal/who-is-out',      icon: UserMinus,       groupLabel: 'บริษัท' },
@@ -129,13 +139,12 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'ออกจากระบบ', icon: LogOut, danger: true },
     ],
     employee: [
-        // Bottom tabs hold Home/เช็คอิน/ลา-WFH/ประกาศ; the leave-and-WFH
-        // hub is reachable in 1 tap from the bottom-tab "ลา/WFH" + the
-        // chip-row sub-nav on the leave page covers all the sub-pages
-        // (ใบลา · ขอ WFH · วันหยุดสะสม · ปฏิทิน · นโยบาย). Mod's call:
-        // "ลา/WFH" group ใน More เป็นทางที่ 3 ที่ทำเรื่องเดิม → drop it.
-        // Approver inboxes inject as top-level items via shell.tsx
-        // when employees.is_approver = true.
+        // "การลาและ WFH" group
+        { label: 'ใบลาของฉัน',    desc: 'ประวัติและยื่นใบลา',     href: '/portal/leave',           icon: Palmtree,        groupLabel: 'การลาและ WFH' },
+        { label: 'ขอ WFH',        desc: 'ประวัติและขอ WFH',      href: '/portal/wfh',             icon: Home },
+        { label: 'วันหยุดสะสม',   desc: 'วันหยุดพักผ่อนและสิทธิ์',  href: '/portal/comp-days',       icon: CalendarHeart },
+        { label: 'ปฏิทิน',        desc: 'ปฏิทินการลาส่วนตัว',     href: '/portal/calendar',        icon: Calendar },
+        { label: 'นโยบายการลา',  desc: 'ระเบียบการลาบริษัท',     href: '/portal/leave-policy',    icon: ScrollText },
         // "ส่วนตัว" group — personal data only (profile + slip).
         { label: 'โปรไฟล์',        desc: 'ข้อมูลส่วนตัวและตำแหน่ง',  href: '/portal/profile',        icon: UserRound,       groupLabel: 'ส่วนตัว' },
         { label: 'สลิปของฉัน',     desc: 'ดูสลิปเงินเดือน',         href: '/portal/payroll',        icon: FileText },
