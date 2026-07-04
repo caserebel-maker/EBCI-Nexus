@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback, useTransition } from 'react'
-import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
     ShieldCheck, Download, Filter, CheckCircle2, XCircle, Trash2,
-    Clock, CalendarDays, User, Loader2, X, AlertCircle, ChevronDown, ChevronRight,
+    Clock, CalendarDays, User, Loader2, X, AlertCircle, ChevronDown, ChevronRight, Eye,
 } from 'lucide-react'
 import { approveLeaveAsCurrentUser, rejectLeaveAsCurrentUser } from '@/lib/leave-approval-actions'
 import { cn } from '@/lib/utils'
@@ -154,6 +155,151 @@ function RejectModal({
                     </div>
                 </div>
             </div>
+        </div>
+    )
+}
+
+function LeaveRequestDetailModal({
+    request,
+    onClose,
+    onApprove,
+    onReject,
+    onDelete,
+    actionLoading,
+}: {
+    request: LeaveRequest
+    onClose: () => void
+    onApprove: (id: string) => void
+    onReject: (request: LeaveRequest) => void
+    onDelete: (request: LeaveRequest) => void
+    actionLoading: boolean
+}) {
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+        window.addEventListener('keydown', onKey)
+        const prev = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        return () => {
+            window.removeEventListener('keydown', onKey)
+            document.body.style.overflow = prev
+        }
+    }, [onClose])
+
+    const statusCfg = STATUS_CONFIG[request.status] || STATUS_CONFIG.pending
+    const leaveLabel = LEAVE_TYPE_LABELS[request.leaveType] ?? request.leaveType
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4"
+            onClick={onClose}
+        >
+            <section
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="leave-detail-title"
+                className="w-full max-w-2xl max-h-[88vh] overflow-hidden rounded-2xl border border-border bg-white dark:bg-card shadow-2xl"
+                onClick={e => e.stopPropagation()}
+            >
+                <header className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+                    <div className="min-w-0">
+                        <p className="text-xs font-semibold text-muted-foreground">รายละเอียดใบลา</p>
+                        <h2 id="leave-detail-title" className="mt-1 text-xl font-bold text-foreground leading-snug">
+                            {request.employee.firstNameTH} {request.employee.lastNameTH}
+                        </h2>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            {request.employee.employeeCode} · {request.employee.department} · {request.employee.position}
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="h-9 w-9 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center shrink-0"
+                        aria-label="ปิดรายละเอียด"
+                    >
+                        <X size={18} />
+                    </button>
+                </header>
+
+                <div className="max-h-[calc(88vh-136px)] overflow-y-auto px-5 py-4 space-y-4">
+                    <div className="flex flex-wrap gap-2">
+                        <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${LEAVE_TYPE_COLORS[request.leaveType] || 'bg-gray-100 text-gray-700'}`}>
+                            {leaveLabel}
+                        </span>
+                        <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${statusCfg.color}`}>
+                            {statusCfg.icon}
+                            {statusCfg.label}
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <DetailBox label="วันที่เริ่ม">{formatDate(request.startDate)}</DetailBox>
+                        <DetailBox label="วันที่สิ้นสุด">{formatDate(request.endDate)}</DetailBox>
+                        <DetailBox label="จำนวนวัน">{request.totalDays} วัน</DetailBox>
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-muted/50 p-4">
+                        <p className="text-xs font-semibold text-muted-foreground mb-2">เหตุผลการลา</p>
+                        <p className="text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed">
+                            {request.reason || '—'}
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <DetailBox label="ยื่นเมื่อ">{formatDate(request.createdAt)}</DetailBox>
+                        <DetailBox label="ผู้อนุมัติ">{request.approver?.name || 'ยังไม่ระบุ'}</DetailBox>
+                    </div>
+
+                    {request.rejectionReason && (
+                        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+                            <p className="text-xs font-semibold mb-2">เหตุผลปฏิเสธ / ยกเลิก</p>
+                            <p className="text-sm whitespace-pre-wrap break-words">{request.rejectionReason}</p>
+                        </div>
+                    )}
+                </div>
+
+                <footer className="border-t border-border px-5 py-4 flex flex-wrap items-center justify-end gap-2">
+                    {request.status === 'pending' && (
+                        <>
+                            <button
+                                type="button"
+                                onClick={() => onApprove(request.id)}
+                                disabled={actionLoading}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-60"
+                            >
+                                {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                                อนุมัติ
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => onReject(request)}
+                                disabled={actionLoading}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                            >
+                                <XCircle size={14} />
+                                ปฏิเสธ
+                            </button>
+                        </>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => onDelete(request)}
+                        disabled={actionLoading}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-60"
+                    >
+                        <Trash2 size={14} />
+                        ลบ
+                    </button>
+                </footer>
+            </section>
+        </div>
+    )
+}
+
+function DetailBox({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <div className="rounded-xl border border-border bg-muted/40 px-3 py-2.5">
+            <p className="text-[11px] font-semibold text-muted-foreground">{label}</p>
+            <div className="mt-1 text-sm font-semibold text-foreground">{children}</div>
         </div>
     )
 }
@@ -311,15 +457,18 @@ function HrRejectModal({
 
 // ---- Main Page ----
 export default function LeaveAdminPage() {
+    const router = useRouter()
     const searchParams = useSearchParams()
     const urlStatus = searchParams.get('status')
     const legacyFilter = searchParams.get('filter')
+    const requestId = searchParams.get('request')
     const initialStatus = urlStatus ?? (legacyFilter === 'pending' ? 'pending' : '')
     const confirm = useConfirmDialog()
     const [requests, setRequests] = useState<LeaveRequest[]>([])
     const [loading, setLoading] = useState(true)
     const [actionLoading, setActionLoading] = useState<string | null>(null)
     const [rejectTarget, setRejectTarget] = useState<LeaveRequest | null>(null)
+    const [detailTarget, setDetailTarget] = useState<LeaveRequest | null>(null)
     const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
     const [exportLoading, setExportLoading] = useState(false)
 
@@ -364,6 +513,27 @@ export default function LeaveAdminPage() {
     }, [year, month, department, leaveType, status])
 
     useEffect(() => { fetchRequests() }, [fetchRequests])
+
+    useEffect(() => {
+        if (!requestId || loading) return
+        const match = requests.find(r => r.id === requestId)
+        if (match) setDetailTarget(match)
+    }, [loading, requestId, requests])
+
+    const openDetail = (request: LeaveRequest) => {
+        setDetailTarget(request)
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('request', request.id)
+        router.replace(`/hradmin/leave/admin?${params.toString()}`, { scroll: false })
+    }
+
+    const closeDetail = () => {
+        setDetailTarget(null)
+        const params = new URLSearchParams(searchParams.toString())
+        params.delete('request')
+        const query = params.toString()
+        router.replace(query ? `/hradmin/leave/admin?${query}` : '/hradmin/leave/admin', { scroll: false })
+    }
 
     const fetchHrRequests = useCallback(async () => {
         setHrLoading(true)
@@ -570,8 +740,32 @@ export default function LeaveAdminPage() {
                     loading={hrActionId === hrRejectTarget.id}
                 />
             )}
+            {detailTarget && (
+                <LeaveRequestDetailModal
+                    request={detailTarget}
+                    onClose={closeDetail}
+                    onApprove={handleApprove}
+                    onReject={setRejectTarget}
+                    onDelete={handleDelete}
+                    actionLoading={actionLoading === detailTarget.id}
+                />
+            )}
 
             <div className="space-y-6">
+                <nav aria-label="breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-white/55 dark:text-muted-foreground">
+                    <Link href="/hradmin/dashboard" className="hover:text-white dark:hover:text-foreground transition-colors">
+                        แดชบอร์ด
+                    </Link>
+                    <ChevronRight size={13} className="opacity-50" />
+                    <Link href="/hradmin/leave/admin" className="hover:text-white dark:hover:text-foreground transition-colors">
+                        การลาและ WFH
+                    </Link>
+                    <ChevronRight size={13} className="opacity-50" />
+                    <span className="text-white dark:text-foreground">
+                        {status === 'pending' ? 'รออนุมัติใบลา' : 'จัดการการลา'}
+                    </span>
+                </nav>
+
                 {/* Header */}
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div>
@@ -768,7 +962,11 @@ export default function LeaveAdminPage() {
                                         {requests.map(req => {
                                             const statusCfg = STATUS_CONFIG[req.status] || STATUS_CONFIG.pending
                                             return (
-                                                <tr key={req.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                                                <tr
+                                                    key={req.id}
+                                                    onClick={() => openDetail(req)}
+                                                    className="border-b border-border hover:bg-muted/30 transition-colors cursor-pointer"
+                                                >
                                                     <td className="px-4 py-3">
                                                         <div className="flex items-center gap-2">
                                                             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -809,7 +1007,7 @@ export default function LeaveAdminPage() {
                                                             {statusCfg.label}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-3">
+                                                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                                                         {req.status === 'pending' ? (
                                                             <div className="flex gap-1">
                                                                 <button
@@ -829,6 +1027,15 @@ export default function LeaveAdminPage() {
                                                                     ปฏิเสธ
                                                                 </button>
                                                                 <button
+                                                                    onClick={() => openDetail(req)}
+                                                                    disabled={actionLoading === req.id}
+                                                                    className="flex items-center gap-1 bg-muted hover:bg-muted/80 text-foreground text-xs font-semibold px-2.5 py-1.5 rounded-md disabled:opacity-60 transition-colors"
+                                                                    title="ดูรายละเอียด"
+                                                                >
+                                                                    <Eye size={10} />
+                                                                    รายละเอียด
+                                                                </button>
+                                                                <button
                                                                     onClick={() => handleDelete(req)}
                                                                     disabled={actionLoading === req.id}
                                                                     className="flex items-center gap-1 bg-neutral-600 hover:bg-neutral-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded-md disabled:opacity-60 transition-colors"
@@ -843,6 +1050,14 @@ export default function LeaveAdminPage() {
                                                                 <span className="text-xs text-muted-foreground">
                                                                     {req.approver?.name || '—'}
                                                                 </span>
+                                                                <button
+                                                                    onClick={() => openDetail(req)}
+                                                                    disabled={actionLoading === req.id}
+                                                                    className="text-primary hover:text-primary/75 p-1 rounded hover:bg-primary/10 transition-colors"
+                                                                    title="ดูรายละเอียด"
+                                                                >
+                                                                    <Eye size={13} />
+                                                                </button>
                                                                 <button
                                                                     onClick={() => handleDelete(req)}
                                                                     disabled={actionLoading === req.id}
@@ -866,7 +1081,11 @@ export default function LeaveAdminPage() {
                                 {requests.map(req => {
                                     const statusCfg = STATUS_CONFIG[req.status] || STATUS_CONFIG.pending
                                     return (
-                                        <div key={req.id} className="p-4 space-y-3">
+                                        <div
+                                            key={req.id}
+                                            onClick={() => openDetail(req)}
+                                            className="p-4 space-y-3 cursor-pointer hover:bg-muted/30 transition-colors"
+                                        >
                                             <div className="flex items-center justify-between gap-2 flex-wrap">
                                                 <div className="flex items-center gap-2">
                                                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -877,7 +1096,7 @@ export default function LeaveAdminPage() {
                                                         <p className="text-xs text-muted-foreground">{req.employee.department}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex gap-2 items-center">
+                                                <div className="flex gap-2 items-center" onClick={e => e.stopPropagation()}>
                                                     <span className={`text-xs font-semibold px-2 py-1 rounded-full ${LEAVE_TYPE_COLORS[req.leaveType] || 'bg-gray-100 text-gray-700'}`}>
                                                         {LEAVE_TYPE_LABELS[req.leaveType]}
                                                     </span>
@@ -886,6 +1105,15 @@ export default function LeaveAdminPage() {
                                                         {statusCfg.label}
                                                     </span>
                                                     {req.status !== 'pending' && (
+                                                        <>
+                                                        <button
+                                                            onClick={() => openDetail(req)}
+                                                            disabled={actionLoading === req.id}
+                                                            className="text-primary hover:text-primary/75 p-1.5 rounded hover:bg-primary/10 transition-colors shrink-0"
+                                                            title="ดูรายละเอียด"
+                                                        >
+                                                            <Eye size={14} />
+                                                        </button>
                                                         <button
                                                             onClick={() => handleDelete(req)}
                                                             disabled={actionLoading === req.id}
@@ -894,6 +1122,7 @@ export default function LeaveAdminPage() {
                                                         >
                                                             <Trash2 size={14} />
                                                         </button>
+                                                        </>
                                                     )}
                                                 </div>
                                             </div>
@@ -901,7 +1130,7 @@ export default function LeaveAdminPage() {
                                                 {formatDate(req.startDate)} – {formatDate(req.endDate)} ({req.totalDays} วัน)
                                             </p>
                                             {req.status === 'pending' ? (
-                                                <div className="flex gap-2">
+                                                <div className="flex gap-2" onClick={e => e.stopPropagation()}>
                                                     <button
                                                         onClick={() => handleApprove(req.id)}
                                                         disabled={actionLoading === req.id}
@@ -917,6 +1146,14 @@ export default function LeaveAdminPage() {
                                                     >
                                                         <XCircle size={12} />
                                                         ปฏิเสธ
+                                                    </button>
+                                                    <button
+                                                        onClick={() => openDetail(req)}
+                                                        disabled={actionLoading === req.id}
+                                                        className="flex items-center justify-center bg-muted hover:bg-muted/80 text-foreground text-xs font-semibold px-3 py-2 rounded-lg disabled:opacity-60 transition-colors"
+                                                        title="ดูรายละเอียด"
+                                                    >
+                                                        <Eye size={12} />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(req)}

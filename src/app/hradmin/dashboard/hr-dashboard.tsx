@@ -337,9 +337,9 @@ function DeptDonut({ data, total }: { data: DeptDatum[]; total: number }) {
 }
 
 // ─── Section Header ───────────────────────────────────────────────────────────
-function SectionHeader({ title, icon: Icon, warn }: { title: string; icon: any; warn?: boolean }) {
+function SectionHeader({ title, icon: Icon, warn, className }: { title: string; icon: any; warn?: boolean; className?: string }) {
     return (
-        <div className="flex items-center gap-2 mb-4">
+        <div className={cn('flex items-center gap-2 mb-4', className)}>
             <div className={warn ? 'h-7 w-7 rounded-lg bg-amber-500/20 ring-1 ring-amber-400/40 flex items-center justify-center' : 'h-7 w-7 rounded-lg bg-white/15 ring-1 ring-white/25 flex items-center justify-center'}>
                 <Icon size={14} className={warn ? 'text-amber-300' : 'text-amber-300'} />
             </div>
@@ -575,8 +575,10 @@ function WeekCalendar({ weekDays, leavesToday, onDayClick }: {
 
 // ─── Pending Leave Row ────────────────────────────────────────────────────────
 function PendingRow({ lr, onDone }: { lr: any; onDone: (id: string) => void }) {
+    const router = useRouter()
     const [isPending, start] = useTransition()
     const [done, setDone] = useState<'approve' | 'reject' | null>(null)
+    const detailHref = `/hradmin/leave/admin?status=pending&request=${encodeURIComponent(lr.id)}`
     const act = (action: 'approve' | 'reject') => {
         start(async () => {
             await handleLeaveAction(lr.id, action)
@@ -597,20 +599,33 @@ function PendingRow({ lr, onDone }: { lr: any; onDone: (id: string) => void }) {
         )
     }
     return (
-        <div className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-white/5 transition-colors">
+        <div
+            role="button"
+            tabIndex={0}
+            onClick={() => router.push(detailHref)}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    router.push(detailHref)
+                }
+            }}
+            className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/70 transition-colors cursor-pointer group"
+            title="เปิดรายละเอียดใบลา"
+        >
             <div className="flex-1 min-w-0">
-                <p className="text-base font-bold text-white truncate">{name}</p>
+                <p className="text-base font-bold text-white truncate group-hover:text-amber-100">{name}</p>
                 <p className="text-sm text-white/50">
                     {LEAVE_LABELS[lr.leave_type] ?? lr.leave_type} · {lr.total_days} วัน ·{' '}
                     {new Date(lr.start_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
                 </p>
+                <p className="text-[11px] font-semibold text-amber-200/70 mt-0.5">ดูรายละเอียด →</p>
             </div>
-            <div className="flex gap-1.5 shrink-0">
-                <button onClick={() => act('approve')} disabled={isPending}
+            <div className="flex gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
+                <button onClick={(e) => { e.stopPropagation(); act('approve') }} disabled={isPending}
                     className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 text-sm font-bold transition-colors disabled:opacity-40">
                     {isPending ? <Loader2 size={13} className="animate-spin" /> : 'อนุมัติ'}
                 </button>
-                <button onClick={() => act('reject')} disabled={isPending}
+                <button onClick={(e) => { e.stopPropagation(); act('reject') }} disabled={isPending}
                     className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-red-300 text-sm font-bold transition-colors disabled:opacity-40">
                     ปฏิเสธ
                 </button>
@@ -809,7 +824,16 @@ export function HRDashboard({
 
                     {/* Pending approvals */}
                     <div style={glassStyle} className="p-5">
-                        <SectionHeader title={`รออนุมัติใบลา (${pending.length})`} icon={Clock} />
+                        <div className="flex items-center justify-between gap-3 mb-4">
+                            <SectionHeader title={`รออนุมัติใบลา (${pending.length})`} icon={Clock} className="mb-0" />
+                            <button
+                                type="button"
+                                onClick={() => router.push('/hradmin/leave/admin?status=pending')}
+                                className="text-xs font-bold text-amber-200/70 hover:text-amber-100 transition-colors shrink-0"
+                            >
+                                ดูทั้งหมด →
+                            </button>
+                        </div>
                         {pending.length === 0 ? (
                             <p className="text-sm text-white/30 italic text-center py-4">ไม่มีใบลารออนุมัติ</p>
                         ) : (
