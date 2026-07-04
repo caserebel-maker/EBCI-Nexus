@@ -21,6 +21,7 @@ interface SearchParams {
     q?: string           // employee search (nickname / code)
     from?: string        // start_date filter YYYY-MM-DD
     to?: string          // start_date filter YYYY-MM-DD
+    request?: string     // leave_requests.id to open in the detail drawer
     // Tab 3 filter params
     level?: string       // comma-separated approval_level (1..5)
     filter?: string      // quick filter keyword: used_high | unused | adjusted

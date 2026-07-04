@@ -578,7 +578,7 @@ function PendingRow({ lr, onDone }: { lr: any; onDone: (id: string) => void }) {
     const router = useRouter()
     const [isPending, start] = useTransition()
     const [done, setDone] = useState<'approve' | 'reject' | null>(null)
-    const detailHref = `/hradmin/leave/admin?status=pending&request=${encodeURIComponent(lr.id)}`
+    const detailHref = `/hradmin/leave?tab=requests&status=pending&request=${encodeURIComponent(lr.id)}`
     const act = (action: 'approve' | 'reject') => {
         start(async () => {
             await handleLeaveAction(lr.id, action)
@@ -828,7 +828,7 @@ export function HRDashboard({
                             <SectionHeader title={`รออนุมัติใบลา (${pending.length})`} icon={Clock} className="mb-0" />
                             <button
                                 type="button"
-                                onClick={() => router.push('/hradmin/leave/admin?status=pending')}
+                                onClick={() => router.push('/hradmin/leave?tab=requests&status=pending')}
                                 className="text-xs font-bold text-amber-200/70 hover:text-amber-100 transition-colors shrink-0"
                             >
                                 ดูทั้งหมด →

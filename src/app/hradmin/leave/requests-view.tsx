@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -60,6 +60,15 @@ export function RequestsView({
     const [forceTarget, setForceTarget] = useState<{ item: LeaveRequestItem; action: 'approve' | 'reject' | 'cancel' } | null>(null)
     const [createOpen, setCreateOpen] = useState(false)
     const [toast, setToast] = useState<string | null>(null)
+    const requestId = searchParams?.get('request') ?? null
+
+    useEffect(() => {
+        if (!requestId) return
+        const match = items.find(item => item.id === requestId)
+        if (!match || drawerItem?.id === match.id) return
+        const timer = window.setTimeout(() => setDrawerItem(match), 0)
+        return () => window.clearTimeout(timer)
+    }, [drawerItem?.id, items, requestId])
 
     const refreshList = () => {
         startTransition(() => {
@@ -75,10 +84,31 @@ export function RequestsView({
     const goToPage = (nextPage: number) => {
         const sp = new URLSearchParams(searchParams?.toString() ?? '')
         sp.set('tab', 'requests')
+        sp.delete('request')
         if (nextPage <= 1) sp.delete('page')
         else sp.set('page', String(nextPage))
         startTransition(() => {
             router.replace(`${pathname}?${sp.toString()}`)
+        })
+    }
+
+    const openDrawer = (item: LeaveRequestItem) => {
+        setDrawerItem(item)
+        const sp = new URLSearchParams(searchParams?.toString() ?? '')
+        sp.set('tab', 'requests')
+        sp.set('request', item.id)
+        startTransition(() => {
+            router.replace(`${pathname}?${sp.toString()}`, { scroll: false })
+        })
+    }
+
+    const closeDrawer = () => {
+        setDrawerItem(null)
+        const sp = new URLSearchParams(searchParams?.toString() ?? '')
+        sp.delete('request')
+        const query = sp.toString()
+        startTransition(() => {
+            router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
         })
     }
 
@@ -95,6 +125,20 @@ export function RequestsView({
 
     return (
         <div className="space-y-5">
+            <nav aria-label="breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-white/55">
+                <Link href="/hradmin/dashboard" className="hover:text-white transition-colors">
+                    แดชบอร์ด
+                </Link>
+                <ChevronRight size={13} className="opacity-50" />
+                <Link href="/hradmin/leave" className="hover:text-white transition-colors">
+                    การลาและ WFH
+                </Link>
+                <ChevronRight size={13} className="opacity-50" />
+                <span className="text-white">
+                    {filters.status.includes('pending') ? 'ใบลารออนุมัติ' : 'ใบลาทั้งหมด'}
+                </span>
+            </nav>
+
             {/* Header */}
             <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div className="flex items-start gap-3 min-w-0">
@@ -200,7 +244,7 @@ export function RequestsView({
             {/* Table */}
             <RequestsTable
                 items={items}
-                onRowClick={setDrawerItem}
+                onRowClick={openDrawer}
                 onForceAction={(item, action) => setForceTarget({ item, action })}
             />
 
@@ -220,15 +264,15 @@ export function RequestsView({
             >
                 <Info size={13} className="shrink-0" />
                 <span>
-                    การ "บังคับอนุมัติ/ปฏิเสธ" จะ <strong className="text-white/75">ข้าม approval chain</strong> และ
-                    บันทึกเป็นประวัติของ HR ในช่อง "บันทึกการอนุมัติ"
+                    การบังคับอนุมัติ/ปฏิเสธจะ <strong className="text-white/75">ข้าม approval chain</strong> และ
+                    บันทึกเป็นประวัติของ HR ในช่องบันทึกการอนุมัติ
                 </span>
             </div>
 
             {/* Overlays */}
             <RequestDetailDrawer
                 item={drawerItem}
-                onClose={() => setDrawerItem(null)}
+                onClose={closeDrawer}
                 onForceAction={action => {
                     if (drawerItem) setForceTarget({ item: drawerItem, action })
                 }}
