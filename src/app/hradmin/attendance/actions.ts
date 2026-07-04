@@ -1,7 +1,10 @@
 'use server'
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE } from '@/lib/outside-head-office'
+import {
+    OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE,
+    normalizeOutsideHeadOfficeCheckin,
+} from '@/lib/outside-head-office'
 
 export interface AttendanceStats {
     totalEmployees: number
@@ -30,6 +33,7 @@ export interface AttendanceRecord {
         distance_from_office: number | null
         checked_in_at: string
         checked_out_at: string | null
+        notes?: string | null
     } | null
 }
 
@@ -80,10 +84,11 @@ export async function getAttendanceForDate(dateStr: string) {
     // 3. Map employees to their checkin (if any)
     const checkinByEmpId = new Map<string, AttendanceCheckin>()
     for (const c of checkinsResult.data ?? []) {
+        const normalizedCheckin = normalizeOutsideHeadOfficeCheckin(c)
         // Take latest checkin if multiple
-        const existing = checkinByEmpId.get(c.employee_id)
-        if (!existing || new Date(c.checked_in_at) > new Date(existing.checked_in_at)) {
-            checkinByEmpId.set(c.employee_id, c)
+        const existing = checkinByEmpId.get(normalizedCheckin.employee_id)
+        if (!existing || new Date(normalizedCheckin.checked_in_at) > new Date(existing.checked_in_at)) {
+            checkinByEmpId.set(normalizedCheckin.employee_id, normalizedCheckin)
         }
     }
     for (const scan of cardScansResult.data ?? []) {

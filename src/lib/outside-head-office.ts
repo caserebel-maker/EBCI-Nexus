@@ -1,4 +1,6 @@
 export const OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE = 'outside_head_office' as const
+export const OUTSIDE_HEAD_OFFICE_STORAGE_TYPE = 'field' as const
+export const OUTSIDE_HEAD_OFFICE_DEFAULT_NOTE = 'ประจำงานนอก Head Office'
 
 export const OUTSIDE_HEAD_OFFICE_EMPLOYEES = [
     {
@@ -94,4 +96,25 @@ export function getCheckinTypeDisplay(type: string) {
     if (type === 'field') return '🚛 ภาคสนาม'
     if (type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE) return '📍 นอก Head Office'
     return type
+}
+
+export function isStoredOutsideHeadOfficeCheckin(input: {
+    type?: string | null
+    notes?: string | null
+} | null | undefined) {
+    return (
+        input?.type === OUTSIDE_HEAD_OFFICE_STORAGE_TYPE &&
+        input.notes?.trim() === OUTSIDE_HEAD_OFFICE_DEFAULT_NOTE
+    )
+}
+
+export function normalizeOutsideHeadOfficeCheckin<T extends {
+    type?: string | null
+    notes?: string | null
+} | null | undefined>(checkin: T): T {
+    if (!checkin || !isStoredOutsideHeadOfficeCheckin(checkin)) return checkin
+    return {
+        ...checkin,
+        type: OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE,
+    }
 }

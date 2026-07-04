@@ -12,7 +12,10 @@ import { resolveLeaveApprover } from '@/lib/leave-approval'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
 import {
     OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE,
+    OUTSIDE_HEAD_OFFICE_DEFAULT_NOTE,
+    OUTSIDE_HEAD_OFFICE_STORAGE_TYPE,
     isOutsideHeadOfficeEmployee,
+    normalizeOutsideHeadOfficeCheckin,
 } from '@/lib/outside-head-office'
 
 type CheckInType = 'office' | 'wfh' | 'field' | typeof OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
@@ -228,6 +231,9 @@ export async function checkIn(payload: CheckInPayload) {
 
     // Determine actual type based on GPS vs user intent.
     const actualType: CheckInType = payload.type
+    const storageType = payload.type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
+        ? OUTSIDE_HEAD_OFFICE_STORAGE_TYPE
+        : actualType
     if (payload.type === 'office' && distance !== null && distance > location.radius_meters) {
         // User claims office but GPS says not near.
         return {
@@ -245,13 +251,13 @@ export async function checkIn(payload: CheckInPayload) {
         .from('checkins')
         .insert({
             employee_id: employeeId,
-            type: actualType,
+            type: storageType,
             latitude: payload.latitude,
             longitude: payload.longitude,
             accuracy_meters: payload.accuracy,
             distance_from_office: distance,
             notes: payload.type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
-                ? (trimmedNote || 'ประจำงานนอก Head Office')
+                ? OUTSIDE_HEAD_OFFICE_DEFAULT_NOTE
                 : (trimmedNote || null),
             ip_address: ipAddress,
             source: 'web',
@@ -311,7 +317,9 @@ export async function checkIn(payload: CheckInPayload) {
     return {
         success: true,
         id: data.id,
-        type: data.type,
+        type: payload.type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
+            ? OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
+            : data.type,
         checked_in_at: data.checked_in_at,
         distance_meters: distance !== null ? Math.round(distance) : null,
         late_minutes: lateMinutes,
@@ -368,5 +376,5 @@ export async function getTodayCheckin() {
         .limit(1)
         .maybeSingle()
 
-    return data
+    return normalizeOutsideHeadOfficeCheckin(data)
 }
