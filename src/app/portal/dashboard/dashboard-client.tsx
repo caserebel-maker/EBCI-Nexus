@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import useEmblaCarousel from 'embla-carousel-react'
 import Autoplay from 'embla-carousel-autoplay'
@@ -480,34 +481,28 @@ function DonutCard({
             </button>
 
             {/* Popup */}
-            {isOpen && (
+            {isOpen && typeof document !== 'undefined' && createPortal(
                 <>
-                    {/* Backdrop */}
+                    <div className="fixed inset-0 z-[9998] bg-black/25" onClick={onClose} />
                     <div
-                        className="fixed inset-0 z-40"
-                        onClick={onClose}
-                    />
-                    {/* Mobile uses a viewport-centered panel so edge donuts
-                        cannot push the popup off-screen. Desktop keeps the
-                        anchored tooltip behavior above the donut. */}
-                    <div
-                        className="fixed left-1/2 top-1/2 z-50 max-h-[72vh] w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 overflow-y-auto p-4 sm:absolute sm:bottom-[calc(100%+8px)] sm:top-auto sm:w-80 sm:max-w-[calc(100vw-2rem)] sm:translate-y-0"
+                        className="fixed left-1/2 top-1/2 z-[9999] max-h-[75dvh] w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto p-4 pt-10"
                         style={popupGlass}
+                        role="dialog"
+                        aria-modal="true"
                         onClick={(event) => event.stopPropagation()}
                     >
+                        <button
+                            type="button"
+                            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white"
+                            onClick={onClose}
+                            aria-label="ปิด"
+                        >
+                            <X size={16} />
+                        </button>
                         {popupContent}
-                        {/* Caret */}
-                        <div
-                            className="hidden sm:block absolute left-1/2 -translate-x-1/2 -bottom-[7px]"
-                            style={{
-                                width: 0, height: 0,
-                                borderLeft: '7px solid transparent',
-                                borderRight: '7px solid transparent',
-                                borderTop: '7px solid rgba(173,95,108,0.30)',
-                            }}
-                        />
                     </div>
-                </>
+                </>,
+                document.body
             )}
         </div>
     )
