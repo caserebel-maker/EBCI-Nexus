@@ -9,20 +9,19 @@
  * (check-in window timing), update the numbers here — every consumer
  * picks them up automatically.
  */
-
 // ── Work schedule ──────────────────────────────────────────────────────
 export const WORK_SCHEDULE = {
     /** Full-day office hours */
     fullDayStart: '08:00',
-    fullDayEnd: '17:30',
+    fullDayEnd: '17:00',
 
     /** Morning half = 08:00 – 12:00 */
     morningStart: '08:00',
     morningEnd: '12:00',
 
-    /** Afternoon half = 13:00 – 17:30 */
+    /** Afternoon half = 13:00 – 17:00 */
     afternoonStart: '13:00',
-    afternoonEnd: '17:30',
+    afternoonEnd: '17:00',
 
     /** Lunch break */
     lunchStart: '12:00',
