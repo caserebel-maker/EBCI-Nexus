@@ -13,7 +13,7 @@ type LoginBackgroundTheme = 'night-city' | 'legacy-video' | 'city-night-video'
 // - 'city-night-video' for the night city aerial/traffic drone video
 // - 'night-city' for the 3D animated CSS city towers
 // - 'legacy-video' for the abstract geometrical lines video
-const LOGIN_BACKGROUND_THEME: LoginBackgroundTheme = 'city-night-video'
+const LOGIN_BACKGROUND_THEME: LoginBackgroundTheme = 'legacy-video'
 
 const CITY_TOWERS = [
     { left: '4%', top: '22%', width: '7.6rem', height: '18rem', rise: '124px', glow: 'rgba(14,165,233,0.40)', delay: '-4s' },
