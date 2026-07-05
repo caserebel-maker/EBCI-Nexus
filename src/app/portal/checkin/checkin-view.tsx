@@ -153,26 +153,42 @@ export function CheckinView({
             return
         }
         setGpsState('requesting')
+
+        const onSuccess = (pos: GeolocationPosition) => {
+            setGps({
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
+                accuracy: pos.coords.accuracy,
+            })
+            setGpsState('success')
+            setGpsError(null)
+        }
+
+        const onError = (err: GeolocationPositionError, canFallback: boolean) => {
+            // Error 2: POSITION_UNAVAILABLE, Error 3: TIMEOUT
+            if (canFallback && (err.code === 2 || err.code === 3)) {
+                // Retry without high accuracy (e.g. use Wi-Fi/IP location indoors)
+                navigator.geolocation.getCurrentPosition(
+                    onSuccess,
+                    (fallbackErr) => onError(fallbackErr, false),
+                    { enableHighAccuracy: false, timeout: 15000, maximumAge: 30000 }
+                )
+                return
+            }
+
+            setGpsState('error')
+            const messages: Record<number, string> = {
+                1: 'ถูกปฏิเสธสิทธิ์การเข้าถึงตำแหน่ง — กรุณาอนุญาตในการตั้งค่าเบราว์เซอร์',
+                2: 'ไม่สามารถตรวจจับตำแหน่งได้ — ตรวจสอบว่า GPS เปิดอยู่ หรือลองเชื่อมต่อ Wi-Fi',
+                3: 'หมดเวลารอตำแหน่ง — กรุณาลองใหม่อีกครั้ง',
+            }
+            setGpsError(messages[err.code] ?? err.message)
+        }
+
         navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                setGps({
-                    lat: pos.coords.latitude,
-                    lng: pos.coords.longitude,
-                    accuracy: pos.coords.accuracy,
-                })
-                setGpsState('success')
-                setGpsError(null)
-            },
-            (err) => {
-                setGpsState('error')
-                const messages: Record<number, string> = {
-                    1: 'ถูกปฏิเสธสิทธิ์การเข้าถึงตำแหน่ง — กรุณาอนุญาตในการตั้งค่าเบราว์เซอร์',
-                    2: 'ไม่สามารถตรวจจับตำแหน่งได้ — ตรวจสอบว่า GPS เปิดอยู่',
-                    3: 'หมดเวลารอตำแหน่ง',
-                }
-                setGpsError(messages[err.code] ?? err.message)
-            },
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+            onSuccess,
+            (err) => onError(err, true),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
         )
     }, [])
 
