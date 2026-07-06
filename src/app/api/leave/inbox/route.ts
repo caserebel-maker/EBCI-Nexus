@@ -6,6 +6,8 @@ import { getDelegateApplicantIdsForApprover } from '@/lib/leave-delegate-approve
 
 export const dynamic = 'force-dynamic'
 
+const MANAGER_VISIBLE_BALANCE_TYPES = ['annual', 'personal', 'sick'] as const
+
 /**
  * GET /api/leave/inbox
  *
@@ -102,7 +104,10 @@ export async function GET() {
     // Join applicant details + leave-type meta + current year's balance
     const list = rows ?? []
     const employeeIds = Array.from(new Set(list.map(r => r.employee_id as string)))
-    const typeIds = Array.from(new Set(list.map(r => r.leave_type_id as string)))
+    const typeIds = Array.from(new Set([
+        ...list.map(r => r.leave_type_id as string),
+        ...MANAGER_VISIBLE_BALANCE_TYPES,
+    ]))
 
     const [empsRes, typesRes, balancesRes] = await Promise.all([
         employeeIds.length
@@ -165,6 +170,31 @@ export async function GET() {
                 pending_days: pending,
                 remaining_days: remaining,
             },
+            leave_balance_summary: typeIds
+                .filter(typeId => MANAGER_VISIBLE_BALANCE_TYPES.includes(typeId as typeof MANAGER_VISIBLE_BALANCE_TYPES[number]) || typeId === r.leave_type_id)
+                .map(typeId => {
+                    const summaryType = typeMap.get(typeId)
+                    const summaryBalance = balanceMap.get(`${r.employee_id}::${typeId}`)
+                    const summaryTotal = Number(summaryBalance?.total_days ?? 0)
+                    const summaryUsed = Number(summaryBalance?.used_days ?? 0)
+                    const summaryPending = Number(summaryBalance?.pending_days ?? 0)
+                    const summaryRemaining = Math.max(0, summaryTotal - summaryUsed - summaryPending)
+                    const isRequestedType = typeId === r.leave_type_id
+                    return {
+                        leave_type_id: typeId,
+                        name_th: summaryType?.name_th ?? typeId,
+                        color: summaryType?.color ?? null,
+                        is_unlimited: Boolean(summaryType?.is_unlimited),
+                        total_days: summaryTotal,
+                        used_days: summaryUsed,
+                        pending_days: summaryPending,
+                        remaining_days: summaryRemaining,
+                        after_current_request_days: isRequestedType
+                            ? Math.max(0, summaryRemaining - Number(r.total_days ?? 0))
+                            : summaryRemaining,
+                        is_requested_type: isRequestedType,
+                    }
+                }),
         }
     })
 

@@ -55,6 +55,18 @@ interface InboxItem {
         pending_days: number
         remaining_days: number
     }
+    leave_balance_summary?: Array<{
+        leave_type_id: string
+        name_th: string
+        color: string | null
+        is_unlimited: boolean
+        total_days: number
+        used_days: number
+        pending_days: number
+        remaining_days: number
+        after_current_request_days: number
+        is_requested_type: boolean
+    }>
 }
 
 type FilterKey = 'all' | 'oldest' | 'today'
@@ -373,6 +385,7 @@ function RequestCard({
                         <p className="text-[13px] text-white/75 mt-1.5 line-clamp-2">
                             &ldquo;{item.reason}&rdquo;
                         </p>
+                        <ManagerBalanceSnapshot item={item} />
                         {item.status === 'cancellation_requested' && item.cancellation_reason && (
                             <p className="text-[12px] text-amber-200/90 mt-1 line-clamp-2 inline-flex items-start gap-1">
                                 <Ban size={11} className="mt-0.5 shrink-0" />
@@ -500,6 +513,86 @@ function DetailField({
 
 function formatDays(value: number): string {
     return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, '')
+}
+
+const BALANCE_TYPE_ORDER = ['annual', 'personal', 'sick']
+
+function ManagerBalanceSnapshot({ item }: { item: InboxItem }) {
+    const rows = (item.leave_balance_summary ?? [])
+        .slice()
+        .sort((a, b) => {
+            const ia = BALANCE_TYPE_ORDER.indexOf(a.leave_type_id)
+            const ib = BALANCE_TYPE_ORDER.indexOf(b.leave_type_id)
+            return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib)
+        })
+
+    if (rows.length === 0) return null
+
+    const requested = rows.find(row => row.is_requested_type)
+    const requestedDays = Number(item.total_days)
+    const willExceed = Boolean(
+        requested &&
+        !requested.is_unlimited &&
+        requested.total_days > 0 &&
+        requested.remaining_days < requestedDays,
+    )
+
+    return (
+        <div className="mt-3 rounded-xl border border-white/10 bg-black/15 p-2.5">
+            <div className="flex items-center justify-between gap-2 mb-2">
+                <p className="text-[11px] font-bold text-white/70 inline-flex items-center gap-1.5">
+                    <CalendarIcon size={12} className="text-amber-200" />
+                    วันลาคงเหลือของพนักงาน
+                </p>
+                {willExceed && (
+                    <span className="text-[10px] font-bold text-red-200 bg-red-500/15 border border-red-400/30 rounded-full px-2 py-0.5">
+                        เกินสิทธิ์
+                    </span>
+                )}
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+                {rows.map(row => {
+                    const isZeroEntitlement = !row.is_unlimited && row.total_days <= 0
+                    const low = !row.is_unlimited && row.total_days > 0 && row.remaining_days <= 1
+                    const isCurrentProblem = row.is_requested_type && willExceed
+                    const tone = isCurrentProblem
+                        ? 'border-red-400/40 bg-red-500/15 text-red-100'
+                        : row.is_requested_type
+                            ? 'border-amber-300/40 bg-amber-300/10 text-amber-50'
+                            : low
+                                ? 'border-yellow-300/25 bg-yellow-300/10 text-yellow-50'
+                                : 'border-white/10 bg-white/5 text-white/80'
+                    return (
+                        <div
+                            key={row.leave_type_id}
+                            className={cn('rounded-lg border px-2 py-2 min-w-0', tone)}
+                        >
+                            <p className="text-[10px] font-semibold truncate opacity-80">
+                                {row.name_th}
+                            </p>
+                            <p className="text-sm font-extrabold tabular-nums leading-tight mt-0.5">
+                                {row.is_unlimited ? 'ไม่จำกัด' : isZeroEntitlement ? 'ไม่มีสิทธิ์' : `${formatDays(row.remaining_days)} วัน`}
+                            </p>
+                            {row.is_requested_type && !row.is_unlimited && !isZeroEntitlement && (
+                                <p className={cn(
+                                    'text-[10px] mt-0.5 truncate',
+                                    isCurrentProblem ? 'text-red-100' : 'text-white/50',
+                                )}>
+                                    อนุมัติแล้วเหลือ {formatDays(row.after_current_request_days)}
+                                </p>
+                            )}
+                        </div>
+                    )
+                })}
+            </div>
+            {willExceed && requested && (
+                <p className="mt-2 text-[11px] text-red-200 inline-flex items-center gap-1.5">
+                    <AlertCircle size={12} className="shrink-0" />
+                    ใบนี้ขอ {formatDays(requestedDays)} วัน แต่{requested.name_th}เหลือ {formatDays(requested.remaining_days)} วัน
+                </p>
+            )}
+        </div>
+    )
 }
 
 function BalanceBar({ item }: { item: InboxItem }) {
