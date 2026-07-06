@@ -63,6 +63,15 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
     const pathname = usePathname()
     const { t } = useTranslation()
 
+    React.useEffect(() => {
+        const sendHeartbeat = () => {
+            fetch('/api/portal/heartbeat', { method: 'POST' }).catch(() => {})
+        }
+        sendHeartbeat()
+        const interval = setInterval(sendHeartbeat, 120 * 1000)
+        return () => clearInterval(interval)
+    }, [])
+
     // Navigation Items — HR Admin in /portal sees employee nav (their "portal mode")
     const effectiveRole = (role === 'hr_admin' && pathname?.startsWith('/portal')) ? 'employee' : role
     const baseItems = NAVIGATION_CONFIG[effectiveRole] || []

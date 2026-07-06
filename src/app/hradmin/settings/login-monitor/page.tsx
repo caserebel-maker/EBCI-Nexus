@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { CheckCircle2, Clock, RefreshCw, Search, ShieldCheck, UserCheck, UserX } from 'lucide-react'
 import { getSession } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { formatBangkokDateTime, todayBangkokKey } from '@/lib/datetime'
+import { formatBangkokDateTime, todayBangkokKey, formatBangkokTime } from '@/lib/datetime'
 import { AutoRefresh } from './auto-refresh'
 
 export const dynamic = 'force-dynamic'
@@ -22,6 +22,7 @@ type EmployeeRow = {
     department: string | null
     position: string | null
     photo_url: string | null
+    last_active_at: string | null
 }
 
 type LoginAttemptRow = {
@@ -41,6 +42,7 @@ type MonitorRow = EmployeeRow & {
     lastLoginAt: string | null
     successCount: number
     failedCount: number
+    activeNow: boolean
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -139,7 +141,7 @@ export default async function LaunchLoginMonitorPage({ searchParams }: PageProps
 
     const { data: employeeRows, error: employeeError } = await supabaseAdmin
         .from('employees')
-        .select('id, employee_code, first_name_th, last_name_th, nickname, email, department, position, photo_url')
+        .select('id, employee_code, first_name_th, last_name_th, nickname, email, department, position, photo_url, last_active_at')
         .eq('status', 'active')
         .order('employee_code', { ascending: true })
 
@@ -183,6 +185,11 @@ export default async function LaunchLoginMonitorPage({ searchParams }: PageProps
         const personAttempts = emailLower ? attemptsByEmail.get(emailLower) ?? [] : []
         const successes = personAttempts.filter(a => a.success)
         const failures = personAttempts.filter(a => !a.success)
+
+        const now = new Date()
+        const lastActive = employee.last_active_at ? new Date(employee.last_active_at) : null
+        const activeNow = lastActive ? (now.getTime() - lastActive.getTime() < 5 * 60 * 1000) : false
+
         return {
             ...employee,
             displayName: employeeName(employee),
@@ -195,6 +202,7 @@ export default async function LaunchLoginMonitorPage({ searchParams }: PageProps
             lastLoginAt: successes.at(-1)?.attempted_at ?? null,
             successCount: successes.length,
             failedCount: failures.length,
+            activeNow,
         }
     }).sort(sortRows)
 
@@ -357,13 +365,30 @@ export default async function LaunchLoginMonitorPage({ searchParams }: PageProps
                                         <CheckCircle2 size={13} strokeWidth={3} />
                                     </div>
                                 )}
+                                {row.activeNow && (
+                                    <div className="absolute -right-0.5 -bottom-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-400 ring-2 ring-[#1b0a0d] shadow-sm shadow-emerald-400/60 animate-pulse">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-[#07130d]" />
+                                    </div>
+                                )}
                             </div>
 
                             <div className="mt-1.5 min-w-0">
                                 <p className={['truncate text-xs font-black', row.loggedIn ? 'text-white' : 'text-white/55'].join(' ')}>
                                     {row.shortName}
                                 </p>
-                                <p className="truncate text-[10px] font-bold text-white/35">{row.employee_code ?? '—'}</p>
+                                {row.activeNow ? (
+                                    <p className="truncate text-[10px] font-bold text-emerald-400 animate-pulse">
+                                        ใช้งานอยู่
+                                    </p>
+                                ) : row.loggedIn && row.lastLoginAt ? (
+                                    <p className="truncate text-[10px] font-bold text-white/50">
+                                        {formatBangkokTime(row.lastLoginAt)}
+                                    </p>
+                                ) : (
+                                    <p className="truncate text-[10px] font-bold text-white/35">
+                                        {row.employee_code ?? '—'}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -401,11 +426,16 @@ export default async function LaunchLoginMonitorPage({ searchParams }: PageProps
                                     </span>
                                 ) : (
                                     <span className="text-white/35">ยังไม่มีเวลาเข้า</span>
-                                )}
+                                ) }
                             </div>
 
                             <div className="flex items-center gap-2 text-sm font-bold">
-                                {row.loggedIn ? (
+                                {row.activeNow ? (
+                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-emerald-400/20 px-3 py-1 text-emerald-100 animate-pulse">
+                                        <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/60 animate-ping shrink-0" />
+                                        กำลังใช้งานอยู่
+                                    </span>
+                                ) : row.loggedIn ? (
                                     <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/30 bg-emerald-300/15 px-3 py-1 text-emerald-100">
                                         <CheckCircle2 size={14} />
                                         เข้าแล้ว
