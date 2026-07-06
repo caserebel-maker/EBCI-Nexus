@@ -69,7 +69,7 @@ export function CheckinMap({
     distanceMeters,
 }: CheckinMapProps) {
     const isAtOffice = distanceMeters !== null && distanceMeters <= radiusMeters
-    const [mapTheme, setMapTheme] = useState<'dark' | 'light'>('dark')
+    const [mapTheme, setMapTheme] = useState<'dark' | 'light'>('light')
 
     useEffect(() => {
         const saved = localStorage.getItem('ebci_map_theme')
