@@ -17,6 +17,7 @@ import { WORK_SCHEDULE, HALF_DAY_RULES } from '@/lib/leave-constants'
 import Link from 'next/link'
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog'
 import {
+    OUTSIDE_HEAD_OFFICE_DEFAULT_NOTE,
     OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE,
     getCheckinTypeDisplay,
     getCheckinTypeLabel,
@@ -242,12 +243,16 @@ export function CheckinView({
         if (!ok) return
 
         setLoading(true)
+        const submitType = type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE ? 'field' : type
+        const submitNotes = type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
+            ? OUTSIDE_HEAD_OFFICE_DEFAULT_NOTE
+            : notes
         const result = await checkIn({
-            type,
+            type: submitType,
             latitude: gps?.lat ?? null,
             longitude: gps?.lng ?? null,
             accuracy: gps?.accuracy ?? null,
-            notes,
+            notes: submitNotes,
             // lateReason is undefined when on-time; server stores NULL.
             lateReason: lateMinutes > 0 ? lateReason.trim() || undefined : undefined,
         })

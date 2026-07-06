@@ -269,6 +269,11 @@ export async function checkIn(payload: CheckInPayload) {
 
     if (error) {
         console.error('checkIn error:', error)
+        if (error.message?.includes('checkins_type_check')) {
+            return {
+                error: 'ระบบบันทึกประเภทเช็คอินไม่สำเร็จ — กรุณารีเฟรชหน้าแล้วลองใหม่อีกครั้ง หากยังขึ้นซ้ำให้แจ้ง HR',
+            }
+        }
         return { error: error.message }
     }
 
