@@ -41,7 +41,7 @@ export const OUTSIDE_HEAD_OFFICE_EMPLOYEES = [
     },
     {
         employeeCode: '148-51',
-        name: 'อินดา ศรีรักษา',
+        name: 'ลินดา ศรีรักษา',
         department: 'ฝ่ายประสานงานเอกสาร-นำเข้า',
         remark: 'Sign Contract',
     },
