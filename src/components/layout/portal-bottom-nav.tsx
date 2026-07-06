@@ -209,6 +209,50 @@ function bucketIntoGroups(items: MoreItem[]): MoreGroup[] {
     return groups
 }
 
+const PENDING_POLL_MS = 5 * 60_000
+
+function usePendingApprovalCount(): number {
+    const [count, setCount] = useState(0)
+
+    useEffect(() => {
+        let cancelled = false
+        let timer: ReturnType<typeof setInterval> | null = null
+
+        const tick = async () => {
+            try {
+                const res = await fetch('/api/leave/pending-count', { cache: 'no-store' })
+                if (!res.ok) return
+                const json = await res.json()
+                if (!cancelled && typeof json.count === 'number') setCount(json.count)
+            } catch {
+                // ignore
+            }
+        }
+        const start = () => {
+            if (timer) return
+            timer = setInterval(tick, PENDING_POLL_MS)
+        }
+        const stop = () => {
+            if (timer) { clearInterval(timer); timer = null }
+        }
+        const onVisibility = () => {
+            if (document.visibilityState === 'visible') { void tick(); start() }
+            else stop()
+        }
+
+        void tick()
+        if (document.visibilityState === 'visible') start()
+        document.addEventListener('visibilitychange', onVisibility)
+        return () => {
+            cancelled = true
+            stop()
+            document.removeEventListener('visibilitychange', onVisibility)
+        }
+    }, [])
+
+    return count
+}
+
 export function PortalBottomNav({
     canManagePayroll = false,
     canViewAttendanceInsights = false,
@@ -224,6 +268,7 @@ export function PortalBottomNav({
 }) {
     const role = useRole()
     const pathname = usePathname()
+    const pendingCount = usePendingApprovalCount()
     const [moreOpen, setMoreOpen] = useState(false)
     /**
      * Per-group expand/collapse state. Default = all collapsed (Mod's
@@ -405,11 +450,16 @@ export function PortalBottomNav({
                                             <GroupIcon size={18} className="text-white" />
                                         </span>
                                         <div className="flex-1 min-w-0 text-left">
-                                            <p className="text-white font-semibold text-sm">
-                                                {group.label}
-                                                <span className="ml-1.5 text-white/45 font-medium text-xs">
+                                            <p className="text-white font-semibold text-sm flex items-center gap-1.5 flex-wrap">
+                                                <span>{group.label}</span>
+                                                <span className="text-white/45 font-medium text-xs">
                                                     ({group.items.length})
                                                 </span>
+                                                {group.label === 'การอนุมัติ' && pendingCount > 0 && (
+                                                    <span className="shrink-0 inline-flex items-center justify-center rounded-full bg-amber-400 text-[#561e23] px-1.5 py-0.5 text-[9px] font-black ring-1 ring-amber-200/50 shadow">
+                                                        {pendingCount}
+                                                    </span>
+                                                )}
                                             </p>
                                             <p className="text-xs text-white/45">
                                                 {expanded ? 'แตะเพื่อย่อเก็บ' : 'แตะเพื่อขยาย'}
@@ -467,7 +517,14 @@ export function PortalBottomNav({
                                                             <item.icon size={18} className="text-white" />
                                                         </span>
                                                         <div className="flex-1 min-w-0">
-                                                            <p className="text-white font-semibold text-sm">{item.label}</p>
+                                                            <p className="text-white font-semibold text-sm flex items-center gap-1.5">
+                                                                <span>{item.label}</span>
+                                                                {(item.href === '/portal/leave/inbox' || item.href === '/hradmin/leave/inbox') && pendingCount > 0 && (
+                                                                    <span className="shrink-0 inline-flex items-center justify-center rounded-full bg-amber-400 text-[#561e23] px-1.5 py-0.5 text-[9px] font-black ring-1 ring-amber-200/50 shadow">
+                                                                        {pendingCount}
+                                                                    </span>
+                                                                )}
+                                                            </p>
                                                             {item.desc && <p className={cn('text-xs', item.accent ? 'text-white/80' : 'text-white/45')}>{item.desc}</p>}
                                                         </div>
                                                         <ChevronRight size={14} className={item.accent ? 'text-white/70' : 'text-white/30'} />
@@ -524,7 +581,14 @@ export function PortalBottomNav({
                             isMoreActive ? 'text-white' : 'text-white/50 hover:text-white/75'
                         )}
                     >
-                        <MoreHorizontal size={22} strokeWidth={isMoreActive ? 2.5 : 1.8} />
+                        <div className="relative">
+                            <MoreHorizontal size={22} strokeWidth={isMoreActive ? 2.5 : 1.8} />
+                            {pendingCount > 0 && (
+                                <span className="absolute -top-1 -right-1.5 w-3.5 h-3.5 rounded-full bg-amber-400 text-[#561e23] text-[8px] font-black flex items-center justify-center border border-[#561e23] animate-pulse">
+                                    {pendingCount}
+                                </span>
+                            )}
+                        </div>
                         <span className={cn('text-[10px] leading-tight tracking-wide', isMoreActive ? 'font-bold' : 'font-medium')}>
                             เพิ่มเติม
                         </span>
