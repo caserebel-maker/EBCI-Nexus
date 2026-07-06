@@ -4,9 +4,8 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { MapPin, Users, Building, Home, HelpCircle, RefreshCw, Calendar, CheckCircle2, Clock, LogOut, MapPinOff, FileUp, AlertTriangle, Download } from 'lucide-react'
 import { ExportAttendanceModal } from './export-modal'
-import { todayBangkokKey } from '@/lib/datetime'
+import { formatBangkokTime, toDate, todayBangkokKey } from '@/lib/datetime'
 import { cn } from '@/lib/utils'
-import { formatBangkokTime } from '@/lib/datetime'
 import { getAttendanceForDate, type AttendanceStats, type AttendanceRecord } from './actions'
 import { OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE } from '@/lib/outside-head-office'
 
@@ -40,7 +39,8 @@ interface Props {
 const MONTHS_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
 
 function formatThaiDate(iso: string) {
-    const d = new Date(iso)
+    const d = toDate(iso, 'utc')
+    if (!d) return iso
     return `${d.getDate()} ${MONTHS_TH[d.getMonth()]} ${d.getFullYear() + 543}`
 }
 
@@ -51,7 +51,8 @@ function formatTime(iso: string) {
 }
 
 function timeAgo(iso: string): string {
-    const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+    const d = toDate(iso, 'utc')
+    const seconds = d ? Math.floor((Date.now() - d.getTime()) / 1000) : 0
     if (seconds < 60) return 'เพิ่งอัปเดต'
     const minutes = Math.floor(seconds / 60)
     if (minutes < 60) return `${minutes} นาทีที่แล้ว`
@@ -236,7 +237,8 @@ export function AttendanceView({ initialDate, initialData }: Props) {
 
             {/* Last Sync Status Banner */}
             {data?.lastSyncTime && (() => {
-                const delayMs = Date.now() - new Date(data.lastSyncTime).getTime()
+                const syncDate = toDate(data.lastSyncTime, 'utc')
+                const delayMs = syncDate ? Date.now() - syncDate.getTime() : 0
                 const isStalled = delayMs > 2 * 3600 * 1000 // 2 hours
                 return (
                     <div className={cn(

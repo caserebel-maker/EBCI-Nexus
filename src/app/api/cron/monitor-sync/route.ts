@@ -72,10 +72,10 @@ export async function GET(req: NextRequest) {
         if (!latestScan) {
             return NextResponse.json({ success: true, message: 'No card scan logs found in database' })
         }
-
-        const lastSyncMs = new Date(latestScan.created_at).getTime()
+        const rawCreatedAt = String(latestScan.created_at)
+        const normalized = rawCreatedAt.endsWith('Z') || rawCreatedAt.includes('+') ? rawCreatedAt : rawCreatedAt + 'Z'
+        const lastSyncMs = new Date(normalized).getTime()
         const delayMs = Date.now() - lastSyncMs
-
         if (delayMs > STALL_LIMIT_MS) {
             // 4. Resolve Telegram recipients (Mod and Mod HR)
             const { data: employees } = await supabaseAdmin
