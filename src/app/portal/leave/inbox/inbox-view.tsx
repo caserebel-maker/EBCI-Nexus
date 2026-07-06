@@ -1,6 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import {
     Inbox, Filter, Clock, Calendar as CalendarIcon, CheckCircle2, XCircle,
     Loader2, AlertCircle, ChevronDown, Paperclip, Phone, Building2,
@@ -117,6 +119,8 @@ function initialsFrom(item: InboxItem): string {
 
 // ── Main view ────────────────────────────────────────────────────────────
 export function InboxView() {
+    const pathname = usePathname()
+    const isAdmin = pathname?.startsWith('/hradmin')
     const [items, setItems] = useState<InboxItem[]>([])
     const [loading, setLoading] = useState(true)
     const [err, setErr] = useState<string | null>(null)
@@ -187,6 +191,26 @@ export function InboxView() {
                     <Inbox size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
+                    {/* Breadcrumb */}
+                    <div className="flex items-center gap-1.5 text-xs text-white/45 mb-1.5 flex-wrap">
+                        {isAdmin ? (
+                            <>
+                                <Link href="/hradmin/dashboard" className="hover:text-white transition-colors">แดชบอร์ด</Link>
+                                <span className="text-white/25">/</span>
+                                <span className="text-white/45">การลา</span>
+                                <span className="text-white/25">/</span>
+                                <span className="text-white/75 font-semibold">อนุมัติการลา</span>
+                            </>
+                        ) : (
+                            <>
+                                <Link href="/portal/dashboard" className="hover:text-white transition-colors">หน้าแรก</Link>
+                                <span className="text-white/25">/</span>
+                                <span className="text-white/45">การลาและ WFH</span>
+                                <span className="text-white/25">/</span>
+                                <span className="text-white/75 font-semibold">อนุมัติการลา</span>
+                            </>
+                        )}
+                    </div>
                     <h1 className="text-xl font-bold text-white inline-flex items-center gap-2">
                         ใบลารอการอนุมัติ
                         {items.length > 0 && (
@@ -463,22 +487,21 @@ function RequestCard({
 
             {/* Collapsed footer (buttons always reachable) */}
             {!expanded && (
-                <div className="flex items-stretch border-t border-white/5">
+                <div className="flex items-center gap-2 p-2 border-t border-white/5 bg-black/10 rounded-b-xl">
                     <button
                         type="button"
-                        onClick={onRejectClick}
-                        className="flex-1 py-2.5 text-sm font-bold text-red-300 hover:bg-red-500/10 transition-colors inline-flex items-center justify-center gap-1.5"
+                        onClick={(e) => { e.stopPropagation(); onRejectClick() }}
+                        className="flex-1 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 active:scale-95 transition-all text-white text-xs font-black shadow-sm"
                     >
-                        <XCircle size={14} />
+                        <XCircle size={13} />
                         ปฏิเสธ
                     </button>
-                    <div className="w-px bg-white/10" />
                     <button
                         type="button"
-                        onClick={onApproveClick}
-                        className="flex-[2] py-2.5 text-sm font-bold text-emerald-300 hover:bg-emerald-500/10 transition-colors inline-flex items-center justify-center gap-1.5"
+                        onClick={(e) => { e.stopPropagation(); onApproveClick() }}
+                        className="flex-[2] h-9 inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition-all text-white text-xs font-black shadow-sm"
                     >
-                        <CheckCircle2 size={14} />
+                        <CheckCircle2 size={13} />
                         อนุมัติ
                     </button>
                 </div>
