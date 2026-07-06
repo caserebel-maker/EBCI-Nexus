@@ -496,6 +496,20 @@ export function CheckinView({
                             <p className="text-amber-100">{todayCheckin!.notes}</p>
                         </div>
                     )}
+                    {todayCheckin!.latitude !== null && todayCheckin!.longitude !== null && (
+                        <div className="mb-4 rounded-xl p-3 bg-white/5 border border-white/10 text-xs flex flex-col gap-1.5">
+                            <p className="text-white/40 font-semibold uppercase tracking-wider text-left">ตำแหน่งที่เช็คอิน</p>
+                            <a
+                                href={`https://www.google.com/maps?q=${todayCheckin!.latitude},${todayCheckin!.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 text-cyan-300 hover:text-cyan-200 transition-colors font-medium text-left"
+                            >
+                                <MapPin size={14} className="shrink-0" />
+                                ดูบน Google Maps ({todayCheckin!.latitude.toFixed(6)}, {todayCheckin!.longitude.toFixed(6)})
+                            </a>
+                        </div>
+                    )}
                     <button
                         onClick={handleCheckout}
                         disabled={loading}
@@ -535,6 +549,20 @@ export function CheckinView({
                             </span>
                         </div>
                     </div>
+                    {todayCheckin!.latitude !== null && todayCheckin!.longitude !== null && (
+                        <div className="mt-4 rounded-xl p-3 bg-white/5 border border-white/10 text-xs flex flex-col gap-1.5">
+                            <p className="text-white/40 font-semibold uppercase tracking-wider text-left">ตำแหน่งที่เช็คอิน</p>
+                            <a
+                                href={`https://www.google.com/maps?q=${todayCheckin!.latitude},${todayCheckin!.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 text-cyan-300 hover:text-cyan-200 transition-colors font-medium text-left"
+                            >
+                                <MapPin size={14} className="shrink-0" />
+                                ดูบน Google Maps ({todayCheckin!.latitude.toFixed(6)}, {todayCheckin!.longitude.toFixed(6)})
+                            </a>
+                        </div>
+                    )}
                     <p className="text-[11px] text-white/40 text-center mt-4">
                         ขอบคุณสำหรับการทำงานวันนี้ 🙏
                     </p>

@@ -460,6 +460,19 @@ function EmployeeRow({ record }: { record: AttendanceRecord }) {
                                 ห่าง {Math.round(c.distance_from_office)} ม.
                             </div>
                         )}
+                        {c.latitude !== null && c.longitude !== null && (
+                            <div className="mt-1 flex justify-end">
+                                <a
+                                    href={`https://www.google.com/maps?q=${c.latitude},${c.longitude}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-[10px] text-cyan-300 hover:text-cyan-200 hover:underline transition-all font-medium"
+                                >
+                                    <MapPin size={10} />
+                                    ดูตำแหน่ง
+                                </a>
+                            </div>
+                        )}
                     </>
                 )}
             </div>
