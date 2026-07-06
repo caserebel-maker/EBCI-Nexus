@@ -523,6 +523,8 @@ function BalanceBar({ item }: { item: InboxItem }) {
     }
 
     const pct = total > 0 ? Math.min(100, ((used + thisReq) / total) * 100) : 0
+    const isExceeded = hasEntitlement && !lt?.is_unlimited && (remainingBeforeApproval < thisReq)
+
     return (
         <div className="p-3 rounded-lg bg-white/5 border border-white/10 space-y-2">
             <div className="flex items-center justify-between gap-2 text-xs">
@@ -541,6 +543,12 @@ function BalanceBar({ item }: { item: InboxItem }) {
                     )}
                 </span>
             </div>
+            {isExceeded && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-red-500/10 border border-red-500/30 text-[11px] font-semibold text-red-300">
+                    <AlertCircle size={12} className="shrink-0" />
+                    วันลาคงเหลือไม่เพียงพอ (ต้องการ {formatDays(thisReq)} วัน แต่เหลือ {formatDays(remainingBeforeApproval)} วัน)
+                </div>
+            )}
             <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
                 <div
                     className="h-full transition-all"
