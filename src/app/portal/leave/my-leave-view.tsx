@@ -1180,6 +1180,42 @@ function NewLeaveModal({
         need('endDate', !endDate)
         need('reason', !reason.trim())
 
+        // Validate policy constraints on the client side (same day / advance notice / sick leave rule)
+        if (inScope('startDate') && selectedType && startDate) {
+            const todayStr = todayBangkokIso()
+            const startD = new Date(startDate)
+            const todayD = new Date(todayStr)
+            
+            startD.setHours(0,0,0,0)
+            todayD.setHours(0,0,0,0)
+
+            const diffTime = startD.getTime() - todayD.getTime()
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+
+            const sameDayAllowed = selectedType.same_day_allowed !== false
+            const advanceDays = selectedType.advance_notice_days ?? 0
+
+            if (selectedType.leave_type_id === 'sick') {
+                if (diffDays >= 0) {
+                    errorIds.add('startDate')
+                    missing.push('ลาป่วยต้องเป็นวันที่ผ่านไปแล้ว — ยื่นในวันนี้หรือล่วงหน้าไม่ได้')
+                }
+            } else {
+                if (diffDays < 0) {
+                    errorIds.add('startDate')
+                    missing.push('ไม่สามารถยื่นลาย้อนหลังได้')
+                }
+                if (!sameDayAllowed && diffDays === 0) {
+                    errorIds.add('startDate')
+                    missing.push('ประเภทนี้ไม่อนุญาตให้ยื่นลาในวันเดียวกัน')
+                }
+                if (advanceDays > 0 && diffDays < advanceDays) {
+                    errorIds.add('startDate')
+                    missing.push(`ต้องขอล่วงหน้าอย่างน้อย ${advanceDays} วัน (${selectedType.name_th})`)
+                }
+            }
+        }
+
         // approverChain === null means "still loading" — don't block on it
         // (otherwise users on slow networks see a phantom error). Empty
         // array means HR genuinely hasn't wired the chain.
@@ -1676,10 +1712,30 @@ function Step2Dates({
     errorFields: Set<FieldId>
 }) {
     const today = todayBangkokIso()
-    const minDate = type.leave_type_id === 'sick'
-        ? undefined // sick leave must be past
-        : today
-    const maxDate = type.leave_type_id === 'sick' ? today : undefined
+    let minDate: string | undefined = undefined
+    let maxDate: string | undefined = undefined
+
+    if (type.leave_type_id === 'sick') {
+        // sick leave must be strictly in the past (yesterday or earlier)
+        const tDate = new Date(today)
+        tDate.setDate(tDate.getDate() - 1)
+        maxDate = tDate.toISOString().slice(0, 10)
+    } else {
+        const sameDayAllowed = type.same_day_allowed !== false
+        const advanceDays = type.advance_notice_days ?? 0
+
+        if (advanceDays > 0) {
+            const tDate = new Date(today)
+            tDate.setDate(tDate.getDate() + advanceDays)
+            minDate = tDate.toISOString().slice(0, 10)
+        } else if (!sameDayAllowed) {
+            const tDate = new Date(today)
+            tDate.setDate(tDate.getDate() + 1)
+            minDate = tDate.toISOString().slice(0, 10)
+        } else {
+            minDate = today
+        }
+    }
 
     return (
         <div className="space-y-4">
