@@ -272,7 +272,7 @@ export function PortalBottomNav({
     // are also approvers (e.g. หัวหน้าแผนกที่อยู่ใน role 'employee'
     // เพราะไม่ได้ถูกตั้ง role manager). Sits at the top of the More
     // panel so they can act on requests in 1 tap.
-    const approverMoreItems: MoreItem[] = (role === 'employee' && isApprover)
+    const approverMoreItems: MoreItem[] = ((role === 'employee' || role === 'hr_admin') && isApprover)
         ? [
             {
                 label: 'อนุมัติการลา',
