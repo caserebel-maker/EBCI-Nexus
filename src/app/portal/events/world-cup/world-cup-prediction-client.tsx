@@ -296,10 +296,10 @@ export function WorldCupPredictionClient({
                                 onClick={() => setPendingTeamId(team.id)}
                                 className={[
                                     'group relative min-h-40 overflow-hidden rounded-3xl border p-5 text-left transition-all duration-150',
-                                    'bg-gradient-to-b from-white to-slate-50/90',
+                                    'bg-gradient-to-b from-white via-slate-50 to-slate-200/60',
                                     active 
-                                        ? 'border-emerald-400 border-b-[8px] border-b-emerald-500 shadow-[0_8px_20px_rgba(16,185,129,0.15)]' 
-                                        : 'border-slate-200/90 border-b-[8px] border-b-slate-300/80 shadow-[0_6px_12px_rgba(0,0,0,0.08)] hover:border-yellow-400/80 hover:border-b-yellow-500 hover:-translate-y-0.5 hover:shadow-[0_10px_18px_rgba(0,0,0,0.12)]',
+                                        ? 'border-emerald-400 border-b-[8px] border-b-emerald-600 shadow-[0_8px_20px_rgba(16,185,129,0.2),inset_0_2px_3px_rgba(255,255,255,0.9)] ring-2 ring-emerald-400/30' 
+                                        : 'border-slate-200 border-b-[8px] border-b-slate-400/90 shadow-[0_6px_14px_rgba(0,0,0,0.12),inset_0_2px_3px_rgba(255,255,255,0.9)] hover:border-yellow-400 hover:border-b-yellow-500 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(0,0,0,0.18),inset_0_2px_3px_rgba(255,255,255,0.9)]',
                                     closed ? 'cursor-not-allowed opacity-75' : 'active:translate-y-0.5 active:border-b-[3px] active:shadow-[0_2px_4px_rgba(0,0,0,0.06)]',
                                 ].join(' ')}
                             >
