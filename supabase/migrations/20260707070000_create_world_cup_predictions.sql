@@ -138,7 +138,7 @@ CROSS JOIN (VALUES
     ('สเปน', 'Spain', '🇪🇸', 30, '#f59e0b'),
     ('เบลเยียม', 'Belgium', '🇧🇪', 40, '#facc15'),
     ('นอร์เวย์', 'Norway', '🇳🇴', 50, '#1d4ed8'),
-    ('อังกฤษ', 'England', '🏴', 60, '#ef4444'),
+    ('อังกฤษ', 'England', '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 60, '#ef4444'),
     ('ทีมเข้ารอบ 7', 'Quarter-finalist 7', '🏆', 70, '#22c55e'),
     ('ทีมเข้ารอบ 8', 'Quarter-finalist 8', '🏆', 80, '#14b8a6')
 ) AS teams(team_name, team_name_en, flag_emoji, seed_order, accent_color)
