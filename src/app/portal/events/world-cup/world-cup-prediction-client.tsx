@@ -281,24 +281,26 @@ export function WorldCupPredictionClient({
                                 disabled={closed || saving}
                                 onClick={() => setPendingTeamId(team.id)}
                                 className={[
-                                    'group relative min-h-40 overflow-hidden rounded-3xl border p-5 text-left transition',
-                                    'bg-gradient-to-br from-white/[.14] to-white/[.05] shadow-lg shadow-black/10',
-                                    active ? 'border-emerald-300 ring-2 ring-emerald-300/50' : 'border-white/15 hover:border-yellow-200/60',
-                                    closed ? 'cursor-not-allowed opacity-70' : 'hover:-translate-y-1 hover:bg-white/[.16]',
+                                    'group relative min-h-40 overflow-hidden rounded-3xl border p-5 text-left transition-all duration-150',
+                                    'bg-gradient-to-b from-white to-slate-50/90',
+                                    active 
+                                        ? 'border-emerald-400 border-b-[8px] border-b-emerald-500 shadow-[0_8px_20px_rgba(16,185,129,0.15)]' 
+                                        : 'border-slate-200/90 border-b-[8px] border-b-slate-300/80 shadow-[0_6px_12px_rgba(0,0,0,0.08)] hover:border-yellow-400/80 hover:border-b-yellow-500 hover:-translate-y-0.5 hover:shadow-[0_10px_18px_rgba(0,0,0,0.12)]',
+                                    closed ? 'cursor-not-allowed opacity-75' : 'active:translate-y-0.5 active:border-b-[3px] active:shadow-[0_2px_4px_rgba(0,0,0,0.06)]',
                                 ].join(' ')}
                             >
                                 <div
-                                    className="absolute -right-8 -top-8 h-28 w-28 rounded-full opacity-25 blur-sm transition group-hover:opacity-40"
+                                    className="absolute -right-8 -top-8 h-28 w-28 rounded-full opacity-10 blur-sm transition group-hover:opacity-25"
                                     style={{ backgroundColor: team.accentColor ?? '#facc15' }}
                                 />
                                 <div className="relative flex items-start justify-between gap-3">
-                                    <span className="text-5xl">{team.flag ?? '🏆'}</span>
-                                    {active && <CheckCircle2 className="text-emerald-200" />}
+                                    <span className="text-7xl drop-shadow-md select-none transform transition-transform duration-200 group-hover:scale-110">{team.flag ?? '🏆'}</span>
+                                    {active && <CheckCircle2 className="text-emerald-500 drop-shadow-sm" size={24} />}
                                 </div>
                                 <div className="relative mt-5">
-                                    <h3 className="text-2xl font-black text-white">{team.name}</h3>
-                                    {team.nameEn && <p className="mt-1 text-sm font-semibold uppercase tracking-[0.16em] text-white/45">{team.nameEn}</p>}
-                                    <p className="mt-4 text-sm text-white/55">{count} คนเลือกทีมนี้</p>
+                                    <h3 className="text-2xl font-black text-slate-800">{team.name}</h3>
+                                    {team.nameEn && <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{team.nameEn}</p>}
+                                    <p className="mt-4 text-xs font-semibold text-slate-500">{count} คนเลือกทีมนี้</p>
                                     {pickers.length > 0 && (
                                         <div className="mt-4 flex items-center gap-3">
                                             <div className="flex -space-x-2">
@@ -306,16 +308,16 @@ export function WorldCupPredictionClient({
                                                     <AvatarBubble
                                                         key={picker.id}
                                                         picker={picker}
-                                                        className="h-9 w-9 border-2 border-[#46101a]"
+                                                        className="h-8 w-8 border-2 border-white"
                                                     />
                                                 ))}
                                                 {hiddenCount > 0 && (
-                                                    <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#46101a] bg-yellow-300 text-xs font-black text-[#30040b] shadow-lg shadow-black/20">
+                                                    <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-yellow-300 text-[10px] font-black text-[#30040b] shadow-md shadow-black/10">
                                                         +{hiddenCount}
                                                     </div>
                                                 )}
                                             </div>
-                                            <span className="text-xs font-semibold text-white/45">กดดูรายชื่อ</span>
+                                            <span className="text-xs font-semibold text-slate-400">กดดูรายชื่อ</span>
                                         </div>
                                     )}
                                 </div>
