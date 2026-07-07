@@ -51,11 +51,23 @@ type Props = {
 
 function formatThaiDateTime(value: string | null): string {
     if (!value) return 'ยังไม่กำหนดเวลาปิดรับ'
-    return new Intl.DateTimeFormat('th-TH-u-ca-gregory', {
+    const date = new Date(value)
+    const dateStr = new Intl.DateTimeFormat('th-TH-u-ca-gregory', {
         timeZone: 'Asia/Bangkok',
         dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value))
+    }).format(date)
+
+    const timeFormatter = new Intl.DateTimeFormat('th-TH', {
+        timeZone: 'Asia/Bangkok',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+    })
+    const parts = timeFormatter.formatToParts(date)
+    const hours = parts.find(p => p.type === 'hour')?.value ?? '00'
+    const minutes = parts.find(p => p.type === 'minute')?.value ?? '00'
+
+    return `${dateStr} เวลา ${hours}.${minutes} น.`
 }
 
 function formatPrize(value: number): string {
@@ -335,10 +347,16 @@ export function WorldCupPredictionClient({
     return (
         <div className="mx-auto w-full max-w-6xl pb-10">
             {/* KV Image above the card */}
-            <div className="mb-8 flex justify-center">
-                <div className="w-full max-w-[480px] overflow-hidden rounded-[2.1rem] border border-white/15 bg-black/20 shadow-2xl">
+            <div className="mb-8 flex justify-center px-3 sm:px-0">
+                {/* Mobile: 1:1 image */}
+                <div className="block sm:hidden w-full max-w-[440px] overflow-hidden rounded-[1.8rem] border border-white/15 bg-black/20 shadow-2xl">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/events/world-cup-kv.jpg" alt="EBCI World Cup KV" className="w-full h-auto object-cover" />
+                    <img src="/events/world-cup-kv.jpg" alt="EBCI World Cup KV Mobile" className="w-full h-auto object-cover" />
+                </div>
+                {/* Desktop: 16:9 image */}
+                <div className="hidden sm:block w-full max-w-[860px] overflow-hidden rounded-[2rem] border border-white/15 bg-black/20 shadow-2xl">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/events/world-cup-kv-169.jpg" alt="EBCI World Cup KV Desktop" className="w-full h-auto object-cover" />
                 </div>
             </div>
 
@@ -503,11 +521,11 @@ export function WorldCupPredictionClient({
                     </div>
                     <div className="rounded-2xl border border-white/12 bg-black/18 p-4">
                         <p className="font-black text-white">2. เปลี่ยนทีมได้ก่อนปิดรับ</p>
-                        <p className="mt-1 text-xs">สามารถเปลี่ยนคำตอบได้จนถึงเวลา 20:00 น. วันที่ 10 กรกฎาคม 2026</p>
+                        <p className="mt-1 text-xs">สามารถเปลี่ยนคำตอบได้จนถึงเวลา 20.00 น. วันที่ 10 กรกฎาคม 2026</p>
                     </div>
                     <div className="rounded-2xl border border-white/12 bg-black/18 p-4">
                         <p className="font-black text-white">3. หลังปิดรับจะล็อกคำตอบ</p>
-                        <p className="mt-1 text-xs">หลังเวลา 20:00 น. วันที่ 10 กรกฎาคม 2026 จะไม่สามารถเปลี่ยนทีมได้แล้ว</p>
+                        <p className="mt-1 text-xs">หลังเวลา 20.00 น. วันที่ 10 กรกฎาคม 2026 จะไม่สามารถเปลี่ยนทีมได้แล้ว</p>
                     </div>
                     <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/5 p-4">
                         <p className="font-black text-yellow-300">4. รางวัลกิจกรรม 3,000 บาท</p>
