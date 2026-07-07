@@ -464,9 +464,15 @@ export function WorldCupPredictionClient({
                         <p className="text-xs font-black uppercase tracking-[0.24em] text-yellow-200/80">Champion Pick</p>
                         <h2 className="mt-1 text-2xl font-black text-white">เลือกทีมที่คิดว่าจะได้แชมป์</h2>
                     </div>
-                    <p className="text-sm text-white/55">
-                        {closed ? 'ปิดรับคำตอบแล้ว' : 'เปลี่ยนคำตอบได้จนกว่าจะปิดรับ'}
-                    </p>
+                    {!closed ? (
+                        <span className="inline-flex items-center rounded-full bg-yellow-400 px-3.5 py-1.5 text-xs font-black text-[#1a0004] shadow-[0_0_15px_rgba(250,204,21,0.45)] border border-yellow-300 animate-pulse select-none shrink-0">
+                            🔥 เปลี่ยนคำตอบได้จนกว่าจะปิดรับ
+                        </span>
+                    ) : (
+                        <span className="inline-flex items-center rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-black text-white/45 border border-white/5 select-none shrink-0">
+                            🔒 ปิดรับคำตอบแล้ว
+                        </span>
+                    )}
                 </div>
 
                 {closed ? (
