@@ -148,7 +148,7 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'นโยบายการลา',  desc: 'ระเบียบการลาบริษัท',     href: '/portal/leave-policy',    icon: ScrollText },
         // "ส่วนตัว" group — personal data only (profile + slip).
         { label: 'โปรไฟล์',        desc: 'ข้อมูลส่วนตัวและตำแหน่ง',  href: '/portal/profile',        icon: UserRound,       groupLabel: 'ส่วนตัว' },
-        { label: 'ทายบอลโลก',     desc: 'ลุ้นแชมป์เงินรางวัล 5,000 บ. 🏆', href: '/portal/events/world-cup', icon: Sparkles, isEvent: true },
+        { label: 'ทายบอลโลก',     desc: 'ลุ้นแชมป์เงินรางวัล 3,000 บ. 🏆', href: '/portal/events/world-cup', icon: Sparkles, isEvent: true },
         // "บริษัท" group — read-only org-wide info.
         { label: 'ใครไม่อยู่วันนี้', desc: 'ลา · WFH · ออกพื้นที่',     href: '/portal/who-is-out',     icon: UserMinus,       groupLabel: 'บริษัท' },
         { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',   icon: Network },

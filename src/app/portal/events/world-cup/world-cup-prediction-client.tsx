@@ -484,9 +484,9 @@ export function WorldCupPredictionClient({
                         <p className="mt-1 text-xs">หลังเวลา 20:00 น. วันที่ 10 กรกฎาคม 2026 จะไม่สามารถเปลี่ยนทีมได้แล้ว</p>
                     </div>
                     <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/5 p-4">
-                        <p className="font-black text-yellow-300">4. รางวัลกิจกรรม 5,000 บาท</p>
+                        <p className="font-black text-yellow-300">4. รางวัลกิจกรรม 3,000 บาท</p>
                         <ul className="mt-1 list-disc pl-4 text-xs text-yellow-100/90 leading-6">
-                            <li>ทายถูกคนเดียว รับเต็ม 5,000 บาท</li>
+                            <li>ทายถูกคนเดียว รับเต็ม 3,000 บาท</li>
                             <li>ทายถูกหลายคน หารแบ่งรางวัลเท่าๆ กัน</li>
                             <li>ไม่มีใครทายถูกเลย หารเฉลี่ยแบ่งเท่ากันทุกคนที่ส่งคำทาย</li>
                         </ul>
