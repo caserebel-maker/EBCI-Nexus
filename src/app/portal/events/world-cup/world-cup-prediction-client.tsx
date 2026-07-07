@@ -115,24 +115,25 @@ export function WorldCupPredictionClient({
         if (main) {
             const contentDiv = main.querySelector('.overflow-y-auto')
             if (contentDiv) {
-                const originalBg = (contentDiv as HTMLElement).style.backgroundImage
-                const originalBgSize = (contentDiv as HTMLElement).style.backgroundSize
-                const originalBgPos = (contentDiv as HTMLElement).style.backgroundPosition
-                const originalBgRepeat = (contentDiv as HTMLElement).style.backgroundRepeat
-                const originalBgAttachment = (contentDiv as HTMLElement).style.backgroundAttachment
+                const el = contentDiv as HTMLElement
+                const originalBg = el.style.backgroundImage
+                const originalBgSize = el.style.backgroundSize
+                const originalBgPos = el.style.backgroundPosition
+                const originalBgRepeat = el.style.backgroundRepeat
+                const originalBgAttachment = el.style.backgroundAttachment
                 
-                (contentDiv as HTMLElement).style.backgroundImage = "url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1920')"
-                (contentDiv as HTMLElement).style.backgroundSize = 'cover'
-                (contentDiv as HTMLElement).style.backgroundPosition = 'center'
-                (contentDiv as HTMLElement).style.backgroundRepeat = 'no-repeat'
-                (contentDiv as HTMLElement).style.backgroundAttachment = 'fixed'
+                el.style.backgroundImage = "url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1920')"
+                el.style.backgroundSize = 'cover'
+                el.style.backgroundPosition = 'center'
+                el.style.backgroundRepeat = 'no-repeat'
+                el.style.backgroundAttachment = 'fixed'
 
                 return () => {
-                    (contentDiv as HTMLElement).style.backgroundImage = originalBg
-                    (contentDiv as HTMLElement).style.backgroundSize = originalBgSize
-                    (contentDiv as HTMLElement).style.backgroundPosition = originalBgPos
-                    (contentDiv as HTMLElement).style.backgroundRepeat = originalBgRepeat
-                    (contentDiv as HTMLElement).style.backgroundAttachment = originalBgAttachment
+                    el.style.backgroundImage = originalBg
+                    el.style.backgroundSize = originalBgSize
+                    el.style.backgroundPosition = originalBgPos
+                    el.style.backgroundRepeat = originalBgRepeat
+                    el.style.backgroundAttachment = originalBgAttachment
                 }
             }
         }
