@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { CheckCircle2, Clock, Loader2, Sparkles, Trophy, Users, X } from 'lucide-react'
 
 type EventData = {
@@ -109,6 +109,34 @@ export function WorldCupPredictionClient({
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
+
+    useEffect(() => {
+        const main = document.querySelector('main')
+        if (main) {
+            const contentDiv = main.querySelector('.overflow-y-auto')
+            if (contentDiv) {
+                const originalBg = (contentDiv as HTMLElement).style.backgroundImage
+                const originalBgSize = (contentDiv as HTMLElement).style.backgroundSize
+                const originalBgPos = (contentDiv as HTMLElement).style.backgroundPosition
+                const originalBgRepeat = (contentDiv as HTMLElement).style.backgroundRepeat
+                const originalBgAttachment = (contentDiv as HTMLElement).style.backgroundAttachment
+                
+                (contentDiv as HTMLElement).style.backgroundImage = "url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1920')"
+                (contentDiv as HTMLElement).style.backgroundSize = 'cover'
+                (contentDiv as HTMLElement).style.backgroundPosition = 'center'
+                (contentDiv as HTMLElement).style.backgroundRepeat = 'no-repeat'
+                (contentDiv as HTMLElement).style.backgroundAttachment = 'fixed'
+
+                return () => {
+                    (contentDiv as HTMLElement).style.backgroundImage = originalBg
+                    (contentDiv as HTMLElement).style.backgroundSize = originalBgSize
+                    (contentDiv as HTMLElement).style.backgroundPosition = originalBgPos
+                    (contentDiv as HTMLElement).style.backgroundRepeat = originalBgRepeat
+                    (contentDiv as HTMLElement).style.backgroundAttachment = originalBgAttachment
+                }
+            }
+        }
+    }, [])
 
     const closed = isEventClosed(event)
     const selectedTeam = useMemo(
@@ -353,7 +381,7 @@ export function WorldCupPredictionClient({
                                         ? 'border-emerald-300/30 bg-emerald-300/10'
                                         : 'border-rose-500/30 bg-rose-500/10 text-rose-200'
                                 ].join(' ')}>
-                                    <p className="text-sm opacity-75">คำทายของคุณตอนนี้</p>
+                                    <p className="text-sm font-semibold text-white">คำทายของคุณตอนนี้</p>
                                     <p className="mt-1 text-2xl font-black text-white">
                                         <span className="mr-2 text-3xl">{selectedTeam.flag}</span>
                                         {selectedTeam.name}
@@ -405,7 +433,7 @@ export function WorldCupPredictionClient({
                                 <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                                 <h3 className="text-lg font-black text-white">ผู้ที่ยังอยู่ในเส้นทางลุ้นรางวัล ({activeTeams.length} ทีม)</h3>
                             </div>
-                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
                                 {activeTeams.map(team => renderTeamCard(team, true))}
                             </div>
                         </div>
@@ -417,14 +445,14 @@ export function WorldCupPredictionClient({
                                     <div className="h-2 w-2 rounded-full bg-rose-500" />
                                     <h3 className="text-lg font-black text-white/55">ตกรอบไปแล้ว ({eliminatedTeams.length} ทีม)</h3>
                                 </div>
-                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
                                     {eliminatedTeams.map(team => renderTeamCard(team, false))}
                                 </div>
                             </div>
                         )}
                     </div>
                 ) : (
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
                         {teams.map(team => renderTeamCard(team, true))}
                     </div>
                 )}
