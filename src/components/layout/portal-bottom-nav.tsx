@@ -10,7 +10,7 @@ import {
     UserPlus, Activity, DoorOpen,
     MapPin, Briefcase, BarChart3, Wallet, ScrollText, ShieldCheck,
     CalendarHeart, UserMinus, AlertTriangle, UserCheck, MessageSquare,
-    Calendar, GitBranch, MailWarning,
+    Calendar, GitBranch, MailWarning, Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRole, type Role } from '@/contexts/role-context'
@@ -30,6 +30,7 @@ interface MoreItem {
     icon: React.ElementType
     danger?: boolean
     groupLabel?: string // render a small section header above this item
+    isEvent?: boolean
 }
 
 // hr_admin has two variants depending on whether they're in /hradmin or /portal.
@@ -147,7 +148,7 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'นโยบายการลา',  desc: 'ระเบียบการลาบริษัท',     href: '/portal/leave-policy',    icon: ScrollText },
         // "ส่วนตัว" group — personal data only (profile + slip).
         { label: 'โปรไฟล์',        desc: 'ข้อมูลส่วนตัวและตำแหน่ง',  href: '/portal/profile',        icon: UserRound,       groupLabel: 'ส่วนตัว' },
-        { label: 'สลิปของฉัน',     desc: 'ดูสลิปเงินเดือน',         href: '/portal/payroll',        icon: FileText },
+        { label: 'ทายบอลโลก',     desc: 'ลุ้นแชมป์เงินรางวัล 5,000 บ. 🏆', href: '/portal/events/world-cup', icon: Sparkles, isEvent: true },
         // "บริษัท" group — read-only org-wide info.
         { label: 'ใครไม่อยู่วันนี้', desc: 'ลา · WFH · ออกพื้นที่',     href: '/portal/who-is-out',     icon: UserMinus,       groupLabel: 'บริษัท' },
         { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',   icon: Network },
@@ -495,12 +496,15 @@ export function PortalBottomNav({
                                                         </button>
                                                     )
                                                 }
+                                                const isEvent = item.isEvent
                                                 const accentClass = item.accent === 'blue'
                                                     ? 'bg-blue-500/90 hover:bg-blue-500 active:bg-blue-600 ring-1 ring-blue-400/50 shadow-lg shadow-blue-500/20'
                                                     : item.accent === 'amber'
                                                         ? 'bg-amber-500/90 hover:bg-amber-500 active:bg-amber-600 ring-1 ring-amber-400/50 shadow-lg shadow-amber-500/20'
-                                                        : 'hover:bg-white/10 active:bg-white/15'
-                                                const iconBgClass = item.accent ? 'bg-white/20' : 'bg-white/10'
+                                                        : isEvent
+                                                            ? 'ring-2 ring-yellow-400/80 shadow-[0_0_15px_rgba(250,204,21,0.4)] border-yellow-400 bg-yellow-500/10 hover:bg-yellow-500/20 animate-pulse'
+                                                            : 'hover:bg-white/10 active:bg-white/15'
+                                                const iconBgClass = item.accent ? 'bg-white/20' : isEvent ? 'bg-yellow-400/20' : 'bg-white/10'
                                                 const isItemActive = item.href ? pathname?.startsWith(item.href) : false
                                                 return (
                                                     <Link
@@ -510,14 +514,15 @@ export function PortalBottomNav({
                                                         className={cn(
                                                             'flex items-center gap-3 px-3 py-3 min-h-[56px] rounded-xl transition-colors',
                                                             accentClass,
-                                                            !item.accent && isItemActive ? 'bg-white/10' : ''
+                                                            !item.accent && !isEvent && isItemActive ? 'bg-white/10' : ''
                                                         )}
+                                                        style={isEvent ? { border: '1px solid rgba(250,204,21,0.3)' } : undefined}
                                                     >
                                                         <span className={cn('flex items-center justify-center w-9 h-9 rounded-full', iconBgClass)}>
-                                                            <item.icon size={18} className="text-white" />
+                                                            <item.icon size={18} className={isEvent ? 'text-yellow-300 animate-bounce' : 'text-white'} />
                                                         </span>
                                                         <div className="flex-1 min-w-0">
-                                                            <p className="text-white font-semibold text-sm flex items-center gap-1.5">
+                                                            <p className={cn('font-semibold text-sm flex items-center gap-1.5', isEvent ? 'text-yellow-100 font-extrabold' : 'text-white')}>
                                                                 <span>{item.label}</span>
                                                                 {(item.href === '/portal/leave/inbox' || item.href === '/hradmin/leave/inbox') && pendingCount > 0 && (
                                                                     <span className="shrink-0 inline-flex items-center justify-center rounded-full bg-amber-400 text-[#561e23] px-1.5 py-0.5 text-[9px] font-black ring-1 ring-amber-200/50 shadow">
@@ -525,9 +530,9 @@ export function PortalBottomNav({
                                                                     </span>
                                                                 )}
                                                             </p>
-                                                            {item.desc && <p className={cn('text-xs', item.accent ? 'text-white/80' : 'text-white/45')}>{item.desc}</p>}
+                                                            {item.desc && <p className={cn('text-xs', item.accent ? 'text-white/80' : isEvent ? 'text-yellow-200/60 font-semibold' : 'text-white/45')}>{item.desc}</p>}
                                                         </div>
-                                                        <ChevronRight size={14} className={item.accent ? 'text-white/70' : 'text-white/30'} />
+                                                        <ChevronRight size={14} className={item.accent ? 'text-white/70' : isEvent ? 'text-yellow-300/80' : 'text-white/30'} />
                                                     </Link>
                                                 )
                                             })}
