@@ -139,8 +139,8 @@ CROSS JOIN (VALUES
     ('เบลเยียม', 'Belgium', '🇧🇪', 40, '#facc15'),
     ('นอร์เวย์', 'Norway', '🇳🇴', 50, '#1d4ed8'),
     ('อังกฤษ', 'England', '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 60, '#ef4444'),
-    ('ทีมเข้ารอบ 7', 'Quarter-finalist 7', '🏆', 70, '#22c55e'),
-    ('ทีมเข้ารอบ 8', 'Quarter-finalist 8', '🏆', 80, '#14b8a6')
+    ('อาร์เจนตินา', 'Argentina', '🇦🇷', 70, '#7dd3fc'),
+    ('โคลอมเบีย', 'Colombia', '🇨🇴', 80, '#eab308')
 ) AS teams(team_name, team_name_en, flag_emoji, seed_order, accent_color)
 ON CONFLICT (event_id, team_name) DO UPDATE SET
     team_name_en = EXCLUDED.team_name_en,
