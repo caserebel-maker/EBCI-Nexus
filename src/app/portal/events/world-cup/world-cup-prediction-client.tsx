@@ -46,6 +46,7 @@ type Props = {
     teams: TeamData[]
     initialPredictionTeamId: string | null
     totalPredictions: number
+    nonPredictors: PickerData[]
 }
 
 function formatThaiDateTime(value: string | null): string {
@@ -96,6 +97,7 @@ export function WorldCupPredictionClient({
     teams,
     initialPredictionTeamId,
     totalPredictions,
+    nonPredictors,
 }: Props) {
     const [selectedTeamId, setSelectedTeamId] = useState<string | null>(initialPredictionTeamId)
     const [pendingTeamId, setPendingTeamId] = useState<string | null>(null)
@@ -109,6 +111,7 @@ export function WorldCupPredictionClient({
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [showNonPredictorsModal, setShowNonPredictorsModal] = useState(false)
 
     useEffect(() => {
         const main = document.querySelector('main')
@@ -186,7 +189,7 @@ export function WorldCupPredictionClient({
                 disabled={closed || saving || !isTeamActive}
                 onClick={() => setPendingTeamId(team.id)}
                 className={[
-                    'group relative min-h-40 overflow-hidden rounded-3xl border p-5 text-left transition-all duration-150',
+                    'group relative overflow-hidden rounded-[1.8rem] border p-3.5 text-left transition-all duration-150 w-full',
                     isTeamActive 
                         ? 'bg-gradient-to-b from-white via-slate-50 to-slate-200/60'
                         : 'bg-slate-100/40 border-slate-200/60 border-b-2 border-b-slate-300 shadow-none opacity-60 cursor-not-allowed',
@@ -213,52 +216,52 @@ export function WorldCupPredictionClient({
 
                 <div className="relative flex items-start justify-between gap-3">
                     <span className={[
-                        'text-7xl drop-shadow-md select-none transform transition-transform duration-200',
+                        'text-5xl drop-shadow-md select-none transform transition-transform duration-200',
                         isTeamActive ? 'group-hover:scale-110' : 'grayscale opacity-50'
                     ].join(' ')}>{team.flag ?? '🏆'}</span>
-                    {isTeamActive && active && <CheckCircle2 className="text-emerald-500 drop-shadow-sm" size={24} />}
+                    {isTeamActive && active && <CheckCircle2 className="text-emerald-500 drop-shadow-sm" size={18} />}
                 </div>
 
-                <div className="relative mt-5">
+                <div className="relative mt-2.5">
                     <h3 className={[
-                        'text-2xl font-black',
+                        'text-lg font-black leading-tight truncate',
                         isTeamActive ? 'text-slate-800' : 'text-slate-400'
                     ].join(' ')}>{team.name}</h3>
                     {team.nameEn && (
                         <p className={[
-                            'mt-1 text-xs font-semibold uppercase tracking-[0.16em]',
+                            'mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] truncate',
                             isTeamActive ? 'text-slate-400' : 'text-slate-400/60'
                         ].join(' ')}>{team.nameEn}</p>
                     )}
                     
                     <p className={[
-                        'mt-4 text-xs font-semibold',
+                        'mt-2 text-[11px] font-bold leading-none',
                         isTeamActive ? 'text-slate-500' : 'text-slate-400/80'
                     ].join(' ')}>{count} คนเลือกทีมนี้</p>
 
                     {/* Live prize split indicator */}
                     {closed && isTeamActive && count > 0 && (
-                        <div className="mt-3 inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200/50 shadow-sm animate-in fade-in zoom-in-95 duration-200">
-                            💰 ลุ้นส่วนแบ่งคนละ {formatPrize(prizeShare)} บ.
+                        <div className="mt-1.5 inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 border border-emerald-200/50 shadow-sm animate-in fade-in zoom-in-95 duration-200">
+                            💰 ลุ้น {formatPrize(prizeShare)} บ.
                         </div>
                     )}
 
                     {pickers.length > 0 && (
-                        <div className="mt-4 flex items-center gap-3">
-                            <div className="flex -space-x-2">
+                        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                            <div className="flex -space-x-1.5">
                                 {visiblePickers.map(picker => (
                                     <AvatarBubble
                                         key={picker.id}
                                         picker={picker}
                                         className={[
-                                            'h-8 w-8 border-2 border-white',
+                                            'h-6 w-6 border border-white',
                                             isTeamActive ? '' : 'grayscale opacity-40'
                                         ].join(' ')}
                                     />
                                 ))}
                                 {hiddenCount > 0 && (
                                     <div className={[
-                                        'flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-[10px] font-black shadow-md',
+                                        'flex h-6 w-6 items-center justify-center rounded-full border border-white text-[8px] font-black shadow-md',
                                         isTeamActive 
                                             ? 'bg-yellow-300 text-[#30040b] shadow-black/10' 
                                             : 'bg-slate-200 text-slate-400 shadow-none opacity-50'
@@ -268,7 +271,7 @@ export function WorldCupPredictionClient({
                                 )}
                             </div>
                             <span className={[
-                                'text-xs font-semibold',
+                                'text-[10px] font-bold leading-none',
                                 isTeamActive ? 'text-slate-400' : 'text-slate-400/60'
                             ].join(' ')}>กดดูรายชื่อ</span>
                         </div>
@@ -345,7 +348,7 @@ export function WorldCupPredictionClient({
                 <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/15" />
                 <div className="absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15" />
 
-                <div className="relative grid gap-8 p-5 sm:p-8 lg:grid-cols-[1.05fr_.95fr] lg:p-10">
+                <div className="relative grid gap-8 p-3 sm:p-8 lg:grid-cols-[1.05fr_.95fr] lg:p-10">
                     <div className="flex min-h-[520px] flex-col justify-between">
                         <div>
                             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-300/10 px-4 py-2 text-sm font-black uppercase tracking-[0.22em] text-emerald-200">
@@ -369,7 +372,18 @@ export function WorldCupPredictionClient({
                             <div className="rounded-3xl border border-white/15 bg-white/10 p-5 text-white">
                                 <Users className="mb-4 text-emerald-200" />
                                 <p className="text-sm text-white/55">ส่งคำตอบแล้ว</p>
-                                <p className="mt-1 text-3xl font-black">{predictionCount} คน</p>
+                                <div className="mt-1 flex items-baseline justify-between">
+                                    <p className="text-3xl font-black">{predictionCount} คน</p>
+                                    {nonPredictors.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowNonPredictorsModal(true)}
+                                            className="text-xs font-bold text-yellow-300 hover:text-yellow-200 hover:underline flex items-center gap-1 active:scale-95 transition-all"
+                                        >
+                                            ยังไม่ทาย ({nonPredictors.length})
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             <div className="rounded-3xl border border-white/15 bg-white/10 p-5 text-white">
                                 <Clock className="mb-4 text-sky-200" />
@@ -426,7 +440,7 @@ export function WorldCupPredictionClient({
                 </div>
             </section>
 
-            <section className="mt-6 rounded-[2rem] border border-white/15 bg-white/10 p-5 shadow-xl shadow-black/10 backdrop-blur sm:p-7">
+            <section className="mt-6 rounded-[2rem] border border-white/15 bg-white/10 p-3 shadow-xl shadow-black/10 backdrop-blur sm:p-7">
                 <div className="mb-5 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
                     <div>
                         <p className="text-xs font-black uppercase tracking-[0.24em] text-yellow-200/80">Champion Pick</p>
@@ -561,6 +575,50 @@ export function WorldCupPredictionClient({
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {showNonPredictorsModal && (
+                <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowNonPredictorsModal(false)} />
+                    <div className="relative w-full max-w-md overflow-hidden rounded-[2.1rem] border border-white/18 bg-[#1f0308] p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+                        <button
+                            type="button; cursor-pointer"
+                            onClick={() => setShowNonPredictorsModal(false)}
+                            className="absolute right-4 top-4 rounded-full p-2 text-white/55 hover:bg-white/10 hover:text-white"
+                        >
+                            <X size={20} />
+                        </button>
+                        <div className="text-center">
+                            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-yellow-300/15 text-4xl text-yellow-300">
+                                <Users size={32} />
+                            </div>
+                            <h3 className="mt-5 text-2xl font-black text-white">ยังไม่ได้ทายคำตอบ</h3>
+                            <p className="mt-1 text-sm text-white/60">
+                                มีทั้งหมด <span className="font-black text-yellow-200">{nonPredictors.length} คน</span> ที่ยังไม่ส่งคำทำนาย
+                            </p>
+                        </div>
+                        <div className="mt-6 max-h-72 space-y-2 overflow-auto pr-1">
+                            {nonPredictors.map(picker => (
+                                <div key={picker.id} className="flex items-center gap-3 rounded-2xl bg-white/8 p-2.5">
+                                    <AvatarBubble picker={picker} className="h-9 w-9" />
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-black text-white">{picker.name}</p>
+                                        {picker.code && (
+                                            <p className="text-xs font-semibold text-white/45">รหัสพนักงาน: {picker.code}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setShowNonPredictorsModal(false)}
+                            className="mt-6 w-full rounded-2xl border border-white/15 bg-white/10 py-3 font-black text-white/80 hover:bg-white/15"
+                        >
+                            ปิดหน้าต่าง
+                        </button>
                     </div>
                 </div>
             )}

@@ -85,12 +85,12 @@ export default async function WorldCupEventPage() {
     }
 
     const event = eventData as EventRow
-    const [employeeRes, teamsRes, myPredictionRes, predictionsRes] = await Promise.all([
+    const [employeesRes, teamsRes, myPredictionRes, predictionsRes] = await Promise.all([
         supabaseAdmin
             .from('employees')
             .select('id, first_name_th, last_name_th, nickname, employee_code, department, position, photo_url')
-            .eq('id', employeeId)
-            .maybeSingle(),
+            .eq('status', 'active')
+            .order('employee_code', { ascending: true }),
         supabaseAdmin
             .from('world_cup_teams')
             .select('id, team_name, team_name_en, flag_emoji, seed_order, accent_color, is_active')
@@ -108,19 +108,18 @@ export default async function WorldCupEventPage() {
             .eq('event_id', event.id),
     ])
 
-    const employee = (employeeRes.data as EmployeeRow | null) ?? null
+    const allEmployees = (employeesRes.data ?? []) as EmployeeRow[]
+    const employee = allEmployees.find(emp => emp.id === employeeId) ?? null
     const teams = (teamsRes.data ?? []) as TeamRow[]
     const myPrediction = (myPredictionRes.data as PredictionRow | null) ?? null
     const predictions = (predictionsRes.data ?? []) as PredictionRow[]
-    const predictionEmployeeIds = Array.from(new Set(predictions.map(prediction => prediction.employee_id).filter(Boolean)))
-    const predictionEmployeesRes = predictionEmployeeIds.length > 0
-        ? await supabaseAdmin
-            .from('employees')
-            .select('id, first_name_th, last_name_th, nickname, employee_code, department, position, photo_url')
-            .in('id', predictionEmployeeIds)
-        : { data: [] }
-    const predictionEmployees = ((predictionEmployeesRes.data ?? []) as EmployeeRow[])
-    const employeeById = new Map(predictionEmployees.map(emp => [emp.id, emp]))
+    
+    const employeeById = new Map(allEmployees.map(emp => [emp.id, emp]))
+    
+    // Find active employees who have NOT predicted
+    const predictedEmployeeIds = new Set(predictions.map(p => p.employee_id).filter(Boolean))
+    const nonPredictors = allEmployees.filter(emp => !predictedEmployeeIds.has(emp.id))
+
     const pickersByTeam = predictions.reduce<Record<string, Array<{
         id: string
         name: string
@@ -171,6 +170,13 @@ export default async function WorldCupEventPage() {
             }))}
             initialPredictionTeamId={myPrediction?.team_id ?? null}
             totalPredictions={predictions.length}
+            nonPredictors={nonPredictors.map(emp => ({
+                id: emp.id,
+                name: buildDisplayName(emp),
+                code: emp.employee_code ?? null,
+                avatarUrl: emp.photo_url ?? null,
+                initials: employeeInitials(emp),
+            }))}
         />
     )
 }
