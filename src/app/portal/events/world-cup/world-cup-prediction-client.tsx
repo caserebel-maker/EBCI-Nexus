@@ -113,27 +113,38 @@ export function WorldCupPredictionClient({
     useEffect(() => {
         const main = document.querySelector('main')
         if (main) {
-            const contentDiv = main.querySelector('.overflow-y-auto')
-            if (contentDiv) {
-                const el = contentDiv as HTMLElement
-                const originalBg = el.style.backgroundImage
-                const originalBgSize = el.style.backgroundSize
-                const originalBgPos = el.style.backgroundPosition
-                const originalBgRepeat = el.style.backgroundRepeat
-                const originalBgAttachment = el.style.backgroundAttachment
-                
-                el.style.backgroundImage = "url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1920')"
-                el.style.backgroundSize = 'cover'
-                el.style.backgroundPosition = 'center'
-                el.style.backgroundRepeat = 'no-repeat'
-                el.style.backgroundAttachment = 'fixed'
+            const shellContainer = (main.closest('.bg-brand-gradient') as HTMLElement) || (main.parentElement as HTMLElement)
+            const contentDiv = main.querySelector('.overflow-y-auto') as HTMLElement
 
-                return () => {
-                    el.style.backgroundImage = originalBg
-                    el.style.backgroundSize = originalBgSize
-                    el.style.backgroundPosition = originalBgPos
-                    el.style.backgroundRepeat = originalBgRepeat
-                    el.style.backgroundAttachment = originalBgAttachment
+            let originalShellBg = ''
+            let originalShellBgSize = ''
+            let originalContentBg = ''
+            let originalContentBgSize = ''
+
+            if (shellContainer) {
+                originalShellBg = shellContainer.style.background
+                originalShellBgSize = shellContainer.style.backgroundSize
+
+                shellContainer.style.background = "url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1920') no-repeat center center fixed"
+                shellContainer.style.backgroundSize = 'cover'
+            }
+
+            if (contentDiv) {
+                originalContentBg = contentDiv.style.background
+                originalContentBgSize = contentDiv.style.backgroundSize
+
+                contentDiv.style.background = "url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1920') no-repeat center center fixed"
+                contentDiv.style.backgroundSize = 'cover'
+            }
+
+            return () => {
+                if (shellContainer) {
+                    shellContainer.style.background = originalShellBg
+                    shellContainer.style.backgroundSize = originalShellBgSize
+                }
+                if (contentDiv) {
+                    contentDiv.style.background = originalContentBg
+                    contentDiv.style.backgroundSize = originalContentBgSize
                 }
             }
         }
