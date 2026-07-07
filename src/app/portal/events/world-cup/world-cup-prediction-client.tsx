@@ -184,7 +184,7 @@ export function WorldCupPredictionClient({
             <div className="mb-8 flex justify-center">
                 <div className="w-full max-w-[480px] overflow-hidden rounded-[2.5rem] border border-white/15 bg-black/20 shadow-2xl">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/events/world-cup-kv.png" alt="EBCI World Cup KV" className="w-full h-auto object-cover" />
+                    <img src="/events/world-cup-kv.jpg" alt="EBCI World Cup KV" className="w-full h-auto object-cover" />
                 </div>
             </div>
 
