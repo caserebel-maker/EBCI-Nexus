@@ -325,6 +325,34 @@ export function WorldCupPredictionClient({
                 </div>
             </section>
 
+            <section className="mt-6 rounded-[2rem] border border-yellow-300/20 bg-gradient-to-br from-yellow-300/12 via-white/8 to-emerald-300/10 p-5 shadow-xl shadow-black/10 backdrop-blur sm:p-7">
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-[0.24em] text-yellow-200/80">Event Rules</p>
+                        <h2 className="mt-2 text-2xl font-black text-white">กติกาการทายแชมป์</h2>
+                    </div>
+                    <div className="inline-flex w-fit items-center gap-2 rounded-full border border-yellow-200/25 bg-yellow-300/10 px-4 py-2 text-sm font-black text-yellow-100">
+                        <Clock size={16} />
+                        ปิดรับ {formatThaiDateTime(event.closesAt)}
+                    </div>
+                </div>
+
+                <div className="mt-5 grid gap-3 text-sm leading-7 text-white/75 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-white/12 bg-black/18 p-4">
+                        <p className="font-black text-white">1. เลือกได้คนละ 1 ทีม</p>
+                        <p className="mt-1">ให้เลือกทีมที่คิดว่าจะได้แชมป์ฟุตบอลโลก 2026 เพียงทีมเดียวต่อคน</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/12 bg-black/18 p-4">
+                        <p className="font-black text-white">2. เปลี่ยนทีมได้ก่อนปิดรับ</p>
+                        <p className="mt-1">สามารถเปลี่ยนคำตอบได้จนถึงเวลา 20:00 น. วันที่ 10 กรกฎาคม 2026</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/12 bg-black/18 p-4">
+                        <p className="font-black text-white">3. หลังปิดรับจะล็อกคำตอบ</p>
+                        <p className="mt-1">หลังเวลา 20:00 น. วันที่ 10 กรกฎาคม 2026 จะไม่สามารถเปลี่ยนทีมได้แล้ว</p>
+                    </div>
+                </div>
+            </section>
+
             {pendingTeam && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm">
                     <div className="w-full max-w-md overflow-hidden rounded-[2rem] border border-white/15 bg-[#3a0711] shadow-2xl shadow-black/40">
