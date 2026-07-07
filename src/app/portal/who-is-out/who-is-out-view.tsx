@@ -11,6 +11,7 @@ interface Entry {
     nickname: string | null
     department: string | null
     position: string | null
+    workLocation: string | null
     kind: 'leave' | 'wfh' | 'field'
     statusLabel: string
     isHalfDay: boolean
@@ -36,6 +37,16 @@ const SECTION_META: Array<{
     { key: 'leave', title: 'ลา',          Icon: Palmtree, color: '#86efac', bg: 'rgba(74,222,128,0.12)',  border: 'rgba(74,222,128,0.3)' },
     { key: 'field', title: 'ออกพื้นที่',  Icon: Plane,    color: '#fdba74', bg: 'rgba(251,146,60,0.12)',  border: 'rgba(251,146,60,0.3)' },
 ]
+
+function getWorkLocationBadge(workLocation: string | null) {
+    if (workLocation === 'johnson') {
+        return { label: 'จอห์นสัน', className: 'bg-orange-500/15 text-orange-200 border-orange-300/30', Icon: MapPin }
+    }
+    if (workLocation === 'saraburi') {
+        return { label: 'สระบุรี (WFH)', className: 'bg-blue-500/15 text-blue-200 border-blue-300/30', Icon: Home }
+    }
+    return null
+}
 
 export function WhoIsOutView({ initialEntries }: Props) {
     const [filter, setFilter] = useState<'all' | 'wfh' | 'leave' | 'field'>('all')
@@ -196,6 +207,7 @@ function PersonRow({
     sectionStyle: typeof SECTION_META[number]
 }) {
     const display = formatEmployeeName(e, 'พนักงาน')
+    const locationBadge = getWorkLocationBadge(e.workLocation)
 
     return (
         <div className="px-4 py-3 flex items-start gap-3">
@@ -223,6 +235,12 @@ function PersonRow({
                 </p>
                 {/* Status + extras */}
                 <div className="flex flex-wrap items-center gap-2 pt-1">
+                    {locationBadge && (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.7rem] font-semibold border ${locationBadge.className}`}>
+                            <locationBadge.Icon size={11} />
+                            {locationBadge.label}
+                        </span>
+                    )}
                     <span
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.7rem] font-semibold"
                         style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}

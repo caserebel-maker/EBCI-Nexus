@@ -21,6 +21,7 @@ import { bangkokTodayIso } from '@/lib/leave-validations'
  */
 
 export type WhoIsOutKind = 'leave' | 'wfh' | 'field'
+export type WhoIsOutWorkLocation = 'johnson' | 'saraburi' | string | null
 
 export interface WhoIsOutEntry {
     employeeId: string
@@ -29,6 +30,7 @@ export interface WhoIsOutEntry {
     nickname: string | null
     department: string | null
     position: string | null
+    workLocation: WhoIsOutWorkLocation
     /** Sort key — leave/wfh come first (planned), field last (ad-hoc). */
     kind: WhoIsOutKind
     /** Display label used in the badge: "ลาป่วย" / "ลากิจ" / "WFH" /
@@ -68,7 +70,14 @@ interface EmployeeRow {
     nickname: string | null
     department: string | null
     position: string | null
+    work_location: string | null
     photo_url: string | null
+}
+
+const PERMANENT_NON_HEAD_OFFICE_LOCATIONS = new Set(['johnson', 'saraburi'])
+
+function isPermanentNonHeadOffice(emp: EmployeeRow | undefined): boolean {
+    return !!emp?.work_location && PERMANENT_NON_HEAD_OFFICE_LOCATIONS.has(emp.work_location)
 }
 
 /**
@@ -125,7 +134,7 @@ export async function fetchWhoIsOutToday(): Promise<WhoIsOutEntry[]> {
 
     const { data: empData } = await supabaseAdmin
         .from('employees')
-        .select('id, first_name_th, last_name_th, nickname, department, position, photo_url')
+        .select('id, first_name_th, last_name_th, nickname, department, position, work_location, photo_url')
         .in('id', allEmpIds)
         .eq('status', 'active')
     const empMap = new Map<string, EmployeeRow>(
@@ -174,6 +183,7 @@ export async function fetchWhoIsOutToday(): Promise<WhoIsOutEntry[]> {
             nickname: emp.nickname,
             department: emp.department,
             position: emp.position,
+            workLocation: emp.work_location,
             kind: 'leave',
             statusLabel: `${baseLabel}${halfSuffix}`,
             isHalfDay: half,
@@ -188,6 +198,7 @@ export async function fetchWhoIsOutToday(): Promise<WhoIsOutEntry[]> {
         if (fieldEmployeeIds.has(r.employee_id)) continue
         const emp = empMap.get(r.employee_id)
         if (!emp) continue
+        if (isPermanentNonHeadOffice(emp)) continue
         entries.push({
             employeeId: r.employee_id,
             firstNameTh: emp.first_name_th ?? '',
@@ -195,6 +206,7 @@ export async function fetchWhoIsOutToday(): Promise<WhoIsOutEntry[]> {
             nickname: emp.nickname,
             department: emp.department,
             position: emp.position,
+            workLocation: emp.work_location,
             kind: 'wfh',
             statusLabel: 'WFH',
             isHalfDay: false,
@@ -212,6 +224,7 @@ export async function fetchWhoIsOutToday(): Promise<WhoIsOutEntry[]> {
         seenField.add(r.employee_id)
         const emp = empMap.get(r.employee_id)
         if (!emp) continue
+        if (isPermanentNonHeadOffice(emp)) continue
         entries.push({
             employeeId: r.employee_id,
             firstNameTh: emp.first_name_th ?? '',
@@ -219,6 +232,7 @@ export async function fetchWhoIsOutToday(): Promise<WhoIsOutEntry[]> {
             nickname: emp.nickname,
             department: emp.department,
             position: emp.position,
+            workLocation: emp.work_location,
             kind: 'field',
             statusLabel: 'ออกพื้นที่',
             isHalfDay: false,

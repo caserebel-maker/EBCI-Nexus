@@ -31,6 +31,7 @@ interface Entry {
     nickname: string | null
     department: string | null
     position: string | null
+    workLocation: string | null
     kind: Kind
     statusLabel: string
     isHalfDay: boolean
@@ -41,6 +42,16 @@ interface Entry {
 }
 
 const PREVIEW_COUNT = 4
+
+function getWorkLocationBadge(workLocation: string | null) {
+    if (workLocation === 'johnson') {
+        return { label: 'จอห์นสัน', className: 'bg-orange-500/15 text-orange-200 border-orange-300/30', Icon: MapPin }
+    }
+    if (workLocation === 'saraburi') {
+        return { label: 'สระบุรี (WFH)', className: 'bg-blue-500/15 text-blue-200 border-blue-300/30', Icon: Home }
+    }
+    return null
+}
 
 const KIND_STYLE: Record<Kind, { bg: string; color: string; border: string; Icon: React.ElementType }> = {
     leave: { bg: 'rgba(74,222,128,0.12)', color: '#86efac', border: 'rgba(74,222,128,0.3)', Icon: Palmtree },
@@ -144,6 +155,7 @@ export function WhoIsOutWidget() {
                     {previewEntries.map(e => {
                         const s = KIND_STYLE[e.kind]
                         const displayName = formatEmployeeName(e, 'พนักงาน')
+                        const locationBadge = getWorkLocationBadge(e.workLocation)
                         return (
                             <div key={`${e.employeeId}-${e.kind}`} className="px-4 py-2.5 flex items-center gap-3">
                                 {e.photoUrl ? (
@@ -162,6 +174,12 @@ export function WhoIsOutWidget() {
                                     </span>
                                 )}
                                 <span className="text-sm text-white font-medium truncate flex-1">{displayName}</span>
+                                {locationBadge && (
+                                    <span className={`hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.65rem] font-semibold whitespace-nowrap shrink-0 border ${locationBadge.className}`}>
+                                        <locationBadge.Icon size={10} />
+                                        {locationBadge.label}
+                                    </span>
+                                )}
                                 <span
                                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.7rem] font-semibold whitespace-nowrap shrink-0"
                                     style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}
@@ -350,6 +368,7 @@ function PersonRow({
     sectionStyle: typeof KIND_STYLE[Kind]
 }) {
     const display = formatEmployeeName(e, 'พนักงาน')
+    const locationBadge = getWorkLocationBadge(e.workLocation)
 
     return (
         <div className="px-3 py-2.5 flex items-start gap-3 min-w-0">
@@ -376,6 +395,12 @@ function PersonRow({
                     </p>
                 )}
                 <div className="flex flex-wrap items-center gap-2 pt-1">
+                    {locationBadge && (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.7rem] font-semibold border ${locationBadge.className}`}>
+                            <locationBadge.Icon size={11} />
+                            {locationBadge.label}
+                        </span>
+                    )}
                     <span
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.7rem] font-semibold"
                         style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}
