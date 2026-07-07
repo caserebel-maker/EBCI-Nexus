@@ -380,27 +380,55 @@ export function InboxView() {
             )}
 
             {/* Content */}
-            {loading && items.length === 0 ? (
-                <div className="p-10 text-center text-white/50" style={glass}>
-                    <Loader2 size={26} className="mx-auto mb-2 animate-spin text-white/40" />
-                    กำลังโหลด…
-                </div>
-            ) : visible.length === 0 ? (
-                <EmptyState />
+            {activeTab === 'pending' ? (
+                loading && items.length === 0 ? (
+                    <div className="p-10 text-center text-white/50" style={glass}>
+                        <Loader2 size={26} className="mx-auto mb-2 animate-spin text-white/40" />
+                        กำลังโหลด…
+                    </div>
+                ) : visible.length === 0 ? (
+                    <EmptyState />
+                ) : (
+                    <ul className="space-y-3">
+                        {visible.map(item => (
+                            <li key={item.id}>
+                                <RequestCard
+                                    item={item}
+                                    expanded={expandedId === item.id}
+                                    onToggleExpand={() => setExpandedId(cur => cur === item.id ? null : item.id)}
+                                    onApproveClick={() => setApproveTarget(item)}
+                                    onRejectClick={() => setRejectTarget(item)}
+                                />
+                            </li>
+                        ))}
+                    </ul>
+                )
             ) : (
-                <ul className="space-y-3">
-                    {visible.map(item => (
-                        <li key={item.id}>
-                            <RequestCard
-                                item={item}
-                                expanded={expandedId === item.id}
-                                onToggleExpand={() => setExpandedId(cur => cur === item.id ? null : item.id)}
-                                onApproveClick={() => setApproveTarget(item)}
-                                onRejectClick={() => setRejectTarget(item)}
-                            />
-                        </li>
-                    ))}
-                </ul>
+                loadingHistory && historyItems.length === 0 ? (
+                    <div className="p-10 text-center text-white/50" style={glass}>
+                        <Loader2 size={26} className="mx-auto mb-2 animate-spin text-white/40" />
+                        กำลังโหลดประวัติวันลา…
+                    </div>
+                ) : historyItems.length === 0 ? (
+                    <div className="p-10 text-center text-white/50" style={glass}>
+                        ไม่มีประวัติวันลาของทีมในปีนี้
+                    </div>
+                ) : (
+                    <ul className="space-y-3">
+                        {historyItems.map(item => (
+                            <li key={item.id}>
+                                <RequestCard
+                                    item={item}
+                                    isHistory
+                                    expanded={expandedId === item.id}
+                                    onToggleExpand={() => setExpandedId(cur => cur === item.id ? null : item.id)}
+                                    onApproveClick={() => {}}
+                                    onRejectClick={() => {}}
+                                />
+                            </li>
+                        ))}
+                    </ul>
+                )
             )}
 
             {/* Modals */}
