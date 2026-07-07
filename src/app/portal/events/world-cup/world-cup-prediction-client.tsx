@@ -125,7 +125,7 @@ export function WorldCupPredictionClient({
                 originalShellBg = shellContainer.style.background
                 originalShellBgSize = shellContainer.style.backgroundSize
 
-                shellContainer.style.background = "url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1920') no-repeat center center fixed"
+                shellContainer.style.background = "linear-gradient(rgba(4, 47, 31, 0.65), rgba(4, 47, 31, 0.8)), url('/events/world-cup-bg.jpg') no-repeat center center fixed"
                 shellContainer.style.backgroundSize = 'cover'
             }
 
@@ -133,7 +133,7 @@ export function WorldCupPredictionClient({
                 originalContentBg = contentDiv.style.background
                 originalContentBgSize = contentDiv.style.backgroundSize
 
-                contentDiv.style.background = "url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1920') no-repeat center center fixed"
+                contentDiv.style.background = "linear-gradient(rgba(4, 47, 31, 0.65), rgba(4, 47, 31, 0.8)), url('/events/world-cup-bg.jpg') no-repeat center center fixed"
                 contentDiv.style.backgroundSize = 'cover'
             }
 
