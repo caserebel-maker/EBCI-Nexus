@@ -171,9 +171,9 @@ export default async function WorldCupEventPage() {
             initialPredictionTeamId={myPrediction?.team_id ?? null}
             totalPredictions={predictions.length}
             nonPredictors={nonPredictors.map(emp => ({
-                id: emp.id,
+                id: emp.id!,
                 name: buildDisplayName(emp),
-                code: emp.employee_code ?? null,
+                employeeCode: emp.employee_code ?? null,
                 avatarUrl: emp.photo_url ?? null,
                 initials: employeeInitials(emp),
             }))}

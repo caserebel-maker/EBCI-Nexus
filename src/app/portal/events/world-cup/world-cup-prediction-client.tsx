@@ -605,8 +605,8 @@ export function WorldCupPredictionClient({
                                     <AvatarBubble picker={picker} className="h-9 w-9" />
                                     <div className="min-w-0 flex-1">
                                         <p className="truncate text-sm font-black text-white">{picker.name}</p>
-                                        {picker.code && (
-                                            <p className="text-xs font-semibold text-white/45">รหัสพนักงาน: {picker.code}</p>
+                                        {picker.employeeCode && (
+                                            <p className="text-xs font-semibold text-white/45">รหัสพนักงาน: {picker.employeeCode}</p>
                                         )}
                                     </div>
                                 </div>
