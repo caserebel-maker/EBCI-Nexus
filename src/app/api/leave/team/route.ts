@@ -5,18 +5,24 @@ import { getSession } from '@/lib/auth'
 // GET /api/leave/team — get all leave requests for the manager's subordinates
 export async function GET(req: NextRequest) {
     const session = await getSession()
-    if (!session || (session.role !== 'manager' && session.role !== 'hr_admin')) {
+    if (!session) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
     const year = searchParams.get('year') ? parseInt(searchParams.get('year')!) : new Date().getFullYear()
+    const view = searchParams.get('view')
 
     try {
         let subordinateIds: string[] = []
+        let filterSubordinates = false
 
-        if (session.role === 'manager') {
+        if (session.role === 'manager' || session.role === 'employee' || view === 'subordinates') {
+            filterSubordinates = true
+        }
+
+        if (filterSubordinates) {
             const managerEmployee = await prisma.employee.findFirst({
                 where: { userId: session.id },
                 include: { subordinates: { select: { id: true } } },
@@ -27,7 +33,7 @@ export async function GET(req: NextRequest) {
 
         const requests = await prisma.leaveRequest.findMany({
             where: {
-                ...(session.role === 'manager' ? { employeeId: { in: subordinateIds } } : {}),
+                ...(filterSubordinates ? { employeeId: { in: subordinateIds } } : {}),
                 ...(status ? { status } : {}),
                 startDate: { gte: new Date(`${year}-01-01`), lt: new Date(`${year + 1}-01-01`) },
             },

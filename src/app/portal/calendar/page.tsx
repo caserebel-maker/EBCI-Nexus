@@ -31,6 +31,15 @@ export interface CalendarBooking {
     bookedByName: string
 }
 
+export interface TeamLeaveDay {
+    date: string   // 'YYYY-MM-DD'
+    leaveType: string
+    status: string
+    employeeName: string
+    employeeId: string
+    photoUrl: string | null
+}
+
 export default async function CalendarPage() {
     const session = await getSession()
     if (!session) redirect('/login')
@@ -39,6 +48,7 @@ export default async function CalendarPage() {
     let holidays: Holiday[] = []
     let leaveDays: LeaveDay[] = []
     let bookings: CalendarBooking[] = []
+    let teamLeaveDays: TeamLeaveDay[] = []
 
     // Fetch holidays for this year
     try {
@@ -80,6 +90,52 @@ export default async function CalendarPage() {
         console.error('[calendar] leave requests fetch failed:', e)
     }
 
+    // Fetch approved leave requests for subordinates (for managers)
+    try {
+        const emp = await prisma.employee.findFirst({
+            where: { userId: session.id },
+            include: { subordinates: { select: { id: true, firstNameTH: true, nickname: true } } }
+        })
+        if (emp && emp.subordinates.length > 0) {
+            const subordinateIds = emp.subordinates.map(s => s.id)
+            const teamReqs = await prisma.leaveRequest.findMany({
+                where: {
+                    employeeId: { in: subordinateIds },
+                    status: 'approved',
+                },
+                select: {
+                    employeeId: true,
+                    employee: { select: { firstNameTH: true, nickname: true, photoUrl: true } },
+                    leaveType: true,
+                    startDate: true,
+                    endDate: true,
+                    status: true,
+                },
+            })
+
+            for (const req of teamReqs) {
+                const start = new Date(req.startDate)
+                const end = new Date(req.endDate)
+                const cursor = new Date(start)
+                const name = req.employee.nickname || req.employee.firstNameTH || 'พนักงาน'
+                while (cursor <= end) {
+                    const dateStr = cursor.toISOString().slice(0, 10)
+                    teamLeaveDays.push({
+                        date: dateStr,
+                        leaveType: req.leaveType,
+                        status: req.status,
+                        employeeName: name,
+                        employeeId: req.employeeId,
+                        photoUrl: req.employee.photoUrl ?? null,
+                    })
+                    cursor.setDate(cursor.getDate() + 1)
+                }
+            }
+        }
+    } catch (e) {
+        console.error('[calendar] team leave requests fetch failed:', e)
+    }
+
     // Active room bookings within ±30 days of today. Booking horizon is 7
     // days so this window comfortably covers any active booking the user
     // could navigate to from the calendar.
@@ -115,7 +171,7 @@ export default async function CalendarPage() {
             <div className="max-w-5xl mx-auto pb-3">
                 <LeaveWfhSubNav />
             </div>
-            <CalendarClient holidays={holidays} leaveDays={leaveDays} bookings={bookings} />
+            <CalendarClient holidays={holidays} leaveDays={leaveDays} bookings={bookings} teamLeaveDays={teamLeaveDays} />
         </>
     )
 }

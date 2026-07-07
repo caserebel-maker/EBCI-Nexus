@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, X, DoorOpen, Calendar as CalendarIcon } from 'lucide-react'
-import type { Holiday, LeaveDay, CalendarBooking } from './page'
+import type { Holiday, LeaveDay, CalendarBooking, TeamLeaveDay } from './page'
 import { formatBangkokTime } from '@/lib/datetime'
 
 interface Props {
     holidays: Holiday[]
     leaveDays: LeaveDay[]
     bookings: CalendarBooking[]
+    teamLeaveDays?: TeamLeaveDay[]
 }
 
 const DAY_HEADERS = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
@@ -60,7 +61,7 @@ const LEAVE_CONFIG: Record<string, { label: string; color: string; emoji: string
 // CELL_PRIORITY wins as the bg. The others render as small accent
 // dots in the cell's bottom-right corner so the user still sees
 // "this day has multiple things going on".
-type CellKind = 'public' | 'religious' | 'company' | 'wfh' | 'work' | 'leave' | 'booking'
+type CellKind = 'public' | 'religious' | 'company' | 'wfh' | 'work' | 'leave' | 'booking' | 'teamLeave'
 
 const CELL_PALETTE: Record<CellKind, { bg: string; text: string; label: string }> = {
     public:    { bg: '#F4F4F5', text: '#000000', label: 'นักขัตฤกษ์' },     // white / black
@@ -70,9 +71,10 @@ const CELL_PALETTE: Record<CellKind, { bg: string; text: string; label: string }
     work:      { bg: '#9333EA', text: '#FFFFFF', label: 'วันทำงาน (ออฟฟิศ)' }, // vibrant purple / white
     leave:     { bg: '#34D399', text: '#34D399', label: 'ใบลา' },            // green outline
     booking:   { bg: '#EC4899', text: '#FFFFFF', label: 'จองห้องประชุม' },   // pink / white
+    teamLeave: { bg: '#8B5CF6', text: '#A78BFA', label: 'วันลาของทีม' },     // purple dashed outline
 }
 
-const CELL_PRIORITY: CellKind[] = ['public', 'religious', 'company', 'wfh', 'work', 'leave', 'booking']
+const CELL_PRIORITY: CellKind[] = ['public', 'religious', 'company', 'wfh', 'work', 'leave', 'booking', 'teamLeave']
 
 /** Map a holidays.type value to a CellKind (or null if not a calendar
  *  bg-painter — defensive for legacy/imported types we don't render). */
@@ -111,6 +113,7 @@ function getShortCellLabel(
     dayHolidays: Holiday[],
     dayLeaves: LeaveDay[],
     dayBookings: CalendarBooking[],
+    dayTeamLeaves: TeamLeaveDay[] = [],
 ): string {
     if (dayHolidays.length > 0) {
         const h = dayHolidays[0]
@@ -126,14 +129,23 @@ function getShortCellLabel(
     if (dayBookings.length > 0) {
         return 'ห้องประชุม'
     }
+    if (dayTeamLeaves.length > 0) {
+        if (dayTeamLeaves.length === 1) {
+            return `${dayTeamLeaves[0].employeeName} ลา`
+        }
+        return `ลา ${dayTeamLeaves.length} คน`
+    }
     return ''
 }
 
-export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
+export function CalendarClient({ holidays, leaveDays, bookings, teamLeaveDays = [] }: Props) {
     const today = new Date()
     const [viewYear, setViewYear] = useState(today.getFullYear())
     const [viewMonth, setViewMonth] = useState(today.getMonth())
     const [selected, setSelected] = useState<string | null>(null)
+    const [showTeamLeaves, setShowTeamLeaves] = useState(true)
+
+    const hasTeamLeaves = teamLeaveDays.length > 0
 
     // Build lookup maps once per render — small data so re-running is fine.
     const holidayMap = useMemo(() => {
@@ -166,6 +178,16 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
         return m
     }, [bookings])
 
+    const teamLeaveMap = useMemo(() => {
+        const m = new Map<string, TeamLeaveDay[]>()
+        for (const l of teamLeaveDays) {
+            const arr = m.get(l.date) ?? []
+            arr.push(l)
+            m.set(l.date, arr)
+        }
+        return m
+    }, [teamLeaveDays])
+
     // Build the month grid (leading + trailing nulls so weeks line up).
     const firstDow = new Date(viewYear, viewMonth, 1).getDay()
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
@@ -191,14 +213,27 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
     return (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 pb-8 lg:h-[calc(100vh-260px)] lg:min-h-[560px] lg:pb-0 xl:h-[calc(100vh-245px)]">
             {/* Header */}
-            <div className="flex shrink-0 items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#ad5f6c]/20 bg-[#882136]/60 text-[#ad5f6c] lg:h-8 lg:w-8">
-                    <CalendarIcon size={18} />
+            <div className="flex shrink-0 items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#ad5f6c]/20 bg-[#882136]/60 text-[#ad5f6c] lg:h-8 lg:w-8">
+                        <CalendarIcon size={18} />
+                    </div>
+                    <div>
+                        <h1 className="text-xl font-bold text-white lg:text-lg">ปฏิทิน</h1>
+                        <p className="text-sm text-white/50 lg:text-xs">วันหยุดบริษัท · ใบลาของฉัน · ห้องประชุมที่จอง</p>
+                    </div>
                 </div>
-                <div>
-                    <h1 className="text-xl font-bold text-white lg:text-lg">ปฏิทิน</h1>
-                    <p className="text-sm text-white/50 lg:text-xs">วันหยุดบริษัท · ใบลาของฉัน · ห้องประชุมที่จอง</p>
-                </div>
+                {hasTeamLeaves && (
+                    <label className="flex items-center gap-2 cursor-pointer bg-white/5 border border-white/10 hover:bg-white/10 px-3 py-1.5 rounded-xl text-xs text-white font-semibold transition-colors">
+                        <input
+                            type="checkbox"
+                            checked={showTeamLeaves}
+                            onChange={(e) => setShowTeamLeaves(e.target.checked)}
+                            className="rounded border-white/20 bg-white/5 text-emerald-500 focus:ring-0 cursor-pointer h-4 w-4"
+                        />
+                        <span>แสดงวันลาของทีม</span>
+                    </label>
+                )}
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-2xl p-3 sm:p-4 lg:p-3"
@@ -245,6 +280,7 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                         const dayHolidays = holidayMap.get(dateStr) ?? []
                         const dayLeaves = leaveMap.get(dateStr) ?? []
                         const dayBookings = bookingMap.get(dateStr) ?? []
+                        const dayTeamLeaves = showTeamLeaves ? (teamLeaveMap.get(dateStr) ?? []) : []
                         const isToday = dateStr === todayStr
                         const dow = (firstDow + d - 1) % 7
                         const isWeekend = dow === 0 || dow === 6
@@ -261,6 +297,7 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                         }
                         if (dayLeaves.length > 0) kindsSet.add('leave')
                         if (dayBookings.length > 0) kindsSet.add('booking')
+                        if (dayTeamLeaves.length > 0) kindsSet.add('teamLeave')
 
                         const kindsByPriority = CELL_PRIORITY.filter(k => kindsSet.has(k))
                         const dominantKind = kindsByPriority[0] ?? null
@@ -270,6 +307,7 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                         const tooltip = [
                             ...dayHolidays.map(h => `${getHolidayConfig(h.type).emoji} ${h.name}`),
                             ...dayLeaves.map(l => `${getLeaveConfig(l.leaveType).emoji} ${getLeaveConfig(l.leaveType).label} (${LEAVE_STATUS_LABEL[l.status] ?? l.status})`),
+                            ...dayTeamLeaves.map(tl => `👥 [ทีม] ${tl.employeeName}: ${getLeaveConfig(tl.leaveType).label}`),
                             ...dayBookings.map(b => `🚪 ${b.title} ${formatBangkokTime(b.startsAt)}`),
                         ].join('\n')
 
@@ -283,10 +321,13 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                         // they don't push the number off-center.
                         const palette = dominantKind ? CELL_PALETTE[dominantKind] : null
                         const isLeave = dominantKind === 'leave'
+                        const isTeamLeave = dominantKind === 'teamLeave'
                         const cellStyle: React.CSSProperties = palette
                             ? isLeave
                                 ? { border: '2px solid #34D399', background: 'rgba(52, 211, 153, 0.08)', color: '#34D399' }
-                                : { background: palette.bg, color: palette.text }
+                                : isTeamLeave
+                                    ? { border: '2px dashed #8B5CF6', background: 'rgba(139, 92, 246, 0.05)', color: '#A78BFA' }
+                                    : { background: palette.bg, color: palette.text }
                             : {}
                         const cellClass = palette
                             ? 'relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg p-1 transition-all hover:brightness-110 lg:aspect-auto lg:min-h-0 lg:rounded-md'
@@ -326,7 +367,7 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                                         className="mt-0.5 max-w-full select-none truncate px-0.5 text-center text-[8px] font-semibold leading-tight opacity-90 sm:text-[9px] md:text-[10px] lg:text-[9px]"
                                         style={{ color: dayNumberColor }}
                                     >
-                                        {getShortCellLabel(dayHolidays, dayLeaves, dayBookings)}
+                                        {getShortCellLabel(dayHolidays, dayLeaves, dayBookings, dayTeamLeaves)}
                                     </span>
                                 )}
                                 {accentKinds.length > 0 && (
@@ -353,13 +394,17 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                     {CELL_PRIORITY.map(k => {
                         const c = CELL_PALETTE[k]
                         const isLeaveLegend = k === 'leave'
+                        const isTeamLeaveLegend = k === 'teamLeave'
+                        if (isTeamLeaveLegend && !hasTeamLeaves) return null
                         return (
                             <span key={k} className="inline-flex items-center gap-1.5">
                                 <span
                                     className="block h-3.5 w-3.5 rounded ring-1 ring-black/20 lg:h-2.5 lg:w-2.5"
                                     style={isLeaveLegend 
                                         ? { border: '2.5px solid #34D399', background: 'rgba(52, 211, 153, 0.08)' } 
-                                        : { background: c.bg }
+                                        : isTeamLeaveLegend
+                                            ? { border: '2px dashed #8B5CF6', background: 'rgba(139, 92, 246, 0.05)' }
+                                            : { background: c.bg }
                                     }
                                 />
                                 <span className="text-white/85 font-medium">{c.label}</span>
@@ -375,6 +420,7 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
                     holidays={holidayMap.get(selected) ?? []}
                     leaves={leaveMap.get(selected) ?? []}
                     bookings={bookingMap.get(selected) ?? []}
+                    teamLeaves={showTeamLeaves ? (teamLeaveMap.get(selected) ?? []) : []}
                     onClose={() => setSelected(null)}
                 />
             )}
@@ -389,12 +435,13 @@ export function CalendarClient({ holidays, leaveDays, bookings }: Props) {
  * the user can act there without us duplicating the edit UI here.
  */
 function DayDetailModal({
-    dateIso, holidays, leaves, bookings, onClose,
+    dateIso, holidays, leaves, bookings, teamLeaves = [], onClose,
 }: {
     dateIso: string
     holidays: Holiday[]
     leaves: LeaveDay[]
     bookings: CalendarBooking[]
+    teamLeaves: TeamLeaveDay[]
     onClose: () => void
 }) {
     const headline = useMemo(() => formatThaiFull(dateIso), [dateIso])
@@ -470,6 +517,27 @@ function DayDetailModal({
                         </Section>
                     )}
 
+                    {/* Team Leaves */}
+                    {teamLeaves.length > 0 && (
+                        <Section title="วันลาของทีม">
+                            {teamLeaves.map((l, idx) => {
+                                const cfg = getLeaveConfig(l.leaveType)
+                                return (
+                                    <EventCard
+                                        key={`tl-${idx}`}
+                                        emoji={cfg.emoji}
+                                        chipLabel={`${l.employeeName} (${cfg.label})`}
+                                        chipColor={cfg.color}
+                                        title="อนุมัติแล้ว"
+                                        statusBadge={{ label: 'อนุมัติแล้ว', color: '#34D399' }}
+                                        photoUrl={l.photoUrl}
+                                        link={{ href: '/portal/leave/inbox', label: 'กล่องอนุมัติ' }}
+                                    />
+                                )
+                            })}
+                        </Section>
+                    )}
+
                     {/* Bookings */}
                     {bookings.length > 0 && (
                         <Section title="ห้องประชุมที่จอง">
@@ -502,7 +570,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function EventCard({
-    emoji, chipLabel, chipColor, title, subtitle, statusBadge, link,
+    emoji, chipLabel, chipColor, title, subtitle, statusBadge, link, photoUrl,
 }: {
     emoji: string
     chipLabel: string
@@ -511,6 +579,7 @@ function EventCard({
     subtitle?: string
     statusBadge?: { label: string; color: string }
     link?: { href: string; label: string }
+    photoUrl?: string | null
 }) {
     return (
         <div
@@ -518,7 +587,15 @@ function EventCard({
             style={{ background: `${chipColor}1a`, borderColor: `${chipColor}55` }}
         >
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                <span className="text-lg leading-none">{emoji}</span>
+                {photoUrl ? (
+                    <img
+                        src={photoUrl}
+                        alt=""
+                        className="h-6 w-6 rounded-full object-cover shrink-0 border border-white/20"
+                    />
+                ) : (
+                    <span className="text-lg leading-none">{emoji}</span>
+                )}
                 <span
                     className="text-xs font-bold px-2 py-0.5 rounded"
                     style={{ background: `${chipColor}30`, color: chipColor }}

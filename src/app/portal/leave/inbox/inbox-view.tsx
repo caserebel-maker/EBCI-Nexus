@@ -73,6 +73,18 @@ interface InboxItem {
 
 type FilterKey = 'all' | 'oldest' | 'today'
 
+const LEAVE_TYPES_MAP: Record<string, { label: string; color: string }> = {
+    annual:       { label: 'ลาพักร้อน',  color: '#60A5FA' },
+    sick:         { label: 'ลาป่วย',     color: '#34D399' },
+    personal:     { label: 'ลากิจ',      color: '#FBBF24' },
+    compensation: { label: 'ลาชดเชย',    color: '#FB923C' },
+    maternity:    { label: 'ลาคลอด',     color: '#F472B6' },
+    ordination:   { label: 'ลาบวช',      color: '#A78BFA' },
+    marriage:     { label: 'ลาสมรส',     color: '#F9A8D4' },
+    bereavement:  { label: 'ลาพ่อ-แม่เสียชีวิต', color: '#9CA3AF' },
+    training:     { label: 'ลาพัฒนาความรู้', color: '#67E8F9' },
+}
+
 // ── Styles ───────────────────────────────────────────────────────────────
 const glass: React.CSSProperties = {
     background: 'rgba(255,255,255,0.06)',
@@ -130,6 +142,10 @@ export function InboxView() {
     const [rejectTarget, setRejectTarget] = useState<InboxItem | null>(null)
     const [toast, setToast] = useState<string | null>(null)
 
+    const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending')
+    const [historyItems, setHistoryItems] = useState<InboxItem[]>([])
+    const [loadingHistory, setLoadingHistory] = useState(false)
+
     const load = useCallback(async () => {
         setErr(null); setLoading(true)
         try {
@@ -147,6 +163,80 @@ export function InboxView() {
         }
     }, [])
     useEffect(() => { void load() }, [load])
+
+    const loadHistory = useCallback(async () => {
+        setErr(null); setLoadingHistory(true)
+        try {
+            const res = await fetch('/api/leave/team?view=subordinates', { cache: 'no-store' })
+            if (!res.ok) {
+                const j = await res.json().catch(() => ({}))
+                throw new Error(j?.error ?? `HTTP ${res.status}`)
+            }
+            const json = await res.json()
+            const rawList = json.data ?? []
+            // Map raw prisma team leave requests to InboxItem format
+            const mapped = rawList
+                .filter((p: any) => p.status !== 'pending' && p.status !== 'cancellation_requested')
+                .map((p: any) => {
+                    const leaveTypeId = p.leaveType || 'annual'
+                    const meta = LEAVE_TYPES_MAP[leaveTypeId] || { label: 'ใบลา', color: '#34D399' }
+                    return {
+                        id: p.id,
+                        reference_code: p.referenceCode || p.id.slice(-8).toUpperCase(),
+                        status: p.status,
+                        leave_type_id: leaveTypeId,
+                        start_date: p.startDate ? p.startDate.slice(0, 10) : '',
+                        end_date: p.endDate ? p.endDate.slice(0, 10) : '',
+                        total_days: p.totalDays ?? 1,
+                        is_half_day: p.isHalfDay ?? false,
+                        half_day_period: p.halfDayPeriod ?? null,
+                        reason: p.reason ?? '',
+                        contact_during_leave: p.contactDuringLeave ?? null,
+                        attachment_url: p.attachmentUrl ?? null,
+                        attachment_name: p.attachmentName ?? null,
+                        cancellation_reason: null,
+                        cancellation_requested_at: null,
+                        submitted_at: p.createdAt ? p.createdAt : null,
+                        created_at: p.createdAt ? p.createdAt : '',
+                        employee_id: p.employeeId,
+                        applicant: p.employee ? {
+                            id: p.employee.id,
+                            first_name_th: p.employee.firstNameTH ?? null,
+                            last_name_th: p.employee.lastNameTH ?? null,
+                            nickname: p.employee.nickname ?? null,
+                            department: p.employee.department ?? null,
+                            position: p.employee.position ?? null,
+                            photo_url: p.employee.photoUrl ?? null,
+                            email: p.employee.email ?? null,
+                        } : null,
+                        leave_type: {
+                            id: leaveTypeId,
+                            name_th: meta.label,
+                            icon: null,
+                            color: meta.color,
+                            is_unlimited: false,
+                        },
+                        balance: {
+                            total_days: 0,
+                            used_days: 0,
+                            pending_days: 0,
+                            remaining_days: 0,
+                        }
+                    }
+                })
+            setHistoryItems(mapped)
+        } catch (e) {
+            setErr(e instanceof Error ? e.message : 'โหลดประวัติข้อมูลไม่สำเร็จ')
+        } finally {
+            setLoadingHistory(false)
+        }
+    }, [])
+
+    useEffect(() => {
+        if (activeTab === 'history') {
+            void loadHistory()
+        }
+    }, [activeTab, loadHistory])
 
     const showToast = (msg: string) => {
         setToast(msg)
@@ -211,16 +301,46 @@ export function InboxView() {
                             </>
                         )}
                     </div>
-                    <h1 className="text-xl font-bold text-white inline-flex items-center gap-2">
-                        ใบลารอการอนุมัติ
-                        {items.length > 0 && (
-                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-400 text-black">
-                                {items.length}
-                            </span>
-                        )}
+                    <h1 className="text-xl font-bold text-white">
+                        {activeTab === 'pending' ? 'ใบลารอการอนุมัติ' : 'ประวัติวันลาของทีม'}
                     </h1>
-                    <p className="text-sm text-white/55">คำขอที่ส่งให้คุณพิจารณา</p>
+                    <p className="text-sm text-white/55">
+                        {activeTab === 'pending' ? 'คำขอที่ส่งให้คุณพิจารณา' : 'ประวัติคำขอลาที่พิจารณาเสร็จสิ้นแล้วของลูกน้องในสายงาน'}
+                    </p>
                 </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-white/10 mb-2 gap-2">
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('pending')}
+                    className={cn(
+                        "px-4 py-2.5 text-sm font-semibold transition-all border-b-2 -mb-[2px] inline-flex items-center gap-1.5",
+                        activeTab === 'pending'
+                            ? "border-amber-400 text-amber-400"
+                            : "border-transparent text-white/60 hover:text-white"
+                    )}
+                >
+                    รออนุมัติ
+                    {items.length > 0 && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-400 text-black">
+                            {items.length}
+                        </span>
+                    )}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('history')}
+                    className={cn(
+                        "px-4 py-2.5 text-sm font-semibold transition-all border-b-2 -mb-[2px]",
+                        activeTab === 'history'
+                            ? "border-amber-400 text-amber-400"
+                            : "border-transparent text-white/60 hover:text-white"
+                    )}
+                >
+                    ประวัติของทีม
+                </button>
             </div>
 
             {err && (
@@ -231,7 +351,7 @@ export function InboxView() {
             )}
 
             {/* Filters */}
-            {items.length > 0 && (
+            {activeTab === 'pending' && items.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap">
                     <Filter size={13} className="text-white/45" />
                     {([
@@ -336,13 +456,14 @@ function EmptyState() {
 
 // ── Request card (collapsed + expanded) ──────────────────────────────────
 function RequestCard({
-    item, expanded, onToggleExpand, onApproveClick, onRejectClick,
+    item, expanded, onToggleExpand, onApproveClick, onRejectClick, isHistory = false,
 }: {
     item: InboxItem
     expanded: boolean
     onToggleExpand: () => void
     onApproveClick: () => void
     onRejectClick: () => void
+    isHistory?: boolean
 }) {
     const a = item.applicant
     const lt = item.leave_type
@@ -389,6 +510,18 @@ function RequestCard({
                                     <Ban size={10} />
                                     ขอยกเลิก
                                 </span>
+                            ) : item.status === 'approved' ? (
+                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/90 text-white">
+                                    อนุมัติแล้ว
+                                </span>
+                            ) : item.status === 'rejected' ? (
+                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-rose-500/90 text-white">
+                                    ปฏิเสธแล้ว
+                                </span>
+                            ) : item.status === 'cancelled' ? (
+                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-zinc-500/90 text-white">
+                                    ยกเลิกแล้ว
+                                </span>
                             ) : (
                                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500/85 text-black">
                                     PENDING
@@ -409,7 +542,7 @@ function RequestCard({
                         <p className="text-[13px] text-white/75 mt-1.5 line-clamp-2">
                             &ldquo;{item.reason}&rdquo;
                         </p>
-                        <ManagerBalanceSnapshot item={item} />
+                        {!isHistory && <ManagerBalanceSnapshot item={item} />}
                         {item.status === 'cancellation_requested' && item.cancellation_reason && (
                             <p className="text-[12px] text-amber-200/90 mt-1 line-clamp-2 inline-flex items-start gap-1">
                                 <Ban size={11} className="mt-0.5 shrink-0" />
@@ -448,7 +581,7 @@ function RequestCard({
                     </div>
 
                     {/* Balance summary */}
-                    <BalanceBar item={item} />
+                    {!isHistory && <BalanceBar item={item} />}
 
                     {/* Attachment */}
                     {item.attachment_url && (
@@ -464,29 +597,31 @@ function RequestCard({
                     )}
 
                     {/* Action buttons */}
-                    <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 pt-2 border-t border-white/5 mt-1">
-                        <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); onRejectClick() }}
-                            className="inline-flex items-center justify-center gap-1.5 px-4 h-10 rounded-lg bg-red-500/80 hover:bg-red-500 text-white font-bold text-sm transition-all active:scale-95"
-                        >
-                            <XCircle size={14} />
-                            ปฏิเสธ
-                        </button>
-                        <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); onApproveClick() }}
-                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-5 h-10 rounded-lg bg-emerald-500/90 hover:bg-emerald-500 text-white font-bold text-sm transition-all active:scale-95"
-                        >
-                            <CheckCircle2 size={14} />
-                            อนุมัติ
-                        </button>
-                    </div>
+                    {!isHistory && (
+                        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 pt-2 border-t border-white/5 mt-1">
+                            <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); onRejectClick() }}
+                                className="inline-flex items-center justify-center gap-1.5 px-4 h-10 rounded-lg bg-red-500/80 hover:bg-red-500 text-white font-bold text-sm transition-all active:scale-95"
+                            >
+                                <XCircle size={14} />
+                                ปฏิเสธ
+                            </button>
+                            <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); onApproveClick() }}
+                                className="flex-1 inline-flex items-center justify-center gap-1.5 px-5 h-10 rounded-lg bg-emerald-500/90 hover:bg-emerald-500 text-white font-bold text-sm transition-all active:scale-95"
+                            >
+                                <CheckCircle2 size={14} />
+                                อนุมัติ
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
             {/* Collapsed footer (buttons always reachable) */}
-            {!expanded && (
+            {!expanded && !isHistory && (
                 <div className="flex items-center gap-2 p-2 border-t border-white/5 bg-black/10 rounded-b-xl">
                     <button
                         type="button"
