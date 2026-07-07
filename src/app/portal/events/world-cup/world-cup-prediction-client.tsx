@@ -12,10 +12,21 @@ type EventData = {
 }
 
 type EmployeeData = {
+    id: string
     name: string
     code: string | null
     department: string | null
     position: string | null
+    avatarUrl: string | null
+    initials: string
+}
+
+type PickerData = {
+    id: string
+    name: string
+    initials: string
+    avatarUrl: string | null
+    employeeCode: string | null
 }
 
 type TeamData = {
@@ -25,6 +36,7 @@ type TeamData = {
     flag: string | null
     accentColor: string | null
     pickCount: number
+    pickers: PickerData[]
 }
 
 type Props = {
@@ -56,6 +68,27 @@ function isEventClosed(event: EventData): boolean {
     return new Date(event.closesAt).getTime() <= Date.now()
 }
 
+function AvatarBubble({ picker, className = '' }: { picker: PickerData; className?: string }) {
+    const title = picker.employeeCode ? `${picker.name} (${picker.employeeCode})` : picker.name
+
+    return (
+        <div
+            title={title}
+            className={[
+                'flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/30 bg-white/15 text-xs font-black text-white shadow-lg shadow-black/20',
+                className,
+            ].join(' ')}
+        >
+            {picker.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={picker.avatarUrl} alt={picker.name} className="h-full w-full object-cover" />
+            ) : (
+                <span>{picker.initials}</span>
+            )}
+        </div>
+    )
+}
+
 export function WorldCupPredictionClient({
     event,
     employee,
@@ -67,6 +100,9 @@ export function WorldCupPredictionClient({
     const [pendingTeamId, setPendingTeamId] = useState<string | null>(null)
     const [teamStats, setTeamStats] = useState<Record<string, number>>(() =>
         Object.fromEntries(teams.map(team => [team.id, team.pickCount])),
+    )
+    const [teamPickers, setTeamPickers] = useState<Record<string, PickerData[]>>(() =>
+        Object.fromEntries(teams.map(team => [team.id, team.pickers])),
     )
     const [predictionCount, setPredictionCount] = useState(totalPredictions)
     const [saving, setSaving] = useState(false)
@@ -82,6 +118,14 @@ export function WorldCupPredictionClient({
         () => teams.find(team => team.id === pendingTeamId) ?? null,
         [pendingTeamId, teams],
     )
+    const currentPicker = useMemo<PickerData>(() => ({
+        id: employee.id,
+        name: employee.name,
+        initials: employee.initials,
+        avatarUrl: employee.avatarUrl,
+        employeeCode: employee.code,
+    }), [employee])
+    const pendingPickers = pendingTeamId ? (teamPickers[pendingTeamId] ?? []) : []
 
     async function submitPrediction() {
         if (!pendingTeamId || saving) return
@@ -115,6 +159,16 @@ export function WorldCupPredictionClient({
                 return next
             })
             if (wasFirstPick) setPredictionCount(count => count + 1)
+            setTeamPickers(current => {
+                const next = Object.fromEntries(
+                    Object.entries(current).map(([teamId, pickers]) => [
+                        teamId,
+                        pickers.filter(picker => picker.id !== currentPicker.id),
+                    ]),
+                ) as Record<string, PickerData[]>
+                next[pendingTeamId] = [...(next[pendingTeamId] ?? []), currentPicker]
+                return next
+            })
             setMessage('บันทึกคำทายเรียบร้อยแล้ว')
             setPendingTeamId(null)
         } catch (err) {
@@ -217,6 +271,9 @@ export function WorldCupPredictionClient({
                     {teams.map(team => {
                         const active = selectedTeamId === team.id
                         const count = teamStats[team.id] ?? 0
+                        const pickers = teamPickers[team.id] ?? []
+                        const visiblePickers = pickers.slice(0, 6)
+                        const hiddenCount = Math.max(0, pickers.length - visiblePickers.length)
                         return (
                             <button
                                 key={team.id}
@@ -242,6 +299,25 @@ export function WorldCupPredictionClient({
                                     <h3 className="text-2xl font-black text-white">{team.name}</h3>
                                     {team.nameEn && <p className="mt-1 text-sm font-semibold uppercase tracking-[0.16em] text-white/45">{team.nameEn}</p>}
                                     <p className="mt-4 text-sm text-white/55">{count} คนเลือกทีมนี้</p>
+                                    {pickers.length > 0 && (
+                                        <div className="mt-4 flex items-center gap-3">
+                                            <div className="flex -space-x-2">
+                                                {visiblePickers.map(picker => (
+                                                    <AvatarBubble
+                                                        key={picker.id}
+                                                        picker={picker}
+                                                        className="h-9 w-9 border-2 border-[#46101a]"
+                                                    />
+                                                ))}
+                                                {hiddenCount > 0 && (
+                                                    <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#46101a] bg-yellow-300 text-xs font-black text-[#30040b] shadow-lg shadow-black/20">
+                                                        +{hiddenCount}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <span className="text-xs font-semibold text-white/45">กดดูรายชื่อ</span>
+                                        </div>
+                                    )}
                                 </div>
                             </button>
                         )
@@ -268,6 +344,24 @@ export function WorldCupPredictionClient({
                             <p className="mt-3 text-white/68">
                                 คุณต้องการเลือก <span className="font-black text-yellow-200">{pendingTeam.name}</span> เป็นแชมป์ฟุตบอลโลก 2026 ใช่ไหม
                             </p>
+                            {pendingPickers.length > 0 && (
+                                <div className="mt-5 rounded-2xl border border-white/12 bg-white/8 p-4">
+                                    <p className="text-xs font-black uppercase tracking-[0.18em] text-white/45">คนที่เลือกทีมนี้ตอนนี้</p>
+                                    <div className="mt-3 max-h-48 space-y-2 overflow-auto pr-1">
+                                        {pendingPickers.map(picker => (
+                                            <div key={picker.id} className="flex items-center gap-3 rounded-2xl bg-white/8 p-2">
+                                                <AvatarBubble picker={picker} className="h-10 w-10" />
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-sm font-black text-white">{picker.name}</p>
+                                                    {picker.employeeCode && (
+                                                        <p className="text-xs font-semibold text-white/45">{picker.employeeCode}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                             <div className="mt-6 grid grid-cols-2 gap-3">
                                 <button
                                     type="button"

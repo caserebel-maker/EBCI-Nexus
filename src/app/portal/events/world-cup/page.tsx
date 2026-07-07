@@ -3,6 +3,7 @@ import { Trophy } from 'lucide-react'
 import { getSession } from '@/lib/auth'
 import { resolveSessionEmployeeId } from '@/lib/session-employee'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { employeeInitials } from '@/lib/format-employee-name'
 import { WorldCupPredictionClient } from './world-cup-prediction-client'
 
 export const dynamic = 'force-dynamic'
@@ -10,12 +11,14 @@ export const dynamic = 'force-dynamic'
 const EVENT_SLUG = 'world-cup-2026'
 
 type EmployeeRow = {
+    id?: string | null
     first_name_th: string | null
     last_name_th: string | null
     nickname: string | null
     employee_code: string | null
     department: string | null
     position: string | null
+    photo_url?: string | null
 }
 
 type EventRow = {
@@ -38,6 +41,7 @@ type TeamRow = {
 
 type PredictionRow = {
     team_id: string
+    employee_id: string
 }
 
 function buildDisplayName(emp: EmployeeRow | null): string {
@@ -83,7 +87,7 @@ export default async function WorldCupEventPage() {
     const [employeeRes, teamsRes, myPredictionRes, predictionsRes] = await Promise.all([
         supabaseAdmin
             .from('employees')
-            .select('first_name_th, last_name_th, nickname, employee_code, department, position')
+            .select('id, first_name_th, last_name_th, nickname, employee_code, department, position, photo_url')
             .eq('id', employeeId)
             .maybeSingle(),
         supabaseAdmin
@@ -94,13 +98,13 @@ export default async function WorldCupEventPage() {
             .order('seed_order', { ascending: true }),
         supabaseAdmin
             .from('world_cup_predictions')
-            .select('team_id')
+            .select('team_id, employee_id')
             .eq('event_id', event.id)
             .eq('employee_id', employeeId)
             .maybeSingle(),
         supabaseAdmin
             .from('world_cup_predictions')
-            .select('team_id')
+            .select('team_id, employee_id')
             .eq('event_id', event.id),
     ])
 
@@ -108,6 +112,34 @@ export default async function WorldCupEventPage() {
     const teams = (teamsRes.data ?? []) as TeamRow[]
     const myPrediction = (myPredictionRes.data as PredictionRow | null) ?? null
     const predictions = (predictionsRes.data ?? []) as PredictionRow[]
+    const predictionEmployeeIds = Array.from(new Set(predictions.map(prediction => prediction.employee_id).filter(Boolean)))
+    const predictionEmployeesRes = predictionEmployeeIds.length > 0
+        ? await supabaseAdmin
+            .from('employees')
+            .select('id, first_name_th, last_name_th, nickname, employee_code, department, position, photo_url')
+            .in('id', predictionEmployeeIds)
+        : { data: [] }
+    const predictionEmployees = ((predictionEmployeesRes.data ?? []) as EmployeeRow[])
+    const employeeById = new Map(predictionEmployees.map(emp => [emp.id, emp]))
+    const pickersByTeam = predictions.reduce<Record<string, Array<{
+        id: string
+        name: string
+        initials: string
+        avatarUrl: string | null
+        employeeCode: string | null
+    }>>>((acc, prediction) => {
+        const picker = employeeById.get(prediction.employee_id)
+        if (!picker?.id) return acc
+        if (!acc[prediction.team_id]) acc[prediction.team_id] = []
+        acc[prediction.team_id].push({
+            id: picker.id,
+            name: buildDisplayName(picker),
+            initials: employeeInitials(picker),
+            avatarUrl: picker.photo_url ?? null,
+            employeeCode: picker.employee_code ?? null,
+        })
+        return acc
+    }, {})
 
     return (
         <WorldCupPredictionClient
@@ -119,10 +151,13 @@ export default async function WorldCupEventPage() {
                 closesAt: event.closes_at,
             }}
             employee={{
+                id: employee?.id ?? employeeId,
                 name: buildDisplayName(employee),
                 code: employee?.employee_code ?? null,
                 department: employee?.department ?? null,
                 position: employee?.position ?? null,
+                avatarUrl: employee?.photo_url ?? null,
+                initials: employeeInitials(employee),
             }}
             teams={teams.map(team => ({
                 id: team.id,
@@ -131,6 +166,7 @@ export default async function WorldCupEventPage() {
                 flag: team.flag_emoji,
                 accentColor: team.accent_color,
                 pickCount: countByTeam(predictions)[team.id] ?? 0,
+                pickers: pickersByTeam[team.id] ?? [],
             }))}
             initialPredictionTeamId={myPrediction?.team_id ?? null}
             totalPredictions={predictions.length}
