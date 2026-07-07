@@ -11,6 +11,7 @@ interface Props {
     leaveDays: LeaveDay[]
     bookings: CalendarBooking[]
     teamLeaveDays?: TeamLeaveDay[]
+    hasSubordinates?: boolean
 }
 
 const DAY_HEADERS = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
@@ -138,14 +139,12 @@ function getShortCellLabel(
     return ''
 }
 
-export function CalendarClient({ holidays, leaveDays, bookings, teamLeaveDays = [] }: Props) {
+export function CalendarClient({ holidays, leaveDays, bookings, teamLeaveDays = [], hasSubordinates = false }: Props) {
     const today = new Date()
     const [viewYear, setViewYear] = useState(today.getFullYear())
     const [viewMonth, setViewMonth] = useState(today.getMonth())
     const [selected, setSelected] = useState<string | null>(null)
     const [showTeamLeaves, setShowTeamLeaves] = useState(true)
-
-    const hasTeamLeaves = teamLeaveDays.length > 0
 
     // Build lookup maps once per render — small data so re-running is fine.
     const holidayMap = useMemo(() => {
@@ -223,7 +222,7 @@ export function CalendarClient({ holidays, leaveDays, bookings, teamLeaveDays = 
                         <p className="text-sm text-white/50 lg:text-xs">วันหยุดบริษัท · ใบลาของฉัน · ห้องประชุมที่จอง</p>
                     </div>
                 </div>
-                {hasTeamLeaves && (
+                {hasSubordinates && (
                     <label className="flex items-center gap-2 cursor-pointer bg-white/5 border border-white/10 hover:bg-white/10 px-3 py-1.5 rounded-xl text-xs text-white font-semibold transition-colors">
                         <input
                             type="checkbox"
@@ -395,7 +394,7 @@ export function CalendarClient({ holidays, leaveDays, bookings, teamLeaveDays = 
                         const c = CELL_PALETTE[k]
                         const isLeaveLegend = k === 'leave'
                         const isTeamLeaveLegend = k === 'teamLeave'
-                        if (isTeamLeaveLegend && !hasTeamLeaves) return null
+                        if (isTeamLeaveLegend && !hasSubordinates) return null
                         return (
                             <span key={k} className="inline-flex items-center gap-1.5">
                                 <span

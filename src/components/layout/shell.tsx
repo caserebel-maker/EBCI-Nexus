@@ -119,7 +119,6 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
     // mutate the imported config (modules are singletons across renders).
     if (
         effectiveRole === 'employee'
-        && role !== 'hr_admin'
         && profile?.isApprover
     ) {
         const leaveInbox: NavItem = {

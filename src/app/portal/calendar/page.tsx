@@ -90,6 +90,7 @@ export default async function CalendarPage() {
         console.error('[calendar] leave requests fetch failed:', e)
     }
 
+    let hasSubordinates = false
     // Fetch approved leave requests for subordinates (for managers)
     try {
         const emp = await prisma.employee.findFirst({
@@ -97,6 +98,7 @@ export default async function CalendarPage() {
             include: { subordinates: { select: { id: true, firstNameTH: true, nickname: true } } }
         })
         if (emp && emp.subordinates.length > 0) {
+            hasSubordinates = true
             const subordinateIds = emp.subordinates.map(s => s.id)
             const teamReqs = await prisma.leaveRequest.findMany({
                 where: {
@@ -171,7 +173,7 @@ export default async function CalendarPage() {
             <div className="max-w-5xl mx-auto pb-3">
                 <LeaveWfhSubNav />
             </div>
-            <CalendarClient holidays={holidays} leaveDays={leaveDays} bookings={bookings} teamLeaveDays={teamLeaveDays} />
+            <CalendarClient holidays={holidays} leaveDays={leaveDays} bookings={bookings} teamLeaveDays={teamLeaveDays} hasSubordinates={hasSubordinates} />
         </>
     )
 }
