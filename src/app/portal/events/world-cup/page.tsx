@@ -37,6 +37,7 @@ type TeamRow = {
     flag_emoji: string | null
     seed_order: number
     accent_color: string | null
+    is_active: boolean
 }
 
 type PredictionRow = {
@@ -92,9 +93,8 @@ export default async function WorldCupEventPage() {
             .maybeSingle(),
         supabaseAdmin
             .from('world_cup_teams')
-            .select('id, team_name, team_name_en, flag_emoji, seed_order, accent_color')
+            .select('id, team_name, team_name_en, flag_emoji, seed_order, accent_color, is_active')
             .eq('event_id', event.id)
-            .eq('is_active', true)
             .order('seed_order', { ascending: true }),
         supabaseAdmin
             .from('world_cup_predictions')
@@ -167,6 +167,7 @@ export default async function WorldCupEventPage() {
                 accentColor: team.accent_color,
                 pickCount: countByTeam(predictions)[team.id] ?? 0,
                 pickers: pickersByTeam[team.id] ?? [],
+                isActive: team.is_active,
             }))}
             initialPredictionTeamId={myPrediction?.team_id ?? null}
             totalPredictions={predictions.length}

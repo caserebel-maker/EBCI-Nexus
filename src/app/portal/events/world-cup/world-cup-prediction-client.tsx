@@ -37,6 +37,7 @@ type TeamData = {
     accentColor: string | null
     pickCount: number
     pickers: PickerData[]
+    isActive: boolean
 }
 
 type Props = {
@@ -126,6 +127,116 @@ export function WorldCupPredictionClient({
         employeeCode: employee.code,
     }), [employee])
     const pendingPickers = pendingTeamId ? (teamPickers[pendingTeamId] ?? []) : []
+
+    const activeTeams = useMemo(() => teams.filter(t => t.isActive), [teams])
+    const eliminatedTeams = useMemo(() => teams.filter(t => !t.isActive), [teams])
+
+    const renderTeamCard = (team: TeamData, isTeamActive: boolean) => {
+        const active = selectedTeamId === team.id
+        const count = teamStats[team.id] ?? 0
+        const pickers = teamPickers[team.id] ?? []
+        const visiblePickers = pickers.slice(0, 6)
+        const hiddenCount = Math.max(0, pickers.length - visiblePickers.length)
+        const prizeShare = count > 0 ? Math.round(event.prizeAmount / count) : event.prizeAmount
+
+        return (
+            <button
+                key={team.id}
+                type="button"
+                disabled={closed || saving || !isTeamActive}
+                onClick={() => setPendingTeamId(team.id)}
+                className={[
+                    'group relative min-h-40 overflow-hidden rounded-3xl border p-5 text-left transition-all duration-150',
+                    isTeamActive 
+                        ? 'bg-gradient-to-b from-white via-slate-50 to-slate-200/60'
+                        : 'bg-slate-100/40 border-slate-200/60 border-b-2 border-b-slate-300 shadow-none opacity-60 cursor-not-allowed',
+                    isTeamActive && active 
+                        ? 'border-emerald-400 border-b-[8px] border-b-emerald-600 shadow-[0_8px_20px_rgba(16,185,129,0.2),inset_0_2px_3px_rgba(255,255,255,0.9)] ring-2 ring-emerald-400/30' 
+                        : isTeamActive ? 'border-slate-200 border-b-[8px] border-b-slate-400/90 shadow-[0_6px_14px_rgba(0,0,0,0.12),inset_0_2px_3px_rgba(255,255,255,0.9)] hover:border-yellow-400 hover:border-b-yellow-500 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(0,0,0,0.18),inset_0_2px_3px_rgba(255,255,255,0.9)]' : '',
+                    closed && isTeamActive ? 'cursor-default' : '',
+                    closed && isTeamActive && !active ? 'opacity-85' : '',
+                    !isTeamActive ? '' : 'active:translate-y-0.5 active:border-b-[3px] active:shadow-[0_2px_4px_rgba(0,0,0,0.06)]',
+                ].join(' ')}
+            >
+                {isTeamActive && (
+                    <div
+                        className="absolute -right-8 -top-8 h-28 w-28 rounded-full opacity-10 blur-sm transition group-hover:opacity-25"
+                        style={{ backgroundColor: team.accentColor ?? '#facc15' }}
+                    />
+                )}
+                
+                {!isTeamActive && (
+                    <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-md bg-rose-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-sm">
+                        ตกรอบ
+                    </div>
+                )}
+
+                <div className="relative flex items-start justify-between gap-3">
+                    <span className={[
+                        'text-7xl drop-shadow-md select-none transform transition-transform duration-200',
+                        isTeamActive ? 'group-hover:scale-110' : 'grayscale opacity-50'
+                    ].join(' ')}>{team.flag ?? '🏆'}</span>
+                    {isTeamActive && active && <CheckCircle2 className="text-emerald-500 drop-shadow-sm" size={24} />}
+                </div>
+
+                <div className="relative mt-5">
+                    <h3 className={[
+                        'text-2xl font-black',
+                        isTeamActive ? 'text-slate-800' : 'text-slate-400'
+                    ].join(' ')}>{team.name}</h3>
+                    {team.nameEn && (
+                        <p className={[
+                            'mt-1 text-xs font-semibold uppercase tracking-[0.16em]',
+                            isTeamActive ? 'text-slate-400' : 'text-slate-400/60'
+                        ].join(' ')}>{team.nameEn}</p>
+                    )}
+                    
+                    <p className={[
+                        'mt-4 text-xs font-semibold',
+                        isTeamActive ? 'text-slate-500' : 'text-slate-400/80'
+                    ].join(' ')}>{count} คนเลือกทีมนี้</p>
+
+                    {/* Live prize split indicator */}
+                    {closed && isTeamActive && count > 0 && (
+                        <div className="mt-3 inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200/50 shadow-sm animate-in fade-in zoom-in-95 duration-200">
+                            💰 ลุ้นส่วนแบ่งคนละ {formatPrize(prizeShare)} บ.
+                        </div>
+                    )}
+
+                    {pickers.length > 0 && (
+                        <div className="mt-4 flex items-center gap-3">
+                            <div className="flex -space-x-2">
+                                {visiblePickers.map(picker => (
+                                    <AvatarBubble
+                                        key={picker.id}
+                                        picker={picker}
+                                        className={[
+                                            'h-8 w-8 border-2 border-white',
+                                            isTeamActive ? '' : 'grayscale opacity-40'
+                                        ].join(' ')}
+                                    />
+                                ))}
+                                {hiddenCount > 0 && (
+                                    <div className={[
+                                        'flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-[10px] font-black shadow-md',
+                                        isTeamActive 
+                                            ? 'bg-yellow-300 text-[#30040b] shadow-black/10' 
+                                            : 'bg-slate-200 text-slate-400 shadow-none opacity-50'
+                                    ].join(' ')}>
+                                        +{hiddenCount}
+                                    </div>
+                                )}
+                            </div>
+                            <span className={[
+                                'text-xs font-semibold',
+                                isTeamActive ? 'text-slate-400' : 'text-slate-400/60'
+                            ].join(' ')}>กดดูรายชื่อ</span>
+                        </div>
+                    )}
+                </div>
+            </button>
+        )
+    }
 
     async function submitPrediction() {
         if (!pendingTeamId || saving) return
@@ -236,12 +347,23 @@ export function WorldCupPredictionClient({
                                 {[employee.code, employee.department, employee.position].filter(Boolean).join(' · ')}
                             </p>
                             {selectedTeam ? (
-                                <div className="mt-5 rounded-2xl border border-emerald-300/30 bg-emerald-300/10 p-4">
-                                    <p className="text-sm text-emerald-100/75">คำทายของคุณตอนนี้</p>
+                                <div className={[
+                                    'mt-5 rounded-2xl border p-4 transition-all duration-150',
+                                    selectedTeam.isActive
+                                        ? 'border-emerald-300/30 bg-emerald-300/10'
+                                        : 'border-rose-500/30 bg-rose-500/10 text-rose-200'
+                                ].join(' ')}>
+                                    <p className="text-sm opacity-75">คำทายของคุณตอนนี้</p>
                                     <p className="mt-1 text-2xl font-black text-white">
                                         <span className="mr-2 text-3xl">{selectedTeam.flag}</span>
                                         {selectedTeam.name}
                                     </p>
+                                    {!selectedTeam.isActive && (
+                                        <p className="mt-2 text-xs font-bold text-rose-300 flex items-center gap-1.5">
+                                            <X size={14} className="shrink-0" />
+                                            ทีมนี้ตกรอบแล้ว (คุณตกรอบลุ้นรางวัล 😢)
+                                        </p>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="mt-5 rounded-2xl border border-yellow-300/25 bg-yellow-300/10 p-4 text-yellow-100">
@@ -275,64 +397,37 @@ export function WorldCupPredictionClient({
                     </p>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    {teams.map(team => {
-                        const active = selectedTeamId === team.id
-                        const count = teamStats[team.id] ?? 0
-                        const pickers = teamPickers[team.id] ?? []
-                        const visiblePickers = pickers.slice(0, 6)
-                        const hiddenCount = Math.max(0, pickers.length - visiblePickers.length)
-                        return (
-                            <button
-                                key={team.id}
-                                type="button"
-                                disabled={closed || saving}
-                                onClick={() => setPendingTeamId(team.id)}
-                                className={[
-                                    'group relative min-h-40 overflow-hidden rounded-3xl border p-5 text-left transition-all duration-150',
-                                    'bg-gradient-to-b from-white via-slate-50 to-slate-200/60',
-                                    active 
-                                        ? 'border-emerald-400 border-b-[8px] border-b-emerald-600 shadow-[0_8px_20px_rgba(16,185,129,0.2),inset_0_2px_3px_rgba(255,255,255,0.9)] ring-2 ring-emerald-400/30' 
-                                        : 'border-slate-200 border-b-[8px] border-b-slate-400/90 shadow-[0_6px_14px_rgba(0,0,0,0.12),inset_0_2px_3px_rgba(255,255,255,0.9)] hover:border-yellow-400 hover:border-b-yellow-500 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(0,0,0,0.18),inset_0_2px_3px_rgba(255,255,255,0.9)]',
-                                    closed ? 'cursor-not-allowed opacity-75' : 'active:translate-y-0.5 active:border-b-[3px] active:shadow-[0_2px_4px_rgba(0,0,0,0.06)]',
-                                ].join(' ')}
-                            >
-                                <div
-                                    className="absolute -right-8 -top-8 h-28 w-28 rounded-full opacity-10 blur-sm transition group-hover:opacity-25"
-                                    style={{ backgroundColor: team.accentColor ?? '#facc15' }}
-                                />
-                                <div className="relative flex items-start justify-between gap-3">
-                                    <span className="text-7xl drop-shadow-md select-none transform transition-transform duration-200 group-hover:scale-110">{team.flag ?? '🏆'}</span>
-                                    {active && <CheckCircle2 className="text-emerald-500 drop-shadow-sm" size={24} />}
+                {closed ? (
+                    <div className="space-y-10">
+                        {/* Remaining Contenders */}
+                        <div>
+                            <div className="mb-4 flex items-center gap-2">
+                                <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                                <h3 className="text-lg font-black text-white">ผู้ที่ยังอยู่ในเส้นทางลุ้นรางวัล ({activeTeams.length} ทีม)</h3>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                {activeTeams.map(team => renderTeamCard(team, true))}
+                            </div>
+                        </div>
+
+                        {/* Eliminated Teams */}
+                        {eliminatedTeams.length > 0 && (
+                            <div className="pt-8 border-t border-white/10">
+                                <div className="mb-4 flex items-center gap-2">
+                                    <div className="h-2 w-2 rounded-full bg-rose-500" />
+                                    <h3 className="text-lg font-black text-white/55">ตกรอบไปแล้ว ({eliminatedTeams.length} ทีม)</h3>
                                 </div>
-                                <div className="relative mt-5">
-                                    <h3 className="text-2xl font-black text-slate-800">{team.name}</h3>
-                                    {team.nameEn && <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{team.nameEn}</p>}
-                                    <p className="mt-4 text-xs font-semibold text-slate-500">{count} คนเลือกทีมนี้</p>
-                                    {pickers.length > 0 && (
-                                        <div className="mt-4 flex items-center gap-3">
-                                            <div className="flex -space-x-2">
-                                                {visiblePickers.map(picker => (
-                                                    <AvatarBubble
-                                                        key={picker.id}
-                                                        picker={picker}
-                                                        className="h-8 w-8 border-2 border-white"
-                                                    />
-                                                ))}
-                                                {hiddenCount > 0 && (
-                                                    <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-yellow-300 text-[10px] font-black text-[#30040b] shadow-md shadow-black/10">
-                                                        +{hiddenCount}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <span className="text-xs font-semibold text-slate-400">กดดูรายชื่อ</span>
-                                        </div>
-                                    )}
+                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                    {eliminatedTeams.map(team => renderTeamCard(team, false))}
                                 </div>
-                            </button>
-                        )
-                    })}
-                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        {teams.map(team => renderTeamCard(team, true))}
+                    </div>
+                )}
             </section>
 
             <section className="mt-6 rounded-[2rem] border border-yellow-300/20 bg-gradient-to-br from-yellow-300/12 via-white/8 to-emerald-300/10 p-5 shadow-xl shadow-black/10 backdrop-blur sm:p-7">
