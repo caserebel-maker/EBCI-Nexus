@@ -186,70 +186,84 @@ export function WorldCupPredictionClient({
                 <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/15" />
                 <div className="absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15" />
 
-                <div className="relative grid gap-8 p-5 sm:p-8 lg:grid-cols-[1.05fr_.95fr] lg:p-10">
-                    <div className="flex min-h-[520px] flex-col justify-between">
+                <div className="relative grid gap-8 p-5 sm:p-8 lg:grid-cols-[1.1fr_1.3fr_1.1fr] lg:p-10 items-stretch">
+                    {/* KV Image Column */}
+                    <div className="flex items-center justify-center">
+                        <div className="w-full aspect-square overflow-hidden rounded-[1.8rem] border border-white/15 bg-black/20 shadow-xl max-w-sm lg:max-w-none">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src="/events/world-cup-kv.png" alt="EBCI World Cup KV" className="h-full w-full object-cover object-center" />
+                        </div>
+                    </div>
+
+                    {/* Text & Stats Column */}
+                    <div className="flex flex-col justify-between">
                         <div>
-                            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-300/10 px-4 py-2 text-sm font-black uppercase tracking-[0.22em] text-emerald-200">
-                                <Sparkles size={16} />
+                            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-emerald-200">
+                                <Sparkles size={14} />
                                 EBCI World Cup Event
                             </div>
-                            <h1 className="mt-6 max-w-2xl text-4xl font-black leading-tight text-white sm:text-5xl lg:text-6xl">
+                            <h1 className="mt-4 text-3xl font-black leading-tight text-white sm:text-4xl lg:text-5xl">
                                 {event.title}
                             </h1>
-                            <p className="mt-4 max-w-2xl text-base leading-8 text-white/72 sm:text-lg">
+                            <p className="mt-3 text-sm leading-relaxed text-white/72">
                                 {event.subtitle}
                             </p>
                         </div>
 
-                        <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                            <div className="rounded-3xl border border-yellow-300/25 bg-yellow-300/10 p-5 text-white">
-                                <Trophy className="mb-4 text-yellow-200" />
-                                <p className="text-sm text-white/55">เงินรางวัล</p>
-                                <p className="mt-1 text-3xl font-black text-yellow-200">{formatPrize(event.prizeAmount)} บาท</p>
+                        <div className="mt-6 grid gap-2 sm:grid-cols-3">
+                            <div className="rounded-2xl border border-yellow-300/25 bg-yellow-300/10 p-4 text-white">
+                                <Trophy className="mb-2 text-yellow-200" size={20} />
+                                <p className="text-[10px] text-white/55">เงินรางวัล</p>
+                                <p className="mt-0.5 text-lg font-black text-yellow-200">{formatPrize(event.prizeAmount)} บาท</p>
                             </div>
-                            <div className="rounded-3xl border border-white/15 bg-white/10 p-5 text-white">
-                                <Users className="mb-4 text-emerald-200" />
-                                <p className="text-sm text-white/55">ส่งคำตอบแล้ว</p>
-                                <p className="mt-1 text-3xl font-black">{predictionCount} คน</p>
+                            <div className="rounded-2xl border border-white/15 bg-white/10 p-4 text-white">
+                                <Users className="mb-2 text-emerald-200" size={20} />
+                                <p className="text-[10px] text-white/55">ส่งคำตอบแล้ว</p>
+                                <p className="mt-0.5 text-lg font-black">{predictionCount} คน</p>
                             </div>
-                            <div className="rounded-3xl border border-white/15 bg-white/10 p-5 text-white">
-                                <Clock className="mb-4 text-sky-200" />
-                                <p className="text-sm text-white/55">ปิดรับ</p>
-                                <p className="mt-1 text-base font-bold leading-7">{formatThaiDateTime(event.closesAt)}</p>
+                            <div className="rounded-2xl border border-white/15 bg-white/10 p-4 text-white">
+                                <Clock className="mb-2 text-sky-200" size={20} />
+                                <p className="text-[10px] text-white/55">ปิดรับ</p>
+                                <p className="mt-0.5 text-xs font-bold leading-normal">{formatThaiDateTime(event.closesAt)}</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="rounded-[1.8rem] border border-white/15 bg-black/28 p-4 shadow-xl shadow-black/20 backdrop-blur">
+                    {/* Player Status Column */}
+                    <div className="rounded-[1.8rem] border border-white/15 bg-black/28 p-4 shadow-xl shadow-black/20 backdrop-blur flex flex-col justify-between min-h-[250px] lg:min-h-0">
                         <div className="rounded-[1.4rem] border border-white/12 bg-white/10 p-5">
                             <p className="text-xs font-black uppercase tracking-[0.24em] text-yellow-200/80">Player</p>
-                            <h2 className="mt-2 text-2xl font-black text-white">{employee.name}</h2>
-                            <p className="mt-2 text-sm leading-6 text-white/60">
+                            <h2 className="mt-2 text-xl font-black text-white">{employee.name}</h2>
+                            <p className="mt-2 text-xs leading-relaxed text-white/60">
                                 {[employee.code, employee.department, employee.position].filter(Boolean).join(' · ')}
                             </p>
                             {selectedTeam ? (
-                                <div className="mt-5 rounded-2xl border border-emerald-300/30 bg-emerald-300/10 p-4">
-                                    <p className="text-sm text-emerald-100/75">คำทายของคุณตอนนี้</p>
-                                    <p className="mt-1 text-2xl font-black text-white">
-                                        <span className="mr-2 text-3xl">{selectedTeam.flag}</span>
+                                <div className="mt-4 rounded-xl border border-emerald-300/30 bg-emerald-300/10 p-3">
+                                    <p className="text-xs text-emerald-100/75">คำทายของคุณตอนนี้</p>
+                                    <p className="mt-1 text-xl font-black text-white flex items-center gap-2">
+                                        <span className="text-2xl">{selectedTeam.flag}</span>
                                         {selectedTeam.name}
                                     </p>
                                 </div>
                             ) : (
-                                <div className="mt-5 rounded-2xl border border-yellow-300/25 bg-yellow-300/10 p-4 text-yellow-100">
+                                <div className="mt-4 rounded-xl border border-yellow-300/25 bg-yellow-300/10 p-3 text-xs text-yellow-100">
                                     ยังไม่ได้ส่งคำตอบ เลือกทีมด้านล่างแล้วกดยืนยัน
                                 </div>
                             )}
                         </div>
 
-                        {message && (
-                            <div className="mt-4 rounded-2xl border border-emerald-300/25 bg-emerald-300/12 px-4 py-3 text-sm font-bold text-emerald-100">
-                                {message}
-                            </div>
-                        )}
-                        {error && (
-                            <div className="mt-4 rounded-2xl border border-red-300/25 bg-red-500/20 px-4 py-3 text-sm font-bold text-red-50">
-                                {error}
+                        {(message || error) && (
+                            <div className="mt-3">
+                                {message && (
+                                    <div className="rounded-xl border border-emerald-300/25 bg-emerald-300/12 px-3 py-2 text-xs font-bold text-emerald-100">
+                                        {message}
+                                    </div>
+                                )}
+                                {error && (
+                                    <div className="rounded-xl border border-red-300/25 bg-red-500/20 px-3 py-2 text-xs font-bold text-red-50">
+                                        {error}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
