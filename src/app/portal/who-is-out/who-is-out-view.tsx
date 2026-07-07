@@ -17,6 +17,7 @@ interface Entry {
     halfDayPeriod: 'morning' | 'afternoon' | null
     contact: string | null
     fieldNote: string | null
+    photoUrl: string | null
 }
 
 interface Props {
@@ -198,12 +199,21 @@ function PersonRow({
 
     return (
         <div className="px-4 py-3 flex items-start gap-3">
-            <span
-                className="h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}
-            >
-                {(e.firstNameTh || e.lastNameTh || e.nickname || 'พนักงาน').charAt(0)}
-            </span>
+            {e.photoUrl ? (
+                <img
+                    src={e.photoUrl}
+                    alt=""
+                    className="h-10 w-10 rounded-full object-cover shrink-0"
+                    style={{ border: `1px solid ${s.border}` }}
+                />
+            ) : (
+                <span
+                    className="h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+                    style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}
+                >
+                    {(e.firstNameTh || e.lastNameTh || e.nickname || 'พนักงาน').charAt(0)}
+                </span>
+            )}
             <div className="flex-1 min-w-0 space-y-0.5">
                 <p className="text-sm text-white font-semibold truncate">{display}</p>
                 <p className="text-xs text-white/55 truncate">

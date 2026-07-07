@@ -44,6 +44,7 @@ export interface WhoIsOutEntry {
      *  is filtered out by the lib (note is required at submit time but
      *  legacy rows may have it blank). */
     fieldNote: string | null
+    photoUrl: string | null
 }
 
 interface LeaveRow {
@@ -67,6 +68,7 @@ interface EmployeeRow {
     nickname: string | null
     department: string | null
     position: string | null
+    photo_url: string | null
 }
 
 /**
@@ -123,7 +125,7 @@ export async function fetchWhoIsOutToday(): Promise<WhoIsOutEntry[]> {
 
     const { data: empData } = await supabaseAdmin
         .from('employees')
-        .select('id, first_name_th, last_name_th, nickname, department, position')
+        .select('id, first_name_th, last_name_th, nickname, department, position, photo_url')
         .in('id', allEmpIds)
         .eq('status', 'active')
     const empMap = new Map<string, EmployeeRow>(
@@ -178,6 +180,7 @@ export async function fetchWhoIsOutToday(): Promise<WhoIsOutEntry[]> {
             halfDayPeriod: period,
             contact: null,
             fieldNote: null,
+            photoUrl: emp.photo_url ?? null,
         })
     }
 
@@ -198,6 +201,7 @@ export async function fetchWhoIsOutToday(): Promise<WhoIsOutEntry[]> {
             halfDayPeriod: null,
             contact: r.contact_during_wfh?.trim() || null,
             fieldNote: null,
+            photoUrl: emp.photo_url ?? null,
         })
     }
 
@@ -221,6 +225,7 @@ export async function fetchWhoIsOutToday(): Promise<WhoIsOutEntry[]> {
             halfDayPeriod: null,
             contact: null,
             fieldNote: r.notes?.trim() || null,
+            photoUrl: emp.photo_url ?? null,
         })
     }
 

@@ -37,6 +37,7 @@ interface Entry {
     halfDayPeriod: 'morning' | 'afternoon' | null
     contact: string | null
     fieldNote: string | null
+    photoUrl: string | null
 }
 
 const PREVIEW_COUNT = 4
@@ -145,12 +146,21 @@ export function WhoIsOutWidget() {
                         const displayName = formatEmployeeName(e, 'พนักงาน')
                         return (
                             <div key={`${e.employeeId}-${e.kind}`} className="px-4 py-2.5 flex items-center gap-3">
-                                <span
-                                    className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                                    style={{ background: 'rgba(255,255,255,0.08)', color: 'white' }}
-                                >
-                                    {(e.nickname?.trim() || e.firstNameTh || e.lastNameTh || 'พนักงาน').charAt(0)}
-                                </span>
+                                {e.photoUrl ? (
+                                    <img
+                                        src={e.photoUrl}
+                                        alt=""
+                                        className="h-8 w-8 rounded-full object-cover shrink-0"
+                                        style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+                                    />
+                                ) : (
+                                    <span
+                                        className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+                                        style={{ background: 'rgba(255,255,255,0.08)', color: 'white' }}
+                                    >
+                                        {(e.nickname?.trim() || e.firstNameTh || e.lastNameTh || 'พนักงาน').charAt(0)}
+                                    </span>
+                                )}
                                 <span className="text-sm text-white font-medium truncate flex-1">{displayName}</span>
                                 <span
                                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.7rem] font-semibold whitespace-nowrap shrink-0"
@@ -343,12 +353,21 @@ function PersonRow({
 
     return (
         <div className="px-3 py-2.5 flex items-start gap-3 min-w-0">
-            <span
-                className="h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}
-            >
-                {(e.firstNameTh || e.lastNameTh || e.nickname || 'พนักงาน').charAt(0)}
-            </span>
+            {e.photoUrl ? (
+                <img
+                    src={e.photoUrl}
+                    alt=""
+                    className="h-9 w-9 rounded-full object-cover shrink-0"
+                    style={{ border: `1px solid ${s.border}` }}
+                />
+            ) : (
+                <span
+                    className="h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+                    style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}
+                >
+                    {(e.firstNameTh || e.lastNameTh || e.nickname || 'พนักงาน').charAt(0)}
+                </span>
+            )}
             <div className="flex-1 min-w-0 space-y-0.5">
                 <p className="text-sm text-white font-semibold truncate">{display}</p>
                 {(e.position || e.department) && (
