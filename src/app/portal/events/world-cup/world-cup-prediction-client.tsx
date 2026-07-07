@@ -337,18 +337,26 @@ export function WorldCupPredictionClient({
                     </div>
                 </div>
 
-                <div className="mt-5 grid gap-3 text-sm leading-7 text-white/75 sm:grid-cols-3">
+                <div className="mt-5 grid gap-3 text-sm leading-7 text-white/75 sm:grid-cols-2 lg:grid-cols-4">
                     <div className="rounded-2xl border border-white/12 bg-black/18 p-4">
                         <p className="font-black text-white">1. เลือกได้คนละ 1 ทีม</p>
-                        <p className="mt-1">ให้เลือกทีมที่คิดว่าจะได้แชมป์ฟุตบอลโลก 2026 เพียงทีมเดียวต่อคน</p>
+                        <p className="mt-1 text-xs">ให้เลือกทีมที่คิดว่าจะได้แชมป์ฟุตบอลโลก 2026 เพียงทีมเดียวต่อคน</p>
                     </div>
                     <div className="rounded-2xl border border-white/12 bg-black/18 p-4">
                         <p className="font-black text-white">2. เปลี่ยนทีมได้ก่อนปิดรับ</p>
-                        <p className="mt-1">สามารถเปลี่ยนคำตอบได้จนถึงเวลา 20:00 น. วันที่ 10 กรกฎาคม 2026</p>
+                        <p className="mt-1 text-xs">สามารถเปลี่ยนคำตอบได้จนถึงเวลา 20:00 น. วันที่ 10 กรกฎาคม 2026</p>
                     </div>
                     <div className="rounded-2xl border border-white/12 bg-black/18 p-4">
                         <p className="font-black text-white">3. หลังปิดรับจะล็อกคำตอบ</p>
-                        <p className="mt-1">หลังเวลา 20:00 น. วันที่ 10 กรกฎาคม 2026 จะไม่สามารถเปลี่ยนทีมได้แล้ว</p>
+                        <p className="mt-1 text-xs">หลังเวลา 20:00 น. วันที่ 10 กรกฎาคม 2026 จะไม่สามารถเปลี่ยนทีมได้แล้ว</p>
+                    </div>
+                    <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/5 p-4">
+                        <p className="font-black text-yellow-300">4. รางวัลกิจกรรม 5,000 บาท</p>
+                        <ul className="mt-1 list-disc pl-4 text-xs text-yellow-100/90 leading-6">
+                            <li>ทายถูกคนเดียว รับเต็ม 5,000 บาท</li>
+                            <li>ทายถูกหลายคน หารแบ่งรางวัลเท่าๆ กัน</li>
+                            <li>ไม่มีใครทายถูกเลย หารเฉลี่ยแบ่งเท่ากันทุกคนที่ส่งคำทาย</li>
+                        </ul>
                     </div>
                 </div>
             </section>
