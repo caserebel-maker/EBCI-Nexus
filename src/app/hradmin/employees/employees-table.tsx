@@ -495,7 +495,15 @@ function EmployeeNameCell({ employee }: { employee: Employee }) {
                         </span>
                     )}
                 </div>
-                <div className="text-xs text-white/50 font-mono">{employee.email}</div>
+                <div className="text-xs text-white/50 font-mono flex items-center flex-wrap gap-1 mt-0.5">
+                    {employee.employeeCode && (
+                        <>
+                            <span className="text-white/70 font-semibold">{employee.employeeCode}</span>
+                            <span className="text-white/20">·</span>
+                        </>
+                    )}
+                    <span className="break-all">{employee.email}</span>
+                </div>
             </div>
         </div>
     )
