@@ -350,8 +350,8 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                         <table className="w-full text-sm text-left">
                             <thead className="bg-white/5 text-white/70 font-medium uppercase text-xs">
                                 <tr>
-                                    <th className="px-4 py-4 text-center w-10">#</th>
-                                    <th className="px-6 py-4">{t('employees.table.name')}</th>
+                                    <th className="pl-4 pr-2 py-4 text-center w-12">#</th>
+                                    <th className="pl-2 pr-6 py-4">{t('employees.table.name')}</th>
                                     <th className="px-6 py-4">{t('employees.table.position')}</th>
                                     <th className="px-6 py-4">อายุงาน</th>
                                     <th className="px-6 py-4">{t('employees.table.status')}</th>
@@ -370,10 +370,10 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                                                 navigatingTo === employee.employeeCode && "bg-amber-400/10"
                                             )}
                                         >
-                                            <td className="px-4 py-4 text-center text-white/35 font-mono text-xs select-none">
+                                            <td className="pl-4 pr-2 py-4 text-center text-white/35 font-mono text-xs select-none w-12">
                                                 {idx + 1}
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className="pl-2 pr-6 py-4">
                                                 <EmployeeNameCell employee={employee} />
                                             </td>
                                             <td className="px-6 py-4">
@@ -396,8 +396,8 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                         <table className="w-full text-sm text-left">
                             <thead className="bg-white/5 text-white/70 font-medium uppercase text-xs">
                                 <tr>
-                                    <th className="px-4 py-4 text-center w-10">#</th>
-                                    <th className="px-6 py-4">{t('employees.table.name')}</th>
+                                    <th className="pl-4 pr-2 py-4 text-center w-12">#</th>
+                                    <th className="pl-2 pr-6 py-4">{t('employees.table.name')}</th>
                                     <th className="px-6 py-4">{t('employees.table.position')}</th>
                                     <th className="px-6 py-4">อายุงาน</th>
                                     <th className="px-6 py-4">วันที่พ้นสภาพ</th>
@@ -417,10 +417,10 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                                                 navigatingTo === employee.employeeCode && "bg-amber-400/10"
                                             )}
                                         >
-                                            <td className="px-4 py-4 text-center text-white/35 font-mono text-xs select-none">
+                                            <td className="pl-4 pr-2 py-4 text-center text-white/35 font-mono text-xs select-none w-12">
                                                 {idx + 1}
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className="pl-2 pr-6 py-4">
                                                 <EmployeeNameCell employee={employee} />
                                             </td>
                                             <td className="px-6 py-4">
