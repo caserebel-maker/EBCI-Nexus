@@ -92,6 +92,10 @@ function isRegularWorkday(dateKey: string) {
 }
 
 function isLateBangkokTime(raw: string, source: 'utc' | 'bangkok') {
+    let s = raw.trim()
+    if (source === 'bangkok' && s.endsWith('Z')) {
+        s = s.slice(0, -1)
+    }
     const time = new Intl.DateTimeFormat('en-GB', {
         timeZone: 'Asia/Bangkok',
         hour: '2-digit',
@@ -99,8 +103,8 @@ function isLateBangkokTime(raw: string, source: 'utc' | 'bangkok') {
         hour12: false,
     }).format(
         source === 'utc'
-            ? new Date(raw.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(raw) ? raw : `${raw}Z`)
-            : new Date(raw.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(raw) ? raw : `${raw}+07:00`),
+            ? new Date(s.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(s) ? s : `${s}Z`)
+            : new Date(s.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(s) ? s : `${s}+07:00`),
     )
     const [hour, minute] = time.split(':').map(Number)
     return hour > 8 || (hour === 8 && minute > 0)
