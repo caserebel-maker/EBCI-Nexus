@@ -38,6 +38,7 @@ type TeamData = {
     pickCount: number
     pickers: PickerData[]
     isActive: boolean
+    seedOrder: number
 }
 
 type Props = {
@@ -203,6 +204,35 @@ export function WorldCupPredictionClient({
 
     const activeTeams = useMemo(() => teams.filter(t => t.isActive), [teams])
     const eliminatedTeams = useMemo(() => teams.filter(t => !t.isActive), [teams])
+
+    const getTeamBySeed = (seed: number) => teams.find(t => t.seedOrder === seed)
+
+    const matchups = useMemo(() => [
+        {
+            id: 1,
+            title: 'คู่ที่ 1',
+            team1: getTeamBySeed(10), // France
+            team2: getTeamBySeed(20), // Morocco
+        },
+        {
+            id: 2,
+            title: 'คู่ที่ 2',
+            team1: getTeamBySeed(40), // Belgium
+            team2: getTeamBySeed(30), // Spain
+        },
+        {
+            id: 3,
+            title: 'คู่ที่ 3',
+            team1: getTeamBySeed(60), // England
+            team2: getTeamBySeed(50), // Norway
+        },
+        {
+            id: 4,
+            title: 'คู่ที่ 4',
+            team1: getTeamBySeed(70), // Argentina
+            team2: getTeamBySeed(80), // Switzerland
+        },
+    ], [teams])
 
     const renderTeamCard = (team: TeamData, isTeamActive: boolean) => {
         const active = selectedTeamId === team.id
@@ -489,7 +519,7 @@ export function WorldCupPredictionClient({
                 <div className="mb-5 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
                     <div>
                         <p className="text-xs font-black uppercase tracking-[0.24em] text-yellow-200/80">Champion Pick</p>
-                        <h2 className="mt-1 text-2xl font-black text-white">เลือกทีมที่คิดว่าจะได้แชมป์</h2>
+                        <h2 className="mt-1 text-2xl font-black text-white">ตารางการแข่งขันและเลือกทายแชมป์ (รอบ 8 ทีม)</h2>
                     </div>
                     {!closed ? (
                         <span className="inline-flex items-center rounded-full bg-yellow-400 px-3.5 py-1.5 text-xs font-black text-[#1a0004] shadow-[0_0_15px_rgba(250,204,21,0.45)] border border-yellow-300 animate-pulse select-none shrink-0">
@@ -502,37 +532,141 @@ export function WorldCupPredictionClient({
                     )}
                 </div>
 
-                {closed ? (
-                    <div className="space-y-10">
-                        {/* Remaining Contenders */}
-                        <div>
-                            <div className="mb-4 flex items-center gap-2">
-                                <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                                <h3 className="text-lg font-black text-white">ผู้ที่ยังอยู่ในเส้นทางลุ้นรางวัล ({activeTeams.length} ทีม)</h3>
+                {/* Desktop Bracket (lg screens and above) */}
+                <div className="hidden lg:grid grid-cols-[1fr_auto_1fr] gap-x-20 items-stretch relative py-6">
+                    <style>{`
+                        @keyframes bracket-flow-left {
+                            from { stroke-dashoffset: 20; }
+                            to { stroke-dashoffset: 0; }
+                        }
+                        @keyframes bracket-flow-right {
+                            from { stroke-dashoffset: -20; }
+                            to { stroke-dashoffset: 0; }
+                        }
+                        .animate-flow-left {
+                            stroke-dasharray: 6 4;
+                            animation: bracket-flow-left 1.5s linear infinite;
+                        }
+                        .animate-flow-right {
+                            stroke-dasharray: 6 4;
+                            animation: bracket-flow-right 1.5s linear infinite;
+                        }
+                    `}</style>
+
+                    {/* Left Side Matchups (France/Morocco & Belgium/Spain) */}
+                    <div className="flex flex-col justify-around gap-16 py-4">
+                        {/* Match 1 */}
+                        <div className="relative flex flex-col gap-5 p-5 rounded-[2.2rem] border border-white/5 bg-black/15">
+                            <div className="absolute right-[-5.25rem] top-1/2 -translate-y-1/2 w-20 h-[190px] pointer-events-none">
+                                <svg className="w-full h-full" viewBox="0 0 80 190" preserveAspectRatio="none">
+                                    <path d="M 0 35 H 40 V 155 H 0 M 40 95 H 80" stroke="rgba(250,204,21,0.45)" strokeWidth="2.5" fill="none" strokeLinecap="round" className="animate-flow-left" />
+                                </svg>
                             </div>
-                            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-                                {activeTeams.map(team => renderTeamCard(team, true))}
-                            </div>
+                            <div className="text-center text-[10px] font-black uppercase tracking-widest text-yellow-300/80">คู่ที่ 1 (Match 1)</div>
+                            {matchups[0].team1 && renderTeamCard(matchups[0].team1, matchups[0].team1.isActive)}
+                            {matchups[0].team2 && renderTeamCard(matchups[0].team2, matchups[0].team2.isActive)}
                         </div>
 
-                        {/* Eliminated Teams */}
-                        {eliminatedTeams.length > 0 && (
-                            <div className="pt-8 border-t border-white/10">
-                                <div className="mb-4 flex items-center gap-2">
-                                    <div className="h-2 w-2 rounded-full bg-rose-500" />
-                                    <h3 className="text-lg font-black text-white/55">ตกรอบไปแล้ว ({eliminatedTeams.length} ทีม)</h3>
-                                </div>
-                                <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-                                    {eliminatedTeams.map(team => renderTeamCard(team, false))}
+                        {/* Match 2 */}
+                        <div className="relative flex flex-col gap-5 p-5 rounded-[2.2rem] border border-white/5 bg-black/15">
+                            <div className="absolute right-[-5.25rem] top-1/2 -translate-y-1/2 w-20 h-[190px] pointer-events-none">
+                                <svg className="w-full h-full" viewBox="0 0 80 190" preserveAspectRatio="none">
+                                    <path d="M 0 35 H 40 V 155 H 0 M 40 95 H 80" stroke="rgba(250,204,21,0.45)" strokeWidth="2.5" fill="none" strokeLinecap="round" className="animate-flow-left" />
+                                </svg>
+                            </div>
+                            <div className="text-center text-[10px] font-black uppercase tracking-widest text-yellow-300/80">คู่ที่ 2 (Match 2)</div>
+                            {matchups[1].team1 && renderTeamCard(matchups[1].team1, matchups[1].team1.isActive)}
+                            {matchups[1].team2 && renderTeamCard(matchups[1].team2, matchups[1].team2.isActive)}
+                        </div>
+                    </div>
+
+                    {/* Middle Trophy Column */}
+                    <div className="flex flex-col items-center justify-center px-4 self-center relative w-64 min-h-[500px]">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(250,204,21,0.15)_0%,transparent_70%)] animate-pulse" />
+                        <div className="relative flex flex-col items-center">
+                            <div className="w-44 h-44 rounded-full border-2 border-yellow-400/30 bg-black/45 overflow-hidden flex items-center justify-center p-3 shadow-2xl shadow-yellow-400/20">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img 
+                                    src="/events/world-cup-trophy.jpg" 
+                                    alt="FIFA World Cup Trophy" 
+                                    className="w-full h-full object-cover rounded-full" 
+                                    onError={(e) => {
+                                        e.currentTarget.style.display = 'none'
+                                        const fallback = document.getElementById('trophy-fallback')
+                                        if (fallback) fallback.style.display = 'flex'
+                                    }}
+                                />
+                                <div id="trophy-fallback" className="hidden flex-col items-center text-yellow-300">
+                                    <Trophy size={80} className="drop-shadow-[0_0_20px_rgba(250,204,21,0.5)]" />
                                 </div>
                             </div>
-                        )}
+                            <span className="mt-6 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 px-4 py-1.5 text-xs font-black text-[#1a0004] shadow-lg shadow-yellow-500/20 tracking-wider">
+                                รอบ 8 ทีมสุดท้าย
+                            </span>
+                            <div className="mt-4 text-center">
+                                <h3 className="text-2xl font-black text-white tracking-wide">WORLD CUP 2026</h3>
+                                <p className="mt-1 text-xs text-white/55 font-bold uppercase tracking-widest">ROAD TO CHAMPION</p>
+                            </div>
+                        </div>
                     </div>
-                ) : (
-                    <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-                        {teams.map(team => renderTeamCard(team, true))}
+
+                    {/* Right Side Matchups (England/Norway & Argentina/Switzerland) */}
+                    <div className="flex flex-col justify-around gap-16 py-4">
+                        {/* Match 3 */}
+                        <div className="relative flex flex-col gap-5 p-5 rounded-[2.2rem] border border-white/5 bg-black/15">
+                            <div className="absolute left-[-5.25rem] top-1/2 -translate-y-1/2 w-20 h-[190px] pointer-events-none">
+                                <svg className="w-full h-full" viewBox="0 0 80 190" preserveAspectRatio="none">
+                                    <path d="M 80 35 H 40 V 155 H 80 M 40 95 H 0" stroke="rgba(250,204,21,0.45)" strokeWidth="2.5" fill="none" strokeLinecap="round" className="animate-flow-right" />
+                                </svg>
+                            </div>
+                            <div className="text-center text-[10px] font-black uppercase tracking-widest text-yellow-300/80">คู่ที่ 3 (Match 3)</div>
+                            {matchups[2].team1 && renderTeamCard(matchups[2].team1, matchups[2].team1.isActive)}
+                            {matchups[2].team2 && renderTeamCard(matchups[2].team2, matchups[2].team2.isActive)}
+                        </div>
+
+                        {/* Match 4 */}
+                        <div className="relative flex flex-col gap-5 p-5 rounded-[2.2rem] border border-white/5 bg-black/15">
+                            <div className="absolute left-[-5.25rem] top-1/2 -translate-y-1/2 w-20 h-[190px] pointer-events-none">
+                                <svg className="w-full h-full" viewBox="0 0 80 190" preserveAspectRatio="none">
+                                    <path d="M 80 35 H 40 V 155 H 80 M 40 95 H 0" stroke="rgba(250,204,21,0.45)" strokeWidth="2.5" fill="none" strokeLinecap="round" className="animate-flow-right" />
+                                </svg>
+                            </div>
+                            <div className="text-center text-[10px] font-black uppercase tracking-widest text-yellow-300/80">คู่ที่ 4 (Match 4)</div>
+                            {matchups[3].team1 && renderTeamCard(matchups[3].team1, matchups[3].team1.isActive)}
+                            {matchups[3].team2 && renderTeamCard(matchups[3].team2, matchups[3].team2.isActive)}
+                        </div>
                     </div>
-                )}
+                </div>
+
+                {/* Mobile/Tablet Matchup View (lg screens and below) */}
+                <div className="block lg:hidden space-y-8 py-4">
+                    {matchups.map((match) => (
+                        <div key={match.id} className="relative p-4 rounded-[2.5rem] border border-white/10 bg-black/20 shadow-xl">
+                            <div className="text-center text-[10px] font-black uppercase tracking-widest text-yellow-300/80 mb-3">{match.title}</div>
+                            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 relative">
+                                {/* Horizontal connector line */}
+                                <div className="absolute left-[30%] right-[30%] top-1/2 -translate-y-1/2 h-[2px] bg-gradient-to-r from-transparent via-yellow-400/40 to-transparent pointer-events-none" />
+                                
+                                {/* Team 1 */}
+                                <div className="w-full">
+                                    {match.team1 && renderTeamCard(match.team1, match.team1.isActive)}
+                                </div>
+
+                                {/* Versus Badge */}
+                                <div className="flex flex-col items-center justify-center relative w-10 h-full z-10">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-full border border-yellow-300/35 bg-[#30040b] text-[9px] font-black text-yellow-300 shadow-md shadow-black/30 select-none">
+                                        VS
+                                    </div>
+                                </div>
+
+                                {/* Team 2 */}
+                                <div className="w-full">
+                                    {match.team2 && renderTeamCard(match.team2, match.team2.isActive)}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </section>
 
             <section className="mt-6 rounded-[2rem] border border-yellow-300/20 bg-gradient-to-br from-yellow-300/12 via-white/8 to-emerald-300/10 p-5 shadow-xl shadow-black/10 backdrop-blur sm:p-7">
