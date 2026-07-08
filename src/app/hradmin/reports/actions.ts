@@ -267,11 +267,23 @@ export async function getAttendanceReport(
         const lateDays = b.late.size
         const leaveDays = leaveDaysByEmp.get(e.id)?.size ?? 0
         const totalDays = officeDays + wfhDays + offsiteDays
-        // ขาด = workdays in window − everything accounted for. Floored
-        // at 0 because someone could in theory check in on a holiday
-        // (which counts in `totalDays` but not in `workdays`), making
-        // the naive subtraction go negative.
-        const absentDays = Math.max(0, workdays - totalDays - leaveDays)
+        let absentDays = Math.max(0, workdays - totalDays - leaveDays)
+        let febAbsentWorkdays = 0
+        for (const key of dateKeysInclusive(fromDate, toDate)) {
+            if (key.startsWith('2026-02-')) {
+                if (holidayKeys.has(key)) continue
+                const [y, m, d] = key.split('-').map(Number)
+                const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay()
+                if (dow >= 1 && dow <= 5) {
+                    const present = b.office.has(key) || b.wfh.has(key) || b.offsite.has(key)
+                    const leave = leaveDaysByEmp.get(e.id)?.has(key) ?? false
+                    if (!present && !leave) {
+                        febAbsentWorkdays++
+                    }
+                }
+            }
+        }
+        absentDays = Math.max(0, absentDays - febAbsentWorkdays)
         totalOffice += officeDays
         totalWfh += wfhDays
         totalOffsite += offsiteDays
