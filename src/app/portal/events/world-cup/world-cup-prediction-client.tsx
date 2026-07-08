@@ -535,6 +535,39 @@ export function WorldCupPredictionClient({
                 )}
             </section>
 
+            <section className="mt-6 rounded-[2rem] border border-white/15 bg-white/10 p-5 shadow-xl shadow-black/10 backdrop-blur sm:p-7">
+                <div className="flex items-center gap-3 mb-5">
+                    <div className="h-10 w-10 rounded-xl bg-yellow-400/20 flex items-center justify-center text-yellow-300 border border-yellow-400/30">
+                        <Trophy size={20} />
+                    </div>
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-[0.24em] text-yellow-200/80">Expert Analysis</p>
+                        <h2 className="text-xl font-bold text-white">วิเคราะห์โดยเซียน</h2>
+                    </div>
+                </div>
+                
+                <div className="flex flex-col md:flex-row items-center gap-6 rounded-2xl bg-black/20 p-5 border border-white/5">
+                    <div className="w-full md:w-1/2 overflow-hidden rounded-xl border border-white/10">
+                        <img 
+                            src="/assets/world-cup-bencha.jpg" 
+                            alt="วิเคราะห์โดยเซียนเบญจา"
+                            className="w-full h-auto object-cover hover:scale-[1.02] transition-transform duration-300"
+                        />
+                    </div>
+                    <div className="w-full md:w-1/2 space-y-4">
+                        <div className="inline-flex items-center gap-2 rounded-full bg-yellow-400/10 border border-yellow-400/20 px-3 py-1 text-xs font-semibold text-yellow-300">
+                            ★ เซียนเบญจา พารวย ฟันธง!
+                        </div>
+                        <p className="text-base text-white/90 leading-8">
+                            "ในศึกฟุตบอลโลก 2026 นี้ ทีมชาติ <strong className="text-yellow-300 font-bold">นอร์เวย์ (Norway)</strong> ถือเป็นม้ามืดตัวจริงเสียงจริง ด้วยฟอร์มการเล่นที่ดุดันและขุมกำลังรุ่นใหม่ที่กำลังท็อปฟอร์ม เซียนเบญจาขอฟันธงเลยว่า นอร์เวย์จะเป็นแชมป์บอลโลกแน่นอนครับ!"
+                        </p>
+                        <div className="text-xs text-white/50">
+                            *ข้อมูลการวิเคราะห์เป็นเพียงความคิดเห็นส่วนบุคคลเพื่อความบันเทิงในกิจกรรมเท่านั้น
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section className="mt-6 rounded-[2rem] border border-yellow-300/20 bg-gradient-to-br from-yellow-300/12 via-white/8 to-emerald-300/10 p-5 shadow-xl shadow-black/10 backdrop-blur sm:p-7">
                 <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                     <div>
