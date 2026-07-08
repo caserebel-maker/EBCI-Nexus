@@ -124,6 +124,24 @@ export function WorldCupPredictionClient({
     const [message, setMessage] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [showNonPredictorsModal, setShowNonPredictorsModal] = useState(false)
+    const [activeUsersCount, setActiveUsersCount] = useState<number>(1)
+
+    useEffect(() => {
+        const fetchActiveCount = async () => {
+            try {
+                const res = await fetch('/api/portal/active-count?path=/portal/events/world-cup')
+                const data = await res.json()
+                if (typeof data.activeCount === 'number') {
+                    setActiveUsersCount(data.activeCount)
+                }
+            } catch (e) {
+                console.error('Error fetching active count:', e)
+            }
+        }
+        fetchActiveCount()
+        const interval = setInterval(fetchActiveCount, 15000)
+        return () => clearInterval(interval)
+    }, [])
 
     useEffect(() => {
         const main = document.querySelector('main')
@@ -369,9 +387,18 @@ export function WorldCupPredictionClient({
                 <div className="relative grid gap-8 p-3 sm:p-8 lg:grid-cols-[1.05fr_.95fr] lg:p-10">
                     <div className="flex min-h-[520px] flex-col justify-between">
                         <div>
-                            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-300/10 px-4 py-2 text-sm font-black uppercase tracking-[0.22em] text-emerald-200">
-                                <Sparkles size={16} />
-                                EBCI World Cup Event
+                            <div className="flex flex-wrap items-center gap-2">
+                                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-300/10 px-4 py-2 text-sm font-black uppercase tracking-[0.22em] text-emerald-200">
+                                    <Sparkles size={16} />
+                                    EBCI World Cup Event
+                                </div>
+                                <div className="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 bg-green-500/15 px-3 py-1.5 text-xs font-black tracking-wide text-green-300 shadow-[0_0_10px_rgba(34,197,94,0.15)]">
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                    </span>
+                                    มี {activeUsersCount} คนกำลังดูหน้านี้อยู่
+                                </div>
                             </div>
                             <h1 className="mt-6 max-w-2xl text-4xl font-black leading-tight text-white sm:text-5xl lg:text-6xl">
                                 {event.title}

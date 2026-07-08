@@ -65,7 +65,11 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
 
     React.useEffect(() => {
         const sendHeartbeat = () => {
-            fetch('/api/portal/heartbeat', { method: 'POST' }).catch(() => {})
+            fetch('/api/portal/heartbeat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: window.location.pathname })
+            }).catch(() => {})
         }
         sendHeartbeat()
         const interval = setInterval(sendHeartbeat, 120 * 1000)
