@@ -354,11 +354,19 @@ function LeaveTooltip({ active, payload, label }: ChartTooltipProps) {
     return (
         <div style={{ background: 'rgba(20,4,10,0.95)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '10px 14px' }}>
             <p className="text-white font-bold text-sm mb-1">{label}</p>
-            {payload.map((p) => (
-                <p key={p.name} className="text-xs" style={{ color: p.fill }}>
-                    {p.name}: <span className="font-bold">{p.value} วัน</span>
-                </p>
-            ))}
+            {payload.map((p) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const rawData = p.payload as any
+                const actualValue = p.dataKey === 'usedPct' 
+                    ? rawData?.ใช้ไปแล้ว 
+                    : rawData?.คงเหลือ
+                const displayName = p.name === 'usedPct' ? 'ใช้ไปแล้ว' : p.name === 'remainingPct' ? 'คงเหลือ' : p.name
+                return (
+                    <p key={p.name} className="text-xs" style={{ color: p.fill }}>
+                        {displayName}: <span className="font-bold">{actualValue} วัน</span>
+                    </p>
+                )
+            })}
         </div>
     )
 }
@@ -750,17 +758,26 @@ export function EmployeeProfileView({
     const levelColor = LEVEL_BADGE_COLORS[lvl] ?? LEVEL_BADGE_COLORS[1]
     const levelLabel = EMPLOYEE_LEVELS[lvl]?.label.split('—')[0].trim() ?? `Level ${lvl}`
     const leaveTypeNameById = new Map(leaveTypes.map(t => [t.id, t.name_th]))
-    // ── Leave chart data — primary: leave_balances, fallback: leave_requests ──
     const chartData = (() => {
         if (leaveBalances.length > 0) {
             return leaveBalances
                 .filter(b => b.entitled_days > 0 || b.used_days > 0)
-                .map(b => ({
-                    name: leaveChartLabel(b.leave_type, b.leave_type_name ?? leaveTypeNameById.get(b.leave_type)),
-                    ใช้ไปแล้ว: b.used_days,
-                    คงเหลือ: Math.max(0, b.remaining_days),
-                    entitled: b.entitled_days,
-                }))
+                .map(b => {
+                    const entitled = b.entitled_days
+                    const used = b.used_days
+                    const remaining = Math.max(0, b.remaining_days)
+                    const total = entitled > 0 ? entitled : (used + remaining)
+                    const usedPct = total > 0 ? (used / total) * 100 : 0
+                    const remainingPct = total > 0 ? (remaining / total) * 100 : 100
+                    return {
+                        name: leaveChartLabel(b.leave_type, b.leave_type_name ?? leaveTypeNameById.get(b.leave_type)),
+                        ใช้ไปแล้ว: used,
+                        คงเหลือ: remaining,
+                        entitled: total,
+                        usedPct,
+                        remainingPct,
+                    }
+                })
         }
         // Fallback: tally approved days from leave_requests
         const counts: Record<string, number> = {}
@@ -772,9 +789,11 @@ export function EmployeeProfileView({
             ใช้ไปแล้ว: days,
             คงเหลือ: 0,
             entitled: days,
+            usedPct: 100,
+            remainingPct: 0,
         }))
     })()
-    const leaveChartHeight = Math.max(220, chartData.length * 34 + 48)
+    const leaveChartHeight = Math.max(220, chartData.length * 40 + 48)
     const approvedLeaveDays = recentLeaves
         .filter(l => l.status === 'approved' && new Date(l.start_date).getFullYear() === balanceYear)
         .reduce((sum, l) => sum + Number(l.days ?? 0), 0)
@@ -1599,18 +1618,19 @@ export function EmployeeProfileView({
                             <BarChart
                                 data={chartData}
                                 layout="vertical"
-                                margin={{ top: 0, right: 48, left: 8, bottom: 0 }}
-                                barCategoryGap="30%"
+                                margin={{ top: 0, right: 64, left: 8, bottom: 0 }}
+                                barCategoryGap="25%"
                             >
-                                <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.75)', fontSize: 12 }}
-                                    axisLine={false} tickLine={false} />
+                                <XAxis type="number" domain={[0, 100]} hide={true} />
                                 <YAxis type="category" dataKey="name" width={128}
                                     tick={{ fill: '#fcd34d', fontSize: 12, fontWeight: 600 }}
                                     axisLine={false} tickLine={false} />
                                 <Tooltip content={<LeaveTooltip />} cursor={{ fill: 'rgba(255,255,255,0.22)' }} />
                                 <Bar
-                                    dataKey="ใช้ไปแล้ว"
+                                    dataKey="usedPct"
+                                    name="ใช้ไปแล้ว"
                                     stackId="a"
+                                    barSize={16}
                                     fill={LEAVE_CHART_USED_FILL}
                                     stroke={LEAVE_CHART_USED_STROKE}
                                     strokeWidth={1}
@@ -1618,13 +1638,15 @@ export function EmployeeProfileView({
                                     minPointSize={(value) => (Number(value) > 0 ? 8 : 0)}
                                 />
                                 <Bar
-                                    dataKey="คงเหลือ"
+                                    dataKey="remainingPct"
+                                    name="คงเหลือ"
                                     stackId="a"
+                                    barSize={16}
                                     fill={LEAVE_CHART_REMAINING_FILL}
                                     stroke={LEAVE_CHART_REMAINING_STROKE}
                                     strokeWidth={0.5}
                                     radius={[0, 4, 4, 0]}>
-                                    <LabelList dataKey="คงเหลือ" position="right"
+                                    <LabelList dataKey="remainingPct" position="right"
                                         content={(props: unknown) => {
                                             const { x, y, width, height, index } = props as LeaveChartLabelProps
                                             const d = typeof index === 'number' ? chartData[index] : undefined
@@ -1635,7 +1657,7 @@ export function EmployeeProfileView({
                                                     x={Number(x) + Number(width) + 8}
                                                     y={Number(y) + Number(height) / 2 + 4}
                                                     fill="rgba(255,255,255,0.85)"
-                                                    fontSize={11}
+                                                    fontSize={12}
                                                     fontWeight={700}
                                                 >
                                                     {label}
