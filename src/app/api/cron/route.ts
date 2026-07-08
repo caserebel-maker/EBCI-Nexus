@@ -3,6 +3,7 @@ import { GET as autoCheckout } from './auto-checkout/route'
 import { GET as leaveReminders } from './leave-reminders/route'
 import { GET as wfhCheckinNudge } from './wfh-checkin-nudge/route'
 import { GET as monitorSync } from './monitor-sync/route'
+import { GET as worldCupSummary } from './world-cup-summary/route'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60 // Allow up to 60 seconds for multiple tasks
@@ -41,6 +42,7 @@ export async function GET(req: NextRequest) {
     results.leaveReminders = await runCronTask('leaveReminders', req, leaveReminders)
     results.wfhCheckinNudge = await runCronTask('wfhCheckinNudge', req, wfhCheckinNudge)
     results.autoCheckout = await runCronTask('autoCheckout', req, autoCheckout)
+    results.worldCupSummary = await runCronTask('worldCupSummary', req, worldCupSummary)
 
     return NextResponse.json({
         success: true,
