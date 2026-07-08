@@ -547,7 +547,7 @@ export function WorldCupPredictionClient({
                     </div>
                 </div>
 
-                <div className="mt-5 grid gap-3 text-sm leading-7 text-white/75 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="mt-5 grid gap-3 text-sm leading-7 text-white/75 sm:grid-cols-2 lg:grid-cols-5">
                     <div className="rounded-2xl border border-white/12 bg-black/18 p-4">
                         <p className="font-black text-white">1. เลือกได้คนละ 1 ทีม</p>
                         <p className="mt-1 text-xs">ให้เลือกทีมที่คิดว่าจะได้แชมป์ฟุตบอลโลก 2026 เพียงทีมเดียวต่อคน</p>
@@ -560,8 +560,12 @@ export function WorldCupPredictionClient({
                         <p className="font-black text-white">3. หลังปิดรับจะล็อกคำตอบ</p>
                         <p className="mt-1 text-xs">หลังเวลา 20.00 น. วันที่ 10 กรกฎาคม 2026 จะไม่สามารถเปลี่ยนทีมได้แล้ว</p>
                     </div>
+                    <div className="rounded-2xl border border-white/12 bg-black/18 p-4">
+                        <p className="font-black text-white">4. สิทธิ์เข้าร่วมกิจกรรม</p>
+                        <p className="mt-1 text-xs">ร่วมลุ้นทายผลได้เฉพาะพนักงานที่มีรหัสเข้าระบบ EBCI Nexus เท่านั้น</p>
+                    </div>
                     <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/5 p-4">
-                        <p className="font-black text-yellow-300">4. รางวัลกิจกรรม 3,000 บาท</p>
+                        <p className="font-black text-yellow-300">5. รางวัลกิจกรรม 3,000 บาท</p>
                         <ul className="mt-1 list-disc pl-4 text-xs text-yellow-100/90 leading-6">
                             <li>ทายถูกคนเดียว รับเต็ม 3,000 บาท</li>
                             <li>ทายถูกหลายคน หารแบ่งรางวัลเท่าๆ กัน</li>
