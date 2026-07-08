@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from "react"
+import { useEffect, useState, useTransition, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { publishAnnouncement } from "../actions"
@@ -32,6 +32,19 @@ export default function AnnouncementPage() {
     const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null)
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
+    const [shouldDeleteImage, setShouldDeleteImage] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+
+    const handleClearImage = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        e.preventDefault()
+        setPreviewUrl(null)
+        setExistingImageUrl(null)
+        setShouldDeleteImage(true)
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ""
+        }
+    }
 
     // Fetch existing announcement data if editing
     useEffect(() => {
@@ -105,7 +118,9 @@ export default function AnnouncementPage() {
                 return
             }
         }
-
+        if (shouldDeleteImage) {
+            formData.set('delete_image', 'true')
+        }
         startTransition(async () => {
             let result
             if (editId) {
@@ -311,38 +326,53 @@ export default function AnnouncementPage() {
 
                 <div className="space-y-2">
                     <label className={LABEL_CLASS}>{t('announcements.form.image')}</label>
-                    <div className="bg-slate-200 text-slate-900 rounded-xl p-6 text-center hover:bg-slate-50 transition-all group cursor-pointer relative flex flex-col items-center justify-center gap-2 border-2 border-slate-300 hover:border-blue-300/70 shadow-lg shadow-slate-900/10 active:scale-[0.99] min-h-48 overflow-hidden">
-                        <input
-                            type="file"
-                            name="image"
-                            accept="image/*"
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                            onChange={(e) => {
-                                const file = e.target.files?.[0]
-                                if (file) {
-                                    const reader = new FileReader();
-                                    reader.onload = (ev) => {
-                                        if (ev.target?.result) {
-                                            setPreviewUrl(ev.target.result as string)
-                                        }
-                                    };
-                                    reader.readAsDataURL(file);
-                                }
-                            }}
-                        />
-                        <div id="upload-placeholder" style={{ display: (existingImageUrl || previewUrl) ? 'none' : 'flex' }} className="pointer-events-none flex flex-col items-center">
-                            <div className="h-12 w-12 rounded-full bg-slate-900/10 flex items-center justify-center mb-2 text-slate-900 group-hover:scale-110 transition-transform">
-                                <Megaphone size={24} className="-rotate-12" />
+                    <div className="relative">
+                        <div className="bg-slate-200 text-slate-900 rounded-xl p-6 text-center hover:bg-slate-50 transition-all group cursor-pointer relative flex flex-col items-center justify-center gap-2 border-2 border-slate-300 hover:border-blue-300/70 shadow-lg shadow-slate-900/10 active:scale-[0.99] min-h-48 overflow-hidden">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                name="image"
+                                accept="image/*"
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0]
+                                    if (file) {
+                                        setShouldDeleteImage(false)
+                                        const reader = new FileReader();
+                                        reader.onload = (ev) => {
+                                            if (ev.target?.result) {
+                                                setPreviewUrl(ev.target.result as string)
+                                            }
+                                        };
+                                        reader.readAsDataURL(file);
+                                    }
+                                }}
+                            />
+                            <div id="upload-placeholder" style={{ display: (existingImageUrl || previewUrl) ? 'none' : 'flex' }} className="pointer-events-none flex flex-col items-center">
+                                <div className="h-12 w-12 rounded-full bg-slate-900/10 flex items-center justify-center mb-2 text-slate-900 group-hover:scale-110 transition-transform">
+                                    <Megaphone size={24} className="-rotate-12" />
+                                </div>
+                                <span className="text-slate-900 font-bold uppercase tracking-wider text-sm">Click to Upload Image</span>
+                                <span className="text-[10px] text-slate-600 mt-1">PNG, JPG up to 10MB · แนะนำ 16:9 (1920×1080)</span>
                             </div>
-                            <span className="text-slate-900 font-bold uppercase tracking-wider text-sm">Click to Upload Image</span>
-                            <span className="text-[10px] text-slate-600 mt-1">PNG, JPG up to 10MB · แนะนำ 16:9 (1920×1080)</span>
+                            <div id="preview-container" style={{ display: (existingImageUrl || previewUrl) ? 'block' : 'none' }} className="relative z-0 pointer-events-none w-full">
+                                <img id="preview-image" src={previewUrl || existingImageUrl || ""} alt="Preview" className="max-h-40 rounded-lg mx-auto shadow-lg object-contain w-auto" />
+                                <p className="text-xs text-emerald-600 mt-2 font-bold uppercase tracking-wider">
+                                    {previewUrl ? "New Image Selected" : "Existing Image (Click/Drag to Replace)"}
+                                </p>
+                            </div>
                         </div>
-                        <div id="preview-container" style={{ display: (existingImageUrl || previewUrl) ? 'block' : 'none' }} className="relative z-0 pointer-events-none w-full">
-                            <img id="preview-image" src={previewUrl || existingImageUrl || ""} alt="Preview" className="max-h-40 rounded-lg mx-auto shadow-lg object-contain w-auto" />
-                            <p className="text-xs text-emerald-600 mt-2 font-bold uppercase tracking-wider">
-                                {previewUrl ? "New Image Selected" : "Existing Image (Click/Drag to Replace)"}
-                            </p>
-                        </div>
+                        {(previewUrl || existingImageUrl) && (
+                            <button
+                                type="button"
+                                onClick={handleClearImage}
+                                className="absolute top-3 right-3 z-20 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-rose-900/20 transition-all border border-rose-500/30"
+                                title="ลบรูปภาพปกประกาศ"
+                            >
+                                <X size={14} />
+                                ลบรูปภาพ
+                            </button>
+                        )}
                     </div>
                 </div>
 

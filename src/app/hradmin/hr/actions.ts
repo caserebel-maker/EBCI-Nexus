@@ -242,6 +242,7 @@ export async function updateAnnouncement(id: string, formData: FormData) {
     const priority = formData.get('priority') as string
     const imageFile = formData.get('image')   as File | null
     const expiresInput = formData.get('expires_at') as string | null
+    const deleteImage = formData.get('delete_image') === 'true'
 
     if (!id || !headline || !content || !priority) {
         return { error: 'Missing required fields' }
@@ -281,6 +282,8 @@ export async function updateAnnouncement(id: string, formData: FormData) {
 
         if (imagePath !== undefined) {
             updateData.image_path = imagePath
+        } else if (deleteImage) {
+            updateData.image_path = null
         }
 
         const { error: updateError } = await supabaseAdmin
