@@ -613,58 +613,60 @@ export function WorldCupPredictionClient({
             </section>
 
             {pendingTeam && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm">
-                    <div className="w-full max-w-md overflow-hidden rounded-[2rem] border border-white/15 bg-[#3a0711] shadow-2xl shadow-black/40">
-                        <div className="relative p-6">
-                            <button
-                                type="button"
-                                onClick={() => setPendingTeamId(null)}
-                                className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white/70 hover:bg-white/20 hover:text-white"
-                                aria-label="ปิด"
-                            >
-                                <X size={18} />
-                            </button>
-                            <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-yellow-300/15 text-4xl">
-                                {pendingTeam.flag}
-                            </div>
-                            <h3 className="mt-5 text-3xl font-black text-white">ยืนยันคำทาย</h3>
-                            <p className="mt-3 text-white/68">
-                                คุณต้องการเลือก <span className="font-black text-yellow-200">{pendingTeam.name}</span> เป็นแชมป์ฟุตบอลโลก 2026 ใช่ไหม
-                            </p>
-                            {pendingPickers.length > 0 && (
-                                <div className="mt-5 rounded-2xl border border-white/12 bg-white/8 p-4">
-                                    <p className="text-xs font-black uppercase tracking-[0.18em] text-white/45">คนที่เลือกทีมนี้ตอนนี้</p>
-                                    <div className="mt-3 max-h-48 space-y-2 overflow-auto pr-1">
-                                        {pendingPickers.map(picker => (
-                                            <div key={picker.id} className="flex items-center gap-3 rounded-2xl bg-white/8 p-2">
-                                                <AvatarBubble picker={picker} className="h-10 w-10" />
-                                                <div className="min-w-0">
-                                                    <p className="truncate text-sm font-black text-white">{picker.name}</p>
-                                                    {picker.employeeCode && (
-                                                        <p className="text-xs font-semibold text-white/45">{picker.employeeCode}</p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                            <div className="mt-6 grid grid-cols-2 gap-3">
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/65 p-4 backdrop-blur-sm">
+                    <div className="flex min-h-full items-center justify-center">
+                        <div className="w-full max-w-md overflow-hidden rounded-[2rem] border border-white/15 bg-[#3a0711] shadow-2xl shadow-black/40">
+                            <div className="relative p-6">
                                 <button
                                     type="button"
                                     onClick={() => setPendingTeamId(null)}
-                                    className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 font-black text-white/80 hover:bg-white/15"
+                                    className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white/70 hover:bg-white/20 hover:text-white"
+                                    aria-label="ปิด"
                                 >
-                                    ยกเลิก
+                                    <X size={18} />
                                 </button>
-                                <button
-                                    type="button"
-                                    onClick={submitPrediction}
-                                    disabled={saving}
-                                    className="rounded-2xl bg-yellow-400 px-4 py-3 font-black text-[#30040b] shadow-lg shadow-yellow-500/20 hover:bg-yellow-300 disabled:opacity-70"
-                                >
-                                    {saving ? <Loader2 className="mx-auto animate-spin" /> : 'ยืนยัน'}
-                                </button>
+                                <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-yellow-300/15 text-4xl">
+                                    {pendingTeam.flag}
+                                </div>
+                                <h3 className="mt-5 text-3xl font-black text-white">ยืนยันคำทาย</h3>
+                                <p className="mt-3 text-white/68">
+                                    คุณต้องการเลือก <span className="font-black text-yellow-200">{pendingTeam.name}</span> เป็นแชมป์ฟุตบอลโลก 2026 ใช่ไหม
+                                </p>
+                                {pendingPickers.length > 0 && (
+                                    <div className="mt-5 rounded-2xl border border-white/12 bg-white/8 p-4">
+                                        <p className="text-xs font-black uppercase tracking-[0.18em] text-white/45">คนที่เลือกทีมนี้ตอนนี้</p>
+                                        <div className="mt-3 max-h-32 sm:max-h-48 space-y-2 overflow-auto pr-1">
+                                            {pendingPickers.map(picker => (
+                                                <div key={picker.id} className="flex items-center gap-3 rounded-2xl bg-white/8 p-2">
+                                                    <AvatarBubble picker={picker} className="h-10 w-10" />
+                                                    <div className="min-w-0">
+                                                        <p className="truncate text-sm font-black text-white">{picker.name}</p>
+                                                        {picker.employeeCode && (
+                                                            <p className="text-xs font-semibold text-white/45">{picker.employeeCode}</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="mt-6 grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPendingTeamId(null)}
+                                        className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 font-black text-white/80 hover:bg-white/15"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={submitPrediction}
+                                        disabled={saving}
+                                        className="rounded-2xl bg-yellow-400 px-4 py-3 font-black text-[#30040b] shadow-lg shadow-yellow-500/20 hover:bg-yellow-300 disabled:opacity-70"
+                                    >
+                                        {saving ? <Loader2 className="mx-auto animate-spin" /> : 'ยืนยัน'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -672,45 +674,47 @@ export function WorldCupPredictionClient({
             )}
 
             {showNonPredictorsModal && (
-                <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[80] overflow-y-auto p-4">
                     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowNonPredictorsModal(false)} />
-                    <div className="relative w-full max-w-md overflow-hidden rounded-[2.1rem] border border-white/18 bg-[#1f0308] p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-                        <button
-                            type="button; cursor-pointer"
-                            onClick={() => setShowNonPredictorsModal(false)}
-                            className="absolute right-4 top-4 rounded-full p-2 text-white/55 hover:bg-white/10 hover:text-white"
-                        >
-                            <X size={20} />
-                        </button>
-                        <div className="text-center">
-                            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-yellow-300/15 text-4xl text-yellow-300">
-                                <Users size={32} />
-                            </div>
-                            <h3 className="mt-5 text-2xl font-black text-white">ยังไม่ได้ทายคำตอบ</h3>
-                            <p className="mt-1 text-sm text-white/60">
-                                มีทั้งหมด <span className="font-black text-yellow-200">{nonPredictors.length} คน</span> ที่ยังไม่ส่งคำทำนาย
-                            </p>
-                        </div>
-                        <div className="mt-6 max-h-72 space-y-2 overflow-auto pr-1">
-                            {nonPredictors.map(picker => (
-                                <div key={picker.id} className="flex items-center gap-3 rounded-2xl bg-white/8 p-2.5">
-                                    <AvatarBubble picker={picker} className="h-9 w-9" />
-                                    <div className="min-w-0 flex-1">
-                                        <p className="truncate text-sm font-black text-white">{picker.name}</p>
-                                        {picker.employeeCode && (
-                                            <p className="text-xs font-semibold text-white/45">รหัสพนักงาน: {picker.employeeCode}</p>
-                                        )}
-                                    </div>
+                    <div className="flex min-h-full items-center justify-center">
+                        <div className="relative w-full max-w-md overflow-hidden rounded-[2.1rem] border border-white/18 bg-[#1f0308] p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+                            <button
+                                type="button; cursor-pointer"
+                                onClick={() => setShowNonPredictorsModal(false)}
+                                className="absolute right-4 top-4 rounded-full p-2 text-white/55 hover:bg-white/10 hover:text-white"
+                            >
+                                <X size={20} />
+                            </button>
+                            <div className="text-center">
+                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-yellow-300/15 text-4xl text-yellow-300">
+                                    <Users size={32} />
                                 </div>
-                            ))}
+                                <h3 className="mt-5 text-2xl font-black text-white">ยังไม่ได้ทายคำตอบ</h3>
+                                <p className="mt-1 text-sm text-white/60">
+                                    มีทั้งหมด <span className="font-black text-yellow-200">{nonPredictors.length} คน</span> ที่ยังไม่ส่งคำทำนาย
+                                </p>
+                            </div>
+                            <div className="mt-6 max-h-48 sm:max-h-72 space-y-2 overflow-auto pr-1">
+                                {nonPredictors.map(picker => (
+                                    <div key={picker.id} className="flex items-center gap-3 rounded-2xl bg-white/8 p-2.5">
+                                        <AvatarBubble picker={picker} className="h-9 w-9" />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="truncate text-sm font-black text-white">{picker.name}</p>
+                                            {picker.employeeCode && (
+                                                <p className="text-xs font-semibold text-white/45">รหัสพนักงาน: {picker.employeeCode}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowNonPredictorsModal(false)}
+                                className="mt-6 w-full rounded-2xl border border-white/15 bg-white/10 py-3 font-black text-white/80 hover:bg-white/15"
+                            >
+                                ปิดหน้าต่าง
+                            </button>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => setShowNonPredictorsModal(false)}
-                            className="mt-6 w-full rounded-2xl border border-white/15 bg-white/10 py-3 font-black text-white/80 hover:bg-white/15"
-                        >
-                            ปิดหน้าต่าง
-                        </button>
                     </div>
                 </div>
             )}
