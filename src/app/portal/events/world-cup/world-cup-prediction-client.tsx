@@ -591,6 +591,20 @@ export function WorldCupPredictionClient({
 
             <section className="mt-6 rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/8 via-white/4 to-white/6 p-5 shadow-xl shadow-black/10 backdrop-blur sm:p-7">
                 <div>
+                    <p className="text-xs font-black uppercase tracking-[0.24em] text-yellow-200/80">Bracket Analysis</p>
+                    <h2 className="mt-2 text-2xl font-black text-white">วิเคราะห์สายการแข่งขัน โดยเซียนโต้ย</h2>
+                </div>
+                <div className="mt-5 flex justify-center overflow-hidden rounded-2xl border border-white/12 bg-black/18">
+                    <img 
+                        src="/events/world-cup-bracket-analysis.jpg" 
+                        alt="วิเคราะห์สายการแข่งขันโดยเซียนโต้ย" 
+                        className="max-h-[600px] w-auto object-contain"
+                    />
+                </div>
+            </section>
+
+            <section className="mt-6 rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/8 via-white/4 to-white/6 p-5 shadow-xl shadow-black/10 backdrop-blur sm:p-7">
+                <div>
                     <p className="text-xs font-black uppercase tracking-[0.24em] text-yellow-200/80">Expert Analysis</p>
                     <h2 className="mt-2 text-2xl font-black text-white">วิเคราะห์โดยเซียน</h2>
                 </div>
