@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
     Users, CalendarDays, Clock, AlertTriangle, TrendingUp,
-    CheckCircle, XCircle, Cake, Building2, Loader2, Megaphone, Gift, X
+    CheckCircle, XCircle, Cake, Building2, Loader2, Megaphone, Gift, X, UserX
 } from 'lucide-react'
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -820,6 +820,53 @@ export function HRDashboard({
                     <div style={glassStyle} className="p-5">
                         <SectionHeader title={`ปฏิทินสัปดาห์นี้ · ลาวันนี้ ${leavesToday.length} คน`} icon={CalendarDays} />
                         <WeekCalendar weekDays={weekDays} leavesToday={leavesToday} onDayClick={setSelectedDay} />
+                    </div>
+
+                    {/* ใครไม่อยู่วันนี้ (Who is out today) */}
+                    <div style={glassStyle} className="p-5">
+                        <SectionHeader title={`ใครไม่อยู่วันนี้ (${leavesToday.length})`} icon={UserX} />
+                        {leavesToday.length === 0 ? (
+                            <p className="text-sm text-white/30 italic text-center py-4">ไม่มีพนักงานลาวันนี้</p>
+                        ) : (
+                            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                                {leavesToday.map(lr => {
+                                    const emp = lr.employees
+                                    if (!emp) return null
+                                    const name = fullName(emp.first_name_th, emp.last_name_th, emp.nickname)
+                                    return (
+                                        <div 
+                                            key={lr.id} 
+                                            onClick={() => router.push(`/hradmin/employees/${emp.id}`)}
+                                            className="flex items-center gap-2.5 py-2 px-2.5 rounded-xl hover:bg-white/5 transition-colors cursor-pointer group"
+                                        >
+                                            {emp.photo_url ? (
+                                                <img 
+                                                    src={emp.photo_url} 
+                                                    alt={emp.first_name_th ?? ''} 
+                                                    className="h-9 w-9 rounded-full object-cover border border-white/10 shrink-0"
+                                                />
+                                            ) : (
+                                                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-rose-500/80 to-purple-600/80 flex items-center justify-center text-xs font-black text-white border border-white/10 shrink-0">
+                                                    {emp.first_name_th?.charAt(0)}
+                                                </div>
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-xs font-bold text-white group-hover:text-amber-200 transition-colors truncate">
+                                                    {name}
+                                                </p>
+                                                <p className="text-[10px] text-white/45 truncate mt-0.5">{emp.department}</p>
+                                            </div>
+                                            <span className={cn(
+                                                'text-[10px] font-black px-2.5 py-0.5 rounded-full border shrink-0',
+                                                LEAVE_BADGE[lr.leave_type] ?? 'bg-white/10 text-white/60 border-white/15'
+                                            )}>
+                                                {LEAVE_LABELS[lr.leave_type] ?? lr.leave_type}
+                                            </span>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
                     </div>
 
                     {/* Pending approvals */}

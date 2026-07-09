@@ -47,7 +47,7 @@ export default async function AdminDashboard() {
     ] = await Promise.all([
         getCurrentPermissions(),
         // All employees (include date_of_birth for birthday section)
-        supabaseAdmin.from('employees').select('id, employee_code, first_name_th, last_name_th, nickname, department, start_date, status, end_date, title, date_of_birth, is_advisor'),
+        supabaseAdmin.from('employees').select('id, employee_code, first_name_th, last_name_th, nickname, department, start_date, status, end_date, title, date_of_birth, is_advisor, photo_url'),
 
         // Leaves today (approved)
         supabaseAdmin.from('leave_requests')
@@ -235,6 +235,11 @@ export default async function AdminDashboard() {
         employee: empMap[lr.employee_id] ?? null,
     }))
 
+    const leavesTodayEnriched = (leavesToday ?? []).map(lr => ({
+        ...lr,
+        employees: empMap[lr.employee_id] ?? null,
+    }))
+
     // ─── Week calendar (Mon–Sun this week) ───
     const monday = new Date(now)
     const day = monday.getDay()
@@ -322,7 +327,7 @@ export default async function AdminDashboard() {
             contractsExpiring={contractsExpiring ?? []}
             anniversaries={anniversaries}
             weekDays={weekDays.map(d => d.toISOString())}
-            leavesToday={leavesToday ?? []}
+            leavesToday={leavesTodayEnriched}
             urgentBanners={announcements ?? []}
             newsAnnouncements={newsWithImages}
             birthdays={birthdays}
