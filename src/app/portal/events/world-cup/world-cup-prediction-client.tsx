@@ -594,19 +594,29 @@ export function WorldCupPredictionClient({
                     <p className="text-xs font-black uppercase tracking-[0.24em] text-yellow-200/80">Expert Analysis</p>
                     <h2 className="mt-2 text-2xl font-black text-white">วิเคราะห์โดยเซียน</h2>
                 </div>
-                <div className="mt-5 grid gap-6 sm:grid-cols-2">
-                    <div className="flex justify-center overflow-hidden rounded-2xl border border-white/12 bg-black/18">
+                <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    <div className="flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/12 bg-black/18 p-3">
+                        <p className="text-sm font-bold text-yellow-300 mb-3">วิเคราะห์โดย: เซียนเบญจา พารวย</p>
                         <img 
                             src="/assets/world-cup-bencha.jpg" 
                             alt="วิเคราะห์โดยเซียนเบญจา พารวย" 
-                            className="max-h-[500px] w-auto object-contain"
+                            className="max-h-[500px] w-auto object-contain rounded-xl"
                         />
                     </div>
-                    <div className="flex justify-center overflow-hidden rounded-2xl border border-white/12 bg-black/18">
+                    <div className="flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/12 bg-black/18 p-3">
+                        <p className="text-sm font-bold text-yellow-300 mb-3">วิเคราะห์โดย: เซียนโต้ย ศุภดล</p>
                         <img 
                             src="/events/world-cup-analysis.jpg" 
                             alt="วิเคราะห์โดยเซียนโต้ย ศุภดล" 
-                            className="max-h-[500px] w-auto object-contain"
+                            className="max-h-[500px] w-auto object-contain rounded-xl"
+                        />
+                    </div>
+                    <div className="flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/12 bg-black/18 p-3">
+                        <p className="text-sm font-bold text-emerald-400 mb-3">วิเคราะห์โดย: ChatGPT 5.5 AI</p>
+                        <img 
+                            src="/events/world-cup-chatgpt.jpg" 
+                            alt="วิเคราะห์โดย ChatGPT 5.5" 
+                            className="max-h-[500px] w-auto object-contain rounded-xl"
                         />
                     </div>
                 </div>
