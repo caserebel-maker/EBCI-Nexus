@@ -124,6 +124,7 @@ export function WorldCupPredictionClient({
     const [message, setMessage] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [showNonPredictorsModal, setShowNonPredictorsModal] = useState(false)
+    const [outstandingNonPredictors, setOutstandingNonPredictors] = useState<PickerData[]>(nonPredictors)
     const [activeUsersCount, setActiveUsersCount] = useState<number>(1)
 
     useEffect(() => {
@@ -331,6 +332,7 @@ export function WorldCupPredictionClient({
                 return next
             })
             if (wasFirstPick) setPredictionCount(count => count + 1)
+            setOutstandingNonPredictors(current => current.filter(picker => picker.id !== currentPicker.id))
             setTeamPickers(current => {
                 const next = Object.fromEntries(
                     Object.entries(current).map(([teamId, pickers]) => [
@@ -407,13 +409,13 @@ export function WorldCupPredictionClient({
                                 <p className="text-sm text-white/55">ส่งคำตอบแล้ว</p>
                                 <div className="mt-1 flex items-baseline justify-between">
                                     <p className="text-3xl font-black">{predictionCount} คน</p>
-                                    {nonPredictors.length > 0 && (
+                                    {outstandingNonPredictors.length > 0 && (
                                         <button
                                             type="button"
                                             onClick={() => setShowNonPredictorsModal(true)}
                                             className="text-xs font-bold text-yellow-300 hover:text-yellow-200 hover:underline flex items-center gap-1 active:scale-95 transition-all"
                                         >
-                                            ยังไม่ทาย ({nonPredictors.length})
+                                            ยังไม่ทาย ({outstandingNonPredictors.length})
                                         </button>
                                     )}
                                 </div>
@@ -610,6 +612,42 @@ export function WorldCupPredictionClient({
                 </div>
             </section>
 
+            <section className="mt-6 rounded-[2rem] border border-yellow-300/18 bg-gradient-to-br from-yellow-300/10 via-white/6 to-rose-500/8 p-5 shadow-xl shadow-black/10 backdrop-blur sm:p-7">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-[0.24em] text-yellow-200/80">Prize Sacrifice</p>
+                        <h2 className="mt-2 text-2xl font-black text-white">ผู้เสียสละเงินรางวัล</h2>
+                        <p className="mt-2 text-sm leading-6 text-white/58">
+                            รายชื่อพนักงาน active ที่ยังไม่ได้ส่งคำทาย ถ้ามีใครทายแล้ว ระบบจะเอาออกจากรายชื่อนี้
+                        </p>
+                    </div>
+                    <div className="inline-flex w-fit items-center gap-2 rounded-full border border-yellow-200/25 bg-yellow-300/10 px-4 py-2 text-sm font-black text-yellow-100">
+                        <Users size={16} />
+                        {outstandingNonPredictors.length} คน
+                    </div>
+                </div>
+
+                {outstandingNonPredictors.length > 0 ? (
+                    <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                        {outstandingNonPredictors.map(picker => (
+                            <div key={picker.id} className="flex min-w-0 items-center gap-3 rounded-2xl border border-white/10 bg-black/18 p-3">
+                                <AvatarBubble picker={picker} className="h-10 w-10" />
+                                <div className="min-w-0">
+                                    <p className="truncate text-sm font-black text-white">{picker.name}</p>
+                                    {picker.employeeCode && (
+                                        <p className="text-xs font-semibold text-white/45">รหัสพนักงาน: {picker.employeeCode}</p>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="mt-5 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-5 text-sm font-black text-emerald-100">
+                        ครบแล้ว ทุกคนส่งคำทายเรียบร้อย
+                    </div>
+                )}
+            </section>
+
             {pendingTeam && (
                 <div
                     className="fixed inset-0 z-[120] overflow-y-auto bg-black/65 p-3 backdrop-blur-sm flex items-center justify-center"
@@ -701,14 +739,14 @@ export function WorldCupPredictionClient({
                                 </div>
                                 <h3 className="mt-5 text-2xl font-black text-white">ยังไม่ได้ทายคำตอบ</h3>
                                 <p className="mt-1 text-sm text-white/60">
-                                    มีทั้งหมด <span className="font-black text-yellow-200">{nonPredictors.length} คน</span> ที่ยังไม่ส่งคำทำนาย
+                                    มีทั้งหมด <span className="font-black text-yellow-200">{outstandingNonPredictors.length} คน</span> ที่ยังไม่ส่งคำทำนาย
                                 </p>
                             </div>
                         </div>
 
                         {/* Content List (Scrollable if height overflows) */}
                         <div className="px-6 py-2 overflow-y-auto flex-1 min-h-0 space-y-2">
-                            {nonPredictors.map(picker => (
+                            {outstandingNonPredictors.map(picker => (
                                 <div key={picker.id} className="flex items-center gap-3 rounded-2xl bg-white/8 p-2.5">
                                     <AvatarBubble picker={picker} className="h-9 w-9" />
                                     <div className="min-w-0 flex-1">
