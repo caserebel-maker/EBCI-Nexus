@@ -208,8 +208,6 @@ export function WorldCupPredictionClient({
         const active = selectedTeamId === team.id
         const count = teamStats[team.id] ?? 0
         const pickers = teamPickers[team.id] ?? []
-        const visiblePickers = pickers.slice(0, 6)
-        const hiddenCount = Math.max(0, pickers.length - visiblePickers.length)
         const prizeShare = count > 0 ? Math.round(event.prizeAmount / count) : event.prizeAmount
 
         return (
@@ -277,9 +275,9 @@ export function WorldCupPredictionClient({
                     )}
 
                     {pickers.length > 0 && (
-                        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                            <div className="flex -space-x-1.5">
-                                {visiblePickers.map(picker => (
+                        <div className="mt-2.5">
+                            <div className="flex flex-wrap gap-1.5">
+                                {pickers.map(picker => (
                                     <AvatarBubble
                                         key={picker.id}
                                         picker={picker}
@@ -289,19 +287,9 @@ export function WorldCupPredictionClient({
                                         ].join(' ')}
                                     />
                                 ))}
-                                {hiddenCount > 0 && (
-                                    <div className={[
-                                        'flex h-6 w-6 items-center justify-center rounded-full border border-white text-[8px] font-black shadow-md',
-                                        isTeamActive 
-                                            ? 'bg-yellow-300 text-[#30040b] shadow-black/10' 
-                                            : 'bg-slate-200 text-slate-400 shadow-none opacity-50'
-                                    ].join(' ')}>
-                                        +{hiddenCount}
-                                    </div>
-                                )}
                             </div>
                             <span className={[
-                                'text-[10px] font-bold leading-none',
+                                'mt-1.5 block text-[10px] font-bold leading-none',
                                 isTeamActive ? 'text-slate-400' : 'text-slate-400/60'
                             ].join(' ')}>กดดูรายชื่อ</span>
                         </div>
