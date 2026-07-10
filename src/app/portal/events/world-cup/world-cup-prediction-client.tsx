@@ -623,14 +623,20 @@ export function WorldCupPredictionClient({
             </section>
 
             {pendingTeam && (
-                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/65 p-4 backdrop-blur-sm flex items-center justify-center">
-                    <div className="w-full max-w-md flex flex-col max-h-[calc(100dvh-2rem)] overflow-hidden rounded-[2rem] border border-white/15 bg-[#3a0711] shadow-2xl shadow-black/40">
+                <div
+                    className="fixed inset-0 z-[120] overflow-y-auto bg-black/65 p-3 backdrop-blur-sm flex items-center justify-center"
+                    style={{
+                        paddingTop: 'max(0.75rem, env(safe-area-inset-top))',
+                        paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
+                    }}
+                >
+                    <div className="relative w-full max-w-md flex flex-col max-h-[calc(100dvh-max(1.5rem,env(safe-area-inset-top))-max(1.5rem,env(safe-area-inset-bottom)))] overflow-hidden rounded-[2rem] border border-white/15 bg-[#3a0711] shadow-2xl shadow-black/40">
                         {/* Header (Static) */}
-                        <div className="relative p-6 pb-2 flex-shrink-0">
+                        <div className="relative p-6 pb-2 pr-16 flex-shrink-0">
                             <button
                                 type="button"
                                 onClick={() => setPendingTeamId(null)}
-                                className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white/70 hover:bg-white/20 hover:text-white"
+                                className="absolute right-4 top-4 z-10 rounded-full bg-white/10 p-2 text-white/70 hover:bg-white/20 hover:text-white"
                                 aria-label="ปิด"
                             >
                                 <X size={18} />
