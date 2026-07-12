@@ -56,6 +56,8 @@ const GRAYSCALE_TEAM_NAMES = new Set([
     'เบลเยียม',
     'norway',
     'นอร์เวย์',
+    'switzerland',
+    'สวิตเซอร์แลนด์',
 ])
 
 function formatThaiDateTime(value: string | null): string {
@@ -216,8 +218,14 @@ export function WorldCupPredictionClient({
     }), [employee])
     const pendingPickers = pendingTeamId ? (teamPickers[pendingTeamId] ?? []) : []
 
-    const activeTeams = useMemo(() => teams.filter(t => t.isActive), [teams])
-    const eliminatedTeams = useMemo(() => teams.filter(t => !t.isActive), [teams])
+    const activeTeams = useMemo(
+        () => teams.filter(team => team.isActive && !shouldShowTeamAsGrayscale(team)),
+        [teams],
+    )
+    const eliminatedTeams = useMemo(
+        () => teams.filter(team => !team.isActive || shouldShowTeamAsGrayscale(team)),
+        [teams],
+    )
 
     const renderTeamCard = (team: TeamData, isTeamActive: boolean) => {
         const active = selectedTeamId === team.id
@@ -233,6 +241,7 @@ export function WorldCupPredictionClient({
                 type="button"
                 disabled={closed || saving || !isSelectable}
                 onClick={() => setPendingTeamId(team.id)}
+                style={showAsGrayscale ? { filter: 'grayscale(1) saturate(0)' } : undefined}
                 className={[
                     'group relative overflow-hidden rounded-[1.8rem] border p-3.5 text-left transition-all duration-150 w-full',
                     isSelectable
