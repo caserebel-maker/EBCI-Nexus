@@ -49,6 +49,15 @@ type Props = {
     nonPredictors: PickerData[]
 }
 
+const GRAYSCALE_TEAM_NAMES = new Set([
+    'morocco',
+    'โมร็อกโก',
+    'belgium',
+    'เบลเยียม',
+    'norway',
+    'นอร์เวย์',
+])
+
 function formatThaiDateTime(value: string | null): string {
     if (!value) return 'ยังไม่กำหนดเวลาปิดรับ'
     const date = new Date(value)
@@ -101,6 +110,11 @@ function AvatarBubble({ picker, className = '' }: { picker: PickerData; classNam
             )}
         </div>
     )
+}
+
+function shouldShowTeamAsGrayscale(team: TeamData): boolean {
+    return GRAYSCALE_TEAM_NAMES.has(team.name.toLowerCase()) ||
+        (team.nameEn ? GRAYSCALE_TEAM_NAMES.has(team.nameEn.toLowerCase()) : false)
 }
 
 export function WorldCupPredictionClient({
@@ -210,34 +224,37 @@ export function WorldCupPredictionClient({
         const count = teamStats[team.id] ?? 0
         const pickers = teamPickers[team.id] ?? []
         const prizeShare = count > 0 ? Math.round(event.prizeAmount / count) : event.prizeAmount
+        const showAsGrayscale = shouldShowTeamAsGrayscale(team)
+        const isSelectable = isTeamActive && !showAsGrayscale
 
         return (
             <button
                 key={team.id}
                 type="button"
-                disabled={closed || saving || !isTeamActive}
+                disabled={closed || saving || !isSelectable}
                 onClick={() => setPendingTeamId(team.id)}
                 className={[
                     'group relative overflow-hidden rounded-[1.8rem] border p-3.5 text-left transition-all duration-150 w-full',
-                    isTeamActive 
+                    isSelectable
                         ? 'bg-gradient-to-b from-white via-slate-50 to-slate-200/60'
                         : 'bg-slate-100/40 border-slate-200/60 border-b-2 border-b-slate-300 shadow-none opacity-60 cursor-not-allowed',
-                    isTeamActive && active 
+                    isSelectable && active
                         ? 'border-emerald-400 border-b-[8px] border-b-emerald-600 shadow-[0_8px_20px_rgba(16,185,129,0.2),inset_0_2px_3px_rgba(255,255,255,0.9)] ring-2 ring-emerald-400/30' 
-                        : isTeamActive ? 'border-slate-200 border-b-[8px] border-b-slate-400/90 shadow-[0_6px_14px_rgba(0,0,0,0.12),inset_0_2px_3px_rgba(255,255,255,0.9)] hover:border-yellow-400 hover:border-b-yellow-500 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(0,0,0,0.18),inset_0_2px_3px_rgba(255,255,255,0.9)]' : '',
-                    closed && isTeamActive ? 'cursor-default' : '',
-                    closed && isTeamActive && !active ? 'opacity-85' : '',
-                    !isTeamActive ? '' : 'active:translate-y-0.5 active:border-b-[3px] active:shadow-[0_2px_4px_rgba(0,0,0,0.06)]',
+                        : isSelectable ? 'border-slate-200 border-b-[8px] border-b-slate-400/90 shadow-[0_6px_14px_rgba(0,0,0,0.12),inset_0_2px_3px_rgba(255,255,255,0.9)] hover:border-yellow-400 hover:border-b-yellow-500 hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(0,0,0,0.18),inset_0_2px_3px_rgba(255,255,255,0.9)]' : '',
+                    closed && isSelectable ? 'cursor-default' : '',
+                    closed && isSelectable && !active ? 'opacity-85' : '',
+                    showAsGrayscale ? 'grayscale saturate-0' : '',
+                    !isSelectable ? '' : 'active:translate-y-0.5 active:border-b-[3px] active:shadow-[0_2px_4px_rgba(0,0,0,0.06)]',
                 ].join(' ')}
             >
-                {isTeamActive && (
+                {isSelectable && (
                     <div
                         className="absolute -right-8 -top-8 h-28 w-28 rounded-full opacity-10 blur-sm transition group-hover:opacity-25"
                         style={{ backgroundColor: team.accentColor ?? '#facc15' }}
                     />
                 )}
                 
-                {!isTeamActive && (
+                {!isSelectable && (
                     <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-md bg-rose-600 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-sm">
                         ตกรอบ
                     </div>
@@ -246,30 +263,30 @@ export function WorldCupPredictionClient({
                 <div className="relative flex items-start justify-between gap-3">
                     <span className={[
                         'text-5xl drop-shadow-md select-none transform transition-transform duration-200',
-                        isTeamActive ? 'group-hover:scale-110' : 'grayscale opacity-50'
+                        isSelectable ? 'group-hover:scale-110' : 'grayscale opacity-50'
                     ].join(' ')}>{team.flag ?? '🏆'}</span>
-                    {isTeamActive && active && <CheckCircle2 className="text-emerald-500 drop-shadow-sm" size={18} />}
+                    {isSelectable && active && <CheckCircle2 className="text-emerald-500 drop-shadow-sm" size={18} />}
                 </div>
 
                 <div className="relative mt-2.5">
                     <h3 className={[
                         'text-lg font-black leading-tight truncate',
-                        isTeamActive ? 'text-slate-800' : 'text-slate-400'
+                        isSelectable ? 'text-slate-800' : 'text-slate-400'
                     ].join(' ')}>{team.name}</h3>
                     {team.nameEn && (
                         <p className={[
                             'mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] truncate',
-                            isTeamActive ? 'text-slate-400' : 'text-slate-400/60'
+                            isSelectable ? 'text-slate-400' : 'text-slate-400/60'
                         ].join(' ')}>{team.nameEn}</p>
                     )}
                     
                     <p className={[
                         'mt-2 text-[11px] font-bold leading-none',
-                        isTeamActive ? 'text-slate-500' : 'text-slate-400/80'
+                        isSelectable ? 'text-slate-500' : 'text-slate-400/80'
                     ].join(' ')}>{count} คนเลือกทีมนี้</p>
 
                     {/* Live prize split indicator */}
-                    {closed && isTeamActive && count > 0 && (
+                    {closed && isSelectable && count > 0 && (
                         <div className="mt-1.5 inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 border border-emerald-200/50 shadow-sm animate-in fade-in zoom-in-95 duration-200">
                             💰 ลุ้น {formatPrize(prizeShare)} บ.
                         </div>
@@ -284,14 +301,14 @@ export function WorldCupPredictionClient({
                                         picker={picker}
                                         className={[
                                             'h-6 w-6 border border-white',
-                                            isTeamActive ? '' : 'grayscale opacity-40'
+                                            isSelectable ? '' : 'grayscale opacity-40'
                                         ].join(' ')}
                                     />
                                 ))}
                             </div>
                             <span className={[
                                 'mt-1.5 block text-[10px] font-bold leading-none',
-                                isTeamActive ? 'text-slate-400' : 'text-slate-400/60'
+                                isSelectable ? 'text-slate-400' : 'text-slate-400/60'
                             ].join(' ')}>กดดูรายชื่อ</span>
                         </div>
                     )}
