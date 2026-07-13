@@ -18,6 +18,10 @@ const DELEGATE_RULES = [
         applicantCode: '036-44', // ปุ๊
         delegateApproverCodes: ['153-59'], // มด
     },
+    {
+        applicantCode: '491-67', // ตี๋ ชยุต
+        delegateApproverCodes: ['457-63'], // จิม ฐานวัฒน์
+    },
 ] as const
 
 async function fetchEmployeeById(id: string): Promise<EmployeeLite | null> {

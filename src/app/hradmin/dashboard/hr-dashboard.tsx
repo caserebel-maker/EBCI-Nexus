@@ -116,14 +116,17 @@ function fullName(firstName: string, lastName: string, nickname?: string | null)
 }
 
 // ─── Metric Card ──────────────────────────────────────────────────────────────
-function MetricCard({ title, value, sub, icon: Icon, accent, href }: {
-    title: string; value: string | number; sub?: string; icon: any; accent: string; href: string
+function MetricCard({ title, value, sub, icon: Icon, accent, href, highlight = false }: {
+    title: string; value: string | number; sub?: string; icon: any; accent: string; href: string; highlight?: boolean
 }) {
     const router = useRouter()
     return (
         <div
             style={metricCardStyle}
-            className="overflow-hidden cursor-pointer transition-all duration-200 hover:brightness-110 hover:scale-[1.02] active:scale-[0.99] flex"
+            className={cn(
+                'overflow-hidden cursor-pointer transition-all duration-200 hover:brightness-110 hover:scale-[1.02] active:scale-[0.99] flex',
+                highlight && 'pending-leave-glow'
+            )}
             onClick={() => router.push(href)}
         >
             <div className={cn('w-1.5 shrink-0', accent)} />
@@ -660,9 +663,46 @@ export function HRDashboard({
     const removePending = (id: string) => setPending(prev => prev.filter(r => r.id !== id))
     const [selectedNews, setSelectedNews] = useState<any>(null)
     const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+    const hasPendingLeaves = pending.length > 0
 
     return (
         <div className="space-y-6">
+            <style jsx global>{`
+                @keyframes pending-leave-card-pulse {
+                    0%, 100% {
+                        border-color: rgba(250, 204, 21, 0.72);
+                        box-shadow:
+                            0 0 0 1px rgba(250, 204, 21, 0.36),
+                            0 0 14px rgba(250, 204, 21, 0.22),
+                            0 8px 32px rgba(0,0,0,0.25);
+                    }
+                    50% {
+                        border-color: rgba(253, 224, 71, 0.98);
+                        box-shadow:
+                            0 0 0 2px rgba(253, 224, 71, 0.54),
+                            0 0 22px rgba(250, 204, 21, 0.42),
+                            0 8px 32px rgba(0,0,0,0.25);
+                    }
+                }
+                .pending-leave-glow {
+                    position: relative;
+                    border: 2px solid rgba(250, 204, 21, 0.85) !important;
+                    animation: pending-leave-card-pulse 1.7s ease-in-out infinite;
+                }
+                .pending-leave-glow::after {
+                    content: '';
+                    pointer-events: none;
+                    position: absolute;
+                    inset: 3px;
+                    border-radius: inherit;
+                    border: 1px solid rgba(254, 240, 138, 0.24);
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .pending-leave-glow {
+                        animation: none;
+                    }
+                }
+            `}</style>
             {selectedNews && <NewsModal news={selectedNews} onClose={() => setSelectedNews(null)} />}
             {selectedDay && <DayLeaveModal date={selectedDay} onClose={() => setSelectedDay(null)} />}
 
@@ -696,7 +736,7 @@ export function HRDashboard({
                             href="/hradmin/leave/admin?filter=today" />
                         <MetricCard title="รออนุมัติใบลา" value={metrics.pendingLeaves}
                             sub="รายการ" icon={Clock} accent="bg-gradient-to-br from-amber-500 to-amber-700"
-                            href="/hradmin/leave/admin?status=pending" />
+                            href="/hradmin/leave/admin?status=pending" highlight={hasPendingLeaves} />
                         <MetricCard title="สัญญาหมดใน 30 วัน" value={metrics.expiringContracts}
                             sub="คน" icon={AlertTriangle} accent="bg-gradient-to-br from-rose-500 to-rose-700"
                             href="/hradmin/employees?filter=contract-expiring" />
@@ -781,7 +821,7 @@ export function HRDashboard({
                 <div className="space-y-5">
 
                     {/* ── ประกาศข่าวสาร ── */}
-                    <div style={glassStyle} className="p-5">
+                    <div style={glassStyle} className={cn('p-5', hasPendingLeaves && 'pending-leave-glow')}>
                         <div className="flex flex-col gap-2 mb-3">
                             <div className="flex items-center gap-2">
                                 <Megaphone size={16} className="text-[#ad5f6c]" />

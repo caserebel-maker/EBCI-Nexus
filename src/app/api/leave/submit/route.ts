@@ -27,6 +27,7 @@ import { createNotification, getEmployeeUserId } from '@/lib/notifications'
 import { findHrNotifyTargets } from '@/lib/hr-notify'
 import { resolveApproverInboxUrl } from '@/lib/leave-inbox-url'
 import { sendTelegram, escapeTelegramHtml } from '@/lib/telegram'
+import { getDelegateApproverIdsForApplicant } from '@/lib/leave-delegate-approvers'
 
 export const dynamic = 'force-dynamic'
 
@@ -349,16 +350,43 @@ export async function POST(req: NextRequest) {
         await Promise.allSettled(jobs)
     }
 
-    // In-app notification for the approver. Best-effort: failure here
-    // never interrupts the response — the DB row is the authoritative
-    // signal, and email is reserved for approve/reject decisions.
+    // Resolve delegate/backup approvers
+    const delegateIds = await getDelegateApproverIdsForApplicant(employeeId)
+    const delegateApprovers: Array<{
+        id: string
+        first_name_th: string | null
+        last_name_th: string | null
+        nickname: string | null
+        email: string | null
+        telegram_chat_id: string | null
+        user_id: string | null
+    }> = []
+    if (delegateIds.length > 0) {
+        const { data: delegates } = await supabaseAdmin
+            .from('employees')
+            .select('id, first_name_th, last_name_th, nickname, email, telegram_chat_id, user_id')
+            .in('id', delegateIds)
+        if (delegates) {
+            delegateApprovers.push(...delegates)
+        }
+    }
+
+    // Collect all recipient user IDs for the pending approval notification
+    const pendingRecipients = new Set<string>()
+    if (approverUserIdForUrl) pendingRecipients.add(approverUserIdForUrl)
+    for (const da of delegateApprovers) {
+        const daUserId = da.user_id || await getEmployeeUserId(da.id)
+        if (daUserId) pendingRecipients.add(daUserId)
+    }
+
+    // In-app notification for the approvers (primary + delegates)
     try {
-        if (approverUserIdForUrl) {
-            const applicantNick = (employeeRow.data?.nickname as string | null) ?? employeeName
-            const leaveTypeTh = leaveType.name_th ?? 'ลา'
-            const dateLabel = startDate === endDate ? startDate : `${startDate} → ${endDate}`
+        const applicantNick = (employeeRow.data?.nickname as string | null) ?? employeeName
+        const leaveTypeTh = leaveType.name_th ?? 'ลา'
+        const dateLabel = startDate === endDate ? startDate : `${startDate} → ${endDate}`
+        for (const recipientUserId of pendingRecipients) {
             await createNotification({
-                recipient_user_id: approverUserIdForUrl,
+                recipient_user_id: recipientUserId,
                 type: 'leave_request_pending',
                 title: `${applicantNick} ขอ${leaveTypeTh}`,
                 body: `${dateLabel} (${totalDays} วัน) — ${reason || 'ไม่ระบุเหตุผล'}`,
@@ -376,37 +404,52 @@ export async function POST(req: NextRequest) {
         console.error('[leave/submit] notification error:', err)
     }
 
-    // Telegram for the actual approver — real-time action channel.
-    // Email above remains the paper trail. Telegram is sent only when
-    // the approver has opted in and has telegram_chat_id on employees.
+    // Telegram for the approver(s) and other requested recipients
     try {
-        if (approver.telegram_chat_id) {
-            const applicantNick = (employeeRow.data?.nickname as string | null) ?? employeeName
-            const leaveTypeTh = leaveType.name_th ?? 'ลา'
-            const dateLabel = startDate === endDate ? startDate : `${startDate} → ${endDate}`
-            const inboxUrl = approverInboxUrl.startsWith('http')
-                ? approverInboxUrl
-                : `https://ebci-nexus.vercel.app${approverInboxUrl}`
-            const text = [
-                `🔔 <b>รออนุมัติ${escapeTelegramHtml(leaveTypeTh)}</b>`,
-                `👤 ${escapeTelegramHtml(applicantNick)}`,
-                `📅 ${escapeTelegramHtml(dateLabel)} (${totalDays} วัน)`,
-                reason ? `📝 ${escapeTelegramHtml(reason.slice(0, 200))}` : '',
-                `<a href="${escapeTelegramHtml(inboxUrl)}">เปิดกล่องอนุมัติใน Nexus →</a>`,
-            ].filter(Boolean).join('\n')
-            sendTelegram({ chatId: approver.telegram_chat_id, text })
-                .catch(err => console.error('[leave/submit] approver telegram failed:', err))
+        const applicantNick = (employeeRow.data?.nickname as string | null) ?? employeeName
+        const leaveTypeTh = leaveType.name_th ?? 'ลา'
+        const dateLabel = startDate === endDate ? startDate : `${startDate} → ${endDate}`
+        const inboxUrl = approverInboxUrl.startsWith('http')
+            ? approverInboxUrl
+            : `https://ebci-nexus.vercel.app${approverInboxUrl}`
+        const text = [
+            `🔔 <b>รออนุมัติ${escapeTelegramHtml(leaveTypeTh)}</b>`,
+            `👤 ${escapeTelegramHtml(applicantNick)}`,
+            `📅 ${escapeTelegramHtml(dateLabel)} (${totalDays} วัน)`,
+            reason ? `📝 ${escapeTelegramHtml(reason.slice(0, 200))}` : '',
+            `<a href="${escapeTelegramHtml(inboxUrl)}">เปิดกล่องอนุมัติใน Nexus →</a>`,
+        ].filter(Boolean).join('\n')
+
+        // Collect all Telegram chat IDs that need this message
+        const telegramTargets = new Set<string>()
+        if (approver.telegram_chat_id) telegramTargets.add(approver.telegram_chat_id)
+        for (const da of delegateApprovers) {
+            if (da.telegram_chat_id) telegramTargets.add(da.telegram_chat_id)
+        }
+
+        // Special rule: if applicant is Tee Chayut (employee_code: '491-67'), also notify Mod (Arthit) on Telegram
+        const applicantCode = employeeRow.data?.employee_code || ''
+        if (applicantCode === '491-67') {
+            // Find Mod's employee record
+            const { data: modEmp } = await supabaseAdmin
+                .from('employees')
+                .select('telegram_chat_id')
+                .eq('id', '23a770e5-f5bf-4933-83ab-c694f69496d6')
+                .maybeSingle()
+            if (modEmp?.telegram_chat_id) {
+                telegramTargets.add(modEmp.telegram_chat_id)
+            }
+        }
+
+        for (const chatId of telegramTargets) {
+            sendTelegram({ chatId, text })
+                .catch(err => console.error(`[leave/submit] telegram send to ${chatId} failed:`, err))
         }
     } catch (err) {
-        console.error('[leave/submit] approver telegram fan-out failed:', err)
+        console.error('[leave/submit] telegram dispatcher failed:', err)
     }
 
     // ── MD FYI fan-out — ม๊อด's 8 พ.ค. call: MD ต้องเห็นทุกใบลาพักร้อน ───
-    // For annual leave only. When the request is short (≤ 3 วัน) MD is
-    // notify-only — both in-app 🔔 AND email (ม๊อด's preference: she
-    // wants MD to never miss an annual leave). When the request is > 3
-    // วัน MD is already the approver, so this block becomes a no-op
-    // (md.id === approver.id check).
     if (leaveTypeId === 'annual' && md && md.id !== approver.id) {
         try {
             const mdUserId = await getEmployeeUserId(md.id)
@@ -451,20 +494,25 @@ export async function POST(req: NextRequest) {
     }
 
     // ── HR FYI fan-out — pending requests stay in-app only ─────────────
-    // Channels (per HR target):
-    //   • In-app 🔔 — always
-    //   • Telegram DM — intentionally skipped until approve/reject,
-    //     because staff may submit wrong details and cancel/recreate.
-    //   • Email      — intentionally skipped (HR has dashboard; ม๊อด 8 พ.ค.)
     try {
+        const fyiRecipients = new Set<string>()
+        // Always include Super Admin (Suriya - 9dc14c59-d2a3-4804-abf1-14417507f0dc)
+        fyiRecipients.add('9dc14c59-d2a3-4804-abf1-14417507f0dc')
+        // Always include HR Admin (Arthit - 48d4b74a-38e8-4106-a5da-8017e55fd6d8)
+        fyiRecipients.add('48d4b74a-38e8-4106-a5da-8017e55fd6d8')
+
+        // Also fetch any other HR notify targets dynamically
         const hrTargets = await findHrNotifyTargets()
-        if (hrTargets.length > 0) {
+        for (const t of hrTargets) {
+            if (t.userId) fyiRecipients.add(t.userId)
+        }
+
+        if (fyiRecipients.size > 0) {
             const dateLabel = startDate === endDate ? startDate : `${startDate} → ${endDate}`
             const applicantNick = (employeeRow.data?.nickname as string | null) ?? employeeName
-            for (const t of hrTargets) {
-                if (!t.userId) continue
+            for (const recipientUserId of fyiRecipients) {
                 await createNotification({
-                    recipient_user_id: t.userId,
+                    recipient_user_id: recipientUserId,
                     type: 'leave_request_fyi',
                     title: `[FYI] ${applicantNick} ${leaveType.name_th ?? 'ลา'}`,
                     body: `${dateLabel} (${totalDays} วัน) — รอ ${approver.first_name_th ?? 'ผู้บังคับบัญชา'} อนุมัติ`,
@@ -476,7 +524,7 @@ export async function POST(req: NextRequest) {
                     icon: 'Calendar',
                     color: 'blue',
                     sender_name: applicantNick,
-                }).catch(err => console.error('[leave/submit] HR in-app notif failed:', err))
+                }).catch(err => console.error('[leave/submit] HR in-app FYI failed:', err))
             }
         }
     } catch (err) {

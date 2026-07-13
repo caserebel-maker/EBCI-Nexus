@@ -84,7 +84,7 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
                 <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
                     <h3 className="font-bold text-white flex items-center gap-2 text-base">
                         <Download size={18} className="text-emerald-300" />
-                        ดาวน์โหลดข้อมูลการเข้างาน
+                        ดาวน์โหลด Summary Report
                     </h3>
                     <button 
                         onClick={onClose} 
@@ -97,6 +97,10 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
 
                 {/* Form Body */}
                 <div className="p-5 space-y-4 font-sans">
+                    <div className="rounded-lg border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-xs leading-relaxed text-emerald-50">
+                        รวมข้อมูลเช็คอิน แตะบัตร ลา WFH วันหยุด ขาด มาสาย และจุดที่ควรตรวจสอบ แบบ 1 แถวต่อพนักงานต่อวัน
+                    </div>
+
                     {/* Select Export Type */}
                     <div className="space-y-1.5">
                         <label className="text-xs font-semibold text-white/50">เลือกช่วงข้อมูล</label>
@@ -188,7 +192,7 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
                         className="flex-1 h-10 rounded-lg text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-900 transition-colors flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/25"
                     >
                         <Download size={15} />
-                        ดาวน์โหลด CSV
+                        ดาวน์โหลด Summary CSV
                     </button>
                     <button
                         onClick={onClose}

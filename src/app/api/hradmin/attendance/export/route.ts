@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getAuth, isHrStaff } from '@/lib/route-auth'
-import { formatBangkokTime, todayBangkokKey } from '@/lib/datetime'
+import { bangkokDateKey, formatBangkokDateTime, formatBangkokTime, todayBangkokKey, toDate } from '@/lib/datetime'
 import { isWorkdaySaturday } from '@/lib/saturday-rules'
+import { getCheckinTypeLabel, normalizeOutsideHeadOfficeCheckin } from '@/lib/outside-head-office'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -10,6 +11,38 @@ export const revalidate = 0
 const WORK_LOCATION_LABELS: Record<string, string> = {
     johnson: 'จอห์นสัน',
     saraburi: 'ทำงานที่บ้าน (สระบุรี)',
+    outside_head_office: 'นอก Head Office',
+    'outside-head-office': 'นอก Head Office',
+    remote_office: 'นอก Head Office',
+}
+
+const REQUEST_STATUS_LABELS: Record<string, string> = {
+    pending: 'รออนุมัติ',
+    approved: 'อนุมัติแล้ว',
+    rejected: 'ปฏิเสธ',
+    cancelled: 'ยกเลิก',
+    cancellation_requested: 'ขอยกเลิกแล้ว',
+}
+
+const HOLIDAY_TYPE_LABELS: Record<string, string> = {
+    public: 'วันสำคัญทางศาสนา/ราชการ',
+    company: 'วันหยุดที่บริษัทกำหนด',
+    religious: 'วันสำคัญทางศาสนา',
+    wfh: 'วันทำงาน WFH บริษัท',
+}
+
+type EmployeeRow = {
+    id: string
+    employee_code: string | null
+    first_name_th: string | null
+    last_name_th: string | null
+    nickname: string | null
+    email?: string | null
+    department: string | null
+    position: string | null
+    work_location: string | null
+    status?: string | null
+    is_advisor?: boolean | null
 }
 
 type CheckinRow = {
@@ -18,22 +51,72 @@ type CheckinRow = {
     type?: string | null
     checked_in_at: string
     checked_out_at: string | null
+    notes?: string | null
+    late_minutes?: number | null
+    late_reason?: string | null
+    auto_closed_at?: string | null
 }
 
 type CardScanRow = {
+    id?: string | null
     employee_id: string | null
     employee_code: string | null
     scan_time: string
+    created_at?: string | null
 }
 
 type LeaveRow = {
+    id: string
+    reference_code: string | null
     employee_id: string
-    leave_type_id: string
+    leave_type_id: string | null
     start_date: string
     end_date: string
+    total_days: number | string | null
+    reason: string | null
+    status: string | null
+    approver_id: string | null
+    current_approver_id: string | null
+    submitted_at: string | null
+    approved_at: string | null
+    rejection_reason: string | null
     is_half_day: boolean | null
     half_day_period: string | null
+    cancellation_requested_at: string | null
+    cancellation_decided_by: string | null
+    cancellation_decision_reason: string | null
+    created_at: string | null
+    updated_at: string | null
 }
+
+type WfhRow = {
+    id: string
+    reference_code: string | null
+    employee_id: string
+    start_date: string
+    end_date: string
+    total_days: number | string | null
+    reason: string | null
+    contact_during_wfh: string | null
+    status: string | null
+    approver_id: string | null
+    approved_at: string | null
+    approval_notes: string | null
+    rejection_reason: string | null
+    submitted_at: string | null
+    cancelled_at: string | null
+    cancellation_reason: string | null
+    created_at: string | null
+    updated_at: string | null
+}
+
+type HolidayRow = {
+    date: string
+    name: string
+    type: string | null
+}
+
+type DateSource = 'utc' | 'bangkok'
 
 const SUPABASE_PAGE_SIZE = 1000
 
@@ -41,10 +124,10 @@ function getDatesInRange(startStr: string, endStr: string): string[] {
     const dates: string[] = []
     const [sYr, sMon, sDay] = startStr.split('-').map(Number)
     const [eYr, eMon, eDay] = endStr.split('-').map(Number)
-    
+
     const start = new Date(sYr, sMon - 1, sDay)
     const end = new Date(eYr, eMon - 1, eDay)
-    
+
     const cur = new Date(start)
     while (cur <= end) {
         const y = cur.getFullYear()
@@ -56,12 +139,119 @@ function getDatesInRange(startStr: string, endStr: string): string[] {
     return dates
 }
 
+function getDateObject(dateStr: string) {
+    const [yr, mon, day] = dateStr.split('-').map(Number)
+    return new Date(yr, mon - 1, day)
+}
+
+function formatThaiDate(dateStr: string, options: Intl.DateTimeFormatOptions = {}) {
+    return getDateObject(dateStr).toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        ...options,
+    })
+}
+
+function formatThaiWeekday(dateStr: string) {
+    return getDateObject(dateStr).toLocaleDateString('th-TH', { weekday: 'long' })
+}
+
+function csvEscape(value: unknown) {
+    const text = value === null || value === undefined || value === '' ? '—' : String(value)
+    return `"${text.replace(/"/g, '""')}"`
+}
+
+function csvRow(columns: unknown[]) {
+    return columns.map(csvEscape).join(',')
+}
+
+function uniqJoin(values: Array<string | null | undefined>, empty = '—') {
+    const cleaned = values
+        .map(v => (v ?? '').trim())
+        .filter(Boolean)
+    return Array.from(new Set(cleaned)).join(' | ') || empty
+}
+
+function statusLabel(status: string | null | undefined) {
+    if (!status) return '—'
+    return REQUEST_STATUS_LABELS[status] ?? status
+}
+
+function employeeFullName(emp: Pick<EmployeeRow, 'first_name_th' | 'last_name_th'> | null | undefined) {
+    return `${emp?.first_name_th ?? ''} ${emp?.last_name_th ?? ''}`.trim() || '—'
+}
+
+function workLocationLabel(value: string | null | undefined) {
+    if (!value) return 'สำนักงาน EBCI (ปกติ)'
+    return WORK_LOCATION_LABELS[value] ?? value
+}
+
+function timestampLabel(raw: string | null | undefined, source: DateSource = 'utc') {
+    if (!raw) return '—'
+    return formatBangkokDateTime(raw, source)
+}
+
+function dateOnly(value: string | null | undefined) {
+    if (!value) return '—'
+    return value.slice(0, 10)
+}
+
+function compareTimestamp(a: string, aSource: DateSource, b: string, bSource: DateSource) {
+    const da = toDate(a, aSource)?.getTime() ?? 0
+    const db = toDate(b, bSource)?.getTime() ?? 0
+    return da - db
+}
+
+function halfDayLabel(row: LeaveRow | null | undefined) {
+    if (!row?.is_half_day) return 'เต็มวัน'
+    if (row.half_day_period === 'morning') return 'ครึ่งวันเช้า'
+    if (row.half_day_period === 'afternoon') return 'ครึ่งวันบ่าย'
+    return 'ครึ่งวัน'
+}
+
+function requestSummary(row: LeaveRow | WfhRow, typeName?: string) {
+    const ref = row.reference_code ?? row.id
+    return `${ref} · ${typeName ?? 'WFH'} · ${statusLabel(row.status)} · ${dateOnly(row.start_date)}-${dateOnly(row.end_date)}`
+}
+
+function mapDateEmployeeRows<T extends { employee_id: string; start_date: string; end_date: string }>(rows: T[]) {
+    const map = new Map<string, T[]>()
+    for (const row of rows) {
+        const start = dateOnly(row.start_date)
+        const end = dateOnly(row.end_date)
+        if (start === '—' || end === '—') continue
+        for (const dateStr of getDatesInRange(start, end)) {
+            const key = `${dateStr}_${row.employee_id}`
+            if (!map.has(key)) map.set(key, [])
+            map.get(key)!.push(row)
+        }
+    }
+    return map
+}
+
+async function fetchAllEmployees(): Promise<EmployeeRow[]> {
+    const rows: EmployeeRow[] = []
+    for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
+        const { data, error } = await supabaseAdmin
+            .from('employees')
+            .select('id, employee_code, first_name_th, last_name_th, nickname, email, department, position, work_location, status, is_advisor')
+            .order('employee_code', { ascending: true })
+            .range(from, from + SUPABASE_PAGE_SIZE - 1)
+
+        if (error) throw new Error(error.message)
+        rows.push(...((data ?? []) as EmployeeRow[]))
+        if (!data || data.length < SUPABASE_PAGE_SIZE) break
+    }
+    return rows
+}
+
 async function fetchAllCheckins(startIso: string, endIso: string): Promise<CheckinRow[]> {
     const rows: CheckinRow[] = []
     for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
         const { data, error } = await supabaseAdmin
             .from('checkins')
-            .select('employee_id, type, source, checked_in_at, checked_out_at')
+            .select('employee_id, type, source, checked_in_at, checked_out_at, notes, late_minutes, late_reason, auto_closed_at')
             .gte('checked_in_at', startIso)
             .lte('checked_in_at', endIso)
             .order('checked_in_at', { ascending: true })
@@ -79,7 +269,7 @@ async function fetchAllCardScans(fromDate: string, toDate: string): Promise<Card
     for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
         const { data, error } = await supabaseAdmin
             .from('card_scans')
-            .select('id, employee_id, employee_code, scan_time')
+            .select('id, employee_id, employee_code, scan_time, created_at')
             .gte('scan_time', `${fromDate}T00:00:00`)
             .lte('scan_time', `${toDate}T23:59:59.999`)
             .order('scan_time', { ascending: true })
@@ -97,10 +287,10 @@ async function fetchAllLeaves(fromDate: string, toDate: string): Promise<LeaveRo
     for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
         const { data, error } = await supabaseAdmin
             .from('leave_requests')
-            .select('employee_id, leave_type_id, start_date, end_date, is_half_day, half_day_period')
-            .eq('status', 'approved')
+            .select('id, reference_code, employee_id, leave_type_id, start_date, end_date, total_days, reason, status, approver_id, current_approver_id, submitted_at, approved_at, rejection_reason, is_half_day, half_day_period, cancellation_requested_at, cancellation_decided_by, cancellation_decision_reason, created_at, updated_at')
             .lte('start_date', toDate)
             .gte('end_date', fromDate)
+            .order('start_date', { ascending: true })
             .range(from, from + SUPABASE_PAGE_SIZE - 1)
 
         if (error) throw new Error(error.message)
@@ -108,6 +298,36 @@ async function fetchAllLeaves(fromDate: string, toDate: string): Promise<LeaveRo
         if (!data || data.length < SUPABASE_PAGE_SIZE) break
     }
     return rows
+}
+
+async function fetchAllWfhRequests(fromDate: string, toDate: string): Promise<WfhRow[]> {
+    const rows: WfhRow[] = []
+    for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
+        const { data, error } = await supabaseAdmin
+            .from('wfh_requests')
+            .select('id, reference_code, employee_id, start_date, end_date, total_days, reason, contact_during_wfh, status, approver_id, approved_at, approval_notes, rejection_reason, submitted_at, cancelled_at, cancellation_reason, created_at, updated_at')
+            .lte('start_date', toDate)
+            .gte('end_date', fromDate)
+            .order('start_date', { ascending: true })
+            .range(from, from + SUPABASE_PAGE_SIZE - 1)
+
+        if (error) throw new Error(error.message)
+        rows.push(...((data ?? []) as WfhRow[]))
+        if (!data || data.length < SUPABASE_PAGE_SIZE) break
+    }
+    return rows
+}
+
+async function fetchHolidays(fromDate: string, toDate: string): Promise<HolidayRow[]> {
+    const { data, error } = await supabaseAdmin
+        .from('holidays')
+        .select('date, name, type')
+        .gte('date', fromDate)
+        .lte('date', toDate)
+        .order('date', { ascending: true })
+
+    if (error) throw new Error(error.message)
+    return (data ?? []) as HolidayRow[]
 }
 
 export async function GET(req: NextRequest) {
@@ -126,244 +346,385 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'รูปแบบวันที่ไม่ถูกต้อง (ต้องเป็น YYYY-MM-DD)' }, { status: 400 })
     }
 
+    if (from > to) {
+        return NextResponse.json({ error: 'วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุด' }, { status: 400 })
+    }
+
     try {
-        // 1. Fetch active employees
-        const { data: employees, error: empError } = await supabaseAdmin
-            .from('employees')
-            .select('id, employee_code, first_name_th, last_name_th, nickname, department, position, work_location')
-            .eq('status', 'active')
-            .neq('is_advisor', true)
-            .order('employee_code', { ascending: true })
-
-        if (empError) throw new Error(empError.message)
-        const employeeIdByCode = new Map<string, string>()
-        for (const emp of employees ?? []) {
-            if (emp.employee_code) employeeIdByCode.set(emp.employee_code, emp.id)
-        }
-
-        // 2. Fetch the same live sources used by the Nexus attendance screen.
-        // `attendance_logs` can lag or contain stale reconciled rows, so exports
-        // intentionally read card_scans/checkins directly.
         const startOfDay = new Date(`${from}T00:00:00+07:00`)
         const endOfDay = new Date(`${to}T23:59:59.999+07:00`)
 
-        const [checkins, cardScans, leaves] = await Promise.all([
+        const [allEmployees, checkins, cardScans, leaves, wfhRequests, holidays] = await Promise.all([
+            fetchAllEmployees(),
             fetchAllCheckins(startOfDay.toISOString(), endOfDay.toISOString()),
             fetchAllCardScans(from, to),
             fetchAllLeaves(from, to),
+            fetchAllWfhRequests(from, to),
+            fetchHolidays(from, to),
         ])
 
-        // Parse leaves into name names map
-        const leaveTypeIds = Array.from(new Set(leaves.map(l => l.leave_type_id)))
-        const { data: leaveTypes } = leaveTypeIds.length
+        const employees = allEmployees.filter(emp => emp.status === 'active' && !emp.is_advisor)
+        const employeeById = new Map(allEmployees.map(emp => [emp.id, emp]))
+        const employeeIdByCode = new Map<string, string>()
+        for (const emp of allEmployees) {
+            if (emp.employee_code) employeeIdByCode.set(emp.employee_code, emp.id)
+        }
+
+        const leaveTypeIds = Array.from(new Set(leaves.map(l => l.leave_type_id).filter(Boolean))) as string[]
+        const { data: leaveTypes, error: leaveTypeError } = leaveTypeIds.length
             ? await supabaseAdmin.from('leave_types').select('id, name_th').in('id', leaveTypeIds)
-            : { data: [] }
-        const leaveTypeNames = new Map((leaveTypes ?? []).map(t => [t.id, t.name_th ?? 'ลา']))
+            : { data: [], error: null }
+        if (leaveTypeError) throw new Error(leaveTypeError.message)
+        const leaveTypeNames = new Map((leaveTypes ?? []).map(t => [String(t.id), String(t.name_th ?? 'ลา')]))
 
-        const leaveMap = new Map<string, { typeName: string; isHalfDay: boolean; halfDayPeriod: string | null }>()
-        for (const l of leaves) {
-            const start = new Date(l.start_date)
-            const end = new Date(l.end_date)
-            const cur = new Date(start)
-            while (cur <= end) {
-                const y = cur.getFullYear()
-                const m = String(cur.getMonth() + 1).padStart(2, '0')
-                const d = String(cur.getDate()).padStart(2, '0')
-                const dateStr = `${y}-${m}-${d}`
-                leaveMap.set(`${dateStr}_${l.employee_id}`, {
-                    typeName: leaveTypeNames.get(l.leave_type_id) ?? 'ลา',
-                    isHalfDay: Boolean(l.is_half_day),
-                    halfDayPeriod: l.half_day_period ? String(l.half_day_period) : null,
-                })
-                cur.setDate(cur.getDate() + 1)
-            }
-        }
-
-        // Group checkins by date and employee
         const checkinMap = new Map<string, CheckinRow[]>()
-        for (const c of checkins) {
-            const datePart = new Date(new Date(c.checked_in_at).getTime() + 7 * 60 * 60 * 1000).toISOString().split('T')[0]
-            const key = `${datePart}_${c.employee_id}`
+        for (const raw of checkins) {
+            const normalized = normalizeOutsideHeadOfficeCheckin(raw) as CheckinRow
+            const datePart = bangkokDateKey(normalized.checked_in_at, 'utc')
+            if (!datePart) continue
+            const key = `${datePart}_${normalized.employee_id}`
             if (!checkinMap.has(key)) checkinMap.set(key, [])
-            checkinMap.get(key)!.push(c)
+            checkinMap.get(key)!.push(normalized)
         }
 
-        // Group scans by date and employee
         const scanMap = new Map<string, CardScanRow[]>()
-        for (const s of cardScans) {
-            const datePart = s.scan_time.split(/[T ]/)[0]
-            const employeeId = s.employee_id ?? (s.employee_code ? employeeIdByCode.get(s.employee_code) ?? null : null)
+        for (const scan of cardScans) {
+            const datePart = bangkokDateKey(scan.scan_time, 'bangkok') ?? scan.scan_time.split(/[T ]/)[0]
+            const employeeId = scan.employee_id ?? (scan.employee_code ? employeeIdByCode.get(scan.employee_code) ?? null : null)
             if (!employeeId) continue
             const key = `${datePart}_${employeeId}`
             if (!scanMap.has(key)) scanMap.set(key, [])
-            scanMap.get(key)!.push(s)
+            scanMap.get(key)!.push(scan)
         }
 
-        // 3. Generate date sequence in range
+        const leaveMap = mapDateEmployeeRows(leaves)
+        const wfhMap = mapDateEmployeeRows(wfhRequests)
+        const holidayByDate = new Map(holidays.map(h => [h.date, h]))
         const dateRange = getDatesInRange(from, to)
 
         if (debug) {
-            const days = dateRange.map(dateStr => {
-                const scanKeys = Array.from(scanMap.keys()).filter(key => key.startsWith(`${dateStr}_`))
-                const checkinKeys = Array.from(checkinMap.keys()).filter(key => key.startsWith(`${dateStr}_`))
-                return {
-                    date: dateStr,
-                    employeesWithCardScans: scanKeys.length,
-                    cardScanRows: scanKeys.reduce((sum, key) => sum + (scanMap.get(key)?.length ?? 0), 0),
-                    employeesWithCheckins: checkinKeys.length,
-                    checkinRows: checkinKeys.reduce((sum, key) => sum + (checkinMap.get(key)?.length ?? 0), 0),
-                    sampleCardScanEmployeeCodes: scanKeys.slice(0, 8).map(key => {
-                        const employeeId = key.slice(dateStr.length + 1)
-                        const emp = (employees ?? []).find(e => e.id === employeeId)
-                        return emp?.employee_code ?? employeeId
-                    }),
-                }
-            })
-
             return NextResponse.json(
                 {
                     from,
                     to,
-                    activeEmployees: employees?.length ?? 0,
-                    days,
+                    activeEmployees: employees.length,
+                    sourceRows: {
+                        checkins: checkins.length,
+                        cardScans: cardScans.length,
+                        leaves: leaves.length,
+                        wfhRequests: wfhRequests.length,
+                        holidays: holidays.length,
+                    },
+                    days: dateRange.map(dateStr => ({
+                        date: dateStr,
+                        employeesWithCardScans: Array.from(scanMap.keys()).filter(key => key.startsWith(`${dateStr}_`)).length,
+                        employeesWithCheckins: Array.from(checkinMap.keys()).filter(key => key.startsWith(`${dateStr}_`)).length,
+                        employeesWithLeaves: Array.from(leaveMap.keys()).filter(key => key.startsWith(`${dateStr}_`)).length,
+                        employeesWithWfh: Array.from(wfhMap.keys()).filter(key => key.startsWith(`${dateStr}_`)).length,
+                        holiday: holidayByDate.get(dateStr) ?? null,
+                    })),
                 },
                 {
                     headers: {
                         'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-                        'Pragma': 'no-cache',
-                        'Expires': '0',
+                        Pragma: 'no-cache',
+                        Expires: '0',
                     },
                 },
             )
         }
 
-        // 4. Construct CSV rows
         const headers = [
-            'วันที่',
+            'วันที่ (ค.ศ.)',
+            'วันที่ (ไทย)',
+            'วัน',
+            'ประเภทวัน',
+            'ชื่อวันหยุด/กิจกรรม',
+            'เป็นวันทำงาน',
+            'ช่วงรายงาน',
             'รหัสพนักงาน',
             'ชื่อ-นามสกุล',
             'ชื่อเล่น',
+            'อีเมล',
+            'สถานะพนักงาน',
             'แผนก',
             'ตำแหน่ง',
             'สถานที่ทำงานหลัก',
-            'เวลาเข้างาน',
-            'เวลาออกงาน',
-            'สถานะการเช็คอิน',
+            'สถานะสรุปรายวัน',
+            'ผลตรวจเช็คอิน',
             'แหล่งข้อมูล',
+            'ประเภทเช็คอินจริง',
+            'เวลาเข้าแรก',
+            'เวลาออกล่าสุด',
+            'จำนวนแตะบัตร',
+            'เวลาแตะบัตรแรก',
+            'เวลาแตะบัตรล่าสุด',
+            'เวลาแตะบัตรทั้งหมด',
+            'จำนวนเช็คอินมือถือ',
+            'เวลาเช็คอินมือถือแรก',
+            'เวลาเช็คเอาท์มือถือล่าสุด',
+            'ประเภทเช็คอินมือถือทั้งหมด',
+            'เวลาเช็คอินมือถือทั้งหมด',
+            'มาสาย (นาที)',
+            'เหตุผลมาสาย',
+            'ปิดงานอัตโนมัติ',
+            'มีใบลาในวันนั้น',
+            'สถานะใบลา',
+            'ประเภทใบลา',
+            'เลขที่ใบลา',
+            'วันที่เริ่มลา',
+            'วันที่สิ้นสุดลา',
+            'จำนวนวันใบลา',
+            'ลาครึ่งวัน',
+            'เหตุผลลา',
+            'ส่งใบลาเมื่อ',
+            'อนุมัติใบลาเมื่อ',
+            'ผู้อนุมัติหลักของใบลา',
+            'ผู้อนุมัติปัจจุบัน',
+            'เหตุผลปฏิเสธใบลา',
+            'สถานะคำขอยกเลิกใบลา',
+            'มี WFH ในวันนั้น',
+            'ประเภท WFH',
+            'สถานะ WFH',
+            'เลขที่ WFH',
+            'วันที่เริ่ม WFH',
+            'วันที่สิ้นสุด WFH',
+            'จำนวนวัน WFH',
+            'เหตุผล WFH',
+            'ช่องทางติดต่อระหว่าง WFH',
+            'ส่ง WFH เมื่อ',
+            'อนุมัติ WFH เมื่อ',
+            'ผู้อนุมัติ WFH',
+            'เหตุผลปฏิเสธ/ยกเลิก WFH',
+            'หมายเหตุ HR',
+            'จุดที่ควรตรวจสอบ',
         ]
 
-        const csvRows = [headers.map(h => `"${h}"`).join(',')]
+        const csvRows = [csvRow(headers)]
         const todayStr = todayBangkokKey()
 
         for (const dateStr of dateRange) {
-            const [yr, mon, day] = dateStr.split('-').map(Number)
-            const dObj = new Date(yr, mon - 1, day)
-            const isWeekend = dObj.getDay() === 0 || (dObj.getDay() === 6 && !isWorkdaySaturday(dateStr))
-            const formattedDateTh = dObj.toLocaleDateString('th-TH', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-            })
+            const dObj = getDateObject(dateStr)
+            const day = dObj.getDay()
+            const isWeekend = day === 0 || (day === 6 && !isWorkdaySaturday(dateStr))
+            const holiday = holidayByDate.get(dateStr)
+            const isCompanyWfh = holiday?.type === 'wfh'
+            const isHoliday = Boolean(holiday && holiday.type !== 'wfh')
+            const isWorkday = !isWeekend && !isHoliday
+            const dayType = holiday
+                ? (HOLIDAY_TYPE_LABELS[holiday.type ?? ''] ?? holiday.type ?? 'วันหยุด/กิจกรรม')
+                : isWeekend
+                    ? 'วันหยุดสุดสัปดาห์'
+                    : 'วันทำงานปกติ'
 
-            for (const emp of employees ?? []) {
+            for (const emp of employees) {
                 const key = `${dateStr}_${emp.id}`
-                const dayCheckins = checkinMap.get(key) ?? []
-                const dayScans = scanMap.get(key) ?? []
-                const dayLeave = leaveMap.get(key)
-                
-                const fullName = `${emp.first_name_th ?? ''} ${emp.last_name_th ?? ''}`.trim()
-                const workLoc = emp.work_location ? WORK_LOCATION_LABELS[emp.work_location] ?? emp.work_location : 'สำนักงาน EBCI (ปกติ)'
-                
+                const dayCheckins = (checkinMap.get(key) ?? [])
+                    .slice()
+                    .sort((a, b) => compareTimestamp(a.checked_in_at, 'utc', b.checked_in_at, 'utc'))
+                const mobileCheckins = dayCheckins.filter(c => c.source !== 'card')
+                const dayScans = (scanMap.get(key) ?? [])
+                    .slice()
+                    .sort((a, b) => compareTimestamp(a.scan_time, 'bangkok', b.scan_time, 'bangkok'))
+                const dayLeaves = leaveMap.get(key) ?? []
+                const dayWfh = wfhMap.get(key) ?? []
+                const approvedLeaves = dayLeaves.filter(l => l.status === 'approved' || l.status === 'cancellation_requested')
+                const activeWfh = dayWfh.filter(w => w.status === 'approved')
+                const firstMobile = mobileCheckins[0] ?? null
+                const firstCard = dayScans[0] ?? null
+                const latestCard = dayScans.length > 1 ? dayScans[dayScans.length - 1] : null
+
+                let firstSource: 'card' | 'mobile' | null = null
+                if (firstCard && firstMobile) {
+                    firstSource = compareTimestamp(firstCard.scan_time, 'bangkok', firstMobile.checked_in_at, 'utc') <= 0 ? 'card' : 'mobile'
+                } else if (firstCard) {
+                    firstSource = 'card'
+                } else if (firstMobile) {
+                    firstSource = 'mobile'
+                }
+
+                const latestMobileCheckout = mobileCheckins
+                    .map(c => c.checked_out_at)
+                    .filter(Boolean)
+                    .sort((a, b) => compareTimestamp(a!, 'utc', b!, 'utc'))
+                    .at(-1) ?? null
+
                 let clockIn = '—'
+                if (firstSource === 'card' && firstCard) clockIn = formatBangkokTime(firstCard.scan_time, 'bangkok')
+                if (firstSource === 'mobile' && firstMobile) clockIn = formatBangkokTime(firstMobile.checked_in_at, 'utc')
+
                 let clockOut = '—'
-                let statusLabel = isWeekend ? 'วันหยุด' : 'ยังไม่เช็คอิน'
-                let sourceLabel = '—'
-
-                let earliestMobile: CheckinRow | null = null
-                let latestMobileCheckout: string | null = null
-                for (const c of dayCheckins) {
-                    if (c.source === 'card') continue
-                    if (!earliestMobile || new Date(c.checked_in_at) < new Date(earliestMobile.checked_in_at)) {
-                        earliestMobile = c
-                    }
-                    if (c.checked_out_at) {
-                        if (!latestMobileCheckout || new Date(c.checked_out_at) > new Date(latestMobileCheckout)) {
-                            latestMobileCheckout = c.checked_out_at
-                        }
-                    }
+                if (latestCard && latestMobileCheckout) {
+                    clockOut = compareTimestamp(latestCard.scan_time, 'bangkok', latestMobileCheckout, 'utc') >= 0
+                        ? formatBangkokTime(latestCard.scan_time, 'bangkok')
+                        : formatBangkokTime(latestMobileCheckout, 'utc')
+                } else if (latestCard) {
+                    clockOut = formatBangkokTime(latestCard.scan_time, 'bangkok')
+                } else if (latestMobileCheckout) {
+                    clockOut = formatBangkokTime(latestMobileCheckout, 'utc')
                 }
 
-                const earliestCardScan = dayScans.length > 0 ? dayScans[0].scan_time : null
-                const latestCardScan = dayScans.length > 1 ? dayScans[dayScans.length - 1].scan_time : null
+                const hasCard = dayScans.length > 0
+                const hasMobile = mobileCheckins.length > 0
+                const hasAnyCheckin = hasCard || hasMobile
+                const checkinMatchStatus = hasCard && hasMobile
+                    ? 'ตรงกัน (มีทั้งแตะบัตรและมือถือ)'
+                    : hasCard
+                        ? 'เฉพาะบัตร'
+                        : hasMobile
+                            ? 'เฉพาะมือถือ'
+                            : 'ไม่มีข้อมูลเช็คอิน'
+                const sourceLabel = hasCard && hasMobile
+                    ? 'สแกนบัตร + มือถือ'
+                    : hasCard
+                        ? 'สแกนบัตร'
+                        : hasMobile
+                            ? 'มือถือ'
+                            : '—'
 
-                if (earliestCardScan || earliestMobile) {
-                    if (earliestCardScan && earliestMobile) {
-                        const cardTime = new Date(earliestCardScan.replace(' ', 'T') + '+07:00')
-                        const mobTime = new Date(earliestMobile.checked_in_at)
-                        if (cardTime < mobTime) {
-                            clockIn = formatBangkokTime(`${earliestCardScan}+07:00`)
-                            sourceLabel = 'แสกนบัตร'
-                        } else {
-                            clockIn = formatBangkokTime(earliestMobile.checked_in_at)
-                            sourceLabel = 'มือถือ'
-                        }
-                        statusLabel = 'ตรงกัน'
-                    } else if (earliestCardScan) {
-                        clockIn = formatBangkokTime(`${earliestCardScan}+07:00`)
-                        sourceLabel = 'แสกนบัตร'
-                        statusLabel = 'เฉพาะบัตร'
-                    } else if (earliestMobile) {
-                        clockIn = formatBangkokTime(earliestMobile.checked_in_at)
-                        sourceLabel = 'มือถือ'
-                        statusLabel = 'เฉพาะมือถือ'
-                    }
+                const mobileTypes = mobileCheckins.map(c => c.type ? getCheckinTypeLabel(c.type) : 'ไม่ระบุ')
+                const actualType = firstSource === 'card'
+                    ? 'ออฟฟิศ'
+                    : firstMobile?.type
+                        ? getCheckinTypeLabel(firstMobile.type)
+                        : hasMobile
+                            ? 'มือถือไม่ระบุประเภท'
+                            : '—'
+                const maxLateMinutes = Math.max(0, ...dayCheckins.map(c => Number(c.late_minutes ?? 0)))
+                const lateReasons = uniqJoin(dayCheckins.map(c => c.late_reason))
+                const autoClosed = dayCheckins.some(c => Boolean(c.auto_closed_at)) ? 'ใช่' : 'ไม่ใช่'
+                const leaveTypeLabels = dayLeaves.map(l => leaveTypeNames.get(l.leave_type_id ?? '') ?? l.leave_type_id ?? 'ลา')
+                const approvedLeaveType = approvedLeaves.length > 0
+                    ? uniqJoin(approvedLeaves.map(l => leaveTypeNames.get(l.leave_type_id ?? '') ?? l.leave_type_id ?? 'ลา'))
+                    : '—'
 
-                    let finalCheckout: string | null = null
-                    if (latestCardScan && latestMobileCheckout) {
-                        const cardTime = new Date(latestCardScan.replace(' ', 'T') + '+07:00')
-                        const mobTime = new Date(latestMobileCheckout)
-                        finalCheckout = cardTime > mobTime ? `${latestCardScan}+07:00` : latestMobileCheckout
-                    } else if (latestCardScan) {
-                        finalCheckout = `${latestCardScan}+07:00`
-                    } else if (latestMobileCheckout) {
-                        finalCheckout = latestMobileCheckout
-                    }
-                    if (finalCheckout) {
-                        clockOut = formatBangkokTime(finalCheckout)
-                    }
-                } else if (dayLeave) {
-                    statusLabel = dayLeave.isHalfDay 
-                        ? `ลาครึ่งวัน (${dayLeave.halfDayPeriod === 'morning' ? 'เช้า' : 'บ่าย'})`
-                        : dayLeave.typeName
-                } else if (isWeekend) {
-                    statusLabel = 'วันหยุด'
+                const issues: string[] = []
+                const notes: string[] = []
+
+                if (hasAnyCheckin && approvedLeaves.length > 0) issues.push('มีเช็คอินในวันที่มีใบลาอนุมัติ')
+                if (hasCard && activeWfh.length > 0) issues.push('มีแตะบัตรในวันที่มี WFH อนุมัติ')
+                if (hasMobile && !hasCard) issues.push('มีเฉพาะเช็คอินมือถือ')
+                if (hasCard && !hasMobile) issues.push('มีเฉพาะแตะบัตร')
+                if (dayLeaves.length > 1) issues.push('มีใบลาหลายรายการในวันเดียวกัน')
+                if (dayWfh.length > 1) issues.push('มีคำขอ WFH หลายรายการในวันเดียวกัน')
+                if (dayLeaves.some(l => l.status === 'pending')) issues.push('มีใบลารออนุมัติในวันนี้')
+                if (dayWfh.some(w => w.status === 'pending')) issues.push('มี WFH รออนุมัติในวันนี้')
+                if (maxLateMinutes > 0) issues.push(`มาสาย ${maxLateMinutes} นาที`)
+
+                let dailyStatus = 'ยังไม่เช็คอิน'
+                if (hasAnyCheckin) {
+                    dailyStatus = actualType === 'WFH'
+                        ? 'เข้างาน WFH'
+                        : actualType === 'นอก Head Office'
+                            ? 'เข้างานนอก Head Office'
+                            : actualType === 'ภาคสนาม'
+                                ? 'เข้างานภาคสนาม'
+                                : 'เข้าออฟฟิศ'
+                } else if (approvedLeaves.length > 0) {
+                    dailyStatus = approvedLeaves.length === 1 && approvedLeaves[0].is_half_day
+                        ? `ลา ${approvedLeaveType} (${halfDayLabel(approvedLeaves[0])})`
+                        : `ลา ${approvedLeaveType}`
+                    notes.push('ไม่ต้องเช็คอินเพราะมีใบลาอนุมัติ')
+                } else if (activeWfh.length > 0) {
+                    dailyStatus = 'WFH อนุมัติแล้ว แต่ยังไม่เช็คอิน'
+                    issues.push('มี WFH อนุมัติแต่ไม่มีเช็คอิน WFH')
+                } else if (isCompanyWfh) {
+                    dailyStatus = 'วัน WFH บริษัท แต่ยังไม่เช็คอิน'
+                    notes.push('บริษัทกำหนดให้เป็น WFH')
+                } else if (!isWorkday) {
+                    dailyStatus = 'วันหยุด'
+                    notes.push(dayType)
                 } else if (dateStr < todayStr) {
-                    statusLabel = 'ขาดเช็คอิน'
-                } else {
-                    statusLabel = 'ยังไม่เช็คอิน'
+                    dailyStatus = 'ขาดเช็คอิน'
+                    issues.push('วันทำงานที่ผ่านมาแล้วแต่ไม่มีเช็คอิน/ใบลา/WFH')
                 }
 
-                const columns = [
-                    formattedDateTh,
+                const primaryLeave = dayLeaves[0] ?? null
+                const primaryWfh = dayWfh[0] ?? null
+                const approver = primaryLeave?.approver_id ? employeeById.get(primaryLeave.approver_id) : null
+                const currentApprover = primaryLeave?.current_approver_id ? employeeById.get(primaryLeave.current_approver_id) : null
+                const wfhApprover = primaryWfh?.approver_id ? employeeById.get(primaryWfh.approver_id) : null
+
+                const row = [
+                    dateStr,
+                    formatThaiDate(dateStr),
+                    formatThaiWeekday(dateStr),
+                    dayType,
+                    holiday?.name ?? '—',
+                    isWorkday ? 'ใช่' : 'ไม่ใช่',
+                    `${from} ถึง ${to}`,
                     emp.employee_code ?? '—',
-                    fullName || '—',
+                    employeeFullName(emp),
                     emp.nickname ?? '—',
+                    emp.email ?? '—',
+                    emp.status ?? '—',
                     emp.department ?? '—',
                     emp.position ?? '—',
-                    workLoc,
+                    workLocationLabel(emp.work_location),
+                    dailyStatus,
+                    checkinMatchStatus,
+                    sourceLabel,
+                    actualType,
                     clockIn,
                     clockOut,
-                    statusLabel,
-                    sourceLabel,
+                    dayScans.length,
+                    firstCard ? formatBangkokTime(firstCard.scan_time, 'bangkok') : '—',
+                    latestCard ? formatBangkokTime(latestCard.scan_time, 'bangkok') : '—',
+                    dayScans.map(s => formatBangkokTime(s.scan_time, 'bangkok')).join(' | ') || '—',
+                    mobileCheckins.length,
+                    firstMobile ? formatBangkokTime(firstMobile.checked_in_at, 'utc') : '—',
+                    latestMobileCheckout ? formatBangkokTime(latestMobileCheckout, 'utc') : '—',
+                    uniqJoin(mobileTypes),
+                    mobileCheckins.map(c => `${formatBangkokTime(c.checked_in_at, 'utc')} (${c.type ? getCheckinTypeLabel(c.type) : 'ไม่ระบุ'})`).join(' | ') || '—',
+                    maxLateMinutes || 0,
+                    lateReasons,
+                    autoClosed,
+                    dayLeaves.length > 0 ? 'มี' : 'ไม่มี',
+                    uniqJoin(dayLeaves.map(l => `${l.reference_code ?? l.id}: ${statusLabel(l.status)}`)),
+                    uniqJoin(leaveTypeLabels),
+                    uniqJoin(dayLeaves.map(l => l.reference_code ?? l.id)),
+                    uniqJoin(dayLeaves.map(l => dateOnly(l.start_date))),
+                    uniqJoin(dayLeaves.map(l => dateOnly(l.end_date))),
+                    uniqJoin(dayLeaves.map(l => String(l.total_days ?? '—'))),
+                    uniqJoin(dayLeaves.map(halfDayLabel)),
+                    uniqJoin(dayLeaves.map(l => l.reason)),
+                    uniqJoin(dayLeaves.map(l => timestampLabel(l.submitted_at ?? l.created_at, 'utc'))),
+                    uniqJoin(dayLeaves.map(l => timestampLabel(l.approved_at, 'utc'))),
+                    approver ? employeeFullName(approver) : '—',
+                    currentApprover ? employeeFullName(currentApprover) : '—',
+                    uniqJoin(dayLeaves.map(l => l.rejection_reason)),
+                    uniqJoin(dayLeaves.map(l => l.cancellation_requested_at
+                        ? `ขอยกเลิกเมื่อ ${timestampLabel(l.cancellation_requested_at, 'utc')}${l.cancellation_decision_reason ? ` · ผล: ${l.cancellation_decision_reason}` : ''}`
+                        : l.status === 'cancelled'
+                            ? 'ยกเลิกแล้ว'
+                            : null)),
+                    dayWfh.length > 0 || isCompanyWfh ? 'มี' : 'ไม่มี',
+                    isCompanyWfh ? 'WFH บริษัท' : (activeWfh.length > 0 ? 'WFH รายบุคคล' : dayWfh.length > 0 ? 'คำขอ WFH รายบุคคล' : '—'),
+                    isCompanyWfh ? 'บริษัทกำหนด' : uniqJoin(dayWfh.map(w => `${w.reference_code ?? w.id}: ${statusLabel(w.status)}`)),
+                    uniqJoin(dayWfh.map(w => w.reference_code ?? w.id)),
+                    uniqJoin(dayWfh.map(w => dateOnly(w.start_date))),
+                    uniqJoin(dayWfh.map(w => dateOnly(w.end_date))),
+                    uniqJoin(dayWfh.map(w => String(w.total_days ?? '—'))),
+                    isCompanyWfh ? holiday?.name ?? 'บริษัทกำหนด WFH' : uniqJoin(dayWfh.map(w => w.reason)),
+                    uniqJoin(dayWfh.map(w => w.contact_during_wfh)),
+                    uniqJoin(dayWfh.map(w => timestampLabel(w.submitted_at ?? w.created_at, 'utc'))),
+                    uniqJoin(dayWfh.map(w => timestampLabel(w.approved_at, 'utc'))),
+                    wfhApprover ? employeeFullName(wfhApprover) : '—',
+                    uniqJoin(dayWfh.map(w => w.rejection_reason ?? w.cancellation_reason)),
+                    uniqJoin([
+                        ...notes,
+                        ...approvedLeaves.map(l => requestSummary(l, leaveTypeNames.get(l.leave_type_id ?? '') ?? l.leave_type_id ?? 'ลา')),
+                        ...activeWfh.map(w => requestSummary(w, 'WFH')),
+                    ]),
+                    uniqJoin(issues),
                 ]
 
-                csvRows.push(columns.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(','))
+                csvRows.push(csvRow(row))
             }
         }
 
-        // Return CSV with UTF-8 BOM for Thai Excel compatibility
         const csvContent = '\uFEFF' + csvRows.join('\n')
-        const filename = `attendance_report_${from}_to_${to}.csv`
+        const filename = `attendance_summary_report_${from}_to_${to}.csv`
 
         return new NextResponse(csvContent, {
             status: 200,
@@ -371,8 +732,8 @@ export async function GET(req: NextRequest) {
                 'Content-Type': 'text/csv; charset=utf-8',
                 'Content-Disposition': `attachment; filename="${filename}"`,
                 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-                'Pragma': 'no-cache',
-                'Expires': '0',
+                Pragma: 'no-cache',
+                Expires: '0',
             },
         })
 
