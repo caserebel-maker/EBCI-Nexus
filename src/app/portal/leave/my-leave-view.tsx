@@ -1196,9 +1196,9 @@ function NewLeaveModal({
             const advanceDays = selectedType.advance_notice_days ?? 0
 
             if (selectedType.leave_type_id === 'sick') {
-                if (diffDays >= 0) {
+                if (diffDays > 0) {
                     errorIds.add('startDate')
-                    missing.push('ลาป่วยต้องเป็นวันที่ผ่านไปแล้ว — ยื่นในวันนี้หรือล่วงหน้าไม่ได้')
+                    missing.push('ลาป่วยล่วงหน้าไม่ได้ — ต้องเป็นวันนี้หรือวันที่ผ่านมาแล้ว')
                 }
             } else {
                 if (diffDays < 0) {

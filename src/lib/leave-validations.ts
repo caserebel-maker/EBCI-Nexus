@@ -138,11 +138,11 @@ export async function validateLeaveRequest(
     // Rule 4 — sick leave is retroactive only; spec wording:
     // "ลาป่วยต้องเป็นวันที่ผ่านไปแล้ว" → start_date must be strictly in the past.
     if (leaveType.id === 'sick') {
-        if (startEpoch >= todayEpoch) {
+        if (startEpoch > todayEpoch) {
             return {
                 ok: false,
                 field: 'date',
-                error: 'ลาป่วยต้องเป็นวันที่ผ่านไปแล้ว — ยื่นในวันนี้หรือล่วงหน้าไม่ได้',
+                error: 'ลาป่วยล่วงหน้าไม่ได้ — ต้องเป็นวันนี้หรือวันที่ผ่านมาแล้ว',
             }
         }
     } else {
