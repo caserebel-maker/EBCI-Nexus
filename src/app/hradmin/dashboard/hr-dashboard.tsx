@@ -821,7 +821,7 @@ export function HRDashboard({
                 <div className="space-y-5">
 
                     {/* ── ประกาศข่าวสาร ── */}
-                    <div style={glassStyle} className={cn('p-5', hasPendingLeaves && 'pending-leave-glow')}>
+                    <div style={glassStyle} className="p-5">
                         <div className="flex flex-col gap-2 mb-3">
                             <div className="flex items-center gap-2">
                                 <Megaphone size={16} className="text-[#ad5f6c]" />
@@ -910,7 +910,7 @@ export function HRDashboard({
                     </div>
 
                     {/* Pending approvals */}
-                    <div style={glassStyle} className="p-5">
+                    <div style={glassStyle} className={cn('p-5', hasPendingLeaves && 'pending-leave-glow')}>
                         <div className="flex items-center justify-between gap-3 mb-4">
                             <SectionHeader title={`รออนุมัติใบลา (${pending.length})`} icon={Clock} className="mb-0" />
                             <button
