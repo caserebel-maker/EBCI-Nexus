@@ -1657,8 +1657,8 @@ function Step1TypePicker({
                                 )}
                             </div>
                         )}
-                        {!selected.same_day_allowed && selected.leave_type_id === 'sick' && (
-                            <p className="text-sm text-rose-200">ต้องเป็นวันที่ผ่านไปแล้ว</p>
+                        {selected.leave_type_id === 'sick' && (
+                            <p className="text-sm text-rose-200">ต้องเป็นวันนี้หรือวันที่ผ่านมาแล้ว</p>
                         )}
                         {selected.leave_type_id === 'sick' ? (
                             <p className="text-sm text-sky-200 inline-flex items-center gap-1.5">
@@ -1716,10 +1716,8 @@ function Step2Dates({
     let maxDate: string | undefined = undefined
 
     if (type.leave_type_id === 'sick') {
-        // sick leave must be strictly in the past (yesterday or earlier)
-        const tDate = new Date(today)
-        tDate.setDate(tDate.getDate() - 1)
-        maxDate = tDate.toISOString().slice(0, 10)
+        // sick leave must be today or in the past (cannot be in the future)
+        maxDate = today
     } else {
         const sameDayAllowed = type.same_day_allowed !== false
         const advanceDays = type.advance_notice_days ?? 0
@@ -1744,7 +1742,7 @@ function Step2Dates({
                 <span>
                     <strong>{type.name_th}</strong>
                     {type.advance_notice_days > 0 && ` · ขอล่วงหน้าอย่างน้อย ${type.advance_notice_days} วัน`}
-                    {type.leave_type_id === 'sick' && ' · ต้องเป็นวันที่ผ่านไปแล้ว'}
+                    {type.leave_type_id === 'sick' && ' · ต้องเป็นวันนี้หรือวันที่ผ่านมาแล้ว'}
                     {!type.is_unlimited && ` · ${leaveQuotaLabel(type)}${type.is_lifetime ? ' (ตลอดอายุงาน)' : ''}`}
                 </span>
             </div>
