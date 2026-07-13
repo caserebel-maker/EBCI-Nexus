@@ -125,7 +125,7 @@ function MetricCard({ title, value, sub, icon: Icon, accent, href, highlight = f
             style={metricCardStyle}
             className={cn(
                 'overflow-hidden cursor-pointer transition-all duration-200 hover:brightness-110 hover:scale-[1.02] active:scale-[0.99] flex',
-                highlight && 'pending-leave-glow'
+                highlight && 'pending-leave-glow pending-leave-bounce'
             )}
             onClick={() => router.push(href)}
         >
@@ -669,34 +669,48 @@ export function HRDashboard({
         <div className="space-y-6">
             <style jsx global>{`
                 @keyframes pending-leave-card-pulse {
-                    0%, 42% {
-                        border-color: rgba(250, 204, 21, 0.98);
+                    0%, 100% {
+                        border-color: rgba(250, 204, 21, 0.56);
                         box-shadow:
-                            0 0 0 2px rgba(250, 204, 21, 0.62),
-                            0 0 16px rgba(250, 204, 21, 0.48),
-                            inset 0 0 18px rgba(250, 204, 21, 0.08),
+                            0 0 0 1px rgba(250, 204, 21, 0.28),
+                            0 0 10px rgba(250, 204, 21, 0.18),
                             0 8px 32px rgba(0,0,0,0.25);
                     }
-                    43%, 100% {
-                        border-color: rgba(250, 204, 21, 0.08);
+                    50% {
+                        border-color: rgba(253, 224, 71, 1);
                         box-shadow:
-                            0 0 0 0 rgba(250, 204, 21, 0),
-                            0 0 0 rgba(250, 204, 21, 0),
+                            0 0 0 2px rgba(253, 224, 71, 0.58),
+                            0 0 20px rgba(250, 204, 21, 0.48),
+                            inset 0 0 16px rgba(250, 204, 21, 0.08),
                             0 8px 32px rgba(0,0,0,0.25);
                     }
                 }
-                @keyframes pending-leave-inner-blink {
-                    0%, 42% {
-                        opacity: 1;
+                @keyframes pending-leave-card-bounce {
+                    0%, 100% {
+                        transform: translateY(0) scale(1);
                     }
-                    43%, 100% {
-                        opacity: 0;
+                    18% {
+                        transform: translateY(-4px) scale(1.025);
+                    }
+                    36% {
+                        transform: translateY(0) scale(0.995);
+                    }
+                    54% {
+                        transform: translateY(-2px) scale(1.012);
+                    }
+                    72% {
+                        transform: translateY(0) scale(1);
                     }
                 }
                 .pending-leave-glow {
                     position: relative;
-                    border: 2px solid rgba(250, 204, 21, 0.98) !important;
-                    animation: pending-leave-card-pulse 0.75s steps(1, end) infinite;
+                    border: 2px solid rgba(250, 204, 21, 0.72) !important;
+                    animation: pending-leave-card-pulse 1.05s ease-in-out infinite;
+                }
+                .pending-leave-bounce {
+                    animation:
+                        pending-leave-card-pulse 1.05s ease-in-out infinite,
+                        pending-leave-card-bounce 1.05s ease-in-out infinite;
                 }
                 .pending-leave-glow::after {
                     content: '';
@@ -704,12 +718,11 @@ export function HRDashboard({
                     position: absolute;
                     inset: 3px;
                     border-radius: inherit;
-                    border: 1px solid rgba(254, 240, 138, 0.34);
-                    animation: pending-leave-inner-blink 0.75s steps(1, end) infinite;
+                    border: 1px solid rgba(254, 240, 138, 0.18);
                 }
                 @media (prefers-reduced-motion: reduce) {
                     .pending-leave-glow,
-                    .pending-leave-glow::after {
+                    .pending-leave-bounce {
                         animation: none;
                     }
                 }
