@@ -27,6 +27,7 @@ export interface UpdateEmployeePayload {
     approval_level?: number
     manager_id?: string | null
     leave_approver_id?: string | null
+    supervisor_id?: string | null
     telegram_chat_id?: string | null
     // Emergency contact (stored directly on employees, not applicants)
     emergency_contact_name?: string | null
@@ -59,7 +60,7 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
     // knows whether to push the new email into Supabase Auth too.
     const { data: before } = await supabaseAdmin
         .from('employees')
-        .select('employee_code, first_name_th, last_name_th, first_name_en, last_name_en, nickname, position, department, secondary_department, phone, email, employment_type, status, start_date, probation_end_date, date_of_birth, gender, quit_date, quit_reason, approval_level, manager_id, leave_approver_id, telegram_chat_id, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, emergency_contact_address, home_latitude, home_longitude, home_location_label, home_location_note, user_id, work_location')
+        .select('employee_code, first_name_th, last_name_th, first_name_en, last_name_en, nickname, position, department, secondary_department, phone, email, employment_type, status, start_date, probation_end_date, date_of_birth, gender, quit_date, quit_reason, approval_level, manager_id, leave_approver_id, supervisor_id, telegram_chat_id, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, emergency_contact_address, home_latitude, home_longitude, home_location_label, home_location_note, user_id, work_location')
         .eq('id', employeeId)
         .maybeSingle()
 
@@ -150,6 +151,7 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
             ...(employeeFields.approval_level !== undefined && { approval_level: employeeFields.approval_level }),
             manager_id: employeeFields.manager_id ?? null,
             leave_approver_id: employeeFields.leave_approver_id ?? null,
+            supervisor_id: employeeFields.supervisor_id ?? null,
             telegram_chat_id: telegramChatId || null,
             ...(telegramChanged && { telegram_registered_at: telegramChatId ? new Date().toISOString() : null }),
             emergency_contact_name:     employeeFields.emergency_contact_name     ?? null,
@@ -208,6 +210,41 @@ export async function updateEmployee(employeeId: string, payload: UpdateEmployee
                 .eq('id', approverId)
         } catch (err) {
             console.error('[updateEmployee] auto-promote leave approver failed:', err)
+        }
+    }
+
+    if (employeeFields.supervisor_id) {
+        try {
+            const approverId = employeeFields.supervisor_id
+            const approver = await supabaseAdmin
+                .from('employees')
+                .select('approval_scopes, approval_department_scope')
+                .eq('id', approverId)
+                .maybeSingle()
+            const existingScopes = Array.isArray(approver.data?.approval_scopes)
+                ? approver.data.approval_scopes as string[]
+                : []
+            const existingDeptScope = Array.isArray(approver.data?.approval_department_scope)
+                ? approver.data.approval_department_scope as string[]
+                : []
+            const nextScopes = Array.from(new Set([...existingScopes, 'leave']))
+            const nextDeptScope = existingDeptScope.includes('all')
+                ? existingDeptScope
+                : Array.from(new Set([
+                    ...existingDeptScope,
+                    before?.department || 'all',
+                ]))
+
+            await supabaseAdmin
+                .from('employees')
+                .update({
+                    is_approver: true,
+                    approval_scopes: nextScopes,
+                    approval_department_scope: nextDeptScope,
+                })
+                .eq('id', approverId)
+        } catch (err) {
+            console.error('[updateEmployee] auto-promote backup approver failed:', err)
         }
     }
 

@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef } from "react"
 import {
-    ArrowLeft, User, Phone, Mail, MapPin, Building, Briefcase,
+    ArrowLeft, User, UserCheck, Phone, Mail, MapPin, Building, Briefcase,
     Calendar, Shield, ChevronRight, Pencil, X, Check,
     AlertCircle, CheckCircle2, Camera, Trash2, Clock, FileText,
     Lock, LogOut, Printer, Send, Home, Cake, Flame,
@@ -211,6 +211,7 @@ interface EmployeeProfileRecord {
     approval_level: number | null
     manager_id: string | null
     leave_approver_id: string | null
+    supervisor_id: string | null
     telegram_chat_id: string | null
     home_latitude: number | string | null
     home_longitude: number | string | null
@@ -308,6 +309,7 @@ interface FormState {
     approval_level: number
     manager_id: string
     leave_approver_id: string
+    supervisor_id: string
     telegram_chat_id: string
     // Home location for the inline map preview. Stored as strings in
     // the form to match the date-of-birth pattern; coerced to numeric
@@ -577,6 +579,7 @@ export function EmployeeProfileView({
         approval_level: employee.approval_level ?? 1,
         manager_id: employee.manager_id ?? '',
         leave_approver_id: employee.leave_approver_id ?? '',
+        supervisor_id: employee.supervisor_id ?? '',
         telegram_chat_id: employee.telegram_chat_id ?? '',
         home_latitude: employee.home_latitude != null ? String(employee.home_latitude) : '',
         home_longitude: employee.home_longitude != null ? String(employee.home_longitude) : '',
@@ -721,6 +724,7 @@ export function EmployeeProfileView({
                 applicant_phone: form.emergency_contact,
                 manager_id: form.manager_id || null,
                 leave_approver_id: form.leave_approver_id || null,
+                supervisor_id: form.supervisor_id || null,
                 telegram_chat_id: form.telegram_chat_id.trim() || null,
                 emergency_contact_name:     form.emergency_contact_name     || null,
                 emergency_contact_phone:    form.emergency_contact_phone    || null,
@@ -1431,6 +1435,27 @@ export function EmployeeProfileView({
                                 <select className={sel} value={form.leave_approver_id}
                                     onChange={set('leave_approver_id')}>
                                     <option value="">— ใช้ผู้บังคับบัญชา —</option>
+                                    {allEmployees.map(e => (
+                                        <option key={e.id} value={e.id}>
+                                            {e.first_name_th} {e.last_name_th}
+                                        </option>
+                                    ))}
+                                </select>
+                            }
+                        />
+                        <InfoRow label="ผู้อนุมัติร่วม / แทน" icon={UserCheck}
+                            value={
+                                form.supervisor_id
+                                    ? (allEmployees.find(e => e.id === form.supervisor_id)
+                                        ? `${allEmployees.find(e => e.id === form.supervisor_id)!.first_name_th} ${allEmployees.find(e => e.id === form.supervisor_id)!.last_name_th}`
+                                        : '—')
+                                    : '—'
+                            }
+                            editing={isEditing}
+                            editNode={
+                                <select className={sel} value={form.supervisor_id}
+                                    onChange={set('supervisor_id')}>
+                                    <option value="">— ไม่มี (ไม่มีผู้อนุมัติร่วม/แทน) —</option>
                                     {allEmployees.map(e => (
                                         <option key={e.id} value={e.id}>
                                             {e.first_name_th} {e.last_name_th}
