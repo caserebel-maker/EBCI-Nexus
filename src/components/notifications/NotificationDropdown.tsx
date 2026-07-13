@@ -87,7 +87,7 @@ export function NotificationDropdown({ open, onClose, state }: Props) {
         // halfway through reviewing a notification. Fall back to the
         // original URL for portal-only paths (announcements, profile).
         const target = pathname?.startsWith('/hradmin')
-            ? rewriteForAdmin(safeUrl)
+            ? rewriteForAdmin(safeUrl, n)
             : safeUrl
         router.push(target)
     }
@@ -226,13 +226,17 @@ export function NotificationDropdown({ open, onClose, state }: Props) {
  * Currently mirrored:
  *   - /portal/leave/inbox      → /hradmin/leave/inbox
  *   - /portal/notifications    → /hradmin/notifications
+ *   - WFH request notifications → /hradmin/wfh/[requestId]
  *
  * Anything else (announcements, profile, payroll, calendar) stays on
  * its /portal route — HR Admin lands in preview mode for those, which
  * is fine since the page itself is the same and the toggle button
  * is one click away to return.
  */
-function rewriteForAdmin(url: string): string {
+function rewriteForAdmin(url: string, notification: NotificationRow): string {
+    if (notification.entity_type === 'wfh_request' && notification.entity_id) {
+        return `/hradmin/wfh/${notification.entity_id}`
+    }
     if (url.startsWith('/portal/leave/inbox')) {
         return '/hradmin/leave/inbox' + url.slice('/portal/leave/inbox'.length)
     }

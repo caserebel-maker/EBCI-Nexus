@@ -248,7 +248,7 @@ export async function submitWfhRequest(
                 type: 'wfh_request_pending',
                 title: `${applicantNick} ขอ WFH`,
                 body: `${input.startDate === input.endDate ? input.startDate : `${input.startDate} → ${input.endDate}`} (${totalDays} วัน) — ${reason}`,
-                action_url: '/portal/wfh/inbox',
+                action_url: `/portal/wfh/inbox?ref=${encodeURIComponent(referenceCode)}`,
                 action_label: 'ดูรายละเอียด',
                 entity_type: 'wfh_request',
                 entity_id: inserted.id as string,
@@ -273,7 +273,7 @@ export async function submitWfhRequest(
                 `👤 ${escapeTelegramHtml(applicantNick)}`,
                 `📅 ${escapeTelegramHtml(dateLabel)} (${totalDays} วัน)`,
                 reason ? `📝 ${escapeTelegramHtml(reason.slice(0, 200))}` : '',
-                `<a href="https://ebci-nexus.vercel.app/portal/wfh/inbox">เปิดกล่องอนุมัติใน Nexus →</a>`,
+                `<a href="https://ebci-nexus.vercel.app/portal/wfh/inbox?ref=${encodeURIComponent(referenceCode)}">เปิดกล่องอนุมัติใน Nexus →</a>`,
             ].filter(Boolean).join('\n')
             await sendTelegram({ chatId: approver.telegram_chat_id, text })
         } catch (err) {
@@ -297,7 +297,7 @@ export async function submitWfhRequest(
                     type: 'wfh_request_fyi',
                     title: `[FYI] ${applicantNick} ขอ WFH`,
                     body: `${dateLabel} (${totalDays} วัน) — รอ ${approverName} อนุมัติ`,
-                    action_url: '/portal/wfh',
+                    action_url: `/hradmin/wfh/${inserted.id as string}`,
                     action_label: 'ดูรายการ',
                     entity_type: 'wfh_request',
                     entity_id: inserted.id as string,
@@ -414,7 +414,7 @@ export async function cancelWfhRequest(input: {
                     `📅 ${escapeTelegramHtml(dateLabel)} (${Number(existing.total_days)} วัน)`,
                     cancelReason ? `📝 เหตุผลที่ยกเลิก: ${escapeTelegramHtml(cancelReason.slice(0, 200))}` : '',
                     originalReason ? `เหตุผลเดิม: ${escapeTelegramHtml(originalReason.slice(0, 200))}` : '',
-                    `<a href="https://ebci-nexus.vercel.app/portal/wfh/inbox">เปิดกล่องอนุมัติใน Nexus →</a>`,
+                    `<a href="https://ebci-nexus.vercel.app/portal/wfh/inbox?ref=${encodeURIComponent(referenceCode)}">เปิดกล่องอนุมัติใน Nexus →</a>`,
                 ].filter(Boolean).join('\n')
                 sendTelegram({ chatId: approverChatId, text })
                     .catch(err => console.error('[wfh] cancel approver telegram failed:', err))
@@ -553,7 +553,7 @@ export async function decideWfhRequest(input: {
                         type: input.decision === 'approve' ? 'wfh_request_approved_fyi' : 'wfh_request_rejected_fyi',
                         title: `[FYI] ${empName} - ${decisionTitle}`,
                         body: `${dateLabel} (${Number(r.total_days)} วัน) — ผู้อนุมัติ: ${approverFormalName}`,
-                        action_url: '/portal/wfh',
+                        action_url: `/hradmin/wfh/${input.id}`,
                         action_label: 'ดูรายการ',
                         entity_type: 'wfh_request',
                         entity_id: input.id,
@@ -570,7 +570,7 @@ export async function decideWfhRequest(input: {
                         `📅 ${escapeTelegramHtml(dateLabel)} (${Number(r.total_days)} วัน)`,
                         `🧑‍💼 ผู้อนุมัติ: ${escapeTelegramHtml(approverFormalName)}`,
                         note ? `📝 ${escapeTelegramHtml(note.slice(0, 200))}` : '',
-                        `<a href="https://ebci-nexus.vercel.app/portal/wfh">ดูใน Nexus →</a>`,
+                        `<a href="https://ebci-nexus.vercel.app/hradmin/wfh/${input.id}">ดูใน Nexus →</a>`,
                     ].filter(Boolean).join('\n')
                     sendTelegram({ chatId: t.telegramChatId, text })
                         .catch(err => console.error('[wfh] decision HR telegram failed:', err))
