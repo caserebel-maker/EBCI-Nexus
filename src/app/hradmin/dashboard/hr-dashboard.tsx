@@ -669,25 +669,34 @@ export function HRDashboard({
         <div className="space-y-6">
             <style jsx global>{`
                 @keyframes pending-leave-card-pulse {
-                    0%, 100% {
-                        border-color: rgba(250, 204, 21, 0.72);
+                    0%, 42% {
+                        border-color: rgba(250, 204, 21, 0.98);
                         box-shadow:
-                            0 0 0 1px rgba(250, 204, 21, 0.36),
-                            0 0 14px rgba(250, 204, 21, 0.22),
+                            0 0 0 2px rgba(250, 204, 21, 0.62),
+                            0 0 16px rgba(250, 204, 21, 0.48),
+                            inset 0 0 18px rgba(250, 204, 21, 0.08),
                             0 8px 32px rgba(0,0,0,0.25);
                     }
-                    50% {
-                        border-color: rgba(253, 224, 71, 0.98);
+                    43%, 100% {
+                        border-color: rgba(250, 204, 21, 0.08);
                         box-shadow:
-                            0 0 0 2px rgba(253, 224, 71, 0.54),
-                            0 0 22px rgba(250, 204, 21, 0.42),
+                            0 0 0 0 rgba(250, 204, 21, 0),
+                            0 0 0 rgba(250, 204, 21, 0),
                             0 8px 32px rgba(0,0,0,0.25);
+                    }
+                }
+                @keyframes pending-leave-inner-blink {
+                    0%, 42% {
+                        opacity: 1;
+                    }
+                    43%, 100% {
+                        opacity: 0;
                     }
                 }
                 .pending-leave-glow {
                     position: relative;
-                    border: 2px solid rgba(250, 204, 21, 0.85) !important;
-                    animation: pending-leave-card-pulse 1.7s ease-in-out infinite;
+                    border: 2px solid rgba(250, 204, 21, 0.98) !important;
+                    animation: pending-leave-card-pulse 0.75s steps(1, end) infinite;
                 }
                 .pending-leave-glow::after {
                     content: '';
@@ -695,10 +704,12 @@ export function HRDashboard({
                     position: absolute;
                     inset: 3px;
                     border-radius: inherit;
-                    border: 1px solid rgba(254, 240, 138, 0.24);
+                    border: 1px solid rgba(254, 240, 138, 0.34);
+                    animation: pending-leave-inner-blink 0.75s steps(1, end) infinite;
                 }
                 @media (prefers-reduced-motion: reduce) {
-                    .pending-leave-glow {
+                    .pending-leave-glow,
+                    .pending-leave-glow::after {
                         animation: none;
                     }
                 }
