@@ -317,6 +317,11 @@ function buildActions(status: string): ActionSpec[] {
         case 'approved':  return [force(reject), force(cancel)]
         case 'rejected':  return [force(approve), force(cancel)]
         case 'cancelled': return [force(approve), force(reject)]
+        case 'cancellation_requested':
+            return [
+                { action: 'approve', label: 'ปฏิเสธคำขอยกเลิก', tone: 'gray', icon: Ban },
+                { action: 'cancel', label: 'อนุมัติยกเลิกใบลา', tone: 'green', icon: CheckCircle2 },
+            ]
         default:          return [force(approve), force(reject), force(cancel)]
     }
 }

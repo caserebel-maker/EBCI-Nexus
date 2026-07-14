@@ -61,8 +61,22 @@ export function ForceActionDialog({ item, action, onClose, onConfirmed }: Props)
     const meta = META[action]
     const Icon = meta.icon
 
+    const isCancelReq = item.status === 'cancellation_requested'
+    const displayTitle = isCancelReq
+        ? (action === 'cancel' ? 'อนุมัติยกเลิกใบลา' : 'ปฏิเสธคำขอยกเลิกใบลา')
+        : meta.title
+    const displayVerb = isCancelReq
+        ? (action === 'cancel' ? 'อนุมัติยกเลิกใบลา' : 'ปฏิเสธคำขอยกเลิก')
+        : meta.verb
+    const displayAccent = isCancelReq
+        ? (action === 'cancel' ? '#6ee7b7' : '#cbd5e1') // green or gray
+        : meta.accent
+    const displayNeedsReason = isCancelReq
+        ? (action === 'cancel') // cancellation approval needs a reason, rejection doesn't
+        : meta.needsReason
+
     const submit = async () => {
-        if (meta.needsReason && reason.trim().length < 5) {
+        if (displayNeedsReason && reason.trim().length < 5) {
             setError('กรุณาระบุเหตุผล (อย่างน้อย 5 ตัวอักษร)')
             return
         }
@@ -75,7 +89,7 @@ export function ForceActionDialog({ item, action, onClose, onConfirmed }: Props)
                 body: JSON.stringify({
                     id: item.id,
                     action,
-                    reason: meta.needsReason ? reason.trim() : undefined,
+                    reason: displayNeedsReason ? reason.trim() : undefined,
                 }),
             })
             if (!res.ok) {
@@ -106,12 +120,12 @@ export function ForceActionDialog({ item, action, onClose, onConfirmed }: Props)
                 <header className="px-5 py-4 border-b border-white/10 flex items-start gap-3">
                     <span
                         className="h-10 w-10 rounded-full flex items-center justify-center shrink-0"
-                        style={{ background: `${meta.accent}20`, color: meta.accent }}
+                        style={{ background: `${displayAccent}20`, color: displayAccent }}
                     >
                         <Icon size={20} />
                     </span>
                     <div className="flex-1 min-w-0">
-                        <h2 id="force-action-title" className="text-white font-bold">{meta.title}</h2>
+                        <h2 id="force-action-title" className="text-white font-bold">{displayTitle}</h2>
                         <p className="text-xs text-white/55 mt-0.5 font-mono">{item.reference_code ?? '—'}</p>
                     </div>
                     <button
@@ -128,18 +142,22 @@ export function ForceActionDialog({ item, action, onClose, onConfirmed }: Props)
                     <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-400/10 border border-amber-300/20">
                         <AlertTriangle size={15} className="text-amber-300 shrink-0 mt-0.5" />
                         <p className="text-xs text-amber-100 leading-relaxed">
-                            <strong>การ{meta.verb}นี้จะข้าม approval chain ปกติ</strong>
+                            {isCancelReq ? (
+                                <strong>การดำเนินการนี้จะข้าม approval chain ปกติ</strong>
+                            ) : (
+                                <strong>การ{displayVerb}นี้จะข้าม approval chain ปกติ</strong>
+                            )}
                             {' '}และบันทึกเป็นการกระทำของ HR ในประวัติของใบลา ยอด balance จะถูกปรับอัตโนมัติตามสถานะใหม่
                         </p>
                     </div>
 
                     <p className="text-sm text-white/75">
                         ใบลาของ <strong className="text-white">{item.employee?.nickname ?? item.employee?.first_name_th ?? '—'}</strong>
-                        {' '}จะถูกเปลี่ยนสถานะเป็น <strong style={{ color: meta.accent }}>{meta.verb}</strong>.
+                        {' '}จะถูกเปลี่ยนสถานะเป็น <strong style={{ color: displayAccent }}>{displayVerb}</strong>.
                         คุณแน่ใจหรือไม่?
                     </p>
 
-                    {meta.needsReason && (
+                    {displayNeedsReason && (
                         <div>
                             <label className="block text-xs font-semibold text-white/65 mb-1.5">
                                 เหตุผล <span className="text-red-300">*</span>
@@ -176,12 +194,12 @@ export function ForceActionDialog({ item, action, onClose, onConfirmed }: Props)
                         onClick={submit}
                         disabled={loading}
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-[#2a0a0e] shadow disabled:opacity-60 transition-colors"
-                        style={{ background: meta.accent }}
+                        style={{ background: displayAccent }}
                     >
                         {loading ? (
                             <><Loader2 size={14} className="animate-spin" /> กำลังบันทึก</>
                         ) : (
-                            <><Icon size={14} /> ยืนยัน{meta.verb}</>
+                            <><Icon size={14} /> ยืนยัน{displayVerb}</>
                         )}
                     </button>
                 </footer>
