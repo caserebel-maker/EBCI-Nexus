@@ -37,7 +37,7 @@ export async function GET() {
         contact_during_leave, attachment_url, attachment_name,
         cancellation_reason, cancellation_requested_at,
         submitted_at, created_at,
-        employee_id
+        employee_id, approver_id
     `
 
     const primary = await supabaseAdmin
@@ -198,5 +198,5 @@ export async function GET() {
         }
     })
 
-    return NextResponse.json({ items, count: items.length })
+    return NextResponse.json({ items, count: items.length, approverId })
 }

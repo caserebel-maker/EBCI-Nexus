@@ -34,6 +34,7 @@ interface InboxItem {
     submitted_at: string | null
     created_at: string
     employee_id: string
+    approver_id?: string | null
     applicant: {
         id: string
         first_name_th: string | null
@@ -141,6 +142,7 @@ export function InboxView() {
     const [approveTarget, setApproveTarget] = useState<InboxItem | null>(null)
     const [rejectTarget, setRejectTarget] = useState<InboxItem | null>(null)
     const [toast, setToast] = useState<string | null>(null)
+    const [currentApproverId, setCurrentApproverId] = useState<string | null>(null)
 
     const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending')
     const [historyItems, setHistoryItems] = useState<InboxItem[]>([])
@@ -156,6 +158,7 @@ export function InboxView() {
             }
             const json = await res.json()
             setItems(json.items ?? [])
+            setCurrentApproverId(json.approverId ?? null)
         } catch (e) {
             setErr(e instanceof Error ? e.message : 'โหลดข้อมูลไม่สำเร็จ')
         } finally {
@@ -398,6 +401,7 @@ export function InboxView() {
                                     onToggleExpand={() => setExpandedId(cur => cur === item.id ? null : item.id)}
                                     onApproveClick={() => setApproveTarget(item)}
                                     onRejectClick={() => setRejectTarget(item)}
+                                    currentApproverId={currentApproverId}
                                 />
                             </li>
                         ))}
@@ -424,6 +428,7 @@ export function InboxView() {
                                     onToggleExpand={() => setExpandedId(cur => cur === item.id ? null : item.id)}
                                     onApproveClick={() => {}}
                                     onRejectClick={() => {}}
+                                    currentApproverId={currentApproverId}
                                 />
                             </li>
                         ))}
@@ -484,7 +489,7 @@ function EmptyState() {
 
 // ── Request card (collapsed + expanded) ──────────────────────────────────
 function RequestCard({
-    item, expanded, onToggleExpand, onApproveClick, onRejectClick, isHistory = false,
+    item, expanded, onToggleExpand, onApproveClick, onRejectClick, isHistory = false, currentApproverId,
 }: {
     item: InboxItem
     expanded: boolean
@@ -492,6 +497,7 @@ function RequestCard({
     onApproveClick: () => void
     onRejectClick: () => void
     isHistory?: boolean
+    currentApproverId?: string | null
 }) {
     const a = item.applicant
     const lt = item.leave_type
@@ -500,6 +506,7 @@ function RequestCard({
     const halfDayLabel = item.is_half_day
         ? ` (ครึ่งวัน - ${item.half_day_period === 'morning' ? 'เช้า' : 'บ่าย'})`
         : ''
+    const isDelegated = currentApproverId && item.approver_id && item.approver_id !== currentApproverId
 
     return (
         <div style={glass} className="overflow-hidden">
@@ -527,6 +534,12 @@ function RequestCard({
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-white font-semibold truncate">{fullApplicantName(item)}</p>
+                            {isDelegated && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                    <Sparkles size={10} />
+                                    อนุมัติร่วม / แทน
+                                </span>
+                            )}
                             <span
                                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider"
                                 style={{ background: `${typeColor}33`, color: typeColor.replace(/^#/, '') ? typeColor : '#fff' }}
