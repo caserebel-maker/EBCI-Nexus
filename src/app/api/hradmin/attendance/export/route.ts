@@ -76,7 +76,7 @@ type LeaveRow = {
     reason: string | null
     status: string | null
     approver_id: string | null
-    current_approver_id: string | null
+    current_approver_id?: string | null
     submitted_at: string | null
     approved_at: string | null
     rejection_reason: string | null
@@ -287,7 +287,7 @@ async function fetchAllLeaves(fromDate: string, toDate: string): Promise<LeaveRo
     for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
         const { data, error } = await supabaseAdmin
             .from('leave_requests')
-            .select('id, reference_code, employee_id, leave_type_id, start_date, end_date, total_days, reason, status, approver_id, current_approver_id, submitted_at, approved_at, rejection_reason, is_half_day, half_day_period, cancellation_requested_at, cancellation_decided_by, cancellation_decision_reason, created_at, updated_at')
+            .select('id, reference_code, employee_id, leave_type_id, start_date, end_date, total_days, reason, status, approver_id, submitted_at, approved_at, rejection_reason, is_half_day, half_day_period, cancellation_requested_at, cancellation_decided_by, cancellation_decision_reason, created_at, updated_at')
             .lte('start_date', toDate)
             .gte('end_date', fromDate)
             .order('start_date', { ascending: true })
@@ -642,7 +642,7 @@ export async function GET(req: NextRequest) {
                 const primaryLeave = dayLeaves[0] ?? null
                 const primaryWfh = dayWfh[0] ?? null
                 const approver = primaryLeave?.approver_id ? employeeById.get(primaryLeave.approver_id) : null
-                const currentApprover = primaryLeave?.current_approver_id ? employeeById.get(primaryLeave.current_approver_id) : null
+                const currentApprover = null
                 const wfhApprover = primaryWfh?.approver_id ? employeeById.get(primaryWfh.approver_id) : null
 
                 const row = [
