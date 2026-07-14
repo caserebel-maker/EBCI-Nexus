@@ -168,6 +168,11 @@ export async function POST(
             if (t.userId) fyiRecipients.add(t.userId)
         }
 
+        // Exclude anyone who is already a pending approver (primary or delegate)
+        for (const pendingId of pendingRecipients) {
+            fyiRecipients.delete(pendingId)
+        }
+
         for (const recipientUserId of fyiRecipients) {
             await createNotification({
                 recipient_user_id: recipientUserId,

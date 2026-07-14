@@ -507,6 +507,11 @@ export async function POST(req: NextRequest) {
             if (t.userId) fyiRecipients.add(t.userId)
         }
 
+        // Exclude anyone who is already a pending approver (primary or delegate)
+        for (const pendingId of pendingRecipients) {
+            fyiRecipients.delete(pendingId)
+        }
+
         if (fyiRecipients.size > 0) {
             const dateLabel = startDate === endDate ? startDate : `${startDate} → ${endDate}`
             const applicantNick = (employeeRow.data?.nickname as string | null) ?? employeeName
