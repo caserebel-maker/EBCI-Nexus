@@ -4,7 +4,10 @@ import { getSession } from '@/lib/auth'
 import { resolveSessionEmployeeId } from '@/lib/session-employee'
 import { bangkokTodayIso } from '@/lib/leave-validations'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
-import { canActOnLeaveRequest } from '@/lib/leave-delegate-approvers'
+import { canActOnLeaveRequest, getDelegateApproverIdsForApplicant } from '@/lib/leave-delegate-approvers'
+import { findHrNotifyTargets } from '@/lib/hr-notify'
+import { sendApprovedLeaveCancellationNotice } from '@/lib/email-leave'
+import { formatEmployeeName } from '@/lib/format-employee-name'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,7 +61,7 @@ export async function POST(
     // Read + ownership + state check
     const { data: row, error: readErr } = await supabaseAdmin
         .from('leave_requests')
-        .select('id, reference_code, employee_id, approver_id, status, leave_type_id, start_date, end_date, total_days')
+        .select('id, reference_code, employee_id, approver_id, status, leave_type_id, start_date, end_date, total_days, reason, cancellation_reason')
         .eq('id', id)
         .maybeSingle()
     if (readErr) return NextResponse.json({ error: readErr.message }, { status: 500 })
@@ -134,10 +137,10 @@ export async function POST(
         // Notify applicant
         try {
             const employeeUserId = await getEmployeeUserId(employeeId)
+            const refundNote = refundEligible
+                ? ' · ระบบคืนวันลาให้แล้ว'
+                : ' · ไม่คืนวันลา (วันลาผ่านไปแล้ว)'
             if (employeeUserId) {
-                const refundNote = refundEligible
-                    ? ' · ระบบคืนวันลาให้แล้ว'
-                    : ' · ไม่คืนวันลา (วันลาผ่านไปแล้ว)'
                 await createNotification({
                     recipient_user_id: employeeUserId,
                     type: 'leave_cancelled',
@@ -152,6 +155,111 @@ export async function POST(
                     color: 'gray',
                 })
             }
+
+            const delegateApproverIds = await getDelegateApproverIdsForApplicant(employeeId)
+            const approverIds = Array.from(new Set([
+                row.approver_id as string | null,
+                approverEmployeeId,
+                ...delegateApproverIds,
+            ].filter(Boolean) as string[]))
+
+            const [
+                { data: employee },
+                { data: leaveType },
+                { data: approverRows },
+                hrTargets,
+            ] = await Promise.all([
+                supabaseAdmin
+                    .from('employees')
+                    .select('id, user_id, email, first_name_th, last_name_th, nickname')
+                    .eq('id', employeeId)
+                    .maybeSingle(),
+                supabaseAdmin
+                    .from('leave_types')
+                    .select('name_th, name')
+                    .eq('id', leaveTypeId)
+                    .maybeSingle(),
+                approverIds.length
+                    ? supabaseAdmin
+                        .from('employees')
+                        .select('id, user_id, email, first_name_th, last_name_th, nickname')
+                        .in('id', approverIds)
+                    : Promise.resolve({ data: [] }),
+                findHrNotifyTargets(),
+            ])
+
+            const employeeName = formatEmployeeName(employee, 'พนักงาน')
+            const leaveTypeName = String(leaveType?.name_th ?? leaveType?.name ?? 'ลา')
+            const primaryApprover = (approverRows ?? []).find((emp: { id: string }) => emp.id === row.approver_id) ?? null
+            const decider = (approverRows ?? []).find((emp: { id: string }) => emp.id === approverEmployeeId) ?? null
+            const primaryApproverName = primaryApprover ? formatEmployeeName(primaryApprover) : null
+            const deciderName = formatEmployeeName(decider, 'ผู้อนุมัติ')
+            const dateText = row.start_date === row.end_date ? row.start_date : `${row.start_date} → ${row.end_date}`
+            const noticeBody = `${employeeName} · ${leaveTypeName} ${dateText} (${totalDays} วัน) — ใบลาถูกยกเลิกแล้ว${refundNote}`
+            const notifiedUsers = new Set<string>(employeeUserId ? [employeeUserId] : [])
+            const emailRecipients = new Set<string>()
+            const employeeEmail = typeof employee?.email === 'string' ? employee.email.trim() : ''
+
+            for (const approver of approverRows ?? []) {
+                const userId = typeof approver.user_id === 'string' ? approver.user_id : null
+                const email = typeof approver.email === 'string' ? approver.email.trim() : ''
+                if (userId && !notifiedUsers.has(userId)) {
+                    notifiedUsers.add(userId)
+                    await createNotification({
+                        recipient_user_id: userId,
+                        type: 'leave_cancelled',
+                        title: 'ใบลาที่เคยอนุมัติถูกยกเลิกแล้ว',
+                        body: noticeBody,
+                        action_url: '/portal/leave/inbox',
+                        action_label: 'ดูกล่องอนุมัติ',
+                        entity_type: 'leave_request',
+                        entity_id: id,
+                        reference_code: String(row.reference_code),
+                        icon: 'Ban',
+                        color: 'amber',
+                    })
+                }
+                if (email && email !== employeeEmail) emailRecipients.add(email)
+            }
+
+            for (const hr of hrTargets) {
+                const userId = hr.userId
+                const email = hr.email?.trim()
+                if (userId && !notifiedUsers.has(userId)) {
+                    notifiedUsers.add(userId)
+                    await createNotification({
+                        recipient_user_id: userId,
+                        type: 'leave_cancelled',
+                        title: `[FYI] ${employeeName} ยกเลิกใบลาแล้ว`,
+                        body: noticeBody,
+                        action_url: '/hradmin/leave?tab=requests',
+                        action_label: 'ดูรายการลา',
+                        entity_type: 'leave_request',
+                        entity_id: id,
+                        reference_code: String(row.reference_code),
+                        icon: 'Ban',
+                        color: 'amber',
+                    })
+                }
+                if (email && email !== employeeEmail) emailRecipients.add(email)
+            }
+
+            await sendApprovedLeaveCancellationNotice({
+                recipients: Array.from(emailRecipients),
+                referenceCode: String(row.reference_code),
+                employeeName,
+                employeeEmail: employeeEmail || '',
+                approverName: primaryApproverName,
+                approverEmail: typeof primaryApprover?.email === 'string' ? primaryApprover.email : null,
+                leaveTypeTh: leaveTypeName,
+                startDate: row.start_date as string,
+                endDate: row.end_date as string,
+                totalDays,
+                reason: String(row.reason ?? ''),
+                cancellationApprovedByName: deciderName,
+                cancellationReason: reason ?? (row.cancellation_reason as string | null) ?? null,
+                refunded: refundEligible,
+            })
         } catch (err) {
             console.error('[leave/cancellation-decision] notification error:', err)
         }

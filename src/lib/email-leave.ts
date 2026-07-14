@@ -455,3 +455,49 @@ export async function sendLeaveCancelled(
         audit: leaveAudit(c, 'leave_cancelled'),
     })
 }
+
+/** Notice to approvers + HR when an already-approved leave is finally cancelled. */
+export async function sendApprovedLeaveCancellationNotice(
+    c: LeaveEmailContext & {
+        recipients: string | string[]
+        cancellationApprovedByName?: string | null
+        cancellationReason?: string | null
+        refunded: boolean
+    },
+) {
+    const recipients = (Array.isArray(c.recipients) ? c.recipients : [c.recipients])
+        .map((email) => email?.trim())
+        .filter(Boolean) as string[]
+    if (!recipients.length) return { success: false }
+
+    const refundText = c.refunded
+        ? 'ระบบคืนวันลาให้พนักงานแล้ว'
+        : 'ไม่คืนวันลา เพราะวันลานี้เริ่มไปแล้วหรือผ่านไปแล้ว'
+    const html = wrap({
+        title: 'แจ้งเพื่อทราบ: ใบลาที่อนุมัติแล้วถูกยกเลิก',
+        subhead: 'Leave · Cancellation Finalized',
+        accent: 'amber',
+        bodyHtml: `
+            ${paragraph(`ใบลาของ <strong style="color:${TEXT_PRIMARY};">${escapeHtml(c.employeeName)}</strong> ที่เคยได้รับการอนุมัติ ถูกยกเลิกเรียบร้อยแล้ว`)}
+            ${referenceBlock(c.referenceCode, 'amber')}
+            ${summaryRows([
+                ['ผู้ลา', `<strong>${escapeHtml(c.employeeName)}</strong>`],
+                ['ประเภท', `<strong>${escapeHtml(c.leaveTypeTh)}</strong>`],
+                ['วันที่ลา', escapeHtml(formatThaiDateRange(c.startDate, c.endDate))],
+                ['จำนวนวัน', `${c.totalDays} วัน`],
+                ['ผู้อนุมัติเดิม', escapeHtml(c.approverName ?? '—')],
+                ['ผู้อนุมัติยกเลิก', escapeHtml(c.cancellationApprovedByName ?? '—')],
+                ['สถานะวันลา', `<strong>${escapeHtml(refundText)}</strong>`],
+            ])}
+            ${c.cancellationReason ? calloutNote('เหตุผล/หมายเหตุการยกเลิก', c.cancellationReason, 'maroon') : ''}
+            ${paragraph('อีเมลฉบับนี้ส่งเพื่อให้ผู้อนุมัติและ HR รับทราบว่าใบลานี้ไม่ต้องถือเป็นวันลาตามแผนเดิมแล้ว', { small: true, muted: true })}
+        `,
+    })
+
+    return sendLeaveEmail({
+        to: recipients,
+        subject: `[FYI] ใบลา [${c.referenceCode}] ถูกยกเลิกแล้ว`,
+        html,
+        audit: leaveAudit(c, 'leave_approved_cancellation_notice'),
+    })
+}
