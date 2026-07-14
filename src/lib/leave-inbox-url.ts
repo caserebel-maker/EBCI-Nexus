@@ -20,17 +20,5 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 export async function resolveApproverInboxUrl(
     userId: string | null | undefined,
 ): Promise<string> {
-    const portalUrl = '/portal/leave/inbox'
-    if (!userId) return portalUrl
-    try {
-        const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId)
-        if (error || !data?.user) return portalUrl
-        const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>
-        const appMeta = (data.user.app_metadata ?? {}) as Record<string, unknown>
-        const role = (meta.role ?? appMeta.role) as string | undefined
-        return role === 'hr_admin' ? '/hradmin/leave/inbox' : portalUrl
-    } catch (err) {
-        console.warn('[leave-inbox-url] resolution failed — falling back to portal', err)
-        return portalUrl
-    }
+    return '/portal/leave/inbox'
 }
