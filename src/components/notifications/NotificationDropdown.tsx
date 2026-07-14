@@ -86,9 +86,12 @@ export function NotificationDropdown({ open, onClose, state }: Props) {
         // rewrite so HR Admin doesn't get flipped into employee mode
         // halfway through reviewing a notification. Fall back to the
         // original URL for portal-only paths (announcements, profile).
-        const target = pathname?.startsWith('/hradmin')
-            ? rewriteForAdmin(safeUrl, n)
-            : safeUrl
+        let target = safeUrl
+        if (pathname?.startsWith('/hradmin')) {
+            target = rewriteForAdmin(safeUrl, n)
+        } else if (pathname?.startsWith('/portal')) {
+            target = rewriteForPortal(safeUrl, n)
+        }
         router.push(target)
     }
 
@@ -239,6 +242,19 @@ function rewriteForAdmin(url: string, notification: NotificationRow): string {
     }
     if (url.startsWith('/portal/notifications')) {
         return '/hradmin/notifications' + url.slice('/portal/notifications'.length)
+    }
+    return url
+}
+
+function rewriteForPortal(url: string, notification: NotificationRow): string {
+    if (url.startsWith('/hradmin/leave/inbox')) {
+        return '/portal/leave/inbox' + url.slice('/hradmin/leave/inbox'.length)
+    }
+    if (url.startsWith('/hradmin/notifications')) {
+        return '/portal/notifications' + url.slice('/hradmin/notifications'.length)
+    }
+    if (url.startsWith('/hradmin/wfh')) {
+        return '/portal/wfh/inbox'
     }
     return url
 }

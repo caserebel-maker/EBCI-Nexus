@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { CheckCheck, Loader2, X, Bell, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toInternalPath } from '@/lib/safe-url'
@@ -35,6 +35,7 @@ interface ListResponse {
  */
 export function NotificationsClient() {
     const router = useRouter()
+    const pathname = usePathname()
     const [items, setItems] = useState<NotificationRow[]>([])
     const [unreadCount, setUnreadCount] = useState(0)
     const [total, setTotal] = useState(0)
@@ -135,8 +136,15 @@ export function NotificationsClient() {
         if (!n.is_read) void markRead(n.id)
         // Defense-in-depth — see NotificationDropdown for rationale.
         const safeUrl = toInternalPath(n.action_url)
-        if (safeUrl) router.push(safeUrl)
-    }, [markRead, router])
+        if (!safeUrl) return
+        let target = safeUrl
+        if (pathname?.startsWith('/hradmin')) {
+            target = rewriteForAdmin(safeUrl, n)
+        } else if (pathname?.startsWith('/portal')) {
+            target = rewriteForPortal(safeUrl, n)
+        }
+        router.push(target)
+    }, [markRead, router, pathname])
 
     // Apply client-side type filter
     const visibleItems = useMemo(() => {
@@ -494,4 +502,27 @@ function bangkokKey(d: Date): string {
     const m = parts.find(p => p.type === 'month')?.value ?? ''
     const day = parts.find(p => p.type === 'day')?.value ?? ''
     return `${y}-${m}-${day}`
+}
+
+function rewriteForAdmin(url: string, notification: NotificationRow): string {
+    if (notification.entity_type === 'wfh_request' && notification.entity_id) {
+        return `/hradmin/wfh/${notification.entity_id}`
+    }
+    if (url.startsWith('/portal/notifications')) {
+        return '/hradmin/notifications' + url.slice('/portal/notifications'.length)
+    }
+    return url
+}
+
+function rewriteForPortal(url: string, notification: NotificationRow): string {
+    if (url.startsWith('/hradmin/leave/inbox')) {
+        return '/portal/leave/inbox' + url.slice('/hradmin/leave/inbox'.length)
+    }
+    if (url.startsWith('/hradmin/notifications')) {
+        return '/portal/notifications' + url.slice('/hradmin/notifications'.length)
+    }
+    if (url.startsWith('/hradmin/wfh')) {
+        return '/portal/wfh/inbox'
+    }
+    return url
 }
