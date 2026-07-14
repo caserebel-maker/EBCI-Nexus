@@ -240,6 +240,9 @@ function rewriteForAdmin(url: string, notification: NotificationRow): string {
     if (notification.entity_type === 'wfh_request' && notification.entity_id) {
         return `/hradmin/wfh/${notification.entity_id}`
     }
+    if (url.startsWith('/portal/leave/inbox')) {
+        return '/hradmin/leave/inbox' + url.slice('/portal/leave/inbox'.length)
+    }
     if (url.startsWith('/portal/notifications')) {
         return '/hradmin/notifications' + url.slice('/portal/notifications'.length)
     }
@@ -247,11 +250,11 @@ function rewriteForAdmin(url: string, notification: NotificationRow): string {
 }
 
 function rewriteForPortal(url: string, notification: NotificationRow): string {
-    if (url.startsWith('/hradmin/leave/inbox')) {
-        return '/portal/leave/inbox' + url.slice('/hradmin/leave/inbox'.length)
+    if (url.startsWith('/hradmin/leave')) {
+        return '/portal/leave/inbox'
     }
     if (url.startsWith('/hradmin/notifications')) {
-        return '/portal/notifications' + url.slice('/hradmin/notifications'.length)
+        return '/portal/notifications'
     }
     if (url.startsWith('/hradmin/wfh')) {
         return '/portal/wfh/inbox'
