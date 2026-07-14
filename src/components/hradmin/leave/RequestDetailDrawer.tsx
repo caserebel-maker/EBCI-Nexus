@@ -204,6 +204,26 @@ export function RequestDetailDrawer({ item, onClose, onForceAction }: Props) {
                         )}
                     </Section>
 
+                    <Section title="ผู้อนุมัติร่วม / แทน" icon={User}>
+                        {item.backupApprover ? (
+                            <div className="flex items-center gap-2">
+                                {item.backupApprover.photo_url ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={item.backupApprover.photo_url} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10" />
+                                ) : (
+                                    <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/60 text-xs font-bold">
+                                        {item.backupApprover.nickname?.[0] ?? '?'}
+                                    </span>
+                                )}
+                                <span className="text-sm text-white/85">
+                                    {formatEmployeeName(item.backupApprover)}
+                                </span>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-white/45">(ยังไม่ระบุผู้อนุมัติร่วม)</p>
+                        )}
+                    </Section>
+
                     {item.approval_notes && (
                         <Section title="บันทึกการอนุมัติ" icon={MessageCircle}>
                             <pre className="text-[11px] text-white/70 whitespace-pre-wrap font-mono leading-relaxed bg-white/5 rounded-lg p-3 border border-white/10">

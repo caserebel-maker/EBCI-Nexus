@@ -75,6 +75,7 @@ interface RawEmployee {
     position: string | null
     photo_url: string | null
     email: string | null
+    supervisor_id?: string | null
 }
 
 interface RawLeaveType {
@@ -381,7 +382,7 @@ async function renderRequestsTab(sp: SearchParams, year: number) {
         allEmpIds.length
             ? supabaseAdmin
                 .from('employees')
-                .select('id, first_name_th, last_name_th, nickname, department, position, photo_url, email')
+                .select('id, first_name_th, last_name_th, nickname, department, position, photo_url, email, supervisor_id')
                 .in('id', allEmpIds)
             : Promise.resolve({ data: [] as RawEmployee[] }),
         supabaseAdmin
@@ -398,6 +399,25 @@ async function renderRequestsTab(sp: SearchParams, year: number) {
     ])
 
     const empMap = new Map((empsRes.data ?? []).map(e => [e.id as string, e as RawEmployee]))
+    
+    // Fetch missing supervisors (backup approvers) dynamically in a batch
+    const missingSupervisorIds = Array.from(new Set(
+        Array.from(empMap.values())
+            .map(e => e.supervisor_id)
+            .filter((id): id is string => Boolean(id) && !empMap.has(id))
+    ))
+    if (missingSupervisorIds.length > 0) {
+        const { data: supervisors } = await supabaseAdmin
+            .from('employees')
+            .select('id, first_name_th, last_name_th, nickname, department, position, photo_url, email, supervisor_id')
+            .in('id', missingSupervisorIds)
+        if (supervisors) {
+            for (const s of supervisors) {
+                empMap.set(s.id, s as RawEmployee)
+            }
+        }
+    }
+
     const leaveTypes = (leaveTypesRes.data ?? []) as RawLeaveType[]
     const departments = Array.from(
         new Set(((deptsRes.data ?? []) as Array<{ department: string | null }>)
@@ -408,6 +428,7 @@ async function renderRequestsTab(sp: SearchParams, year: number) {
     const items = requests.map(r => {
         const emp = empMap.get(r.employee_id)
         const approver = r.approver_id ? empMap.get(r.approver_id) : null
+        const backupApprover = emp?.supervisor_id ? empMap.get(emp.supervisor_id) : null
         const t = leaveTypes.find(x => x.id === r.leave_type_id)
         return {
             id: r.id,
@@ -445,6 +466,13 @@ async function renderRequestsTab(sp: SearchParams, year: number) {
                 first_name_th: approver.first_name_th,
                 last_name_th: approver.last_name_th,
                 photo_url: approver.photo_url,
+            } : null,
+            backupApprover: backupApprover ? {
+                id: backupApprover.id,
+                nickname: backupApprover.nickname,
+                first_name_th: backupApprover.first_name_th,
+                last_name_th: backupApprover.last_name_th,
+                photo_url: backupApprover.photo_url,
             } : null,
         }
     })

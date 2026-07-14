@@ -56,6 +56,7 @@ export interface LeaveRequestItem {
     } | null
     employee: EmployeeLite | null
     approver: ApproverLite | null
+    backupApprover: ApproverLite | null
 }
 
 export interface RequestsFilterState {
