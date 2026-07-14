@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth"
 import { getEmployeeAttendanceSummary } from "@/lib/attendance-summary"
 import type { BalanceCell } from "@/components/hradmin/leave/types"
 import { getStreakInfo } from "@/lib/streak"
+import { fetchEmployeeExpenses } from "@/lib/employee-expenses"
 
 export const dynamic = 'force-dynamic'
 
@@ -329,6 +330,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
 
     const attendanceSummary = await getEmployeeAttendanceSummary(employee.id)
     const streak = await getStreakInfo(employee.id)
+    const expenseBenefits = await fetchEmployeeExpenses(employee.id)
 
     // ── Tenure ─────────────────────────────────────────────────────────────────
     const startDate = new Date(employee.start_date)
@@ -361,6 +363,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             contracts={contracts}
             canViewPayroll={canViewPayroll}
             salarySlips={salarySlips}
+            expenseBenefits={expenseBenefits}
             streak={streak}
         />
     )

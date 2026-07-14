@@ -20,9 +20,11 @@ import { DEPARTMENTS } from "@/config/departments"
 import { ContractsCard } from "@/components/hradmin/employees/ContractsCard"
 import { LocationSection, LocationEmpty } from "@/components/hradmin/employees/LocationSection"
 import { SalarySlipsCard, type SalarySlip } from "@/components/hradmin/employees/SalarySlipsCard"
+import { EmployeeExpensesCard } from "@/components/hradmin/employees/EmployeeExpensesCard"
 import { AdjustBalanceModal } from "@/components/hradmin/leave/AdjustBalanceModal"
 import type { BalanceCell, LeaveTypeLite, EmployeeRowLite } from "@/components/hradmin/leave/types"
 import type { EmployeeAttendanceSummary } from "@/lib/attendance-summary"
+import type { EmployeeExpenseBenefit } from "@/lib/employee-expense-shared"
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList
 } from "recharts"
@@ -260,6 +262,7 @@ interface Props {
     contracts: ContractEntry[]
     canViewPayroll: boolean   // page-level gate from can_manage_payroll
     salarySlips: SalarySlip[]
+    expenseBenefits: EmployeeExpenseBenefit[]
 }
 
 // Mirrors employee_contracts schema (only the fields the card consumes).
@@ -533,7 +536,7 @@ export function EmployeeProfileView({
     employee, photoUrl, displayName, supervisorName, tenure,
     leaveBalances, balanceCells, leaveTypes, balanceYear,
     recentLeaves, attendanceSummary, wfhStats, wfhMonthly, allEmployees, id, isHrAdmin,
-    contracts, canViewPayroll, salarySlips, streak,
+    contracts, canViewPayroll, salarySlips, expenseBenefits, streak,
 }: Props) {
     const router = useRouter()
     const [balanceModalOpen, setBalanceModalOpen] = useState(false)
@@ -1907,6 +1910,21 @@ export function EmployeeProfileView({
                     <ContractsCard
                         employeeId={id}
                         contracts={contracts}
+                        canEdit={isEditing}
+                    />
+                </div>
+            )}
+
+            {/* ── 5c. Employee expenses / reimbursements — HR maintains
+                recurring benefits here (phone allowance, travel support,
+                welfare reimbursements) and staff see the read-only copy
+                from their portal. Keep it close to payroll/contracts
+                because it is sensitive HR-finance context. ───────────── */}
+            {isHrAdmin && (
+                <div className="print:hidden" id="expenses">
+                    <EmployeeExpensesCard
+                        employeeId={id}
+                        benefits={expenseBenefits}
                         canEdit={isEditing}
                     />
                 </div>

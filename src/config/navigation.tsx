@@ -3,7 +3,7 @@ import {
     CalendarDays, ClipboardCheck, ShieldCheck, MapPin, Network, Palmtree,
     ScrollText, BarChart3, Clock, Calendar, Briefcase, User,
     Wallet, CheckCircle, Database, DoorOpen, GitBranch, CalendarHeart, Home,
-    MailWarning, AlertTriangle, UserCheck, MessageSquare, type LucideIcon,
+    MailWarning, AlertTriangle, UserCheck, MessageSquare, ReceiptText, type LucideIcon,
 } from 'lucide-react'
 import { ROLES, type UserRole } from './roles'
 
@@ -39,11 +39,12 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         {
             label: 'dashboard.employees',
             icon: Users,
-            matchPrefix: ['/hradmin/employees', '/hradmin/organization', '/hradmin/applicants'],
+            matchPrefix: ['/hradmin/employees', '/hradmin/organization', '/hradmin/applicants', '/hradmin/expenses'],
             children: [
-                { label: 'รายชื่อ',     href: '/hradmin/employees',    icon: User },
-                { label: 'ผังองค์กร',   href: '/hradmin/organization', icon: Network },
-                { label: 'รับสมัครงาน', href: '/hradmin/applicants',   icon: Briefcase },
+                { label: 'รายชื่อ',              href: '/hradmin/employees',    icon: User },
+                { label: 'ค่าใช้จ่ายพนักงาน',    href: '/hradmin/expenses',     icon: ReceiptText },
+                { label: 'ผังองค์กร',            href: '/hradmin/organization', icon: Network },
+                { label: 'รับสมัครงาน',          href: '/hradmin/applicants',   icon: Briefcase },
             ],
         },
         // "การเข้างาน" — renamed from "เวลาทำงาน" (clearer: it's about
@@ -132,6 +133,15 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
                 { label: 'นโยบายการลา',  href: '/portal/leave-policy',    icon: ScrollText },
             ],
         },
+        {
+            label: 'ส่วนตัว',
+            icon: UserCircle,
+            matchPrefix: ['/portal/profile', '/portal/payroll', '/portal/expenses'],
+            children: [
+                { label: 'recruitment.personalInfo', href: '/portal/profile',  icon: UserCircle },
+                { label: 'ค่าใช้จ่าย/สวัสดิการ',    href: '/portal/expenses', icon: ReceiptText },
+            ],
+        },
         // "บริษัท" group — read-only org-wide info that managers consult
         // (announcements they need to read, the org chart for delegation,
         // the meeting room schedule). Distinct from "การลา" because none
@@ -175,10 +185,11 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         {
             label: 'ส่วนตัว',
             icon: UserCircle,
-            matchPrefix: ['/portal/profile', '/portal/payroll'],
+            matchPrefix: ['/portal/profile', '/portal/payroll', '/portal/expenses'],
             children: [
                 { label: 'recruitment.personalInfo', href: '/portal/profile', icon: UserCircle },
-                { label: 'สลิปเงินเดือน',           href: '/portal/payroll', icon: FileText },
+                { label: 'ค่าใช้จ่าย/สวัสดิการ',    href: '/portal/expenses', icon: ReceiptText },
+                { label: 'สลิปเงินเดือน',           href: '/portal/payroll',  icon: FileText },
             ],
         },
         // "บริษัท" group — org-wide read-only surfaces.
