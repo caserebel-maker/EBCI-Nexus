@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
     X, ChevronLeft, Calendar, Clock, User, Paperclip, Phone,
-    CheckCircle2, XCircle, Ban, FileText, MessageCircle,
+    CheckCircle2, XCircle, Ban, FileText, MessageCircle, AlertTriangle,
 } from 'lucide-react'
 import { formatEmployeeName } from '@/lib/format-employee-name'
 import { STATUS_META, type LeaveRequestItem } from './types'
@@ -124,6 +124,23 @@ export function RequestDetailDrawer({ item, onClose, onForceAction }: Props) {
 
                 {/* Scrollable body */}
                 <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+                    {/* Cancellation Request Banner */}
+                    {item.status === 'cancellation_requested' && (
+                        <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-200 shadow-lg shadow-orange-955/20 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <AlertTriangle size={16} className="text-orange-400 shrink-0 mt-0.5" />
+                            <div className="text-xs space-y-1">
+                                <p className="font-bold text-sm text-orange-300">พนักงานขอยกเลิกใบลาใบนี้</p>
+                                <p className="text-white/70 leading-relaxed">ใบลาได้รับอนุมัติไปแล้ว แต่พนักงานได้กดยื่นเรื่องขอยกเลิกเข้ามาด้วยตัวเองในระบบ</p>
+                                {item.cancellation_reason && (
+                                    <div className="mt-2 pt-2 border-t border-orange-500/15">
+                                        <p className="text-[11px] text-orange-300/80 font-bold uppercase tracking-wider">เหตุผลที่ระบุ:</p>
+                                        <p className="text-white/80 font-medium italic mt-0.5">&ldquo;{item.cancellation_reason}&rdquo;</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     <Section title="พนักงาน" icon={User}>
                         <div className="flex items-center gap-3">
                             {emp?.photo_url ? (

@@ -43,6 +43,8 @@ export interface LeaveRequestItem {
     approved_at: string | null
     approval_notes: string | null
     rejection_reason: string | null
+    cancellation_reason?: string | null
+    cancellation_requested_at?: string | null
     attachment_url: string | null
     attachment_name: string | null
     is_half_day: boolean | null
@@ -76,10 +78,11 @@ export interface RequestsPagination {
 }
 
 export const STATUS_META: Record<string, { label: string; color: string; bg: string; ring: string }> = {
-    pending:   { label: 'รออนุมัติ',  color: '#fcd34d', bg: 'rgba(251,191,36,0.18)', ring: 'rgba(251,191,36,0.35)' },
-    approved:  { label: 'อนุมัติแล้ว', color: '#6ee7b7', bg: 'rgba(52,211,153,0.18)', ring: 'rgba(52,211,153,0.35)' },
-    rejected:  { label: 'ปฏิเสธ',      color: '#fca5a5', bg: 'rgba(239,68,68,0.18)',  ring: 'rgba(239,68,68,0.35)' },
-    cancelled: { label: 'ยกเลิก',      color: '#cbd5e1', bg: 'rgba(255,255,255,0.10)', ring: 'rgba(255,255,255,0.20)' },
+    pending:                { label: 'รออนุมัติ',      color: '#fcd34d', bg: 'rgba(251,191,36,0.18)', ring: 'rgba(251,191,36,0.35)' },
+    approved:               { label: 'อนุมัติแล้ว',     color: '#6ee7b7', bg: 'rgba(52,211,153,0.18)', ring: 'rgba(52,211,153,0.35)' },
+    rejected:               { label: 'ปฏิเสธ',         color: '#fca5a5', bg: 'rgba(239,68,68,0.18)',  ring: 'rgba(239,68,68,0.35)' },
+    cancelled:              { label: 'ยกเลิก',         color: '#cbd5e1', bg: 'rgba(255,255,255,0.10)', ring: 'rgba(255,255,255,0.20)' },
+    cancellation_requested: { label: 'ขอยกเลิกใบลา', color: '#f97316', bg: 'rgba(249,115,22,0.18)', ring: 'rgba(249,115,22,0.35)' },
 }
 
 export const STATUS_ORDER = ['pending', 'approved', 'rejected', 'cancelled'] as const

@@ -59,6 +59,8 @@ interface RawLeaveRequest {
     approved_at: string | null
     approval_notes: string | null
     rejection_reason: string | null
+    cancellation_reason?: string | null
+    cancellation_requested_at?: string | null
     attachment_url: string | null
     attachment_name: string | null
     is_half_day: boolean | null
@@ -349,6 +351,7 @@ async function renderRequestsTab(sp: SearchParams, year: number) {
             `id, employee_id, leave_type_id, start_date, end_date, total_days,
              reason, status, submitted_at, created_at, updated_at, reference_code,
              approver_id, approved_at, approval_notes, rejection_reason,
+             cancellation_reason, cancellation_requested_at,
              attachment_url, attachment_name, is_half_day, half_day_period,
              contact_during_leave`,
             { count: 'exact' },
@@ -444,6 +447,8 @@ async function renderRequestsTab(sp: SearchParams, year: number) {
             approved_at: r.approved_at,
             approval_notes: r.approval_notes,
             rejection_reason: r.rejection_reason,
+            cancellation_reason: r.cancellation_reason,
+            cancellation_requested_at: r.cancellation_requested_at,
             attachment_url: r.attachment_url,
             attachment_name: r.attachment_name,
             is_half_day: r.is_half_day,
