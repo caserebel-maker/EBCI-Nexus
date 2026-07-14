@@ -59,7 +59,7 @@ export default async function AdminDashboard() {
         // Pending leaves count
         supabaseAdmin.from('leave_requests')
             .select('id')
-            .eq('status', 'pending')
+            .in('status', ['pending', 'cancellation_requested'])
             .gte('start_date', yearStart)
             .lt('start_date', nextYearStart),
 
@@ -78,8 +78,8 @@ export default async function AdminDashboard() {
 
         // Pending leaves detail (5 latest)
         supabaseAdmin.from('leave_requests')
-            .select('id, employee_id, leave_type:leave_type_id, start_date, end_date, total_days, reason, created_at')
-            .eq('status', 'pending')
+            .select('id, employee_id, leave_type:leave_type_id, start_date, end_date, total_days, reason, status, created_at')
+            .in('status', ['pending', 'cancellation_requested'])
             .gte('start_date', yearStart)
             .lt('start_date', nextYearStart)
             .order('created_at', { ascending: false })

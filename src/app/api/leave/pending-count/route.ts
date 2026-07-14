@@ -27,7 +27,7 @@ export async function GET() {
         .from('leave_requests')
         .select('id')
         .eq('approver_id', approverId)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'cancellation_requested'])
     for (const row of primary.data ?? []) ids.add(row.id as string)
 
     const delegateApplicantIds = await getDelegateApplicantIdsForApprover(approverId)
@@ -36,7 +36,7 @@ export async function GET() {
             .from('leave_requests')
             .select('id')
             .in('employee_id', delegateApplicantIds)
-            .eq('status', 'pending')
+            .in('status', ['pending', 'cancellation_requested'])
         for (const row of delegated.data ?? []) ids.add(row.id as string)
     }
 
@@ -47,7 +47,7 @@ export async function GET() {
             .from('leave_requests')
             .select('id')
             .eq('approver_id', session.id)
-            .eq('status', 'pending')
+            .in('status', ['pending', 'cancellation_requested'])
         for (const row of fallback.data ?? []) ids.add(row.id as string)
     }
 
