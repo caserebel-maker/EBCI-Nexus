@@ -525,7 +525,7 @@ export async function startFieldTrip(payload: {
         .from('field_trips')
         .insert({
             employee_id: employeeId,
-            checkin_id: openCheckin.id,
+            checkin_id: checkinId,
             purpose: trimmedPurpose,
             estimated_return_time: payload.estimatedReturnTime || null,
             latitude: payload.latitude,
