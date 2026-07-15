@@ -331,15 +331,11 @@ export async function checkIn(payload: CheckInPayload) {
     }
 }
 
-export async function checkOut() {
-    const employeeId = await getEmployeeId()
-    if (!employeeId) {
-        return { error: 'ไม่พบข้อมูลพนักงาน' }
-    }
-
-    // Find open checkin today
+async function getOrCreateCheckinForCardScan(employeeId: string) {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
+    
+    // Find open check-in
     const { data: openCheckin } = await supabaseAdmin
         .from('checkins')
         .select('id')
@@ -349,6 +345,104 @@ export async function checkOut() {
         .order('checked_in_at', { ascending: false })
         .limit(1)
         .maybeSingle()
+
+    if (openCheckin) {
+        return openCheckin.id
+    }
+
+    // No open checkin in app. Check card scans for today.
+    const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit' })
+    const bkkToday = formatter.format(new Date()) // YYYY-MM-DD
+    const dayStart = `${bkkToday}T00:00:00`
+    const dayEnd = `${bkkToday}T23:59:59.999`
+
+    const { data: scans } = await supabaseAdmin
+        .from('card_scans')
+        .select('scan_time')
+        .eq('employee_id', employeeId)
+        .gte('scan_time', dayStart)
+        .lte('scan_time', dayEnd)
+        .order('scan_time', { ascending: true })
+
+    if (scans && scans.length > 0) {
+        const earliestBkkStr = scans[0].scan_time.replace(' ', 'T')
+        const checkedInAt = new Date(`${earliestBkkStr}+07:00`).toISOString()
+
+        const { data: newCheckin, error: createError } = await supabaseAdmin
+            .from('checkins')
+            .insert({
+                employee_id: employeeId,
+                checked_in_at: checkedInAt,
+                type: 'office',
+                source: 'app',
+            })
+            .select('id')
+            .single()
+
+        if (!createError && newCheckin) {
+            return newCheckin.id
+        }
+    }
+
+    return null
+}
+
+export async function checkOut() {
+    const employeeId = await getEmployeeId()
+    if (!employeeId) {
+        return { error: 'ไม่พบข้อมูลพนักงาน' }
+    }
+
+    // Find open checkin today
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    let { data: openCheckin } = await supabaseAdmin
+        .from('checkins')
+        .select('id')
+        .eq('employee_id', employeeId)
+        .is('checked_out_at', null)
+        .gte('checked_in_at', today.toISOString())
+        .order('checked_in_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+    // If no open checkin in checkins table, check card scans today
+    if (!openCheckin) {
+        const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit' })
+        const bkkToday = formatter.format(new Date()) // YYYY-MM-DD
+        const dayStart = `${bkkToday}T00:00:00`
+        const dayEnd = `${bkkToday}T23:59:59.999`
+
+        const { data: scans } = await supabaseAdmin
+            .from('card_scans')
+            .select('scan_time')
+            .eq('employee_id', employeeId)
+            .gte('scan_time', dayStart)
+            .lte('scan_time', dayEnd)
+            .order('scan_time', { ascending: true })
+
+        if (scans && scans.length > 0) {
+            const earliestBkkStr = scans[0].scan_time.replace(' ', 'T')
+            const checkedInAt = new Date(`${earliestBkkStr}+07:00`).toISOString()
+
+            const { data: newCheckin, error: createError } = await supabaseAdmin
+                .from('checkins')
+                .insert({
+                    employee_id: employeeId,
+                    checked_in_at: checkedInAt,
+                    checked_out_at: new Date().toISOString(),
+                    type: 'office',
+                    source: 'app',
+                })
+                .select('id')
+                .single()
+
+            if (createError) {
+                return { error: 'ไม่สามารถบันทึกการเช็คเอาท์ได้: ' + createError.message }
+            }
+            openCheckin = newCheckin
+        }
+    }
 
     if (!openCheckin) {
         return { error: 'ยังไม่ได้เช็คอินวันนี้' }
@@ -408,20 +502,9 @@ export async function startFieldTrip(payload: {
         return { error: 'กรุณาระบุวัตถุประสงค์/ปลายทางอย่างน้อย 5 ตัวอักษร' }
     }
 
-    // Find open check-in today
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const { data: openCheckin } = await supabaseAdmin
-        .from('checkins')
-        .select('id')
-        .eq('employee_id', employeeId)
-        .is('checked_out_at', null)
-        .gte('checked_in_at', today.toISOString())
-        .order('checked_in_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-    if (!openCheckin) {
+    // Find or create check-in matching card scans or normal app check-in
+    const checkinId = await getOrCreateCheckinForCardScan(employeeId)
+    if (!checkinId) {
         return { error: 'กรุณาเช็คอินเข้าระบบก่อนแจ้งออกปฏิบัติงาน' }
     }
 
