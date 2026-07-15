@@ -357,10 +357,10 @@ export function CheckinView({
         const isCurrentlyOut = activeFieldTrip && !activeFieldTrip.returned_at
         const checkinLabel = getCheckinTypeLabel(todayCheckin.type)
         const ok = await confirm({
-            title: isCurrentlyOut ? 'ยืนยันเช็คเอาท์และกลับบ้านเลย?' : `ยืนยันเช็คเอาท์${checkinLabel}?`,
+            title: isCurrentlyOut ? 'สิ้นสุดการทำงานและกลับบ้านเลย?' : 'สิ้นสุดการทำงานของวันนี้?',
             body: isCurrentlyOut 
-                ? 'คุณกำลังอยู่ระหว่างการปฏิบัติงานนอกสถานที่ ระบบจะปิดบันทึกการออกข้างนอกและเช็คเอาท์ออกจากงานทันที' 
-                : 'หากเช็คเอาท์ตอนนี้ จะไม่สามารถเช็คอินซ้ำในวันเดียวกัน',
+                ? 'คุณกำลังอยู่ระหว่างการปฏิบัติงานนอกสถานที่ ต้องการบันทึกเวลาเลิกงานและสิ้นสุดการทำงานของวันนี้ทันทีใช่หรือไม่? (ระบบจะปิดบันทึกการออกไปปฏิบัติงานข้างนอกให้อัตโนมัติ)' 
+                : 'คุณต้องการกดเช็คเอาท์เพื่อบันทึกเวลาเลิกงานและสิ้นสุดการทำงานของวันนี้ใช่หรือไม่? เมื่อบันทึกแล้วจะไม่สามารถเช็คอินซ้ำในวันเดียวกันได้',
             summary: (
                 <div className="space-y-1">
                     <p>⏱ เช็คอินเวลา {formatBangkokTime(todayCheckin.checked_in_at)} น.</p>
