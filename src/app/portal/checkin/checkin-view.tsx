@@ -7,7 +7,7 @@ const CheckinMap = dynamic(() => import('@/components/checkin/checkin-map').then
 import { useCallback, useState, useEffect } from 'react'
 import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut, X, Briefcase, Palmtree, IdCard, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { checkIn, checkOut } from './actions'
+import { checkIn, checkOut, startFieldTrip, endFieldTrip } from './actions'
 import { haversineDistance } from '@/lib/geo'
 import { formatBangkokTime, formatBangkokDateTime } from '@/lib/datetime'
 import type { LeaveTodayInfo } from '@/lib/leave-today'
@@ -67,6 +67,20 @@ interface Props {
      *  rule, so this is UX gating, not security. */
     wfhEligibility: WfhEligibility
     outsideHeadOfficeEligible: boolean
+    activeFieldTrip: FieldTrip | null
+}
+
+interface FieldTrip {
+    id: string
+    employee_id: string
+    checkin_id: string
+    purpose: string
+    estimated_return_time: string | null
+    left_at: string
+    returned_at: string | null
+    latitude: number | null
+    longitude: number | null
+    accuracy_meters: number | null
 }
 
 type GPSState = 'idle' | 'requesting' | 'success' | 'error'
@@ -88,6 +102,7 @@ export function CheckinView({
     cardScanToday,
     wfhEligibility,
     outsideHeadOfficeEligible,
+    activeFieldTrip,
 }: Props) {
     const confirm = useConfirmDialog()
     const [gpsState, setGpsState] = useState<GPSState>('idle')
@@ -95,12 +110,14 @@ export function CheckinView({
     const [gpsError, setGpsError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
-    // Field check-in collects a destination note before submit. The whole
-    // affordance lives behind a "ออกพื้นที่" button so the default flow
-    // (office / WFH) stays one click.
     const [fieldMode, setFieldMode] = useState(false)
     const [fieldNote, setFieldNote] = useState('')
     const FIELD_NOTE_MIN = 5
+
+    // Mid-day field trip (outing) states
+    const [midDayFieldMode, setMidDayFieldMode] = useState(false)
+    const [midDayPurpose, setMidDayPurpose] = useState('')
+    const [midDayReturnTime, setMidDayReturnTime] = useState('')
 
     // Late check-in tracking — declarations live here, but the actual
     // late-minutes value is computed BELOW after `isCheckedIn` is in
@@ -279,16 +296,78 @@ export function CheckinView({
         handleCheckin('field', trimmed)
     }
 
+    const handleMidDayFieldSubmit = async () => {
+        const trimmed = midDayPurpose.trim()
+        if (trimmed.length < 5) {
+            showToast('error', 'กรุณาระบุวัตถุประสงค์/ปลายทางอย่างน้อย 5 ตัวอักษร')
+            return
+        }
+
+        setLoading(true)
+        try {
+            const res = await startFieldTrip({
+                purpose: trimmed,
+                estimatedReturnTime: midDayReturnTime,
+                latitude: gps?.lat ?? null,
+                longitude: gps?.lng ?? null,
+                accuracy: gps?.accuracy ?? null,
+            })
+            if (res.error) {
+                showToast('error', res.error)
+            } else {
+                showToast('success', 'บันทึกการแจ้งออกสำเร็จ')
+                setMidDayFieldMode(false)
+                setMidDayPurpose('')
+                setMidDayReturnTime('')
+                setTimeout(() => window.location.reload(), 1500)
+            }
+        } catch (err: any) {
+            showToast('error', err.message || 'เกิดข้อผิดพลาด')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleMidDayReturn = async () => {
+        const confirmed = await confirm({
+            title: 'กลับเข้าออฟฟิศ?',
+            body: 'คุณเดินทางกลับมาถึงออฟฟิศแล้วใช่หรือไม่?',
+            confirmLabel: 'ใช่, กลับมาถึงแล้ว',
+        })
+        if (!confirmed) return
+
+        setLoading(true)
+        try {
+            const res = await endFieldTrip()
+            if (res.error) {
+                showToast('error', res.error)
+            } else {
+                showToast('success', 'บันทึกการกลับเข้าออฟฟิศสำเร็จ')
+                setTimeout(() => window.location.reload(), 1500)
+            }
+        } catch (err: any) {
+            showToast('error', err.message || 'เกิดข้อผิดพลาด')
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const handleCheckout = async () => {
         if (!todayCheckin) return
+        const isCurrentlyOut = activeFieldTrip && !activeFieldTrip.returned_at
         const checkinLabel = getCheckinTypeLabel(todayCheckin.type)
         const ok = await confirm({
-            title: `ยืนยันเช็คเอาท์${checkinLabel}?`,
-            body: 'หากเช็คเอาท์ตอนนี้ จะไม่สามารถเช็คอินซ้ำในวันเดียวกัน',
+            title: isCurrentlyOut ? 'ยืนยันเช็คเอาท์และกลับบ้านเลย?' : `ยืนยันเช็คเอาท์${checkinLabel}?`,
+            body: isCurrentlyOut 
+                ? 'คุณกำลังอยู่ระหว่างการปฏิบัติงานนอกสถานที่ ระบบจะปิดบันทึกการออกข้างนอกและเช็คเอาท์ออกจากงานทันที' 
+                : 'หากเช็คเอาท์ตอนนี้ จะไม่สามารถเช็คอินซ้ำในวันเดียวกัน',
             summary: (
                 <div className="space-y-1">
                     <p>⏱ เช็คอินเวลา {formatBangkokTime(todayCheckin.checked_in_at)} น.</p>
                     <p>📍 ประเภท: {checkinLabel}</p>
+                    {isCurrentlyOut && (
+                        <p className="text-amber-300">🚙 ปลายทาง: {activeFieldTrip.purpose}</p>
+                    )}
                     <p>⌛ ระยะเวลา: {formatWorkDuration(todayCheckin.checked_in_at)}</p>
                 </div>
             ),
@@ -510,14 +589,144 @@ export function CheckinView({
                             </a>
                         </div>
                     )}
-                    <button
-                        onClick={handleCheckout}
-                        disabled={loading}
-                        className="w-full py-3 rounded-xl bg-red-500/80 hover:bg-red-500 text-white font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-60"
-                    >
-                        {loading ? <Loader2 className="animate-spin" size={18} /> : <LogOut size={18} />}
-                        เช็คเอาท์
-                    </button>
+                    {/* Mid-day field trip (Out of Office) section */}
+                    {midDayFieldMode ? (
+                        <div className="mb-4 space-y-3 rounded-xl p-4 border border-amber-400/30 bg-amber-500/10">
+                            <div className="flex items-center gap-2 text-amber-200">
+                                <Briefcase size={18} />
+                                <span className="font-semibold text-sm">แจ้งออกปฏิบัติงานนอกสถานที่</span>
+                            </div>
+                            <p className="text-xs text-white/60 leading-relaxed text-left">
+                                ระบุวัตถุประสงค์/ปลายทาง และเวลากลับโดยประมาณ
+                            </p>
+                            <textarea
+                                value={midDayPurpose}
+                                onChange={e => setMidDayPurpose(e.target.value)}
+                                placeholder='เช่น "ไปพบลูกค้าที่บริษัท ABC บางนา"'
+                                rows={2}
+                                autoFocus
+                                className="w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm px-3 py-2 focus:outline-none focus:border-amber-300/50 resize-none"
+                            />
+                            <div>
+                                <label className="block text-xs text-white/60 mb-1 text-left">เวลากลับโดยประมาณ</label>
+                                <input
+                                    type="text"
+                                    value={midDayReturnTime}
+                                    onChange={e => setMidDayReturnTime(e.target.value)}
+                                    placeholder='เช่น "16:30 น." หรือ "กลับบ้านเลย"'
+                                    className="w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm px-3 py-2 focus:outline-none focus:border-amber-300/50"
+                                />
+                            </div>
+                            <div className="flex items-center justify-between text-[11px]">
+                                <span className={cn(
+                                    'transition-colors',
+                                    midDayPurpose.trim().length >= FIELD_NOTE_MIN ? 'text-emerald-300' : 'text-white/40',
+                                )}>
+                                    {midDayPurpose.trim().length >= FIELD_NOTE_MIN
+                                        ? '✓ ครบจำนวนตัวอักษรแล้ว'
+                                        : `อย่างน้อย ${FIELD_NOTE_MIN} ตัวอักษร (ตอนนี้ ${midDayPurpose.trim().length})`}
+                                </span>
+                                {gpsState === 'success' && gps && (
+                                    <span className="text-white/40">
+                                        GPS ±{Math.round(gps.accuracy)} ม.
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex gap-2 pt-1">
+                                <button
+                                    onClick={() => { setMidDayFieldMode(false); setMidDayPurpose(''); setMidDayReturnTime('') }}
+                                    disabled={loading}
+                                    className="flex-1 py-2 rounded-xl font-semibold text-xs bg-white/10 hover:bg-white/15 text-white/85 border border-white/15 transition-colors disabled:opacity-60"
+                                >
+                                    ยกเลิก
+                                </button>
+                                <button
+                                    onClick={handleMidDayFieldSubmit}
+                                    disabled={loading || gpsState !== 'success' || midDayPurpose.trim().length < FIELD_NOTE_MIN}
+                                    className="flex-[1.5] py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 bg-amber-500/85 hover:bg-amber-500 text-[#1a0a0d] border border-amber-400/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {loading ? <Loader2 className="animate-spin" size={14} /> : null}
+                                    ยืนยันการแจ้งออก
+                                </button>
+                            </div>
+                        </div>
+                    ) : activeFieldTrip && !activeFieldTrip.returned_at ? (
+                        <div className="mb-4 rounded-xl p-4 border border-amber-500/40 bg-amber-500/10 text-left">
+                            <div className="flex items-center gap-2 text-amber-300 mb-2">
+                                <Briefcase size={18} className="animate-pulse shrink-0" />
+                                <span className="font-bold text-sm">กำลังปฏิบัติงานนอกสถานที่</span>
+                            </div>
+                            <div className="space-y-2 text-sm mb-4">
+                                <div>
+                                    <p className="text-[10px] text-white/40 uppercase tracking-wider">ปลายทาง/วัตถุประสงค์</p>
+                                    <p className="text-white font-medium">{activeFieldTrip.purpose}</p>
+                                </div>
+                                {activeFieldTrip.estimated_return_time && (
+                                    <div>
+                                        <p className="text-[10px] text-white/40 uppercase tracking-wider">เวลากลับโดยประมาณ</p>
+                                        <p className="text-amber-200 font-medium">{activeFieldTrip.estimated_return_time}</p>
+                                    </div>
+                                )}
+                                <div>
+                                    <p className="text-[10px] text-white/40 uppercase tracking-wider">เวลาเริ่มเดินทาง</p>
+                                    <p className="text-white/70 text-xs">{formatBangkokDateTime(activeFieldTrip.left_at)}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={handleMidDayReturn}
+                                    disabled={loading}
+                                    className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex items-center justify-center gap-1.5 transition-all disabled:opacity-60 text-xs"
+                                >
+                                    {loading ? <Loader2 className="animate-spin" size={14} /> : null}
+                                    📥 กลับถึงออฟฟิศ
+                                </button>
+                                <button
+                                    onClick={handleCheckout}
+                                    disabled={loading}
+                                    className="flex-1 py-3 rounded-xl bg-red-500/80 hover:bg-red-500 text-white font-semibold flex items-center justify-center gap-1.5 transition-all disabled:opacity-60 text-xs"
+                                >
+                                    {loading ? <Loader2 className="animate-spin" size={14} /> : <LogOut size={14} />}
+                                    เช็คเอาท์/กลับบ้าน
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => setMidDayFieldMode(true)}
+                            disabled={loading}
+                            className="w-full mb-4 py-3 rounded-xl bg-amber-500/80 hover:bg-amber-500 text-[#1a0a0d] border border-amber-400/30 font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-60 text-sm"
+                        >
+                            <Briefcase size={18} />
+                            🚙 แจ้งออกไปปฏิบัติงานข้างนอก
+                        </button>
+                    )}
+
+                    {/* Standard check-out button (only visible if NOT currently out in the field) */}
+                    {(!activeFieldTrip || activeFieldTrip.returned_at) && (
+                        <button
+                            onClick={handleCheckout}
+                            disabled={loading}
+                            className="w-full py-3 rounded-xl bg-red-500/80 hover:bg-red-500 text-white font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+                        >
+                            {loading ? <Loader2 className="animate-spin" size={18} /> : <LogOut size={18} />}
+                            เช็คเอาท์
+                        </button>
+                    )}
+
+                    {/* Outing History Log */}
+                    {activeFieldTrip && activeFieldTrip.returned_at && (
+                        <div className="mt-4 rounded-xl p-3 bg-white/5 border border-white/10 text-xs text-left">
+                            <p className="text-white/40 font-semibold uppercase tracking-wider mb-1">ประวัติออกข้างนอกวันนี้</p>
+                            <div className="space-y-1">
+                                <p className="text-white/80 font-medium">• {activeFieldTrip.purpose}</p>
+                                <p className="text-white/40 text-[10px]">
+                                    ⏱ เดินทาง: {formatBangkokTime(activeFieldTrip.left_at)} น. - {formatBangkokTime(activeFieldTrip.returned_at)} น.
+                                </p>
+                            </div>
+                        </div>
+                    )}
                 </div>
             ) : isFullyCheckedOut ? (
                 <div

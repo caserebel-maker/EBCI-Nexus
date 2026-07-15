@@ -7,7 +7,7 @@ import { getCardScanTodayInfo } from '@/lib/card-scan-today'
 import { checkWfhEligibility } from '@/lib/wfh-eligibility'
 import { bangkokTodayIso } from '@/lib/leave-validations'
 import { CheckinView } from './checkin-view'
-import { getTodayCheckin } from './actions'
+import { getTodayCheckin, getTodayFieldTrip } from './actions'
 import { isOutsideHeadOfficeEmployee } from '@/lib/outside-head-office'
 
 export const dynamic = 'force-dynamic'
@@ -25,6 +25,7 @@ export default async function CheckinPage() {
         .maybeSingle()
 
     const todayCheckin = await getTodayCheckin()
+    const activeFieldTrip = await getTodayFieldTrip()
 
     // §1.3 — when an approved leave covers today, the page hides the
     // CTA and shows a "วันนี้ลา ..." card. Half-day leaves still allow
@@ -63,6 +64,7 @@ export default async function CheckinPage() {
             cardScanToday={cardScanToday}
             wfhEligibility={wfhEligibility}
             outsideHeadOfficeEligible={isOutsideHeadOfficeEmployee(employeeForCheckin)}
+            activeFieldTrip={activeFieldTrip}
         />
     )
 }

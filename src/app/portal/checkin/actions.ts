@@ -361,6 +361,13 @@ export async function checkOut() {
 
     if (error) return { error: error.message }
 
+    // Auto-close any unreturned field trips for today
+    await supabaseAdmin
+        .from('field_trips')
+        .update({ returned_at: new Date().toISOString() })
+        .eq('employee_id', employeeId)
+        .is('returned_at', null)
+
     revalidatePath('/portal/checkin')
     return { success: true }
 }
@@ -382,4 +389,106 @@ export async function getTodayCheckin() {
         .maybeSingle()
 
     return normalizeOutsideHeadOfficeCheckin(data)
+}
+
+export async function startFieldTrip(payload: {
+    purpose: string
+    estimatedReturnTime: string
+    latitude: number | null
+    longitude: number | null
+    accuracy: number | null
+}) {
+    const employeeId = await getEmployeeId()
+    if (!employeeId) {
+        return { error: 'ไม่พบข้อมูลพนักงาน' }
+    }
+
+    const trimmedPurpose = (payload.purpose ?? '').trim()
+    if (trimmedPurpose.length < 5) {
+        return { error: 'กรุณาระบุวัตถุประสงค์/ปลายทางอย่างน้อย 5 ตัวอักษร' }
+    }
+
+    // Find open check-in today
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const { data: openCheckin } = await supabaseAdmin
+        .from('checkins')
+        .select('id')
+        .eq('employee_id', employeeId)
+        .is('checked_out_at', null)
+        .gte('checked_in_at', today.toISOString())
+        .order('checked_in_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+    if (!openCheckin) {
+        return { error: 'กรุณาเช็คอินเข้าระบบก่อนแจ้งออกปฏิบัติงาน' }
+    }
+
+    // Check if there's already an active (unreturned) field trip
+    const { data: activeTrip } = await supabaseAdmin
+        .from('field_trips')
+        .select('id')
+        .eq('employee_id', employeeId)
+        .is('returned_at', null)
+        .limit(1)
+        .maybeSingle()
+
+    if (activeTrip) {
+        return { error: 'คุณมีรายการออกปฏิบัติงานค้างอยู่ กรุณากลับเข้าออฟฟิศก่อนแจ้งออกรอบใหม่' }
+    }
+
+    const { error } = await supabaseAdmin
+        .from('field_trips')
+        .insert({
+            employee_id: employeeId,
+            checkin_id: openCheckin.id,
+            purpose: trimmedPurpose,
+            estimated_return_time: payload.estimatedReturnTime || null,
+            latitude: payload.latitude,
+            longitude: payload.longitude,
+            accuracy_meters: payload.accuracy,
+        })
+
+    if (error) return { error: error.message }
+
+    revalidatePath('/portal/checkin')
+    return { success: true }
+}
+
+export async function endFieldTrip() {
+    const employeeId = await getEmployeeId()
+    if (!employeeId) {
+        return { error: 'ไม่พบข้อมูลพนักงาน' }
+    }
+
+    const { error } = await supabaseAdmin
+        .from('field_trips')
+        .update({ returned_at: new Date().toISOString() })
+        .eq('employee_id', employeeId)
+        .is('returned_at', null)
+
+    if (error) return { error: error.message }
+
+    revalidatePath('/portal/checkin')
+    return { success: true }
+}
+
+export async function getTodayFieldTrip() {
+    const employeeId = await getEmployeeId()
+    if (!employeeId) return null
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const { data } = await supabaseAdmin
+        .from('field_trips')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .gte('left_at', today.toISOString())
+        .order('left_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+    return data
 }
