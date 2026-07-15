@@ -58,6 +58,8 @@ const GRAYSCALE_TEAM_NAMES = new Set([
     'นอร์เวย์',
     'switzerland',
     'สวิตเซอร์แลนด์',
+    'france',
+    'ฝรั่งเศส',
 ])
 
 function formatThaiDateTime(value: string | null): string {
