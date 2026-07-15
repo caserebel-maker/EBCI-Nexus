@@ -430,6 +430,89 @@ export function CheckinView({
                 </div>
             )}
 
+            {/* Mid-day field trip (Out of Office) Modal Overlay */}
+            {midDayFieldMode && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                    <div className="w-full max-w-sm rounded-2xl p-6 border border-amber-400/30 bg-[#221013] text-left space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-amber-300">
+                                <Briefcase size={20} />
+                                <span className="font-bold text-base text-amber-200">แจ้งออกปฏิบัติงานนอกสถานที่</span>
+                            </div>
+                            <button 
+                                onClick={() => { setMidDayFieldMode(false); setMidDayPurpose(''); setMidDayReturnTime('') }}
+                                className="text-white/40 hover:text-white/70 transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        <p className="text-xs text-white/60 leading-relaxed">
+                            ระบุวัตถุประสงค์/ปลายทาง และเวลากลับโดยประมาณ (เช่น ไปพบลูกค้าที่บางนา)
+                        </p>
+                        
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-xs text-white/50 mb-1">ปลายทาง/วัตถุประสงค์ <span className="text-red-400">*</span></label>
+                                <textarea
+                                    value={midDayPurpose}
+                                    onChange={e => setMidDayPurpose(e.target.value)}
+                                    placeholder='เช่น "ไปพบลูกค้าที่บริษัท ABC บางนา"'
+                                    rows={3}
+                                    autoFocus
+                                    className="w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm px-3 py-2 focus:outline-none focus:border-amber-300/50 resize-none"
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="block text-xs text-white/50 mb-1">เวลากลับโดยประมาณ</label>
+                                <input
+                                    type="text"
+                                    value={midDayReturnTime}
+                                    onChange={e => setMidDayReturnTime(e.target.value)}
+                                    placeholder='เช่น "16:30 น." หรือ "กลับบ้านเลย"'
+                                    className="w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm px-3 py-2 focus:outline-none focus:border-amber-300/50"
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-xs pt-1">
+                            <span className={cn(
+                                'transition-colors font-medium',
+                                midDayPurpose.trim().length >= FIELD_NOTE_MIN ? 'text-emerald-300' : 'text-white/40',
+                            )}>
+                                {midDayPurpose.trim().length >= FIELD_NOTE_MIN
+                                    ? '✓ ครบจำนวนตัวอักษรแล้ว'
+                                    : `อย่างน้อย ${FIELD_NOTE_MIN} ตัวอักษร (ตอนนี้ ${midDayPurpose.trim().length})`}
+                            </span>
+                            {gpsState === 'success' && gps && (
+                                <span className="text-white/40">
+                                    GPS ±{Math.round(gps.accuracy)} ม.
+                                </span>
+                            )}
+                        </div>
+                        
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                onClick={() => { setMidDayFieldMode(false); setMidDayPurpose(''); setMidDayReturnTime('') }}
+                                disabled={loading}
+                                className="flex-1 py-3 rounded-xl font-semibold text-sm bg-white/10 hover:bg-white/15 text-white border border-white/15 transition-colors disabled:opacity-65"
+                            >
+                                ยกเลิก
+                            </button>
+                            <button
+                                onClick={handleMidDayFieldSubmit}
+                                disabled={loading || gpsState !== 'success' || midDayPurpose.trim().length < FIELD_NOTE_MIN}
+                                className="flex-[1.5] py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 border border-amber-400/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loading ? <Loader2 className="animate-spin" size={16} /> : null}
+                                ยืนยันการแจ้งออก
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-white/15 flex items-center justify-center text-amber-300 ring-1 ring-white/25">
@@ -590,67 +673,7 @@ export function CheckinView({
                         </div>
                     )}
                     {/* Mid-day field trip (Out of Office) section */}
-                    {midDayFieldMode ? (
-                        <div className="mb-4 space-y-3 rounded-xl p-4 border border-amber-400/30 bg-amber-500/10">
-                            <div className="flex items-center gap-2 text-amber-200">
-                                <Briefcase size={18} />
-                                <span className="font-semibold text-sm">แจ้งออกปฏิบัติงานนอกสถานที่</span>
-                            </div>
-                            <p className="text-xs text-white/60 leading-relaxed text-left">
-                                ระบุวัตถุประสงค์/ปลายทาง และเวลากลับโดยประมาณ
-                            </p>
-                            <textarea
-                                value={midDayPurpose}
-                                onChange={e => setMidDayPurpose(e.target.value)}
-                                placeholder='เช่น "ไปพบลูกค้าที่บริษัท ABC บางนา"'
-                                rows={2}
-                                autoFocus
-                                className="w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm px-3 py-2 focus:outline-none focus:border-amber-300/50 resize-none"
-                            />
-                            <div>
-                                <label className="block text-xs text-white/60 mb-1 text-left">เวลากลับโดยประมาณ</label>
-                                <input
-                                    type="text"
-                                    value={midDayReturnTime}
-                                    onChange={e => setMidDayReturnTime(e.target.value)}
-                                    placeholder='เช่น "16:30 น." หรือ "กลับบ้านเลย"'
-                                    className="w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm px-3 py-2 focus:outline-none focus:border-amber-300/50"
-                                />
-                            </div>
-                            <div className="flex items-center justify-between text-[11px]">
-                                <span className={cn(
-                                    'transition-colors',
-                                    midDayPurpose.trim().length >= FIELD_NOTE_MIN ? 'text-emerald-300' : 'text-white/40',
-                                )}>
-                                    {midDayPurpose.trim().length >= FIELD_NOTE_MIN
-                                        ? '✓ ครบจำนวนตัวอักษรแล้ว'
-                                        : `อย่างน้อย ${FIELD_NOTE_MIN} ตัวอักษร (ตอนนี้ ${midDayPurpose.trim().length})`}
-                                </span>
-                                {gpsState === 'success' && gps && (
-                                    <span className="text-white/40">
-                                        GPS ±{Math.round(gps.accuracy)} ม.
-                                    </span>
-                                )}
-                            </div>
-                            <div className="flex gap-2 pt-1">
-                                <button
-                                    onClick={() => { setMidDayFieldMode(false); setMidDayPurpose(''); setMidDayReturnTime('') }}
-                                    disabled={loading}
-                                    className="flex-1 py-2 rounded-xl font-semibold text-xs bg-white/10 hover:bg-white/15 text-white/85 border border-white/15 transition-colors disabled:opacity-60"
-                                >
-                                    ยกเลิก
-                                </button>
-                                <button
-                                    onClick={handleMidDayFieldSubmit}
-                                    disabled={loading || gpsState !== 'success' || midDayPurpose.trim().length < FIELD_NOTE_MIN}
-                                    className="flex-[1.5] py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 bg-amber-500/85 hover:bg-amber-500 text-[#1a0a0d] border border-amber-400/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {loading ? <Loader2 className="animate-spin" size={14} /> : null}
-                                    ยืนยันการแจ้งออก
-                                </button>
-                            </div>
-                        </div>
-                    ) : activeFieldTrip && !activeFieldTrip.returned_at ? (
+                    {activeFieldTrip && !activeFieldTrip.returned_at ? (
                         <div className="mb-4 rounded-xl p-4 border border-amber-500/40 bg-amber-500/10 text-left">
                             <div className="flex items-center gap-2 text-amber-300 mb-2">
                                 <Briefcase size={18} className="animate-pulse shrink-0" />
