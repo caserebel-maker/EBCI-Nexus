@@ -407,8 +407,12 @@ async function notifyHrLeaveDecisionTelegram(args: {
 }
 
 // ─── Session-based convenience wrappers ───────────────────────────────────────
+// Employee / manager mode only.
+//
 // These look up the caller's employee ID from session + Supabase auth, so
-// client components don't need to know or pass an employeeId.
+// client components don't need to know or pass an employeeId. HR admin
+// override actions intentionally live in /api/hradmin/leave/force-action
+// so the two modes stay separate in both UI and code.
 
 async function getMyEmployeeId(): Promise<string | null> {
     const session = await getSession()

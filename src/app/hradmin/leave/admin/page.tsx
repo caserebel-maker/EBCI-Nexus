@@ -6,7 +6,6 @@ import {
     ShieldCheck, Download, Filter, CheckCircle2, XCircle, Trash2,
     Clock, CalendarDays, User, Loader2, X, AlertCircle, ChevronDown, ChevronRight,
 } from 'lucide-react'
-import { approveLeaveAsCurrentUser, rejectLeaveAsCurrentUser } from '@/lib/leave-approval-actions'
 import { cn } from '@/lib/utils'
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog'
 
@@ -379,9 +378,14 @@ export default function LeaveAdminPage() {
     function handleHrApprove(id: string) {
         setHrActionId(id)
         startHrTransition(async () => {
-            const result = await approveLeaveAsCurrentUser(id)
-            if ('error' in result) { showToast('error', result.error) }
-            else { showToast('success', result.fullyApproved ? 'อนุมัติเสร็จสิ้น — แจ้งพนักงานแล้ว' : 'อนุมัติแล้ว ส่งต่อขั้นถัดไป'); fetchHrRequests() }
+            const res = await fetch('/api/hradmin/leave/force-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, action: 'approve' }),
+            })
+            const result = await res.json().catch(() => ({}))
+            if (!res.ok) { showToast('error', result.error || 'อนุมัติไม่สำเร็จ') }
+            else { showToast('success', 'อนุมัติเสร็จสิ้น — แจ้งพนักงานแล้ว'); fetchHrRequests() }
             setHrActionId(null)
         })
     }
@@ -407,8 +411,13 @@ export default function LeaveAdminPage() {
         const id = target.id
         setHrActionId(id)
         startHrTransition(async () => {
-            const result = await rejectLeaveAsCurrentUser(id, comment)
-            if ('error' in result) { showToast('error', result.error) }
+            const res = await fetch('/api/hradmin/leave/force-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, action: 'reject', reason: comment }),
+            })
+            const result = await res.json().catch(() => ({}))
+            if (!res.ok) { showToast('error', result.error || 'ปฏิเสธไม่สำเร็จ') }
             else { showToast('success', 'ปฏิเสธใบลา พนักงานได้รับแจ้งแล้ว'); setHrRejectTarget(null); fetchHrRequests() }
             setHrActionId(null)
         })

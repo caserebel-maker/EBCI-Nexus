@@ -98,7 +98,7 @@ export async function getDelegateApplicantIdsForApprover(
     const ids: string[] = []
 
     // 1. Fetch dynamic delegate applicant IDs (employees where supervisor_id = this approver)
-    const { data: emps, error } = await supabaseAdmin
+    const { data: emps } = await supabaseAdmin
         .from('employees')
         .select('id')
         .eq('supervisor_id', approverEmployeeId)
@@ -135,6 +135,12 @@ export async function canActOnLeaveRequest(args: {
     applicantEmployeeId: string
     primaryApproverId: string | null
 }): Promise<boolean> {
+    // Employee/manager mode only:
+    //   - the assigned approver may act, or
+    //   - a configured delegate / co-approver may act.
+    //
+    // HR admin override lives in /api/hradmin/leave/force-action and is
+    // intentionally kept out of this helper so the two modes stay clear.
     if (args.primaryApproverId === args.approverEmployeeId) return true
     const delegateIds = await getDelegateApproverIdsForApplicant(args.applicantEmployeeId)
     return delegateIds.includes(args.approverEmployeeId)

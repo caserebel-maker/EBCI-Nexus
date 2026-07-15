@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import {
-    ClipboardCheck, CheckCircle2, XCircle, Clock, AlertCircle,
-    CalendarDays, User, Loader2, X, ChevronDown
+    ClipboardCheck, CheckCircle2, XCircle, AlertCircle,
+    CalendarDays, User, Loader2, X
 } from 'lucide-react'
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog'
 
@@ -369,8 +369,12 @@ export default function ApproveLeavePage() {
     async function handleApprove(id: string) {
         setActionLoading(id)
         try {
-            const res = await fetch(`/api/leave/requests/${id}/approve`, { method: 'POST' })
-            const data = await res.json()
+            const res = await fetch('/api/hradmin/leave/force-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, action: 'approve' }),
+            })
+            const data = await res.json().catch(() => ({}))
             if (!res.ok) { showToast('error', data.error || 'เกิดข้อผิดพลาด'); return }
             showToast('success', 'อนุมัติใบลาสำเร็จ')
             fetchRequests()
@@ -401,12 +405,12 @@ export default function ApproveLeavePage() {
 
         setActionLoading(target.id)
         try {
-            const res = await fetch(`/api/leave/requests/${target.id}/reject`, {
+            const res = await fetch('/api/hradmin/leave/force-action', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rejectionReason: reason }),
+                body: JSON.stringify({ id: target.id, action: 'reject', reason }),
             })
-            const data = await res.json()
+            const data = await res.json().catch(() => ({}))
             if (!res.ok) { showToast('error', data.error || 'เกิดข้อผิดพลาด'); return }
             showToast('success', 'ปฏิเสธใบลาเรียบร้อย')
             setRejectTarget(null)

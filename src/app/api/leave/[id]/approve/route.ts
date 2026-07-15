@@ -15,13 +15,13 @@ export const dynamic = 'force-dynamic'
  * POST /api/leave/[id]/approve
  * Body (optional): { notes?: string }
  *
- * Approves the pending leave request. Enforces:
- *   - caller is signed in AND is the assigned approver for this row
+ * Employee/manager approval path. Enforces the normal chain:
+ *   - caller is signed in AND is the assigned approver / delegated approver
  *   - row is currently `pending` (409 otherwise — stale click)
- * Flips status → approved, moves the reservation out of pending_days
- * and into used_days atomically-ish (two writes, but the status
- * transition guards against double-apply), then fires the applicant
- * email.
+ *
+ * HR override actions intentionally use /api/hradmin/leave/force-action
+ * so the employee-mode path and admin-mode path stay clearly separate.
+ * This route only handles the standard approval chain.
  */
 export async function POST(
     req: NextRequest,

@@ -103,7 +103,33 @@ interface Props {
 }
 
 async function handleLeaveAction(id: string, action: 'approve' | 'reject') {
-    await fetch(`/api/leave/requests/${id}/${action}`, { method: 'POST' })
+    const res = await fetch('/api/hradmin/leave/force-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+            action === 'reject'
+                ? {
+                    id,
+                    action: 'reject',
+                    reason: 'ปฏิเสธจากหน้ารวมอนุมัติ HR',
+                }
+                : {
+                    id,
+                    action: 'approve',
+                },
+        ),
+        cache: 'no-store',
+    })
+    let payload: any = null
+    try {
+        payload = await res.json()
+    } catch {
+        payload = null
+    }
+    if (!res.ok) {
+        throw new Error(payload?.error || 'ทำรายการไม่สำเร็จ')
+    }
+    return payload
 }
 
 function fullName(firstName: string, lastName: string, nickname?: string | null) {
@@ -581,12 +607,19 @@ function PendingRow({ lr, onDone }: { lr: any; onDone: (id: string) => void }) {
     const router = useRouter()
     const [isPending, start] = useTransition()
     const [done, setDone] = useState<'approve' | 'reject' | null>(null)
+    const [error, setError] = useState<string | null>(null)
     const detailHref = `/hradmin/leave?tab=requests&status=pending&request=${encodeURIComponent(lr.id)}`
     const act = (action: 'approve' | 'reject') => {
+        setError(null)
         start(async () => {
-            await handleLeaveAction(lr.id, action)
-            setDone(action)
-            onDone(lr.id)
+            try {
+                await handleLeaveAction(lr.id, action)
+                setDone(action)
+                onDone(lr.id)
+                router.refresh()
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'ทำรายการไม่สำเร็จ')
+            }
         })
     }
     const name = lr.employee
@@ -598,6 +631,13 @@ function PendingRow({ lr, onDone }: { lr: any; onDone: (id: string) => void }) {
                 {done === 'approve'
                     ? <><CheckCircle size={15} className="text-emerald-400" /> อนุมัติแล้ว</>
                     : <><XCircle size={15} className="text-red-400" /> ปฏิเสธแล้ว</>}
+            </div>
+        )
+    }
+    if (error) {
+        return (
+            <div className="rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-sm text-red-100">
+                {error}
             </div>
         )
     }

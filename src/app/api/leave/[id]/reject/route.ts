@@ -15,11 +15,12 @@ export const dynamic = 'force-dynamic'
  * POST /api/leave/[id]/reject
  * Body: { rejection_reason: string }  (required, ≥ 10 chars)
  *
- * Rejects the pending leave request. Guards the same way as approve:
- * caller must be the assigned approver, row must be pending. Rolls
- * back the pending_days reservation so the applicant's balance shows
- * the days as available again, then fires the rejection email with
- * the reason.
+ * Employee/manager rejection path. Same chain checks as approve:
+ * caller must be the assigned approver / delegated approver and the
+ * row must be pending.
+ *
+ * Admin override actions use /api/hradmin/leave/force-action so the
+ * employee-mode and admin-mode behaviours remain separate.
  */
 export async function POST(
     req: NextRequest,
@@ -35,7 +36,9 @@ export async function POST(
 
     const { id } = await context.params
     const body = await req.json().catch(() => ({}))
-    const rejectionReason: string = String(body?.rejection_reason ?? '').trim()
+    const rejectionReason: string = String(
+        body?.rejection_reason ?? body?.rejectionReason ?? '',
+    ).trim()
     if (rejectionReason.length < 10) {
         return NextResponse.json(
             { error: 'กรุณาระบุเหตุผลการปฏิเสธอย่างน้อย 10 ตัวอักษร' },
