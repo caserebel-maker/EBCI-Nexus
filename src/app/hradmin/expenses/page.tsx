@@ -29,8 +29,21 @@ interface PaymentRow {
     status: string
 }
 
+type SearchParams = {
+    sort?: string
+    dir?: string
+}
+
+type SortKey = 'code' | 'name'
+type SortDir = 'asc' | 'desc'
+
 function fullName(employee: EmployeeRow) {
     return [employee.first_name_th, employee.last_name_th].filter(Boolean).join(' ') || employee.employee_code || 'ไม่ระบุชื่อ'
+}
+
+function sortValue(employee: EmployeeRow, key: SortKey) {
+    if (key === 'name') return fullName(employee)
+    return employee.employee_code || ''
 }
 
 function isMissingExpenseTableError(error: { code?: string | null; message?: string | null }) {
@@ -38,10 +51,19 @@ function isMissingExpenseTableError(error: { code?: string | null; message?: str
     return error.code === '42P01' || message.includes('employee_expense_')
 }
 
-export default async function HrAdminExpensesPage() {
+export default async function HrAdminExpensesPage({
+    searchParams,
+}: {
+    searchParams?: Promise<SearchParams>
+}) {
     const auth = await getAuth()
     if (!auth) redirect('/login')
     if (!isHrStaff(auth)) redirect('/portal/dashboard')
+
+    const sp = await searchParams
+    const sortKey: SortKey = sp?.sort === 'name' ? 'name' : 'code'
+    const sortDir: SortDir = sp?.dir === 'desc' ? 'desc' : 'asc'
+    const sortMultiplier = sortDir === 'asc' ? 1 : -1
 
     const { data: employees } = await supabaseAdmin
         .from('employees')
@@ -50,6 +72,19 @@ export default async function HrAdminExpensesPage() {
         .order('employee_code', { ascending: true })
 
     const employeeRows = (employees ?? []) as EmployeeRow[]
+    const sortedEmployeeRows = [...employeeRows].sort((a, b) => {
+        const compared = sortValue(a, sortKey).localeCompare(sortValue(b, sortKey), 'th', {
+            numeric: true,
+            sensitivity: 'base',
+        })
+
+        if (compared !== 0) return compared * sortMultiplier
+
+        return (a.employee_code ?? '').localeCompare(b.employee_code ?? '', 'th', {
+            numeric: true,
+            sensitivity: 'base',
+        })
+    })
     const employeeIds = employeeRows.map((employee) => employee.id)
 
     let benefits: BenefitRow[] = []
@@ -145,6 +180,34 @@ export default async function HrAdminExpensesPage() {
             </section>
 
             <section className="overflow-hidden rounded-3xl border border-white/15 bg-white/10 shadow-xl backdrop-blur">
+                <div className="flex flex-col gap-3 border-b border-white/10 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p className="text-sm font-semibold text-white">รายชื่อพนักงาน</p>
+                        <p className="text-xs text-white/55">
+                            กำลังเรียงตาม{sortKey === 'name' ? 'ชื่อ-นามสกุล' : 'รหัสพนักงาน'} · {sortDir === 'asc' ? 'น้อยไปมาก / ก-ฮ' : 'มากไปน้อย / ฮ-ก'}
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        <Link
+                            href={`/hradmin/expenses?sort=code&dir=${sortKey === 'code' && sortDir === 'asc' ? 'desc' : 'asc'}`}
+                            className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition ${sortKey === 'code'
+                                ? 'border-yellow-300/60 bg-yellow-300/20 text-yellow-50 shadow-[0_0_18px_rgba(250,204,21,0.18)]'
+                                : 'border-white/15 bg-white/10 text-white/75 hover:bg-white/15'
+                                }`}
+                        >
+                            รหัสพนักงาน {sortKey === 'code' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                        </Link>
+                        <Link
+                            href={`/hradmin/expenses?sort=name&dir=${sortKey === 'name' && sortDir === 'asc' ? 'desc' : 'asc'}`}
+                            className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition ${sortKey === 'name'
+                                ? 'border-yellow-300/60 bg-yellow-300/20 text-yellow-50 shadow-[0_0_18px_rgba(250,204,21,0.18)]'
+                                : 'border-white/15 bg-white/10 text-white/75 hover:bg-white/15'
+                                }`}
+                        >
+                            ชื่อ-นามสกุล {sortKey === 'name' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+                        </Link>
+                    </div>
+                </div>
                 <div className="grid grid-cols-[1.4fr_0.9fr_0.6fr_0.6fr_0.7fr_auto] gap-3 border-b border-white/10 px-5 py-3 text-xs font-semibold uppercase tracking-[0.15em] text-white/55">
                     <span>พนักงาน</span>
                     <span>แผนก</span>
@@ -153,7 +216,7 @@ export default async function HrAdminExpensesPage() {
                     <span>จ่ายแล้ว</span>
                     <span>จัดการ</span>
                 </div>
-                {employeeRows.map((employee) => {
+                {sortedEmployeeRows.map((employee) => {
                     const stats = byEmployee.get(employee.id) ?? { activeBenefits: 0, paid: 0, pending: 0, totalPaid: 0 }
                     return (
                         <div key={employee.id} className="grid grid-cols-[1.4fr_0.9fr_0.6fr_0.6fr_0.7fr_auto] items-center gap-3 border-b border-white/10 px-5 py-4 last:border-b-0">

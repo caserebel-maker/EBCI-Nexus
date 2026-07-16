@@ -51,6 +51,9 @@ export function EmployeeExpensesCard({ employeeId, benefits, canEdit }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isAddingBenefit, setIsAddingBenefit] = useState(false);
   const [editingBenefitId, setEditingBenefitId] = useState<string | null>(null);
+  const [addingPaymentBenefitId, setAddingPaymentBenefitId] = useState<
+    string | null
+  >(null);
 
   const stats = useMemo(() => {
     const payments = benefits.flatMap((benefit) => benefit.payments);
@@ -116,6 +119,9 @@ export function EmployeeExpensesCard({ employeeId, benefits, canEdit }: Props) {
       return;
     }
     event.currentTarget.reset();
+    setAddingPaymentBenefitId((current) =>
+      current === benefitId ? null : current,
+    );
     refresh();
   }
 
@@ -342,11 +348,22 @@ export function EmployeeExpensesCard({ employeeId, benefits, canEdit }: Props) {
       <div className="mt-5 space-y-4">
         {benefits.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/20 bg-black/10 p-8 text-center text-white/60">
-            ยังไม่มีรายการค่าใช้จ่ายหรือสวัสดิการเฉพาะบุคคล
+            <p>ยังไม่มีรายการค่าใช้จ่ายหรือสวัสดิการเฉพาะบุคคล</p>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => setIsAddingBenefit(true)}
+                className="mt-4 inline-flex items-center justify-center gap-2 rounded-2xl border border-cyan-300/35 bg-cyan-400/20 px-4 py-2 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-400/30"
+              >
+                <Plus className="h-4 w-4" />
+                เพิ่มรายการค่าใช้จ่าย
+              </button>
+            )}
           </div>
         ) : (
           benefits.map((benefit) => {
-            const isEditingBenefit = canEdit || editingBenefitId === benefit.id;
+            const isEditingBenefit = editingBenefitId === benefit.id;
+            const isAddingPayment = addingPaymentBenefitId === benefit.id;
 
             return (
               <article
@@ -379,51 +396,65 @@ export function EmployeeExpensesCard({ employeeId, benefits, canEdit }: Props) {
                       </p>
                     )}
                   </div>
-                  <div className="flex flex-wrap justify-end gap-2">
-                    {!isEditingBenefit && (
+                  {canEdit && (
+                    <div className="flex flex-wrap justify-end gap-2">
                       <button
                         type="button"
-                        onClick={() => setEditingBenefitId(benefit.id)}
+                        onClick={() =>
+                          setAddingPaymentBenefitId((current) =>
+                            current === benefit.id ? null : benefit.id,
+                          )
+                        }
+                        className="inline-flex items-center gap-1 rounded-xl border border-emerald-300/35 bg-emerald-400/15 px-3 py-2 text-xs font-semibold text-emerald-50 hover:bg-emerald-400/25"
+                      >
+                        {isAddingPayment ? (
+                          <X className="h-3.5 w-3.5" />
+                        ) : (
+                          <Plus className="h-3.5 w-3.5" />
+                        )}
+                        {isAddingPayment ? "ปิดฟอร์มจ่าย" : "เพิ่มรายการจ่าย"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditingBenefitId((current) =>
+                            current === benefit.id ? null : benefit.id,
+                          )
+                        }
                         className="inline-flex items-center gap-1 rounded-xl border border-cyan-300/30 bg-cyan-400/15 px-3 py-2 text-xs font-semibold text-cyan-50 hover:bg-cyan-400/25"
                       >
-                        <Pencil className="h-3.5 w-3.5" />
-                        แก้ไขรายการนี้
+                        {isEditingBenefit ? (
+                          <X className="h-3.5 w-3.5" />
+                        ) : (
+                          <Pencil className="h-3.5 w-3.5" />
+                        )}
+                        {isEditingBenefit ? "ปิดแก้ไข" : "แก้ไขรายการนี้"}
                       </button>
-                    )}
-                    {isEditingBenefit && !canEdit && (
-                      <button
-                        type="button"
-                        onClick={() => setEditingBenefitId(null)}
-                        className="inline-flex items-center gap-1 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/75 hover:bg-white/15"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                        ยกเลิก
-                      </button>
-                    )}
-                    {isEditingBenefit && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updateBenefit(benefit.id, {
-                              is_active: !benefit.is_active,
-                            })
-                          }
-                          className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/15"
-                        >
-                          {benefit.is_active ? "ปิดใช้งาน" : "เปิดใช้งาน"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => deleteBenefit(benefit.id)}
-                          className="inline-flex items-center gap-1 rounded-xl border border-rose-300/30 bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-100 hover:bg-rose-500/25"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          ลบ
-                        </button>
-                      </>
-                    )}
-                  </div>
+                      {isEditingBenefit && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateBenefit(benefit.id, {
+                                is_active: !benefit.is_active,
+                              })
+                            }
+                            className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/15"
+                          >
+                            {benefit.is_active ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteBenefit(benefit.id)}
+                            className="inline-flex items-center gap-1 rounded-xl border border-rose-300/30 bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-100 hover:bg-rose-500/25"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            ลบ
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {isEditingBenefit && (
@@ -526,10 +557,10 @@ export function EmployeeExpensesCard({ employeeId, benefits, canEdit }: Props) {
                   </form>
                 )}
 
-                {isEditingBenefit && (
+                {isAddingPayment && (
                   <form
                     onSubmit={(event) => handleAddPayment(event, benefit.id)}
-                    className="mt-4 grid gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 md:grid-cols-6"
+                    className="mt-4 grid gap-3 rounded-2xl border border-emerald-300/25 bg-emerald-400/10 p-3 md:grid-cols-6"
                   >
                     <label className="space-y-1 text-xs">
                       <span className="text-white/65">ปี</span>
