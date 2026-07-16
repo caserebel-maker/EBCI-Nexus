@@ -131,6 +131,9 @@ export function CheckinView({
 
     const isCheckedIn = !!todayCheckin && !todayCheckin.checked_out_at
     const isFullyCheckedOut = !!todayCheckin && !!todayCheckin.checked_out_at
+    const isCardCheckedOut = !!cardScanToday?.scans && cardScanToday.scans.length > 0 &&
+        cardScanToday.scans[cardScanToday.scans.length - 1].scanType === 'out'
+    const isCheckedOut = isFullyCheckedOut || isCardCheckedOut
     // §3.1 Phase 1 — show card-scan ack when:
     //   - we found a card scan today, AND
     //   - the user hasn't also app-checked-in (otherwise the existing
@@ -590,60 +593,62 @@ export function CheckinView({
                     )}
 
                     {/* Mid-day field trip (Out of Office) section inside Card Scan container */}
-                    <div className="mt-4 pt-4 border-t border-emerald-500/25">
-                        {activeFieldTrip && !activeFieldTrip.returned_at ? (
-                            <div className="rounded-xl p-4 border border-amber-500/40 bg-amber-500/10 text-left">
-                                <div className="flex items-center gap-2 text-amber-300 mb-2">
-                                    <Briefcase size={18} className="animate-pulse shrink-0" />
-                                    <span className="font-bold text-sm">กำลังปฏิบัติงานนอกสถานที่</span>
-                                </div>
-                                <div className="space-y-2 text-sm mb-4">
-                                    <div>
-                                        <p className="text-[10px] text-white/40 uppercase tracking-wider">ปลายทาง/วัตถุประสงค์</p>
-                                        <p className="text-white font-medium">{activeFieldTrip.purpose}</p>
+                    {!isCheckedOut && (
+                        <div className="mt-4 pt-4 border-t border-emerald-500/25">
+                            {activeFieldTrip && !activeFieldTrip.returned_at ? (
+                                <div className="rounded-xl p-4 border border-amber-500/40 bg-amber-500/10 text-left">
+                                    <div className="flex items-center gap-2 text-amber-300 mb-2">
+                                        <Briefcase size={18} className="animate-pulse shrink-0" />
+                                        <span className="font-bold text-sm">กำลังปฏิบัติงานนอกสถานที่</span>
                                     </div>
-                                    {activeFieldTrip.estimated_return_time && (
+                                    <div className="space-y-2 text-sm mb-4">
                                         <div>
-                                            <p className="text-[10px] text-white/40 uppercase tracking-wider">เวลากลับโดยประมาณ</p>
-                                            <p className="text-amber-200 font-medium">{activeFieldTrip.estimated_return_time}</p>
+                                            <p className="text-[10px] text-white/40 uppercase tracking-wider">ปลายทาง/วัตถุประสงค์</p>
+                                            <p className="text-white font-medium">{activeFieldTrip.purpose}</p>
                                         </div>
-                                    )}
-                                    <div>
-                                        <p className="text-[10px] text-white/40 uppercase tracking-wider">เวลาเริ่มเดินทาง</p>
-                                        <p className="text-white/70 text-xs">{formatBangkokDateTime(activeFieldTrip.left_at)}</p>
+                                        {activeFieldTrip.estimated_return_time && (
+                                            <div>
+                                                <p className="text-[10px] text-white/40 uppercase tracking-wider">เวลากลับโดยประมาณ</p>
+                                                <p className="text-amber-200 font-medium">{activeFieldTrip.estimated_return_time}</p>
+                                            </div>
+                                        )}
+                                        <div>
+                                            <p className="text-[10px] text-white/40 uppercase tracking-wider">เวลาเริ่มเดินทาง</p>
+                                            <p className="text-white/70 text-xs">{formatBangkokDateTime(activeFieldTrip.left_at)}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={handleMidDayReturn}
+                                            disabled={loading}
+                                            className="flex-1 py-3 px-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-60 text-xs sm:text-sm"
+                                        >
+                                            {loading ? <Loader2 className="animate-spin shrink-0" size={16} /> : <Building className="shrink-0" size={16} />}
+                                            <span>กลับถึงออฟฟิศ</span>
+                                        </button>
+                                        <button
+                                            onClick={handleCheckout}
+                                            disabled={loading}
+                                            className="flex-1 py-3 px-2 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-60 text-xs sm:text-sm"
+                                        >
+                                            {loading ? <Loader2 className="animate-spin shrink-0" size={16} /> : <LogOut className="shrink-0" size={16} />}
+                                            <span>เช็คเอาท์/กลับบ้าน</span>
+                                        </button>
                                     </div>
                                 </div>
-
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={handleMidDayReturn}
-                                        disabled={loading}
-                                        className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex items-center justify-center gap-1.5 transition-all disabled:opacity-60 text-xs"
-                                    >
-                                        {loading ? <Loader2 className="animate-spin" size={14} /> : null}
-                                        📥 กลับถึงออฟฟิศ
-                                    </button>
-                                    <button
-                                        onClick={handleCheckout}
-                                        disabled={loading}
-                                        className="flex-1 py-3 rounded-xl bg-red-500/80 hover:bg-red-500 text-white font-semibold flex items-center justify-center gap-1.5 transition-all disabled:opacity-60 text-xs"
-                                    >
-                                        {loading ? <Loader2 className="animate-spin" size={14} /> : <LogOut size={14} />}
-                                        เช็คเอาท์/กลับบ้าน
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <button
-                                onClick={() => setMidDayFieldMode(true)}
-                                disabled={loading}
-                                className="w-full py-3 rounded-xl bg-amber-500/80 hover:bg-amber-500 text-[#1a0a0d] border border-amber-400/30 font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-60 text-sm"
-                            >
-                                <Briefcase size={18} />
-                                🚙 แจ้งออกไปปฏิบัติงานข้างนอก
-                            </button>
-                        )}
-                    </div>
+                            ) : (
+                                <button
+                                    onClick={() => setMidDayFieldMode(true)}
+                                    disabled={loading}
+                                    className="w-full py-3 rounded-xl bg-amber-500/80 hover:bg-amber-500 text-[#1a0a0d] border border-amber-400/30 font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-60 text-sm"
+                                >
+                                    <Briefcase size={18} />
+                                    🚙 แจ้งออกไปปฏิบัติงานข้างนอก
+                                </button>
+                            )}
+                        </div>
+                    )}
 
                     {/* Outing History Log for Card Scan Users */}
                     {activeFieldTrip && activeFieldTrip.returned_at && (
@@ -775,18 +780,18 @@ export function CheckinView({
                                 <button
                                     onClick={handleMidDayReturn}
                                     disabled={loading}
-                                    className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex items-center justify-center gap-1.5 transition-all disabled:opacity-60 text-xs"
+                                    className="flex-1 py-3 px-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-60 text-xs sm:text-sm"
                                 >
-                                    {loading ? <Loader2 className="animate-spin" size={14} /> : null}
-                                    📥 กลับถึงออฟฟิศ
+                                    {loading ? <Loader2 className="animate-spin shrink-0" size={16} /> : <Building className="shrink-0" size={16} />}
+                                    <span>กลับถึงออฟฟิศ</span>
                                 </button>
                                 <button
                                     onClick={handleCheckout}
                                     disabled={loading}
-                                    className="flex-1 py-3 rounded-xl bg-red-500/80 hover:bg-red-500 text-white font-semibold flex items-center justify-center gap-1.5 transition-all disabled:opacity-60 text-xs"
+                                    className="flex-1 py-3 px-2 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-60 text-xs sm:text-sm"
                                 >
-                                    {loading ? <Loader2 className="animate-spin" size={14} /> : <LogOut size={14} />}
-                                    เช็คเอาท์/กลับบ้าน
+                                    {loading ? <Loader2 className="animate-spin shrink-0" size={16} /> : <LogOut className="shrink-0" size={16} />}
+                                    <span>เช็คเอาท์/กลับบ้าน</span>
                                 </button>
                             </div>
                         </div>

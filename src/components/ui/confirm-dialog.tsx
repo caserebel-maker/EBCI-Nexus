@@ -133,34 +133,34 @@ export function ConfirmDialog({
                 }}
             >
                 <div className="px-6 py-5 sm:px-8 sm:py-6">
-                    <div className="flex items-start gap-4">
-                        <div className="shrink-0 rounded-lg bg-white/15 ring-1 ring-white/25 p-2">
-                            <Icon size={24} className={isWarning ? 'text-amber-300' : 'text-red-300'} />
+                    <div className="flex flex-col items-center text-center gap-4">
+                        <div className="rounded-lg bg-white/15 ring-1 ring-white/25 p-2.5">
+                            <Icon size={26} className={isWarning ? 'text-amber-300' : 'text-red-300'} />
                         </div>
-                        <div className="min-w-0 flex-1">
-                            <h2 id={titleId} className="text-lg font-bold text-white leading-snug">
+                        <div className="w-full text-center">
+                            <h2 id={titleId} className="text-xl font-bold text-white leading-snug">
                                 {title}
                             </h2>
                             {summary && (
-                                <div className="mt-3 rounded-xl bg-white/10 border border-white/15 px-3 py-2 text-base text-white/85 leading-relaxed">
+                                <div className="mt-4 rounded-xl bg-white/10 border border-white/15 px-4 py-3 text-base text-white/85 leading-relaxed text-center">
                                     {summary}
                                 </div>
                             )}
                             {body && (
-                                <p id={bodyId} className="mt-3 text-base text-white/90 leading-relaxed">
+                                <p id={bodyId} className="mt-3 text-base text-white/90 leading-relaxed text-center">
                                     {body}
                                 </p>
                             )}
                         </div>
                     </div>
 
-                    <div className="mt-5 flex gap-3 sm:justify-end">
+                    <div className="mt-6 flex gap-3 sm:justify-center">
                         <button
                             ref={cancelRef}
                             type="button"
                             onClick={onClose}
                             disabled={loading}
-                            className="flex-1 sm:flex-none rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-60"
+                            className="flex-1 sm:flex-none rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-60 whitespace-nowrap"
                         >
                             {cancelLabel}
                         </button>
@@ -169,7 +169,7 @@ export function ConfirmDialog({
                             onClick={onConfirm}
                             disabled={loading}
                             className={cn(
-                                'flex-1 sm:flex-none rounded-xl px-4 py-3 text-sm font-bold transition-colors focus:outline-none focus:ring-2 disabled:opacity-70 inline-flex items-center justify-center gap-2',
+                                'flex-1 sm:flex-none rounded-xl px-5 py-3 text-sm font-bold transition-colors focus:outline-none focus:ring-2 disabled:opacity-70 inline-flex items-center justify-center gap-2 whitespace-nowrap',
                                 isWarning
                                     ? 'bg-amber-400 text-black hover:bg-amber-500 focus:ring-amber-200'
                                     : 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-200',
