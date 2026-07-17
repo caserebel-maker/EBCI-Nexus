@@ -508,12 +508,16 @@ export async function startFieldTrip(payload: {
         return { error: 'กรุณาเช็คอินเข้าระบบก่อนแจ้งออกปฏิบัติงาน' }
     }
 
-    // Check if there's already an active (unreturned) field trip
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // Check if there's already an active (unreturned) field trip for today
     const { data: activeTrip } = await supabaseAdmin
         .from('field_trips')
         .select('id')
         .eq('employee_id', employeeId)
         .is('returned_at', null)
+        .gte('left_at', today.toISOString())
         .limit(1)
         .maybeSingle()
 
