@@ -622,7 +622,7 @@ export function CheckinView({
                                         <button
                                             onClick={handleMidDayReturn}
                                             disabled={loading}
-                                            className="flex-1 py-3 px-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-60 text-xs sm:text-sm"
+                                            className="flex-1 py-3.5 px-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex flex-col items-center justify-center gap-1.5 transition-all disabled:opacity-60 text-xs sm:text-sm"
                                         >
                                             {loading ? <Loader2 className="animate-spin shrink-0" size={16} /> : <Building className="shrink-0" size={16} />}
                                             <span>กลับถึงออฟฟิศ</span>
@@ -630,7 +630,7 @@ export function CheckinView({
                                         <button
                                             onClick={handleCheckout}
                                             disabled={loading}
-                                            className="flex-1 py-3 px-2 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-60 text-xs sm:text-sm"
+                                            className="flex-1 py-3.5 px-2 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold flex flex-col items-center justify-center gap-1.5 transition-all disabled:opacity-60 text-xs sm:text-sm"
                                         >
                                             {loading ? <Loader2 className="animate-spin shrink-0" size={16} /> : <LogOut className="shrink-0" size={16} />}
                                             <span>เช็คเอาท์/กลับบ้าน</span>
@@ -780,7 +780,7 @@ export function CheckinView({
                                 <button
                                     onClick={handleMidDayReturn}
                                     disabled={loading}
-                                    className="flex-1 py-3 px-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-60 text-xs sm:text-sm"
+                                    className="flex-1 py-3.5 px-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex flex-col items-center justify-center gap-1.5 transition-all disabled:opacity-60 text-xs sm:text-sm"
                                 >
                                     {loading ? <Loader2 className="animate-spin shrink-0" size={16} /> : <Building className="shrink-0" size={16} />}
                                     <span>กลับถึงออฟฟิศ</span>
@@ -788,7 +788,7 @@ export function CheckinView({
                                 <button
                                     onClick={handleCheckout}
                                     disabled={loading}
-                                    className="flex-1 py-3 px-2 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-60 text-xs sm:text-sm"
+                                    className="flex-1 py-3.5 px-2 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold flex flex-col items-center justify-center gap-1.5 transition-all disabled:opacity-60 text-xs sm:text-sm"
                                 >
                                     {loading ? <Loader2 className="animate-spin shrink-0" size={16} /> : <LogOut className="shrink-0" size={16} />}
                                     <span>เช็คเอาท์/กลับบ้าน</span>
