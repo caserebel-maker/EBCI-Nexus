@@ -89,6 +89,20 @@ export async function GET(req: NextRequest) {
                 console.error('[cron/auto-checkout] update failed:', row.id, updErr)
                 continue
             }
+
+            // Auto-close any unreturned field trips associated with this checkin
+            const { error: tripErr } = await supabaseAdmin
+                .from('field_trips')
+                .update({
+                    returned_at: computedCheckoutIso,
+                    auto_closed_at: now.toISOString(),
+                })
+                .eq('checkin_id', row.id)
+                .is('returned_at', null)
+            if (tripErr) {
+                console.error('[cron/auto-checkout] field trips auto-close failed for checkin:', row.id, tripErr)
+            }
+
             summary.closed++
 
             // Best-effort 🔔 — don't block the next row if this fails.
