@@ -317,40 +317,7 @@ export async function POST(req: NextRequest) {
     // ── Submit-time emails (approver + applicant) ──────────────────────────
     // Best-effort + parallel. Each job logs its own errors. Result flags
     // surface back to the client in case the UI wants to show "email
-    // failed, please contact HR" inline.
-    {
-        const emailCtx = {
-            referenceCode,
-            employeeName,
-            employeeEmail: employeeEmail ?? '',
-            approverName,
-            approverEmail: approverEmail ?? '',
-            approverInboxUrl,
-            leaveTypeTh: leaveType.name_th ?? 'ลา',
-            startDate,
-            endDate,
-            totalDays,
-            reason,
-        }
-        const jobs: Array<Promise<unknown>> = []
-        if (employeeEmail && employeeEmail.includes('@')) {
-            jobs.push(
-                sendLeaveSubmittedToEmployee(emailCtx)
-                    .then(r => { emailSent.employee = Boolean(r && 'success' in r && r.success) })
-                    .catch(err => console.error('[leave/submit] employee email threw:', err)),
-            )
-        }
-        if (approverEmail && approverEmail.includes('@')) {
-            jobs.push(
-                sendLeaveSubmittedToApprover(emailCtx)
-                    .then(r => { emailSent.approver = Boolean(r && 'success' in r && r.success) })
-                    .catch(err => console.error('[leave/submit] approver email threw:', err)),
-            )
-        }
-        await Promise.allSettled(jobs)
-    }
-
-    // Resolve delegate/backup approvers
+    // Resolve delegate/backup approvers (e.g. supervisor_id / co-approvers)
     const delegateIds = await getDelegateApproverIdsForApplicant(employeeId)
     const delegateApprovers: Array<{
         id: string
@@ -369,6 +336,63 @@ export async function POST(req: NextRequest) {
         if (delegates) {
             delegateApprovers.push(...delegates)
         }
+    }
+
+    // ── Email notification block (Primary + Co-approvers) ──────────────────
+    {
+        const jobs: Array<Promise<unknown>> = []
+        if (employeeEmail && employeeEmail.includes('@')) {
+            jobs.push(
+                sendLeaveSubmittedToEmployee({
+                    referenceCode,
+                    employeeName,
+                    employeeEmail: employeeEmail ?? '',
+                    approverName,
+                    approverEmail: approverEmail ?? '',
+                    approverInboxUrl,
+                    leaveTypeTh: leaveType.name_th ?? 'ลา',
+                    startDate,
+                    endDate,
+                    totalDays,
+                    reason,
+                })
+                    .then(r => { emailSent.employee = Boolean(r && 'success' in r && r.success) })
+                    .catch(err => console.error('[leave/submit] employee email threw:', err)),
+            )
+        }
+
+        // Send email to primary approver + all co-approvers / delegate approvers
+        const targetApproverEmails = new Set<string>()
+        if (approverEmail && approverEmail.includes('@')) {
+            targetApproverEmails.add(approverEmail)
+        }
+        for (const da of delegateApprovers) {
+            if (da.email && da.email.includes('@')) {
+                targetApproverEmails.add(da.email)
+            }
+        }
+
+        for (const targetEmail of targetApproverEmails) {
+            const emailCtx = {
+                referenceCode,
+                employeeName,
+                employeeEmail: employeeEmail ?? '',
+                approverName,
+                approverEmail: targetEmail,
+                approverInboxUrl,
+                leaveTypeTh: leaveType.name_th ?? 'ลา',
+                startDate,
+                endDate,
+                totalDays,
+                reason,
+            }
+            jobs.push(
+                sendLeaveSubmittedToApprover(emailCtx)
+                    .then(r => { emailSent.approver = Boolean(r && 'success' in r && r.success) })
+                    .catch(err => console.error('[leave/submit] approver email threw:', err)),
+            )
+        }
+        await Promise.allSettled(jobs)
     }
 
     // Collect all recipient user IDs for the pending approval notification

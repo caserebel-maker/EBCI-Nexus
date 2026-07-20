@@ -1,6 +1,7 @@
 import 'server-only'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { resolveLeaveApprover } from '@/lib/leave-approval'
+import { getDelegateApproverIdsForApplicant } from '@/lib/leave-delegate-approvers'
 import { bangkokTodayIso } from '@/lib/leave-validations'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
 import { findHrNotifyTargets } from '@/lib/hr-notify'
@@ -204,82 +205,133 @@ export async function submitWfhRequest(
     const applicantEmail = applicant?.email ?? null
     const approverEmail = approver.email ?? null
 
-    // ── Submit-time emails — ม๊อด's 8 พ.ค. spec: applicant + approver get
-    // email at submit. HR is in-app only (they have a dashboard). Each
-    // job is best-effort + parallel — never blocks the response.
-    const emailCtx = {
-        referenceCode,
-        employeeName: applicantName,
-        employeeEmail: applicantEmail ?? '',
-        approverName,
-        approverEmail,
-        startDate: input.startDate,
-        endDate: input.endDate,
-        totalDays,
-        reason,
-        contactDuringWfh: contact,
+    // Resolve delegate/backup approvers (e.g. supervisor_id / co-approvers)
+    const delegateIds = await getDelegateApproverIdsForApplicant(input.employeeId)
+    const delegateApprovers: Array<{
+        id: string
+        email: string | null
+        telegram_chat_id: string | null
+        user_id: string | null
+    }> = []
+    if (delegateIds.length > 0) {
+        const { data: delegates } = await supabaseAdmin
+            .from('employees')
+            .select('id, email, telegram_chat_id, user_id')
+            .in('id', delegateIds)
+        if (delegates) {
+            delegateApprovers.push(...delegates)
+        }
     }
 
-    // Fire notification jobs in parallel. Each job logs its own errors.
+    // ── Submit-time emails — applicant + approvers (primary + delegates) ──
     const jobs: Array<Promise<unknown>> = []
 
     // 0a. Applicant confirmation email
     if (applicantEmail && applicantEmail.includes('@')) {
+        const emailCtx = {
+            referenceCode,
+            employeeName: applicantName,
+            employeeEmail: applicantEmail ?? '',
+            approverName,
+            approverEmail: applicantEmail,
+            startDate: input.startDate,
+            endDate: input.endDate,
+            totalDays,
+            reason,
+            contactDuringWfh: contact,
+        }
         jobs.push(
             sendWfhSubmittedToEmployee(emailCtx)
                 .catch(err => console.error('[wfh] applicant email failed:', err)),
         )
     }
-    // 0b. Approver action-needed email
+
+    // 0b. Approver action-needed email (primary + co-approvers)
+    const targetWfhApproverEmails = new Set<string>()
     if (approverEmail && approverEmail.includes('@')) {
+        targetWfhApproverEmails.add(approverEmail)
+    }
+    for (const da of delegateApprovers) {
+        if (da.email && da.email.includes('@')) {
+            targetWfhApproverEmails.add(da.email)
+        }
+    }
+
+    for (const targetEmail of targetWfhApproverEmails) {
+        const emailCtx = {
+            referenceCode,
+            employeeName: applicantName,
+            employeeEmail: applicantEmail ?? '',
+            approverName,
+            approverEmail: targetEmail,
+            startDate: input.startDate,
+            endDate: input.endDate,
+            totalDays,
+            reason,
+            contactDuringWfh: contact,
+        }
         jobs.push(
             sendWfhSubmittedToApprover(emailCtx)
                 .catch(err => console.error('[wfh] approver email failed:', err)),
         )
     }
 
-    // 1. Approver in-app
-    jobs.push((async () => {
-        try {
-            const approverUserId = await getEmployeeUserId(approver.id)
-            if (!approverUserId) return
-            await createNotification({
-                recipient_user_id: approverUserId,
-                type: 'wfh_request_pending',
-                title: `${applicantNick} ขอ WFH`,
-                body: `${input.startDate === input.endDate ? input.startDate : `${input.startDate} → ${input.endDate}`} (${totalDays} วัน) — ${reason}`,
-                action_url: `/portal/wfh/inbox?ref=${encodeURIComponent(referenceCode)}`,
-                action_label: 'ดูรายละเอียด',
-                entity_type: 'wfh_request',
-                entity_id: inserted.id as string,
-                reference_code: referenceCode,
-                icon: 'Home',
-                color: 'amber',
-                sender_name: applicantNick,
-            })
-        } catch (err) {
-            console.error('[wfh] approver in-app notif failed:', err)
-        }
-    })())
+    // 1. Approver in-app (primary + delegates)
+    const targetWfhUserIds = new Set<string>()
+    const primaryUserId = await getEmployeeUserId(approver.id)
+    if (primaryUserId) targetWfhUserIds.add(primaryUserId)
+    for (const da of delegateApprovers) {
+        const daUserId = da.user_id || await getEmployeeUserId(da.id)
+        if (daUserId) targetWfhUserIds.add(daUserId)
+    }
 
-    // 1b. Approver Telegram — real-time action channel. Email above is
-    // still the official paper trail; Telegram is only for opt-in users.
-    jobs.push((async () => {
-        try {
-            if (!approver.telegram_chat_id) return
-            const dateLabel = input.startDate === input.endDate ? input.startDate : `${input.startDate} → ${input.endDate}`
-            const text = [
-                `🔔 <b>รออนุมัติ WFH</b>`,
-                `👤 ${escapeTelegramHtml(applicantNick)}`,
-                `📅 ${escapeTelegramHtml(dateLabel)} (${totalDays} วัน)`,
-                reason ? `📝 ${escapeTelegramHtml(reason.slice(0, 200))}` : '',
-                `<a href="https://ebci-nexus.vercel.app/portal/wfh/inbox?ref=${encodeURIComponent(referenceCode)}">เปิดกล่องอนุมัติใน Nexus →</a>`,
-            ].filter(Boolean).join('\n')
-            await sendTelegram({ chatId: approver.telegram_chat_id, text })
-        } catch (err) {
-            console.error('[wfh] approver telegram failed:', err)
-        }
-    })())
+    for (const recipientUserId of targetWfhUserIds) {
+        jobs.push((async () => {
+            try {
+                await createNotification({
+                    recipient_user_id: recipientUserId,
+                    type: 'wfh_request_pending',
+                    title: `${applicantNick} ขอ WFH`,
+                    body: `${input.startDate === input.endDate ? input.startDate : `${input.startDate} → ${input.endDate}`} (${totalDays} วัน) — ${reason}`,
+                    action_url: `/portal/wfh/inbox?ref=${encodeURIComponent(referenceCode)}`,
+                    action_label: 'ดูรายละเอียด',
+                    entity_type: 'wfh_request',
+                    entity_id: inserted.id as string,
+                    reference_code: referenceCode,
+                    icon: 'Home',
+                    color: 'amber',
+                    sender_name: applicantNick,
+                })
+            } catch (err) {
+                console.error('[wfh] approver in-app notif failed:', err)
+            }
+        })())
+    }
+
+    // 1b. Approver Telegram (primary + delegates)
+    const targetWfhTelegramChatIds = new Set<string>()
+    if (approver.telegram_chat_id) targetWfhTelegramChatIds.add(approver.telegram_chat_id)
+    for (const da of delegateApprovers) {
+        if (da.telegram_chat_id) targetWfhTelegramChatIds.add(da.telegram_chat_id)
+    }
+
+    for (const chatId of targetWfhTelegramChatIds) {
+        jobs.push((async () => {
+            try {
+                const dateLabel = input.startDate === input.endDate ? input.startDate : `${input.startDate} → ${input.endDate}`
+                const text = [
+                    `🔔 <b>รออนุมัติ WFH</b>`,
+                    `👤 ${escapeTelegramHtml(applicantNick)}`,
+                    `📅 ${escapeTelegramHtml(dateLabel)} (${totalDays} วัน)`,
+                    reason ? `📝 ${escapeTelegramHtml(reason.slice(0, 200))}` : '',
+                    `<a href="https://ebci-nexus.vercel.app/portal/wfh/inbox?ref=${encodeURIComponent(referenceCode)}">เปิดกล่องอนุมัติใน Nexus →</a>`,
+                ].filter(Boolean).join('\n')
+                await sendTelegram({ chatId, text })
+            } catch (err) {
+                console.error('[wfh] approver telegram failed:', err)
+            }
+        })())
+    }
 
     // 2. HR FYI — per-person in-app 🔔 only.
     // Telegram is intentionally skipped while the request is pending:
