@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
     Users, CalendarDays, Clock, AlertTriangle, TrendingUp,
-    CheckCircle, XCircle, Cake, Building2, Loader2, Megaphone, Gift, X, UserX
+    Cake, Building2, Loader2, Megaphone, Gift, X, UserX
 } from 'lucide-react'
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -61,6 +61,10 @@ interface Metrics {
     activeEmployees: number
     leavingToday: number
     pendingLeaves: number
+    pendingApprovals?: number
+    pendingLeaveRequests?: number
+    pendingLeaveCancellations?: number
+    pendingWfhRequests?: number
     expiringContracts: number
 }
 
@@ -92,6 +96,7 @@ interface Props {
     deptData: DeptDatum[]
     attendanceData: any[]
     pendingLeaves: any[]
+    pendingApprovals?: any[]
     contractsExpiring: any[]
     anniversaries: any[]
     weekDays: string[]
@@ -100,36 +105,6 @@ interface Props {
     newsAnnouncements: any[]
     birthdays: any[]
     canViewAttendanceInsights?: boolean
-}
-
-async function handleLeaveAction(id: string, action: 'approve' | 'reject') {
-    const res = await fetch('/api/hradmin/leave/force-action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-            action === 'reject'
-                ? {
-                    id,
-                    action: 'reject',
-                    reason: 'ปฏิเสธจากหน้ารวมอนุมัติ HR',
-                }
-                : {
-                    id,
-                    action: 'approve',
-                },
-        ),
-        cache: 'no-store',
-    })
-    let payload: any = null
-    try {
-        payload = await res.json()
-    } catch {
-        payload = null
-    }
-    if (!res.ok) {
-        throw new Error(payload?.error || 'ทำรายการไม่สำเร็จ')
-    }
-    return payload
 }
 
 function fullName(firstName: string, lastName: string, nickname?: string | null) {
@@ -602,76 +577,106 @@ function WeekCalendar({ weekDays, leavesToday, onDayClick }: {
     )
 }
 
-// ─── Pending Leave Row ────────────────────────────────────────────────────────
-function PendingRow({ lr, onDone }: { lr: any; onDone: (id: string) => void }) {
-    const router = useRouter()
-    const [isPending, start] = useTransition()
-    const [done, setDone] = useState<'approve' | 'reject' | null>(null)
-    const [error, setError] = useState<string | null>(null)
-    const detailHref = `/hradmin/leave?tab=requests&status=pending&request=${encodeURIComponent(lr.id)}`
-    const act = (action: 'approve' | 'reject') => {
-        setError(null)
-        start(async () => {
+// ─── Pending Approval Row ──────────────────────────────────────
+function pendingItemKey(item: any) {
+    return `${item.kind ?? 'leave'}-${item.id}`
+}
+
+function getLeaveTypeLabel(leaveType: any) {
+    if (!leaveType) return 'ลา'
+    if (typeof leaveType === 'string') return LEAVE_LABELS[leaveType] ?? leaveType
+    const key = leaveType.code ?? leaveType.id ?? leaveType.name
+    return leaveType.name_th ?? (key ? LEAVE_LABELS[key] ?? key : 'ลา')
+}
+
+function formatShortDate(date?: string | null) {
+    if (!date) return ''
+    try {
+        return new Date(date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
+    } catch {
+        return ''
+    }
+}
+
+function PendingRow({ item, onDone }: { item: any, onDone: (item: any) => void }) {
+    const [isPending, startTransition] = useTransition()
+    const isWfh = item.kind === 'wfh'
+    const isCancellation = !isWfh && item.status === 'cancellation_requested'
+    const empName = item.employee ? `${item.employee.first_name_th} ${item.employee.last_name_th}` : 'ไม่ทราบชื่อ'
+    const leaveTypeLabel = getLeaveTypeLabel(item.leave_type)
+    const dateLabel = isWfh
+        ? formatShortDate(item.date || item.start_date)
+        : formatShortDate(item.start_date)
+    const dayCount = Number(item.days_count ?? item.total_days ?? 1)
+    const detailHref = isWfh
+        ? `/hradmin/wfh/${item.id}`
+        : `/hradmin/leave?tab=requests&status=${isCancellation ? 'cancellation_requested' : 'pending'}&request=${item.id}`
+    const typeBadge = isWfh ? 'WFH' : isCancellation ? 'ยกเลิกลา' : leaveTypeLabel
+    const meta = isWfh
+        ? `ขอ WFH · ${dayCount} วัน${dateLabel ? ` · ${dateLabel}` : ''}`
+        : isCancellation
+            ? `ขอยกเลิก${leaveTypeLabel} · ${dayCount} วัน${dateLabel ? ` · ${dateLabel}` : ''}`
+            : `${leaveTypeLabel} · ${dayCount} วัน${dateLabel ? ` · ${dateLabel}` : ''}`
+
+    const handleLeaveAction = async (action: 'approve' | 'reject') => {
+        startTransition(async () => {
             try {
-                await handleLeaveAction(lr.id, action)
-                setDone(action)
-                onDone(lr.id)
-                router.refresh()
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'ทำรายการไม่สำเร็จ')
+                const res = await fetch('/api/hradmin/leave/force-action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: item.id, action }),
+                })
+                if (res.ok) {
+                    toast.success(action === 'approve' ? 'อนุมัติใบลาแล้ว' : 'ปฏิเสธใบลาแล้ว')
+                    onDone(item)
+                } else {
+                    const data = await res.json().catch(() => ({}))
+                    toast.error(data.error || 'ทำรายการไม่สำเร็จ')
+                }
+            } catch {
+                toast.error('เกิดข้อผิดพลาด')
             }
         })
     }
-    const name = lr.employee
-        ? fullName(lr.employee.first_name_th, lr.employee.last_name_th, lr.employee.nickname)
-        : lr.employee_id
-    if (done) {
-        return (
-            <div className="flex items-center gap-2 py-2 px-3 rounded-xl text-sm text-white/45 italic">
-                {done === 'approve'
-                    ? <><CheckCircle size={15} className="text-emerald-400" /> อนุมัติแล้ว</>
-                    : <><XCircle size={15} className="text-red-400" /> ปฏิเสธแล้ว</>}
-            </div>
-        )
-    }
-    if (error) {
-        return (
-            <div className="rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-sm text-red-100">
-                {error}
-            </div>
-        )
-    }
+
     return (
-        <div
-            role="button"
-            tabIndex={0}
-            onClick={() => router.push(detailHref)}
-            onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    router.push(detailHref)
-                }
-            }}
-            className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/70 transition-colors cursor-pointer group"
-            title="เปิดรายละเอียดใบลา"
-        >
-            <div className="flex-1 min-w-0">
-                <p className="text-base font-bold text-white truncate group-hover:text-amber-100">{name}</p>
-                <p className="text-sm text-white/50">
-                    {LEAVE_LABELS[lr.leave_type] ?? lr.leave_type} · {lr.total_days} วัน ·{' '}
-                    {new Date(lr.start_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
-                </p>
-                <p className="text-[11px] font-semibold text-amber-200/70 mt-0.5">ดูรายละเอียด →</p>
-            </div>
-            <div className="flex gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
-                <button onClick={(e) => { e.stopPropagation(); act('approve') }} disabled={isPending}
-                    className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 text-sm font-bold transition-colors disabled:opacity-40">
-                    {isPending ? <Loader2 size={13} className="animate-spin" /> : 'อนุมัติ'}
-                </button>
-                <button onClick={(e) => { e.stopPropagation(); act('reject') }} disabled={isPending}
-                    className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-red-300 text-sm font-bold transition-colors disabled:opacity-40">
-                    ปฏิเสธ
-                </button>
+        <div className="py-3 border-b border-white/10 last:border-0">
+            <div className="flex items-start gap-3">
+                <div className={cn(
+                    'h-2.5 w-2.5 rounded-full mt-2 shrink-0',
+                    isWfh ? 'bg-blue-300' : isCancellation ? 'bg-orange-300' : 'bg-yellow-300'
+                )} />
+                <div className="min-w-0 flex-1">
+                    <Link href={detailHref} className="block group">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-bold text-white truncate group-hover:text-yellow-200">{empName}</p>
+                            <span className="rounded-full bg-yellow-400/15 px-2 py-0.5 text-[11px] font-bold text-yellow-200">
+                                {typeBadge}
+                            </span>
+                        </div>
+                        <p className="mt-1 text-sm text-white/65">{meta}</p>
+                        <p className="mt-2 text-xs text-yellow-200/90">ดูรายละเอียด →</p>
+                    </Link>
+                </div>
+                {!isWfh && !isCancellation ? (
+                    <div className="flex gap-2 shrink-0">
+                        <button
+                            disabled={isPending}
+                            onClick={() => handleLeaveAction('approve')}
+                            className="px-3 py-2 rounded-lg bg-emerald-500/20 text-emerald-200 text-sm font-bold hover:bg-emerald-500/30 disabled:opacity-50"
+                        >อนุมัติ</button>
+                        <button
+                            disabled={isPending}
+                            onClick={() => handleLeaveAction('reject')}
+                            className="px-3 py-2 rounded-lg bg-rose-500/20 text-rose-200 text-sm font-bold hover:bg-rose-500/30 disabled:opacity-50"
+                        >ปฏิเสธ</button>
+                    </div>
+                ) : (
+                    <Link
+                        href={detailHref}
+                        className="shrink-0 rounded-lg bg-white/10 px-3 py-2 text-sm font-bold text-white/80 hover:bg-white/15"
+                    >เปิดดู</Link>
+                )}
             </div>
         </div>
     )
@@ -694,16 +699,25 @@ const MONTHS_TH = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', '�
 
 export function HRDashboard({
     metrics, attendanceStats, leaveChartData, deptData, attendanceData,
-    pendingLeaves, contractsExpiring, anniversaries,
+    pendingLeaves, pendingApprovals, contractsExpiring, anniversaries,
     weekDays, leavesToday, urgentBanners, newsAnnouncements, birthdays,
     canViewAttendanceInsights = false,
 }: Props) {
     const router = useRouter()
-    const [pending, setPending] = useState(pendingLeaves)
-    const removePending = (id: string) => setPending(prev => prev.filter(r => r.id !== id))
+    const initialPendingApprovals = pendingApprovals && pendingApprovals.length > 0 ? pendingApprovals : pendingLeaves
+    const [pending, setPending] = useState(initialPendingApprovals)
+    const removePending = (item: any) => setPending(prev => prev.filter(r => pendingItemKey(r) !== pendingItemKey(item)))
     const [selectedNews, setSelectedNews] = useState<any>(null)
     const [selectedDay, setSelectedDay] = useState<Date | null>(null)
-    const hasPendingLeaves = pending.length > 0
+    const pendingApprovalTotal = metrics.pendingApprovals ?? pending.length
+    const pendingLeaveRequestCount = metrics.pendingLeaveRequests ?? metrics.pendingLeaves
+    const pendingLeaveCancellationCount = metrics.pendingLeaveCancellations ?? 0
+    const pendingWfhRequestCount = metrics.pendingWfhRequests ?? 0
+    const hasPendingApprovals = pendingApprovalTotal > 0
+
+    useEffect(() => {
+        setPending(pendingApprovals && pendingApprovals.length > 0 ? pendingApprovals : pendingLeaves)
+    }, [pendingApprovals, pendingLeaves])
 
     return (
         <div className="space-y-6">
@@ -745,12 +759,12 @@ export function HRDashboard({
                 .pending-leave-glow {
                     position: relative;
                     border: 2px solid rgba(250, 204, 21, 0.72) !important;
-                    animation: pending-leave-card-pulse 1.05s ease-in-out infinite;
+                    animation: pending-leave-card-pulse 0.72s ease-in-out infinite;
                 }
                 .pending-leave-bounce {
                     animation:
-                        pending-leave-card-pulse 1.05s ease-in-out infinite,
-                        pending-leave-card-bounce 1.05s ease-in-out infinite;
+                        pending-leave-card-pulse 0.72s ease-in-out infinite,
+                        pending-leave-card-bounce 0.9s ease-in-out infinite;
                 }
                 .pending-leave-glow::after {
                     content: '';
@@ -798,9 +812,10 @@ export function HRDashboard({
                         <MetricCard title="ลาวันนี้" value={metrics.leavingToday}
                             sub="ได้รับอนุมัติแล้ว" icon={CalendarDays} accent="bg-gradient-to-br from-emerald-500 to-emerald-700"
                             href="/hradmin/leave/admin?filter=today" />
-                        <MetricCard title="รออนุมัติใบลา" value={metrics.pendingLeaves}
-                            sub="รายการ" icon={Clock} accent="bg-gradient-to-br from-amber-500 to-amber-700"
-                            href="/hradmin/leave/admin?status=pending" highlight={hasPendingLeaves} />
+                        <MetricCard title="งานรออนุมัติ" value={pendingApprovalTotal}
+                            sub={`ลา ${pendingLeaveRequestCount} · ยกเลิก ${pendingLeaveCancellationCount} · WFH ${pendingWfhRequestCount}`}
+                            icon={Clock} accent="bg-gradient-to-br from-amber-500 to-amber-700"
+                            href="#pending-approvals" highlight={hasPendingApprovals} />
                         <MetricCard title="สัญญาหมดใน 30 วัน" value={metrics.expiringContracts}
                             sub="คน" icon={AlertTriangle} accent="bg-gradient-to-br from-rose-500 to-rose-700"
                             href="/hradmin/employees?filter=contract-expiring" />
@@ -974,9 +989,13 @@ export function HRDashboard({
                     </div>
 
                     {/* Pending approvals */}
-                    <div style={glassStyle} className={cn('p-5', hasPendingLeaves && 'pending-leave-glow')}>
+                    <div
+                        id="pending-approvals"
+                        style={glassStyle}
+                        className={cn('p-5', hasPendingApprovals && 'pending-leave-glow')}
+                    >
                         <div className="flex items-center justify-between gap-3 mb-4">
-                            <SectionHeader title={`รออนุมัติใบลา (${pending.length})`} icon={Clock} className="mb-0" />
+                            <SectionHeader title={`งานรออนุมัติ (${pendingApprovalTotal})`} icon={Clock} className="mb-0" />
                             <button
                                 type="button"
                                 onClick={() => router.push('/hradmin/leave?tab=requests&status=pending')}
@@ -986,10 +1005,12 @@ export function HRDashboard({
                             </button>
                         </div>
                         {pending.length === 0 ? (
-                            <p className="text-sm text-white/30 italic text-center py-4">ไม่มีใบลารออนุมัติ</p>
+                            <p className="text-sm text-white/30 italic text-center py-4">ไม่มีงานรออนุมัติ</p>
                         ) : (
                             <div className="space-y-1">
-                                {pending.map(lr => <PendingRow key={lr.id} lr={lr} onDone={removePending} />)}
+                                {pending.map(item => (
+                                    <PendingRow key={pendingItemKey(item)} item={item} onDone={removePending} />
+                                ))}
                             </div>
                         )}
                     </div>

@@ -42,6 +42,7 @@ export default async function AdminDashboard() {
         { data: contractsExpiring },
         { data: leaveHistory },
         { data: pendingLeaves },
+        { data: pendingWfhRequests, count: pendingWfhTotal },
         { data: announcements },
         { data: newsAnnouncements },
     ] = await Promise.all([
@@ -58,7 +59,7 @@ export default async function AdminDashboard() {
 
         // Pending leaves count
         supabaseAdmin.from('leave_requests')
-            .select('id')
+            .select('id, status')
             .in('status', ['pending', 'cancellation_requested'])
             .gte('start_date', yearStart)
             .lt('start_date', nextYearStart),
@@ -76,14 +77,23 @@ export default async function AdminDashboard() {
             .gte('start_date', twelveMonthsAgo.toISOString())
             .eq('status', 'approved'),
 
-        // Pending leaves detail (5 latest)
+        // Pending leave actions (latest)
         supabaseAdmin.from('leave_requests')
-            .select('id, employee_id, leave_type:leave_type_id, start_date, end_date, total_days, reason, status, created_at')
+            .select('id, employee_id, leave_type:leave_type_id, start_date, end_date, total_days, reason, status, submitted_at, created_at, cancellation_reason, cancellation_requested_at')
             .in('status', ['pending', 'cancellation_requested'])
             .gte('start_date', yearStart)
             .lt('start_date', nextYearStart)
             .order('created_at', { ascending: false })
-            .limit(5),
+            .limit(10),
+
+        // Pending WFH actions (latest)
+        supabaseAdmin.from('wfh_requests')
+            .select('id, reference_code, employee_id, start_date, end_date, total_days, reason, status, submitted_at, created_at', { count: 'exact' })
+            .eq('status', 'pending')
+            .gte('start_date', yearStart)
+            .lt('start_date', nextYearStart)
+            .order('submitted_at', { ascending: false })
+            .limit(10),
 
         // Announcements for urgent banners
         supabaseAdmin.from('announcements').select('*')
@@ -228,12 +238,29 @@ export default async function AdminDashboard() {
         })
         .sort((a, b) => a.dobDay - b.dobDay)
 
-    // ─── Enrich pending leaves with employee names ───
+    // ─── Enrich pending approval work with employee names ───
     const empMap = Object.fromEntries((employees ?? []).map(e => [e.id, e]))
-    const pendingEnriched = (pendingLeaves ?? []).map(lr => ({
+    const pendingLeaveRows = (leavesPending ?? []) as Array<{ status: string | null }>
+    const pendingLeaveRequestCount = pendingLeaveRows.filter(lr => lr.status === 'pending').length
+    const pendingLeaveCancellationCount = pendingLeaveRows.filter(lr => lr.status === 'cancellation_requested').length
+    const pendingWfhCount = pendingWfhTotal ?? (pendingWfhRequests ?? []).length
+    const pendingLeaveEnriched = (pendingLeaves ?? []).map(lr => ({
         ...lr,
+        kind: 'leave' as const,
         employee: empMap[lr.employee_id] ?? null,
     }))
+    const pendingWfhEnriched = (pendingWfhRequests ?? []).map(wfh => ({
+        ...wfh,
+        kind: 'wfh' as const,
+        employee: empMap[wfh.employee_id] ?? null,
+    }))
+    const pendingApprovalItems = [...pendingLeaveEnriched, ...pendingWfhEnriched]
+        .sort((a: any, b: any) => {
+            const timeOf = (item: any) => new Date(item.cancellation_requested_at ?? item.submitted_at ?? item.created_at ?? '1970-01-01').getTime()
+            return timeOf(b) - timeOf(a)
+        })
+        .slice(0, 6)
+    const pendingApprovalTotal = pendingLeaveRequestCount + pendingLeaveCancellationCount + pendingWfhCount
 
     const leavesTodayEnriched = (leavesToday ?? []).map(lr => ({
         ...lr,
@@ -316,14 +343,19 @@ export default async function AdminDashboard() {
                 totalEmployees: (employees ?? []).filter(e => !e.is_advisor).length,
                 activeEmployees: (employees ?? []).filter(e => e.status === 'active' && !e.is_advisor).length,
                 leavingToday: (leavesToday ?? []).length,
-                pendingLeaves: (leavesPending ?? []).length,
+                pendingLeaves: pendingLeaveRequestCount,
+                pendingApprovals: pendingApprovalTotal,
+                pendingLeaveRequests: pendingLeaveRequestCount,
+                pendingLeaveCancellations: pendingLeaveCancellationCount,
+                pendingWfhRequests: pendingWfhCount,
                 expiringContracts: (contractsExpiring ?? []).length,
             }}
             attendanceStats={attendanceStats}
             leaveChartData={leaveChartData}
             deptData={deptData}
             attendanceData={attendanceData}
-            pendingLeaves={pendingEnriched}
+            pendingLeaves={pendingLeaveEnriched}
+            pendingApprovals={pendingApprovalItems}
             contractsExpiring={contractsExpiring ?? []}
             anniversaries={anniversaries}
             weekDays={weekDays.map(d => d.toISOString())}
