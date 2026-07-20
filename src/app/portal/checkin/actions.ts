@@ -85,6 +85,16 @@ const LATE_TIER3_MIN = 60   // > 60 min = manager notified
  *  ("ประชุม ABC", "ส่งของ X"). */
 const FIELD_NOTE_MIN_LENGTH = 5
 
+
+function getBangkokTodayUtcRange() {
+    const today = bangkokTodayIso()
+    return {
+        start: new Date(`${today}T00:00:00+07:00`).toISOString(),
+        end: new Date(`${today}T23:59:59.999+07:00`).toISOString(),
+        dateKey: today,
+    }
+}
+
 export async function checkIn(payload: CheckInPayload) {
     const employeeId = await getEmployeeId()
     if (!employeeId) {
@@ -193,14 +203,16 @@ export async function checkIn(payload: CheckInPayload) {
         return { error: `กรุณาระบุปลายทาง/เหตุผลอย่างน้อย ${FIELD_NOTE_MIN_LENGTH} ตัวอักษร (เช่น "ประชุม ABC ที่บางนา")` }
     }
 
-    // Guard: 1 check-in per day (Option 1 — strict)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    // Guard: 1 check-in per Bangkok calendar day (Option 1 — strict).
+    // Vercel runs in UTC, so `new Date().setHours(0...)` would start at
+    // 07:00 Bangkok and miss early check-ins between 00:00-06:59.
+    const todayRange = getBangkokTodayUtcRange()
     const { data: openCheckin } = await supabaseAdmin
         .from('checkins')
         .select('id')
         .eq('employee_id', employeeId)
-        .gte('checked_in_at', today.toISOString())
+        .gte('checked_in_at', todayRange.start)
+        .lte('checked_in_at', todayRange.end)
         .maybeSingle()
 
     if (openCheckin) {
@@ -332,16 +344,16 @@ export async function checkIn(payload: CheckInPayload) {
 }
 
 async function getOrCreateCheckinForCardScan(employeeId: string) {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    
-    // Find open check-in
+    const todayRange = getBangkokTodayUtcRange()
+
+    // Find open check-in for the Bangkok calendar day.
     const { data: openCheckin } = await supabaseAdmin
         .from('checkins')
         .select('id')
         .eq('employee_id', employeeId)
         .is('checked_out_at', null)
-        .gte('checked_in_at', today.toISOString())
+        .gte('checked_in_at', todayRange.start)
+        .lte('checked_in_at', todayRange.end)
         .order('checked_in_at', { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -351,8 +363,7 @@ async function getOrCreateCheckinForCardScan(employeeId: string) {
     }
 
     // No open checkin in app. Check card scans for today.
-    const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit' })
-    const bkkToday = formatter.format(new Date()) // YYYY-MM-DD
+    const bkkToday = todayRange.dateKey
     const dayStart = `${bkkToday}T00:00:00`
     const dayEnd = `${bkkToday}T23:59:59.999`
 
@@ -393,23 +404,22 @@ export async function checkOut() {
         return { error: 'ไม่พบข้อมูลพนักงาน' }
     }
 
-    // Find open checkin today
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    // Find open check-in for the Bangkok calendar day.
+    const todayRange = getBangkokTodayUtcRange()
     let { data: openCheckin } = await supabaseAdmin
         .from('checkins')
         .select('id')
         .eq('employee_id', employeeId)
         .is('checked_out_at', null)
-        .gte('checked_in_at', today.toISOString())
+        .gte('checked_in_at', todayRange.start)
+        .lte('checked_in_at', todayRange.end)
         .order('checked_in_at', { ascending: false })
         .limit(1)
         .maybeSingle()
 
     // If no open checkin in checkins table, check card scans today
     if (!openCheckin) {
-        const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit' })
-        const bkkToday = formatter.format(new Date()) // YYYY-MM-DD
+        const bkkToday = todayRange.dateKey
         const dayStart = `${bkkToday}T00:00:00`
         const dayEnd = `${bkkToday}T23:59:59.999`
 
@@ -470,14 +480,14 @@ export async function getTodayCheckin() {
     const employeeId = await getEmployeeId()
     if (!employeeId) return null
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const todayRange = getBangkokTodayUtcRange()
 
     const { data } = await supabaseAdmin
         .from('checkins')
         .select('*')
         .eq('employee_id', employeeId)
-        .gte('checked_in_at', today.toISOString())
+        .gte('checked_in_at', todayRange.start)
+        .lte('checked_in_at', todayRange.end)
         .order('checked_in_at', { ascending: false })
         .limit(1)
         .maybeSingle()
@@ -565,14 +575,14 @@ export async function getTodayFieldTrip() {
     const employeeId = await getEmployeeId()
     if (!employeeId) return null
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const todayRange = getBangkokTodayUtcRange()
 
     const { data } = await supabaseAdmin
         .from('field_trips')
         .select('*')
         .eq('employee_id', employeeId)
-        .gte('left_at', today.toISOString())
+        .gte('left_at', todayRange.start)
+        .lte('left_at', todayRange.end)
         .order('left_at', { ascending: false })
         .limit(1)
         .maybeSingle()
