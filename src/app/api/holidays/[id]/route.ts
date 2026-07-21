@@ -14,11 +14,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!date || !name || !type)
         return NextResponse.json({ error: 'กรุณากรอกข้อมูลให้ครบ' }, { status: 400 })
 
-    const year = parseInt(date.substring(0, 4))
-
     const { data, error } = await supabaseAdmin
         .from('holidays')
-        .update({ date, name, type, year })
+        .update({ date, name, type })
         .eq('id', id)
         .select()
         .single()

@@ -32,11 +32,9 @@ export async function POST(req: NextRequest) {
     if (!date || !name || !type)
         return NextResponse.json({ error: 'กรุณากรอกข้อมูลให้ครบ' }, { status: 400 })
 
-    const year = parseInt(date.substring(0, 4))
-
     const { data, error } = await supabaseAdmin
         .from('holidays')
-        .insert({ date, name, type, year })
+        .insert({ date, name, type })
         .select()
         .single()
 

@@ -110,7 +110,6 @@ export async function POST(req: NextRequest) {
             // calendar UI; full text lives on the announcement.
             name: `WFH — ${reasonText.slice(0, 60)}${reasonText.length > 60 ? '…' : ''}`,
             type: 'wfh',
-            year: parseInt(d.slice(0, 4), 10),
         }))
         const { error: holErr } = await supabaseAdmin.from('holidays').insert(rows)
         if (holErr) {
