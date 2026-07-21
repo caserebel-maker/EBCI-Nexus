@@ -1,10 +1,14 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { DoorOpen, Plus, X, Clock, Users, FileText, Trash2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { useState, useTransition, useMemo } from 'react'
+import {
+    DoorOpen, Plus, X, Clock, Users, FileText, Trash2, Loader2,
+    CheckCircle2, AlertCircle, Calendar as CalendarIcon, List,
+    ChevronLeft, ChevronRight, CalendarDays
+} from 'lucide-react'
 import { createBooking, cancelBooking } from './actions'
 import type { RoomBooking } from './constants'
-import { formatBangkokTime, formatBangkokDateTime } from '@/lib/datetime'
+import { formatBangkokTime } from '@/lib/datetime'
 
 const glass: React.CSSProperties = {
     background: 'rgba(255,255,255,0.06)',
@@ -14,14 +18,38 @@ const glass: React.CSSProperties = {
     borderRadius: '16px',
 }
 
-const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+const TH_FULL_MONTHS = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+]
+const TH_SHORT_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+const WEEKDAYS_TH = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.']
+
+function toYmd(d: Date): string {
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+}
+
+function getTodayYmd(): string {
+    return toYmd(new Date())
+}
 
 function formatThaiDateShort(iso: string): string {
     const d = new Date(iso)
     if (isNaN(d.getTime())) return iso
     const day = d.getDate()
-    const m = TH_MONTHS[d.getMonth()]
+    const m = TH_SHORT_MONTHS[d.getMonth()]
     return `${day} ${m}`
+}
+
+function formatFullThaiDate(isoYmd: string): string {
+    const [y, m, d] = isoYmd.split('-').map(Number)
+    if (!y || !m || !d) return isoYmd
+    const thaiYear = y + 543
+    const monthName = TH_FULL_MONTHS[m - 1] ?? ''
+    return `${d} ${monthName} ${thaiYear}`
 }
 
 function formatTimeRange(startsAt: string, endsAt: string): string {
@@ -37,13 +65,12 @@ function isSameDay(a: string, b: string): boolean {
 }
 
 function todayDateInputValue(): string {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return getTodayYmd()
 }
 
 function maxDateInputValue(daysAhead: number): string {
     const d = new Date(Date.now() + daysAhead * 24 * 60 * 60 * 1000)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return toYmd(d)
 }
 
 interface Props {
@@ -53,25 +80,80 @@ interface Props {
     mine: RoomBooking[]
     currentEmployeeId: string | null
     isHrAdmin: boolean
-    /** When true the page renders as an HR audit view: hides "my bookings",
-        relabels the main list as "ทุกการจอง", and surfaces cancelled rows
-        too (employee mode only renders active upcoming bookings). */
     hrAuditMode?: boolean
 }
 
 export function MeetingRoomView({ roomName, horizonDays, upcoming, mine, currentEmployeeId, isHrAdmin, hrAuditMode = false }: Props) {
+    const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
     const [showForm, setShowForm] = useState(false)
+    const [initialFormDate, setInitialFormDate] = useState<string | null>(null)
     const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
+
+    // Calendar state
+    const today = new Date()
+    const [currentYear, setCurrentYear] = useState(today.getFullYear())
+    const [currentMonth, setCurrentMonth] = useState(today.getMonth()) // 0 - 11
+    const [selectedDateIso, setSelectedDateIso] = useState<string>(getTodayYmd())
 
     const showToast = (type: 'success' | 'error', msg: string) => {
         setToast({ type, msg })
         setTimeout(() => setToast(null), 4000)
     }
 
+    const handlePrevMonth = () => {
+        if (currentMonth === 0) {
+            setCurrentMonth(11)
+            setCurrentYear(y => y - 1)
+        } else {
+            setCurrentMonth(m => m - 1)
+        }
+    }
+
+    const handleNextMonth = () => {
+        if (currentMonth === 11) {
+            setCurrentMonth(0)
+            setCurrentYear(y => y + 1)
+        } else {
+            setCurrentMonth(m => m + 1)
+        }
+    }
+
+    const handleGoToday = () => {
+        const now = new Date()
+        setCurrentYear(now.getFullYear())
+        setCurrentMonth(now.getMonth())
+        setSelectedDateIso(toYmd(now))
+    }
+
+    // Map bookings by date YYYY-MM-DD
+    const bookingsByDate = useMemo(() => {
+        const map = new Map<string, RoomBooking[]>()
+        for (const b of upcoming) {
+            if (b.cancelled_at && !hrAuditMode) continue
+            // Extract local Bangkok YYYY-MM-DD from starts_at
+            const dateStr = toYmd(new Date(b.starts_at))
+            if (!map.has(dateStr)) {
+                map.set(dateStr, [])
+            }
+            map.get(dateStr)!.push(b)
+        }
+        return map
+    }, [upcoming, hrAuditMode])
+
+    // Bookings on the selected date
+    const selectedDateBookings = useMemo(() => {
+        return bookingsByDate.get(selectedDateIso) ?? []
+    }, [bookingsByDate, selectedDateIso])
+
+    const handleOpenCreateForm = (prefillDate?: string) => {
+        setInitialFormDate(prefillDate || selectedDateIso || todayDateInputValue())
+        setShowForm(true)
+    }
+
     return (
         <div className="space-y-5">
             {/* Header */}
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2">
                         <DoorOpen className="w-6 h-6 text-amber-200" />
@@ -81,12 +163,40 @@ export function MeetingRoomView({ roomName, horizonDays, upcoming, mine, current
                         {roomName} · จองล่วงหน้าได้ {horizonDays} วัน
                     </p>
                 </div>
-                <button
-                    onClick={() => setShowForm(true)}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-400 text-[#561e23] font-bold text-sm shadow-lg active:scale-95 transition"
-                >
-                    <Plus className="w-4 h-4" /> จองห้อง
-                </button>
+                <div className="flex items-center gap-3 self-start sm:self-auto">
+                    {/* View Switcher */}
+                    <div className="flex items-center p-1 rounded-xl bg-black/30 border border-white/12 text-xs font-semibold">
+                        <button
+                            onClick={() => setViewMode('calendar')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                                viewMode === 'calendar'
+                                    ? 'bg-amber-400 text-[#561e23] shadow-md font-bold'
+                                    : 'text-white/70 hover:text-white'
+                            }`}
+                        >
+                            <CalendarIcon className="w-3.5 h-3.5" />
+                            ปฏิทิน
+                        </button>
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                                viewMode === 'list'
+                                    ? 'bg-amber-400 text-[#561e23] shadow-md font-bold'
+                                    : 'text-white/70 hover:text-white'
+                            }`}
+                        >
+                            <List className="w-3.5 h-3.5" />
+                            รายการ
+                        </button>
+                    </div>
+
+                    <button
+                        onClick={() => handleOpenCreateForm()}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-400 text-[#561e23] font-bold text-sm shadow-lg active:scale-95 transition"
+                    >
+                        <Plus className="w-4 h-4" /> จองห้อง
+                    </button>
+                </div>
             </div>
 
             {/* My bookings (if any) — hidden in HR audit view */}
@@ -112,43 +222,161 @@ export function MeetingRoomView({ roomName, horizonDays, upcoming, mine, current
                 </section>
             )}
 
-            {/* Upcoming (everyone's) */}
-            <section className="space-y-2">
-                <h2 className="text-white/85 font-semibold text-sm">
-                    {hrAuditMode
-                        ? `ทุกการจอง (30 วันที่ผ่านมา + ${horizonDays} วันข้างหน้า)`
-                        : `คิวห้องประชุม ${horizonDays} วันข้างหน้า`}
-                </h2>
-                {upcoming.length === 0 ? (
-                    <div className="p-6 text-center text-white/55 text-sm" style={glass}>
-                        {hrAuditMode ? 'ยังไม่มีรายการจองในช่วงนี้' : 'ยังไม่มีใครจอง — ห้องว่างทั้งสัปดาห์'}
+            {/* CALENDAR VIEW MODE */}
+            {viewMode === 'calendar' ? (
+                <div className="space-y-4">
+                    {/* Calendar Card */}
+                    <div className="p-4 sm:p-5" style={glass}>
+                        {/* Month Navigator Header */}
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <CalendarDays className="w-5 h-5 text-amber-300" />
+                                <h2 className="text-lg font-bold text-white">
+                                    {TH_FULL_MONTHS[currentMonth]} {currentYear + 543}
+                                </h2>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleGoToday}
+                                    className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-white/80 hover:text-white text-xs font-medium border border-white/15 transition"
+                                >
+                                    วันนี้
+                                </button>
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        onClick={handlePrevMonth}
+                                        className="p-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white/80 hover:text-white border border-white/15 transition"
+                                        title="เดือนก่อนหน้า"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={handleNextMonth}
+                                        className="p-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white/80 hover:text-white border border-white/15 transition"
+                                        title="เดือนถัดไป"
+                                    >
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Weekday Labels */}
+                        <div className="grid grid-cols-7 gap-1 text-center mb-1">
+                            {WEEKDAYS_TH.map((wd, i) => (
+                                <div
+                                    key={wd}
+                                    className={`py-1.5 text-xs font-semibold ${
+                                        i === 0 || i === 6 ? 'text-amber-300/70' : 'text-white/60'
+                                    }`}
+                                >
+                                    {wd}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Month Grid Cells */}
+                        <MonthGrid
+                            year={currentYear}
+                            month={currentMonth}
+                            selectedDateIso={selectedDateIso}
+                            bookingsByDate={bookingsByDate}
+                            onSelectDate={(iso) => setSelectedDateIso(iso)}
+                        />
                     </div>
-                ) : (
-                    <div className="space-y-2">
-                        {upcoming.map(b => (
-                            <BookingRow
-                                key={b.id}
-                                booking={b}
-                                canCancel={
-                                    !b.cancelled_at
-                                    && new Date(b.ends_at) > new Date()
-                                    && (b.booked_by_employee_id === currentEmployeeId || isHrAdmin)
-                                }
-                                onCancelled={(msg) => showToast('success', msg)}
-                                onError={(msg) => showToast('error', msg)}
-                                tone="public"
-                            />
-                        ))}
+
+                    {/* Selected Date Schedule Detail Panel */}
+                    <div className="p-4 sm:p-5 space-y-3" style={glass}>
+                        <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-3">
+                            <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-amber-300" />
+                                <h3 className="font-bold text-white text-base">
+                                    รายการจองวันที่ {formatFullThaiDate(selectedDateIso)}
+                                </h3>
+                                {selectedDateBookings.length > 0 && (
+                                    <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-200 border border-amber-400/30 text-xs font-semibold">
+                                        {selectedDateBookings.length} รายการ
+                                    </span>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => handleOpenCreateForm(selectedDateIso)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-[#561e23] font-bold text-xs shadow transition active:scale-95"
+                            >
+                                <Plus className="w-3.5 h-3.5" /> จองวันนี้
+                            </button>
+                        </div>
+
+                        {selectedDateBookings.length === 0 ? (
+                            <div className="py-6 px-4 text-center text-white/55 text-sm space-y-3">
+                                <p className="font-medium text-white/70">ยังไม่มีรายการจองในวันนี้ (ห้องประชุมว่างทั้งวัน)</p>
+                                <button
+                                    onClick={() => handleOpenCreateForm(selectedDateIso)}
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-amber-200 border border-amber-300/30 font-semibold text-xs transition"
+                                >
+                                    <Plus className="w-3.5 h-3.5" /> คลิกเพื่อจองห้องประชุมสำหรับวันนี้
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-2 pt-1">
+                                {selectedDateBookings.map(b => (
+                                    <BookingRow
+                                        key={b.id}
+                                        booking={b}
+                                        canCancel={
+                                            !b.cancelled_at
+                                            && new Date(b.ends_at) > new Date()
+                                            && (b.booked_by_employee_id === currentEmployeeId || isHrAdmin)
+                                        }
+                                        onCancelled={(msg) => showToast('success', msg)}
+                                        onError={(msg) => showToast('error', msg)}
+                                        tone={b.booked_by_employee_id === currentEmployeeId ? 'own' : 'public'}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
-                )}
-            </section>
+                </div>
+            ) : (
+                /* LIST VIEW MODE */
+                <section className="space-y-2">
+                    <h2 className="text-white/85 font-semibold text-sm">
+                        {hrAuditMode
+                            ? `ทุกการจอง (30 วันที่ผ่านมา + ${horizonDays} วันข้างหน้า)`
+                            : `คิวห้องประชุม ${horizonDays} วันข้างหน้า`}
+                    </h2>
+                    {upcoming.length === 0 ? (
+                        <div className="p-6 text-center text-white/55 text-sm" style={glass}>
+                            {hrAuditMode ? 'ยังไม่มีรายการจองในช่วงนี้' : 'ยังไม่มีใครจอง — ห้องว่างทั้งสัปดาห์'}
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {upcoming.map(b => (
+                                <BookingRow
+                                    key={b.id}
+                                    booking={b}
+                                    canCancel={
+                                        !b.cancelled_at
+                                        && new Date(b.ends_at) > new Date()
+                                        && (b.booked_by_employee_id === currentEmployeeId || isHrAdmin)
+                                    }
+                                    onCancelled={(msg) => showToast('success', msg)}
+                                    onError={(msg) => showToast('error', msg)}
+                                    tone={b.booked_by_employee_id === currentEmployeeId ? 'own' : 'public'}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </section>
+            )}
 
             {showForm && (
                 <BookingFormModal
                     horizonDays={horizonDays}
                     roomName={roomName}
-                    onClose={() => setShowForm(false)}
-                    onSuccess={() => { setShowForm(false); showToast('success', 'จองห้องเรียบร้อย') }}
+                    initialDate={initialFormDate}
+                    onClose={() => { setShowForm(false); setInitialFormDate(null); }}
+                    onSuccess={() => { setShowForm(false); setInitialFormDate(null); showToast('success', 'จองห้องเรียบร้อย'); }}
                     onError={(msg) => showToast('error', msg)}
                 />
             )}
@@ -173,6 +401,124 @@ export function MeetingRoomView({ roomName, horizonDays, upcoming, mine, current
                     </div>
                 </div>
             )}
+        </div>
+    )
+}
+
+function MonthGrid({
+    year,
+    month,
+    selectedDateIso,
+    bookingsByDate,
+    onSelectDate,
+}: {
+    year: number
+    month: number
+    selectedDateIso: string
+    bookingsByDate: Map<string, RoomBooking[]>
+    onSelectDate: (iso: string) => void
+}) {
+    const todayYmd = getTodayYmd()
+
+    // Build days array for 6-week grid
+    const days = useMemo(() => {
+        const firstDayOfMonth = new Date(year, month, 1)
+        const startingWeekday = firstDayOfMonth.getDay() // 0 = Sun, 6 = Sat
+        const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+        const list: Array<{ date: Date; iso: string; inCurrentMonth: boolean }> = []
+
+        // Previous month padding
+        const prevMonthLastDate = new Date(year, month, 0).getDate()
+        for (let i = startingWeekday - 1; i >= 0; i--) {
+            const d = new Date(year, month - 1, prevMonthLastDate - i)
+            list.push({ date: d, iso: toYmd(d), inCurrentMonth: false })
+        }
+
+        // Current month days
+        for (let day = 1; day <= daysInMonth; day++) {
+            const d = new Date(year, month, day)
+            list.push({ date: d, iso: toYmd(d), inCurrentMonth: true })
+        }
+
+        // Next month padding to complete 35 or 42 grid cells
+        const remaining = (list.length > 35 ? 42 : 35) - list.length
+        for (let day = 1; day <= remaining; day++) {
+            const d = new Date(year, month + 1, day)
+            list.push({ date: d, iso: toYmd(d), inCurrentMonth: false })
+        }
+
+        return list
+    }, [year, month])
+
+    return (
+        <div className="grid grid-cols-7 gap-1">
+            {days.map(({ date, iso, inCurrentMonth }) => {
+                const isToday = iso === todayYmd
+                const isSelected = iso === selectedDateIso
+                const dayBookings = bookingsByDate.get(iso) ?? []
+                const activeBookings = dayBookings.filter(b => !b.cancelled_at)
+                const hasBookings = activeBookings.length > 0
+
+                return (
+                    <button
+                        key={iso}
+                        onClick={() => onSelectDate(iso)}
+                        className={`min-h-[64px] sm:min-h-[76px] p-1 sm:p-1.5 rounded-xl flex flex-col justify-between text-left transition-all relative overflow-hidden border ${
+                            isSelected
+                                ? 'bg-amber-500/25 border-amber-400 text-white shadow-lg'
+                                : inCurrentMonth
+                                ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white/90'
+                                : 'bg-black/20 text-white/30 border-transparent hover:bg-white/5'
+                        } ${isToday ? 'ring-2 ring-amber-400' : ''}`}
+                    >
+                        {/* Day Number Header */}
+                        <div className="flex items-center justify-between w-full">
+                            <span
+                                className={`text-xs sm:text-sm font-bold px-1 py-0.5 rounded-md ${
+                                    isToday
+                                        ? 'bg-amber-400 text-[#561e23]'
+                                        : isSelected
+                                        ? 'text-amber-200 font-extrabold'
+                                        : ''
+                                }`}
+                            >
+                                {date.getDate()}
+                            </span>
+                            {hasBookings && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-amber-400 text-[#561e23]">
+                                    {activeBookings.length}
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Bookings Preview inside cell */}
+                        <div className="w-full space-y-0.5 mt-1 hidden sm:block">
+                            {activeBookings.slice(0, 2).map(b => (
+                                <div
+                                    key={b.id}
+                                    className="text-[10px] leading-tight px-1 py-0.5 rounded bg-amber-500/20 text-amber-200 border border-amber-400/30 truncate"
+                                    title={`${formatTimeRange(b.starts_at, b.ends_at)} ${b.title} (${b.booked_by_name})`}
+                                >
+                                    <span className="font-semibold">{formatBangkokTime(b.starts_at)}</span> {b.title}
+                                </div>
+                            ))}
+                            {activeBookings.length > 2 && (
+                                <div className="text-[9px] text-amber-300/80 font-medium px-1">
+                                    + อีก {activeBookings.length - 2} รายการ
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Mobile indicator dots */}
+                        <div className="flex items-center gap-1 sm:hidden mt-1 justify-center w-full">
+                            {hasBookings && (
+                                <div className="w-2 h-2 rounded-full bg-amber-400 shadow-sm" />
+                            )}
+                        </div>
+                    </button>
+                )
+            })}
         </div>
     )
 }
@@ -229,7 +575,7 @@ function BookingRow({
             <div className="flex-1 min-w-0">
                 <div className="font-semibold text-white text-[15px] truncate">{booking.title}</div>
                 <div className="text-white/65 text-xs mt-1 flex items-center gap-1.5">
-                    <Users className="w-3 h-3" /> {booking.booked_by_name}
+                    <Users className="w-3 h-3 text-amber-200/80 shrink-0" /> {booking.booked_by_name}
                 </div>
                 {booking.attendees && (
                     <div className="text-white/55 text-xs mt-1 truncate">
@@ -249,7 +595,7 @@ function BookingRow({
                 <button
                     onClick={handleCancel}
                     disabled={pending}
-                    className="shrink-0 p-2 rounded-lg text-rose-300 hover:bg-rose-500/15 disabled:opacity-50"
+                    className="shrink-0 p-2 rounded-lg text-rose-300 hover:bg-rose-500/15 disabled:opacity-50 transition"
                     title="ยกเลิกการจอง"
                 >
                     {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
@@ -262,19 +608,21 @@ function BookingRow({
 function BookingFormModal({
     horizonDays,
     roomName,
+    initialDate,
     onClose,
     onSuccess,
     onError,
 }: {
     horizonDays: number
     roomName: string
+    initialDate?: string | null
     onClose: () => void
     onSuccess: () => void
     onError: (msg: string) => void
 }) {
     const [pending, startTransition] = useTransition()
     const [title, setTitle] = useState('')
-    const [date, setDate] = useState(todayDateInputValue())
+    const [date, setDate] = useState(initialDate || todayDateInputValue())
     const [startTime, setStartTime] = useState('09:00')
     const [endTime, setEndTime] = useState('10:00')
     const [attendees, setAttendees] = useState('')

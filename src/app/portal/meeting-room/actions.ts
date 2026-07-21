@@ -38,15 +38,15 @@ async function resolveBooker() {
 }
 
 export async function listUpcomingBookings(): Promise<RoomBooking[]> {
-    const horizonMs = BOOKING_HORIZON_DAYS * 24 * 60 * 60 * 1000
-    const cutoff = new Date(Date.now() + horizonMs).toISOString()
+    const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    const cutoff = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
 
     const { data, error } = await supabaseAdmin
         .from('room_bookings')
         .select('id, title, notes, attendees, starts_at, ends_at, booked_by_employee_id, booked_by_name, cancelled_at, cancelled_by_name, cancellation_reason, created_at')
         .is('cancelled_at', null)
+        .gte('ends_at', from)
         .lte('starts_at', cutoff)
-        .gte('ends_at', new Date().toISOString())
         .order('starts_at', { ascending: true })
 
     if (error) {
