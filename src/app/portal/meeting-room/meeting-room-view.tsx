@@ -4,7 +4,7 @@ import { useState, useTransition, useMemo } from 'react'
 import {
     DoorOpen, Plus, X, Clock, Users, FileText, Trash2, Loader2,
     CheckCircle2, AlertCircle, Calendar as CalendarIcon, List,
-    ChevronLeft, ChevronRight, CalendarDays
+    ChevronLeft, ChevronRight, CalendarDays, Eye
 } from 'lucide-react'
 import { createBooking, cancelBooking } from './actions'
 import type { RoomBooking } from './constants'
@@ -89,6 +89,9 @@ export function MeetingRoomView({ roomName, horizonDays, upcoming, mine, current
     const [initialFormDate, setInitialFormDate] = useState<string | null>(null)
     const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
 
+    // Quick Tooltip Popover State
+    const [activeTooltipIso, setActiveTooltipIso] = useState<string | null>(null)
+
     // Calendar state
     const today = new Date()
     const [currentYear, setCurrentYear] = useState(today.getFullYear())
@@ -130,7 +133,6 @@ export function MeetingRoomView({ roomName, horizonDays, upcoming, mine, current
         const map = new Map<string, RoomBooking[]>()
         for (const b of upcoming) {
             if (b.cancelled_at && !hrAuditMode) continue
-            // Extract local Bangkok YYYY-MM-DD from starts_at
             const dateStr = toYmd(new Date(b.starts_at))
             if (!map.has(dateStr)) {
                 map.set(dateStr, [])
@@ -145,9 +147,24 @@ export function MeetingRoomView({ roomName, horizonDays, upcoming, mine, current
         return bookingsByDate.get(selectedDateIso) ?? []
     }, [bookingsByDate, selectedDateIso])
 
+    // Bookings for active tooltip modal
+    const activeTooltipBookings = useMemo(() => {
+        if (!activeTooltipIso) return []
+        return bookingsByDate.get(activeTooltipIso) ?? []
+    }, [bookingsByDate, activeTooltipIso])
+
     const handleOpenCreateForm = (prefillDate?: string) => {
         setInitialFormDate(prefillDate || selectedDateIso || todayDateInputValue())
         setShowForm(true)
+    }
+
+    const handleSelectDateFromGrid = (iso: string) => {
+        setSelectedDateIso(iso)
+        const dateBookings = bookingsByDate.get(iso) ?? []
+        const activeCount = dateBookings.filter(b => !b.cancelled_at).length
+        if (activeCount > 0) {
+            setActiveTooltipIso(iso)
+        }
     }
 
     return (
@@ -281,7 +298,7 @@ export function MeetingRoomView({ roomName, horizonDays, upcoming, mine, current
                             month={currentMonth}
                             selectedDateIso={selectedDateIso}
                             bookingsByDate={bookingsByDate}
-                            onSelectDate={(iso) => setSelectedDateIso(iso)}
+                            onSelectDate={handleSelectDateFromGrid}
                         />
                     </div>
 
@@ -368,6 +385,19 @@ export function MeetingRoomView({ roomName, horizonDays, upcoming, mine, current
                         </div>
                     )}
                 </section>
+            )}
+
+            {/* Quick Tooltip Popover Modal */}
+            {activeTooltipIso && activeTooltipBookings.length > 0 && (
+                <QuickBookingTooltipModal
+                    iso={activeTooltipIso}
+                    bookings={activeTooltipBookings}
+                    onClose={() => setActiveTooltipIso(null)}
+                    onOpenCreateForm={(iso) => {
+                        setActiveTooltipIso(null)
+                        handleOpenCreateForm(iso)
+                    }}
+                />
             )}
 
             {showForm && (
@@ -464,13 +494,18 @@ function MonthGrid({
                     <button
                         key={iso}
                         onClick={() => onSelectDate(iso)}
-                        className={`min-h-[64px] sm:min-h-[76px] p-1 sm:p-1.5 rounded-xl flex flex-col justify-between text-left transition-all relative overflow-hidden border ${
+                        className={`min-h-[64px] sm:min-h-[76px] p-1 sm:p-1.5 rounded-xl flex flex-col justify-between text-left transition-all relative overflow-hidden border group ${
                             isSelected
                                 ? 'bg-amber-500/25 border-amber-400 text-white shadow-lg'
                                 : inCurrentMonth
-                                ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white/90'
+                                ? 'bg-white/5 hover:bg-white/12 border-white/10 text-white/90'
                                 : 'bg-black/20 text-white/30 border-transparent hover:bg-white/5'
                         } ${isToday ? 'ring-2 ring-amber-400' : ''}`}
+                        title={
+                            hasBookings
+                                ? `${formatThaiDateShort(iso)} (${activeBookings.length} รายการจอง): ${activeBookings.map(b => `${formatBangkokTime(b.starts_at)} ${b.title} (${b.booked_by_name})`).join(', ')}`
+                                : formatThaiDateShort(iso)
+                        }
                     >
                         {/* Day Number Header */}
                         <div className="flex items-center justify-between w-full">
@@ -486,7 +521,7 @@ function MonthGrid({
                                 {date.getDate()}
                             </span>
                             {hasBookings && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-amber-400 text-[#561e23]">
+                                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-amber-400 text-[#561e23] shadow-sm">
                                     {activeBookings.length}
                                 </span>
                             )}
@@ -498,7 +533,6 @@ function MonthGrid({
                                 <div
                                     key={b.id}
                                     className="text-[10px] leading-tight px-1 py-0.5 rounded bg-amber-500/20 text-amber-200 border border-amber-400/30 truncate"
-                                    title={`${formatTimeRange(b.starts_at, b.ends_at)} ${b.title} (${b.booked_by_name})`}
                                 >
                                     <span className="font-semibold">{formatBangkokTime(b.starts_at)}</span> {b.title}
                                 </div>
@@ -519,6 +553,107 @@ function MonthGrid({
                     </button>
                 )
             })}
+        </div>
+    )
+}
+
+function QuickBookingTooltipModal({
+    iso,
+    bookings,
+    onClose,
+    onOpenCreateForm,
+}: {
+    iso: string
+    bookings: RoomBooking[]
+    onClose: () => void
+    onOpenCreateForm: (dateIso: string) => void
+}) {
+    const activeBookings = bookings.filter(b => !b.cancelled_at)
+
+    return (
+        <div
+            className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150"
+            onClick={onClose}
+        >
+            <div
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-md p-5 rounded-2xl space-y-4 shadow-2xl border border-amber-400/40 max-h-[85vh] overflow-y-auto"
+                style={{
+                    background: 'rgba(56,18,22,0.92)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                }}
+            >
+                {/* Tooltip Header */}
+                <div className="flex items-start justify-between border-b border-white/15 pb-3">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-amber-400/20 text-amber-300 flex items-center justify-center border border-amber-400/40 shrink-0">
+                            <CalendarDays className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-white text-base">รายการจองห้องประชุม</h3>
+                            <p className="text-amber-200 text-xs font-semibold mt-0.5">
+                                วันที่ {formatFullThaiDate(iso)} ({activeBookings.length} รายการ)
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                {/* List of bookings */}
+                <div className="space-y-2.5">
+                    {activeBookings.map(b => (
+                        <div
+                            key={b.id}
+                            className="p-3.5 rounded-xl bg-white/8 border border-white/12 space-y-1.5"
+                        >
+                            <div className="flex items-center justify-between gap-2">
+                                <span className="px-2.5 py-0.5 rounded-md bg-amber-400/20 text-amber-200 text-xs font-bold border border-amber-400/30">
+                                    {formatTimeRange(b.starts_at, b.ends_at)} น.
+                                </span>
+                                <span className="text-white/75 text-xs font-medium truncate">
+                                    ผู้จอง: <strong className="text-white">{b.booked_by_name}</strong>
+                                </span>
+                            </div>
+                            <div className="font-bold text-white text-[15px] pt-0.5">
+                                {b.title}
+                            </div>
+                            {b.attendees && (
+                                <div className="text-white/75 text-xs flex items-start gap-1.5">
+                                    <Users className="w-3.5 h-3.5 mt-0.5 text-amber-300 shrink-0" />
+                                    <span>ผู้ร่วม: <strong className="text-white/90">{b.attendees}</strong></span>
+                                </div>
+                            )}
+                            {b.notes && (
+                                <div className="text-white/70 text-xs bg-black/25 p-2 rounded-lg border border-white/5">
+                                    หมายเหตุ: {b.notes}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 pt-2 border-t border-white/15">
+                    <button
+                        onClick={() => onOpenCreateForm(iso)}
+                        className="flex-1 py-2.5 rounded-xl bg-amber-400 text-[#561e23] font-bold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition"
+                    >
+                        <Plus className="w-4 h-4" /> จองเพิ่มสำหรับวันนี้
+                    </button>
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2.5 rounded-xl bg-white/10 text-white font-medium text-xs hover:bg-white/15 transition"
+                    >
+                        ปิดหน้าต่าง
+                    </button>
+                </div>
+            </div>
         </div>
     )
 }
