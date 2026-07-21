@@ -22,34 +22,38 @@ const YEARS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - 1 + i)
 // (chip + label + emoji). The grid itself uses CELL_PALETTE below
 // (Mod's 4 May call: solid bg + day# is more legible than emoji-row).
 const TYPE_CONFIG: Record<string, { label: string; color: string; emoji: string }> = {
-    public:    { label: 'นักขัตฤกษ์',      color: '#F87171', emoji: '🇹🇭' },
-    religious: { label: 'วันสำคัญทางศาสนา', color: '#F472B6', emoji: '🛕' },
-    company:   { label: 'บริษัทกำหนด',     color: '#22C55E', emoji: '📌' },
-    wfh:       { label: 'WFH',             color: '#60A5FA', emoji: '🏠' },
-    work:      { label: 'วันทำงาน (ออฟฟิศ)', color: '#C084FC', emoji: '🏢' },
+    public:    { label: 'นักขัตฤกษ์',          color: '#F87171', emoji: '🇹🇭' },
+    religious: { label: 'วันสำคัญทางศาสนา',    color: '#F472B6', emoji: '🛕' },
+    special:   { label: 'วันหยุดพิเศษ',        color: '#FB923C', emoji: '🎉' },
+    company:   { label: 'บริษัทกำหนด (วันหยุด)', color: '#22C55E', emoji: '📌' },
+    work:      { label: 'วันทำงาน (เข้าออฟฟิศ)', color: '#C084FC', emoji: '🏢' },
+    wfh:       { label: 'วันทำงาน (WFH)',      color: '#60A5FA', emoji: '🏠' },
 }
 
 // Cell-bg palette for the GRID. Same scheme as the portal calendar
-// (sync if you change one — they're conceptually the same legend
-// even though the data sources differ; HR sees only holidays/WFH).
-type CellKind = 'public' | 'religious' | 'company' | 'wfh' | 'work'
+type CellKind = 'public' | 'religious' | 'special' | 'company' | 'wfh' | 'work'
 const CELL_PALETTE: Record<CellKind, { bg: string; text: string; label: string }> = {
     public:    { bg: '#F4F4F5', text: '#000000', label: 'นักขัตฤกษ์' },
     religious: { bg: '#FBBF24', text: '#000000', label: 'วันสำคัญทางศาสนา' },
+    special:   { bg: '#FB923C', text: '#FFFFFF', label: 'วันหยุดพิเศษ' },
     company:   { bg: '#22C55E', text: '#07130C', label: 'บริษัทกำหนด' },
-    wfh:       { bg: '#2563EB', text: '#FFFFFF', label: 'WFH' },
-    work:      { bg: '#9333EA', text: '#FFFFFF', label: 'วันทำงาน (ออฟฟิศ)' },
+    work:      { bg: '#9333EA', text: '#FFFFFF', label: 'วันทำงาน (เข้าออฟฟิศ)' },
+    wfh:       { bg: '#2563EB', text: '#FFFFFF', label: 'วันทำงาน (WFH)' },
 }
-const CELL_PRIORITY: CellKind[] = ['public', 'religious', 'company', 'wfh', 'work']
+const CELL_PRIORITY: CellKind[] = ['public', 'religious', 'special', 'company', 'work', 'wfh']
 function holidayTypeToCellKind(t: string): CellKind {
-    if (t === 'public' || t === 'religious' || t === 'company' || t === 'wfh' || t === 'work') return t
-    return 'company'  // unknown → fall back so it still paints something
+    if (t === 'public' || t === 'religious' || t === 'special' || t === 'company' || t === 'wfh' || t === 'work') return t
+    if (t === 'workday' || t === 'office' || t === 'office_workday') return 'work'
+    if (t === 'special_holiday') return 'special'
+    return 'company'
 }
 const TYPE_OPTIONS: Array<{ value: string; label: string }> = [
     { value: 'public',    label: 'นักขัตฤกษ์ (วันหยุด)' },
     { value: 'religious', label: 'วันสำคัญทางศาสนา (วันหยุด)' },
-    { value: 'company',   label: 'บริษัทกำหนด (วันหยุด)' },
-    { value: 'wfh',       label: 'WFH (ทำงานที่บ้าน)' },
+    { value: 'special',   label: 'วันหยุดพิเศษ (วันหยุด)' },
+    { value: 'company',   label: 'บริษัทกำหนด (วันหยุดประจำสัปดาห์)' },
+    { value: 'work',      label: 'วันทำงาน (เข้าออฟฟิศ)' },
+    { value: 'wfh',       label: 'วันทำงาน (WFH)' },
 ]
 
 const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
@@ -111,8 +115,9 @@ export default function HolidaysPage() {
         if (!form.date || !form.name) return
         setSaving(true)
         try {
-            const url = editTarget ? `/api/holidays/${editTarget.id}` : '/api/holidays'
-            const method = editTarget ? 'PUT' : 'POST'
+            const isVirtualSat = editTarget && editTarget.id.startsWith('sat-')
+            const url = editTarget && !isVirtualSat ? `/api/holidays/${editTarget.id}` : '/api/holidays'
+            const method = editTarget && !isVirtualSat ? 'PUT' : 'POST'
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },

@@ -28,11 +28,12 @@ const THAI_DOWS = ['อาทิตย์','จันทร์','อังคา
 // hard to scan because some emojis blend into the maroon page bg
 // and the icons stretched cell heights inconsistently).
 const HOLIDAY_CONFIG: Record<string, { label: string; color: string; emoji: string }> = {
-    public:    { label: 'นักขัตฤกษ์',      color: '#F87171', emoji: '🇹🇭' },
-    religious: { label: 'วันสำคัญทางศาสนา', color: '#F472B6', emoji: '🛕' },
-    company:   { label: 'บริษัทกำหนด',     color: '#22C55E', emoji: '📌' },
-    wfh:       { label: 'WFH',             color: '#60A5FA', emoji: '🏠' },
-    work:      { label: 'วันทำงาน (ออฟฟิศ)', color: '#C084FC', emoji: '🏢' },
+    public:    { label: 'นักขัตฤกษ์',          color: '#F87171', emoji: '🇹🇭' },
+    religious: { label: 'วันสำคัญทางศาสนา',    color: '#F472B6', emoji: '🛕' },
+    special:   { label: 'วันหยุดพิเศษ',        color: '#FB923C', emoji: '🎉' },
+    company:   { label: 'บริษัทกำหนด',         color: '#22C55E', emoji: '📌' },
+    wfh:       { label: 'WFH',                 color: '#60A5FA', emoji: '🏠' },
+    work:      { label: 'วันทำงาน (เข้าออฟฟิศ)', color: '#C084FC', emoji: '🏢' },
 }
 
 // Leave types — same as above, used by the modal not the grid.
@@ -49,42 +50,31 @@ const LEAVE_CONFIG: Record<string, { label: string; color: string; emoji: string
 }
 
 // CELL palette — what shows in the calendar GRID (cell bg color).
-// 2026-07-03: keep company holidays green and personal leave as a green outline.
-// Mod-defined colour scheme:
-//   public    → ขาว     (highest priority, all-company off day)
-//   religious → เหลือง
-//   company   → เขียวเต็ม
-//   wfh       → น้ำเงิน
-//   leave     → กรอบเขียว (any leave type the user has)
-//   booking   → ชมพู
-//
-// Priority: when a cell has multiple kinds, the FIRST one in
-// CELL_PRIORITY wins as the bg. The others render as small accent
-// dots in the cell's bottom-right corner so the user still sees
-// "this day has multiple things going on".
-type CellKind = 'public' | 'religious' | 'company' | 'wfh' | 'work' | 'leave' | 'booking' | 'teamLeave'
+type CellKind = 'public' | 'religious' | 'special' | 'company' | 'wfh' | 'work' | 'leave' | 'booking' | 'teamLeave'
 
 const CELL_PALETTE: Record<CellKind, { bg: string; text: string; label: string }> = {
     public:    { bg: '#F4F4F5', text: '#000000', label: 'นักขัตฤกษ์' },     // white / black
     religious: { bg: '#FBBF24', text: '#000000', label: 'วันสำคัญทางศาสนา' }, // yellow / black
+    special:   { bg: '#FB923C', text: '#FFFFFF', label: 'วันหยุดพิเศษ' },     // orange / white
     company:   { bg: '#22C55E', text: '#07130C', label: 'บริษัทกำหนด' },     // green / dark
     wfh:       { bg: '#2563EB', text: '#FFFFFF', label: 'WFH' },             // rich blue / white
-    work:      { bg: '#9333EA', text: '#FFFFFF', label: 'วันทำงาน (ออฟฟิศ)' }, // vibrant purple / white
+    work:      { bg: '#9333EA', text: '#FFFFFF', label: 'วันทำงาน (เข้าออฟฟิศ)' }, // vibrant purple / white
     leave:     { bg: '#34D399', text: '#34D399', label: 'ใบลา' },            // green outline
     booking:   { bg: '#EC4899', text: '#FFFFFF', label: 'จองห้องประชุม' },   // pink / white
     teamLeave: { bg: '#8B5CF6', text: '#A78BFA', label: 'วันลาของทีม' },     // purple dashed outline
 }
 
-const CELL_PRIORITY: CellKind[] = ['public', 'religious', 'company', 'wfh', 'work', 'leave', 'booking', 'teamLeave']
+const CELL_PRIORITY: CellKind[] = ['public', 'religious', 'special', 'company', 'wfh', 'work', 'leave', 'booking', 'teamLeave']
 
 /** Map a holidays.type value to a CellKind (or null if not a calendar
  *  bg-painter — defensive for legacy/imported types we don't render). */
 function holidayTypeToCellKind(holidayType: string): CellKind | null {
     if (holidayType === 'public') return 'public'
     if (holidayType === 'religious') return 'religious'
+    if (holidayType === 'special' || holidayType === 'special_holiday') return 'special'
     if (holidayType === 'company') return 'company'
     if (holidayType === 'wfh') return 'wfh'
-    if (holidayType === 'work') return 'work'
+    if (holidayType === 'work' || holidayType === 'workday' || holidayType === 'office') return 'work'
     return 'company'  // unknown → treat as "company-set" so it still paints
 }
 
