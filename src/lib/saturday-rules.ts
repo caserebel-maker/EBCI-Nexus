@@ -41,6 +41,34 @@ export function isHolidaySaturday(dateInput: Date | string): boolean {
     return idx === 2 || idx === 4 || idx === 5;
 }
 
+export function normalizeHolidayType(type: string | null | undefined): string {
+    if (!type) return ''
+    if (type === 'workday' || type === 'office' || type === 'office_workday') return 'work'
+    if (type === 'special_holiday') return 'special'
+    return type
+}
+
+export function isWorkingCalendarType(type: string | null | undefined): boolean {
+    const normalized = normalizeHolidayType(type)
+    return normalized === 'work' || normalized === 'wfh'
+}
+
+export function isNonWorkingCalendarType(type: string | null | undefined): boolean {
+    const normalized = normalizeHolidayType(type)
+    return Boolean(normalized) && !isWorkingCalendarType(normalized)
+}
+
+export function isWorkingDateByCalendar(dateKey: string, type?: string | null): boolean {
+    if (isWorkingCalendarType(type)) return true
+    if (isNonWorkingCalendarType(type)) return false
+
+    const date = new Date(`${dateKey}T00:00:00Z`)
+    const day = date.getUTCDay()
+    if (day === 0) return false
+    if (day === 6) return isWorkdaySaturday(dateKey)
+    return true
+}
+
 export function getSaturdaysForYear(year: number): SaturdayHoliday[] {
     const holidays: SaturdayHoliday[] = []
     
