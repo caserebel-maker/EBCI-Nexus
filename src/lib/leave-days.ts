@@ -1,3 +1,5 @@
+import { isWorkingDateByCalendar } from './saturday-rules'
+
 /** Date-only helpers for leave day counting. */
 export function toEpochDay(date: string): number {
     const [year, month, day] = date.split('-').map(Number)
@@ -6,19 +8,22 @@ export function toEpochDay(date: string): number {
 }
 
 export function isWeekendEpochDay(epochDay: number): boolean {
-    // 1970-01-01 was Thursday. 0 = Sunday, 6 = Saturday.
-    const dayOfWeek = (epochDay + 4) % 7
-    return dayOfWeek === 0 || dayOfWeek === 6
+    const dateObj = new Date(epochDay * 86400000)
+    const dateKey = dateObj.toISOString().slice(0, 10)
+    return !isWorkingDateByCalendar(dateKey)
 }
 
 /**
- * Count working days inclusive between start and end, excluding Saturday/Sunday.
- * Half-day leaves always count as 0.5 and should be restricted to one date by UI/API.
+ * Count working days inclusive between start and end, taking into account:
+ * - Saturday rules (1st & 3rd Saturday are workdays, 2nd, 4th, 5th Saturday are holidays)
+ * - Sunday is always a non-working weekend
+ * - Company calendar DB overrides (e.g. 25 July 2026 set to 'work' or 'wfh', or Mon-Fri set to holiday)
  */
 export function calculateWorkingLeaveDays(
     startDate: string,
     endDate: string,
     isHalfDay: boolean,
+    holidaysMap?: Map<string, string> | Record<string, string>,
 ): number {
     if (isHalfDay) return 0.5
     const start = toEpochDay(startDate)
@@ -27,7 +32,21 @@ export function calculateWorkingLeaveDays(
 
     let count = 0
     for (let day = start; day <= end; day += 1) {
-        if (!isWeekendEpochDay(day)) count += 1
+        const dateObj = new Date(day * 86400000)
+        const dateKey = dateObj.toISOString().slice(0, 10)
+
+        let holidayType: string | undefined = undefined
+        if (holidaysMap) {
+            if (holidaysMap instanceof Map) {
+                holidayType = holidaysMap.get(dateKey)
+            } else {
+                holidayType = holidaysMap[dateKey]
+            }
+        }
+
+        if (isWorkingDateByCalendar(dateKey, holidayType)) {
+            count += 1
+        }
     }
     return count
 }

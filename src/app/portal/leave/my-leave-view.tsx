@@ -196,8 +196,8 @@ function todayBangkokIso(): string {
     const now = new Date(Date.now() + 7 * 60 * 60 * 1000)
     return now.toISOString().slice(0, 10)
 }
-function daysInclusive(start: string, end: string, half: boolean): number {
-    return calculateWorkingLeaveDays(start, end, half)
+function daysInclusive(start: string, end: string, half: boolean, holidaysMap?: Map<string, string>): number {
+    return calculateWorkingLeaveDays(start, end, half, holidaysMap)
 }
 
 // ── Main view ─────────────────────────────────────────────────────────────────
@@ -209,6 +209,7 @@ export function MyLeaveView({ year }: Props) {
     const [balances, setBalances] = useState<BalanceEntry[]>([])
     const [requests, setRequests] = useState<LeaveRequest[]>([])
     const [drafts, setDrafts] = useState<LeaveDraft[]>([])
+    const [holidaysMap, setHolidaysMap] = useState<Map<string, string>>(new Map())
     const [loading, setLoading] = useState(true)
     const [err, setErr] = useState<string | null>(null)
     const [tab, setTab] = useState<StatusFilter>('all')
@@ -227,10 +228,11 @@ export function MyLeaveView({ year }: Props) {
         setErr(null)
         setLoading(true)
         try {
-            const [balRes, reqRes, draftRes] = await Promise.all([
+            const [balRes, reqRes, draftRes, holRes] = await Promise.all([
                 fetch(`/api/leave/balance/${year}`, { cache: 'no-store' }),
                 fetch('/api/leave/my', { cache: 'no-store' }),
                 fetch('/api/leave/draft', { cache: 'no-store' }),
+                fetch(`/api/holidays?year=${year}`, { cache: 'no-store' }),
             ])
             if (!balRes.ok) throw new Error('โหลดยอดวันลาไม่สำเร็จ')
             if (!reqRes.ok) throw new Error('โหลดประวัติการลาไม่สำเร็จ')
@@ -239,6 +241,14 @@ export function MyLeaveView({ year }: Props) {
             // Drafts are best-effort — a failure to load drafts shouldn't
             // block the page (user can still file a fresh leave).
             const draftJson = draftRes.ok ? await draftRes.json() : { items: [] }
+            const holJson = holRes.ok ? await holRes.json() : { data: [] }
+            const hMap = new Map<string, string>()
+            if (Array.isArray(holJson.data)) {
+                for (const h of holJson.data) {
+                    hMap.set(h.date, h.type)
+                }
+            }
+            setHolidaysMap(hMap)
             setBalances((balJson.balances ?? []).sort((a: BalanceEntry, b: BalanceEntry) => a.display_order - b.display_order))
             setRequests(reqJson.items ?? [])
             setDrafts(draftJson.items ?? [])
@@ -355,6 +365,7 @@ export function MyLeaveView({ year }: Props) {
             {formOpen && (
                 <NewLeaveModal
                     balances={balances}
+                    holidaysMap={holidaysMap}
                     initialDraft={formOpen === 'new' ? null : formOpen}
                     onClose={() => setFormOpen(false)}
                     onDraftChange={() => { void loadAll() }}
@@ -988,9 +999,10 @@ interface ApproverChainStep {
 }
 
 function NewLeaveModal({
-    balances, onClose, onSuccess, initialDraft, onDraftChange,
+    balances, holidaysMap, onClose, onSuccess, initialDraft, onDraftChange,
 }: {
     balances: BalanceEntry[]
+    holidaysMap?: Map<string, string>
     onClose: () => void
     onSuccess: (msg: string) => void
     /** §2.4 — when set, hydrate state from this draft and update the
@@ -1144,7 +1156,7 @@ function NewLeaveModal({
     }, [selectedTypeId, startDate, endDate, isHalfDay, halfDayPeriod, reason, contact, step, saveDraft])
 
     const selectedType = balances.find(b => b.leave_type_id === selectedTypeId) ?? null
-    const totalDays = startDate && endDate ? daysInclusive(startDate, endDate, isHalfDay) : 0
+    const totalDays = startDate && endDate ? daysInclusive(startDate, endDate, isHalfDay, holidaysMap) : 0
 
     const attachmentRequired = requiresAttachmentForSelection(selectedType, totalDays)
 
@@ -1669,6 +1681,19 @@ function Step1TypePicker({
                                 <Paperclip size={12} /> ต้องแนบเอกสาร
                             </p>
                         )}
+                    </div>
+                    <div className="mt-3 rounded-lg border border-amber-300/45 bg-amber-300/12 px-3 py-2.5 text-amber-50 shadow-[0_0_18px_rgba(252,211,77,0.12)]">
+                        <div className="flex items-start gap-2.5">
+                            <AlertCircle size={16} className="mt-0.5 shrink-0 text-amber-200" />
+                            <div className="min-w-0">
+                                <p className="text-sm font-black leading-snug text-amber-100">
+                                    ข้อควรระวัง: ลาเช้า แล้วบ่าย WFH
+                                </p>
+                                <p className="mt-1 text-xs font-semibold leading-relaxed text-amber-50/85">
+                                    หากลาครึ่งวันเช้า แล้วช่วงบ่ายจะทำงานจากบ้าน ต้องยื่นคำขอ WFH ของวันเดียวกันเพิ่มอีกใบก่อนเช็คอิน WFH เพราะใบลาและ WFH เป็นคนละรายการกัน
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

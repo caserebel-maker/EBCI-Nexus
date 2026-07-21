@@ -211,10 +211,25 @@ export async function POST(req: NextRequest) {
 
         if (!employee) return NextResponse.json({ error: 'ไม่พบข้อมูลพนักงาน' }, { status: 404 })
 
-        // Calculate working days
-        const totalDays = calculateWorkingLeaveDays(startDate, endDate, Boolean(isHalfDay))
+        // Calculate working days with holidays from DB
+        const startYear = start.getFullYear()
+        const endYear = end.getFullYear()
+        const { data: dbHolidays } = await supabaseAdmin
+            .from('holidays')
+            .select('date, type')
+            .gte('year', startYear)
+            .lte('year', endYear)
+
+        const holidaysMap = new Map<string, string>()
+        if (dbHolidays) {
+            for (const h of dbHolidays) {
+                holidaysMap.set(h.date, h.type)
+            }
+        }
+
+        const totalDays = calculateWorkingLeaveDays(startDate, endDate, Boolean(isHalfDay), holidaysMap)
         if (totalDays <= 0) {
-            return NextResponse.json({ error: 'ช่วงวันที่เลือกไม่มีวันทำงาน กรุณาเลือกวันจันทร์-ศุกร์' }, { status: 400 })
+            return NextResponse.json({ error: 'ช่วงวันที่เลือกไม่มีวันทำงาน กรุณาเลือกวันทำงาน' }, { status: 400 })
         }
 
         // Generate reference code
