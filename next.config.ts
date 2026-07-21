@@ -3,10 +3,7 @@ import type { NextConfig } from "next";
 // `eslint` exists at runtime in Next 16 but the published `NextConfig`
 // type drops it on certain channels — cast through a wider shape so
 // the config compiles without losing the option.
-const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },

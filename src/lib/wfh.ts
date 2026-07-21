@@ -466,7 +466,7 @@ export async function cancelWfhRequest(input: {
                     `📅 ${escapeTelegramHtml(dateLabel)} (${Number(existing.total_days)} วัน)`,
                     cancelReason ? `📝 เหตุผลที่ยกเลิก: ${escapeTelegramHtml(cancelReason.slice(0, 200))}` : '',
                     originalReason ? `เหตุผลเดิม: ${escapeTelegramHtml(originalReason.slice(0, 200))}` : '',
-                    `<a href="https://ebci-nexus.vercel.app/portal/wfh/inbox?ref=${encodeURIComponent(referenceCode)}">เปิดกล่องอนุมัติใน Nexus →</a>`,
+                    `<a href="https://ebci-nexus.vercel.app/portal/wfh/inbox?ref=${encodeURIComponent((existing as any).reference_code ?? existing.id)}">เปิดกล่องอนุมัติใน Nexus →</a>`,
                 ].filter(Boolean).join('\n')
                 sendTelegram({ chatId: approverChatId, text })
                     .catch(err => console.error('[wfh] cancel approver telegram failed:', err))
