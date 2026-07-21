@@ -39,7 +39,7 @@ export default async function AnnouncementsListPage({
             : `${supabaseUrl}/storage/v1/object/public/announcement-images/${imagePath}`
     }
 
-    const toViewItem = (a: any, creatorMap: Map<string, string>) => ({
+    const toViewItem = (a: any, creatorMap: Record<string, string>) => ({
         ...a,
         imageUrl: resolveImage(a.image_path as string | null),
         creator_name: displayCreator(a.created_by as string | null, creatorMap),
