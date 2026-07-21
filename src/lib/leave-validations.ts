@@ -13,6 +13,7 @@ export interface ValidateLeaveArgs {
     balance: LeaveBalanceRow | null
     employeeId: string
     todayBangkokIso: string // YYYY-MM-DD in Bangkok
+    holidaysMap?: Map<string, string> | Record<string, string>
 }
 
 export type ValidationResult =
@@ -168,12 +169,30 @@ export async function validateLeaveRequest(
         }
     }
 
-    const totalDays = calculateLeaveDays(startDate, endDate, isHalfDay)
+    let holidaysMap = args.holidaysMap
+    if (!holidaysMap) {
+        const startYear = new Date(startDate).getFullYear()
+        const endYear = new Date(endDate).getFullYear()
+        const { data: dbHolidays } = await supabaseAdmin
+            .from('holidays')
+            .select('date, type')
+            .gte('year', startYear)
+            .lte('year', endYear)
+        const map = new Map<string, string>()
+        if (dbHolidays) {
+            for (const h of dbHolidays) {
+                map.set(h.date, h.type)
+            }
+        }
+        holidaysMap = map
+    }
+
+    const totalDays = calculateWorkingLeaveDays(startDate, endDate, isHalfDay, holidaysMap)
     if (totalDays <= 0) {
         return {
             ok: false,
             field: 'date',
-            error: 'ช่วงวันที่เลือกไม่มีวันทำงาน กรุณาเลือกวันจันทร์-ศุกร์',
+            error: 'ช่วงวันที่เลือกไม่มีวันทำงาน กรุณาเลือกวันทำงาน',
         }
     }
 
