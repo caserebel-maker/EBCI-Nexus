@@ -108,6 +108,13 @@ function getShortCellLabel(
 ): string {
     if (dayHolidays.length > 0) {
         const h = dayHolidays[0]
+        const type = h.type
+        if (type === 'work' || type === 'workday' || type === 'office') return 'งานออฟฟิศ'
+        if (type === 'wfh') return 'งาน WFH'
+        if (type === 'company') return 'วันหยุด'
+        if (type === 'special' || type === 'special_holiday') {
+            return h.name.includes('วันหยุด') ? 'หยุดพิเศษ' : (h.name.length > 10 ? h.name.slice(0, 8) + '..' : h.name)
+        }
         if (h.name.includes('วันทำงานครึ่งวัน (ออฟฟิศ)')) return 'งานออฟฟิศ'
         if (h.name.includes('วันทำงานครึ่งวัน (WFH)')) return 'งาน WFH'
         if (h.name.includes('วันหยุดประจำสัปดาห์')) return 'วันหยุด'

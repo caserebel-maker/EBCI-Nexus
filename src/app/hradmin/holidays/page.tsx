@@ -64,11 +64,18 @@ function formatThaiDate(dateStr: string): string {
     return `${parseInt(d)} ${THAI_MONTHS[parseInt(m) - 1]} ${parseInt(y) + 543}`
 }
 
-function getShortHolidayLabel(name: string): string {
-    if (name.includes('วันทำงานครึ่งวัน (ออฟฟิศ)')) return 'งานออฟฟิศ'
-    if (name.includes('วันทำงานครึ่งวัน (WFH)')) return 'งาน WFH'
-    if (name.includes('วันหยุดประจำสัปดาห์')) return 'วันหยุด'
-    return name.length > 10 ? name.slice(0, 8) + '..' : name
+function getShortHolidayLabel(h: { name: string; type: string }): string {
+    const type = h.type
+    if (type === 'work' || type === 'workday' || type === 'office') return 'งานออฟฟิศ'
+    if (type === 'wfh') return 'งาน WFH'
+    if (type === 'company') return 'วันหยุด'
+    if (type === 'special' || type === 'special_holiday') {
+        return h.name.includes('วันหยุด') ? 'หยุดพิเศษ' : (h.name.length > 10 ? h.name.slice(0, 8) + '..' : h.name)
+    }
+    if (h.name.includes('วันทำงานครึ่งวัน (ออฟฟิศ)')) return 'งานออฟฟิศ'
+    if (h.name.includes('วันทำงานครึ่งวัน (WFH)')) return 'งาน WFH'
+    if (h.name.includes('วันหยุดประจำสัปดาห์')) return 'วันหยุด'
+    return h.name.length > 10 ? h.name.slice(0, 8) + '..' : h.name
 }
 
 const emptyForm = { date: '', name: '', type: 'public' }
@@ -107,7 +114,13 @@ export default function HolidaysPage() {
 
     function openEdit(h: Holiday) {
         setEditTarget(h)
-        setForm({ date: h.date, name: h.name, type: h.type })
+        let defaultName = h.name
+        if (h.name === 'วันหยุดประจำสัปดาห์') {
+            if (h.type === 'work') defaultName = 'วันทำงาน (เข้าออฟฟิศ)'
+            else if (h.type === 'wfh') defaultName = 'วันทำงาน (WFH)'
+            else if (h.type === 'special') defaultName = 'วันหยุดพิเศษ'
+        }
+        setForm({ date: h.date, name: defaultName, type: h.type })
         setModalOpen(true)
     }
 
@@ -545,7 +558,7 @@ function CalendarMonthView({
                                         className="text-[8px] sm:text-[9px] md:text-[10px] font-semibold leading-tight text-center truncate max-w-full px-0.5 select-none opacity-90 mt-0.5"
                                         style={{ color: dayNumberColor }}
                                     >
-                                        {getShortHolidayLabel(events[0].name)}
+                                        {getShortHolidayLabel(events[0])}
                                     </span>
                                 )}
                                 {accentKinds.length > 0 && (
