@@ -35,9 +35,8 @@ ON CONFLICT (date, name) DO NOTHING;
 INSERT INTO public.holidays (date, name, type) VALUES
     ('2026-03-03', 'วันมาฆบูชา (โดยประมาณ — โปรดยืนยัน)',     'religious'),
     ('2026-05-31', 'วันวิสาขบูชา (โดยประมาณ — โปรดยืนยัน)',    'religious'),
-    ('2026-07-29', 'วันอาฬหบูชา (โดยประมาณ — โปรดยืนยัน)',     'religious'),
-    ('2026-07-30', 'วันเข้าพรรษา (โดยประมาณ — โปรดยืนยัน)',    'religious')
+    ('2026-07-29', 'วันอาฬหบูชา (โดยประมาณ — โปรดยืนยัน)',     'religious')
 ON CONFLICT (date, name) DO NOTHING;
 
--- Verify (expect 19 rows: 15 fixed-date public + 4 tentative lunar religious):
+-- Verify (expect 18 rows: 15 fixed-date public + 3 tentative lunar religious):
 -- SELECT date, name, type FROM public.holidays WHERE year = 2026 ORDER BY date;
