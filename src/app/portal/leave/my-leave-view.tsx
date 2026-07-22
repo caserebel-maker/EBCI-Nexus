@@ -10,7 +10,7 @@ import {
 import { cn } from '@/lib/utils'
 import { ValidationToast } from '@/components/ui/validation-toast'
 import { WORK_SCHEDULE, HALF_DAY_RULES } from '@/lib/leave-constants'
-import { calculateWorkingLeaveDays } from '@/lib/leave-days'
+import { calculateWorkingLeaveDays, isWorkingDate, toEpochDay } from '@/lib/leave-days'
 
 // ── Validation field IDs + Thai labels ────────────────────────────────────────
 // Used by both validate() and the per-input red-border styling so the toast
@@ -198,6 +198,37 @@ function todayBangkokIso(): string {
 }
 function daysInclusive(start: string, end: string, half: boolean, holidaysMap?: Map<string, string>): number {
     return calculateWorkingLeaveDays(start, end, half, holidaysMap)
+}
+
+const HOLIDAY_TYPE_LABEL: Record<string, string> = {
+    public: 'วันหยุดนักขัตฤกษ์',
+    religious: 'วันหยุดตามปฏิทินบริษัท',
+    company: 'วันหยุดบริษัท',
+    special: 'วันหยุดพิเศษ',
+    special_holiday: 'วันหยุดพิเศษ',
+}
+
+function epochDayToIso(day: number): string {
+    const d = new Date(day * 86400000)
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+}
+
+function nonWorkingDateSummary(start: string, end: string, holidaysMap: Map<string, string>): string | null {
+    const startDay = toEpochDay(start)
+    const endDay = toEpochDay(end)
+    if (!Number.isFinite(startDay) || !Number.isFinite(endDay) || endDay < startDay) return null
+
+    const labels: string[] = []
+    for (let day = startDay; day <= endDay; day += 1) {
+        const dateKey = epochDayToIso(day)
+        const type = holidaysMap.get(dateKey)
+        if (isWorkingDate(dateKey, type)) continue
+        labels.push(`${formatThaiDate(dateKey)}${type ? ` (${HOLIDAY_TYPE_LABEL[type] ?? 'วันหยุด'})` : ' (วันหยุดประจำสัปดาห์)'}`)
+    }
+
+    if (labels.length === 0) return null
+    const visible = labels.slice(0, 3).join(', ')
+    return labels.length > 3 ? `${visible} และอีก ${labels.length - 3} วัน` : visible
 }
 
 // ── Main view ─────────────────────────────────────────────────────────────────
@@ -1157,6 +1188,9 @@ function NewLeaveModal({
 
     const selectedType = balances.find(b => b.leave_type_id === selectedTypeId) ?? null
     const totalDays = startDate && endDate ? daysInclusive(startDate, endDate, isHalfDay, holidaysMap) : 0
+    const nonWorkingSummary = startDate && endDate && !isHalfDay
+        ? nonWorkingDateSummary(startDate, endDate, holidaysMap)
+        : null
 
     const attachmentRequired = requiresAttachmentForSelection(selectedType, totalDays)
 
@@ -1244,6 +1278,14 @@ function NewLeaveModal({
             missing.push('วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่ม')
         }
 
+        if (inScope('endDate') && startDate && endDate && new Date(endDate) >= new Date(startDate) && totalDays <= 0) {
+            errorIds.add('startDate')
+            errorIds.add('endDate')
+            missing.push(nonWorkingSummary
+                ? `ช่วงวันที่เลือกไม่ถูกนับเป็นวันลา เพราะเป็นวันหยุด/ไม่ใช่วันทำงาน: ${nonWorkingSummary}`
+                : 'ช่วงวันที่เลือกไม่มีวันทำงาน กรุณาเลือกวันทำงาน')
+        }
+
         // Days exceed remaining balance.
         if (inScope('endDate') && selectedType && !selectedType.is_unlimited && totalDays > selectedType.remaining_days && totalDays > 0) {
             errorIds.add('startDate')
@@ -1263,7 +1305,7 @@ function NewLeaveModal({
         }
 
         return { ok: missing.length === 0, missing, errorIds }
-    }, [selectedTypeId, startDate, endDate, reason, approverChain, selectedType, totalDays, attachmentRequired, attachment])
+    }, [selectedTypeId, startDate, endDate, reason, approverChain, selectedType, totalDays, nonWorkingSummary, attachmentRequired, attachment])
 
     /** After a failed validate(): apply the red borders, open the toast,
      *  and scroll/focus the first errored field after a tick (so the
@@ -1421,6 +1463,7 @@ function NewLeaveModal({
                             setReason={(v) => { setReason(v); clearFieldError('reason') }}
                             contact={contact} setContact={setContact}
                             totalDays={totalDays}
+                            nonWorkingSummary={nonWorkingSummary}
                             approverChain={approverChain}
                             errorFields={errorFields}
                         />
@@ -1442,6 +1485,7 @@ function NewLeaveModal({
                             reason={reason} contact={contact}
                             attachment={attachment}
                             totalDays={totalDays}
+                            nonWorkingSummary={nonWorkingSummary}
                         />
                     )}
 
@@ -1714,7 +1758,7 @@ function Step1TypePicker({
 function Step2Dates({
     type, startDate, setStartDate, endDate, setEndDate,
     isHalfDay, setIsHalfDay, halfDayPeriod, setHalfDayPeriod,
-    reason, setReason, contact, setContact, totalDays,
+    reason, setReason, contact, setContact, totalDays, nonWorkingSummary,
     approverChain, errorFields,
 }: {
     type: BalanceEntry
@@ -1731,6 +1775,7 @@ function Step2Dates({
     contact: string
     setContact: (v: string) => void
     totalDays: number
+    nonWorkingSummary: string | null
     approverChain: ApproverChainStep[] | null
     /** Per-field validation errors. Drives the red border on each input
      *  and lets the parent's scroll target [data-field] queries hit. */
@@ -1800,9 +1845,21 @@ function Step2Dates({
             </div>
 
             {startDate && endDate && (
-                <p className="text-sm text-white/70">
-                    รวม <span className="text-white font-bold">{totalDays}</span> วัน
-                </p>
+                <div className="space-y-2">
+                    <p className="text-sm text-white/70">
+                        รวม <span className="text-white font-bold">{totalDays}</span> วัน
+                    </p>
+                    {totalDays <= 0 && nonWorkingSummary && (
+                        <div className="rounded-lg bg-yellow-300 px-3 py-2 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.08)]">
+                            <p className="text-sm font-black leading-snug">
+                                วันที่เลือกไม่ถูกนับเป็นวันลา
+                            </p>
+                            <p className="mt-0.5 text-xs font-semibold leading-snug text-black/75">
+                                {nonWorkingSummary} เป็นวันหยุดหรือไม่ใช่วันทำงาน กรุณาเลือกวันทำงาน
+                            </p>
+                        </div>
+                    )}
+                </div>
             )}
 
             <div className="p-3 rounded-lg bg-white/5 border border-white/10">
@@ -2073,7 +2130,7 @@ function Step3Attachment({
 
 // ── Step 4: review ───────────────────────────────────────────────────────────
 function Step4Review({
-    type, startDate, endDate, isHalfDay, halfDayPeriod, reason, contact, attachment, totalDays,
+    type, startDate, endDate, isHalfDay, halfDayPeriod, reason, contact, attachment, totalDays, nonWorkingSummary,
 }: {
     type: BalanceEntry
     startDate: string
@@ -2084,6 +2141,7 @@ function Step4Review({
     contact: string
     attachment: File | null
     totalDays: number
+    nonWorkingSummary: string | null
 }) {
     const Icon = LEAVE_ICON[type.leave_type_id] ?? CalendarDays
     return (
@@ -2109,6 +2167,16 @@ function Step4Review({
                     {contact && <Field label="ติดต่อระหว่างลา" value={contact} />}
                     <Field label="เอกสารแนบ" value={attachment ? attachment.name : '— ไม่แนบ'} />
                 </dl>
+                {totalDays <= 0 && nonWorkingSummary && (
+                    <div className="mt-4 rounded-lg bg-yellow-300 px-3 py-2 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.08)]">
+                        <p className="text-sm font-black leading-snug">
+                            ใบลานี้ยังส่งไม่ได้ เพราะจำนวนวันลาเป็น 0 วัน
+                        </p>
+                        <p className="mt-0.5 text-xs font-semibold leading-snug text-black/75">
+                            {nonWorkingSummary} เป็นวันหยุดหรือไม่ใช่วันทำงาน กรุณากลับไปเลือกวันทำงาน
+                        </p>
+                    </div>
+                )}
             </div>
             <p className="text-[11px] text-white/50 px-2">
                 กดยืนยันเพื่อส่งใบลาให้ผู้อนุมัติ · ระบบจะส่ง email ยืนยันให้คุณและผู้อนุมัติอัตโนมัติ
