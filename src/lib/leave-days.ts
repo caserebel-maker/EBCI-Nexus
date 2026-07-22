@@ -3,7 +3,8 @@ export function toEpochDay(date: string): number {
     if (!date || typeof date !== 'string') return NaN
     const [year, month, day] = date.split('-').map(Number)
     if (!year || !month || !day) return NaN
-    return Date.UTC(year, month - 1, day) / 86400000
+    const normalizedYear = year > 2400 ? year - 543 : year
+    return Date.UTC(normalizedYear, month - 1, day) / 86400000
 }
 
 export function getSaturdayIndex(dateKey: string): number {
