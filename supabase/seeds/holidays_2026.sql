@@ -1,7 +1,7 @@
 -- Seed Thai public holidays 2026 (พ.ศ. 2569).
 --
 -- Fixed-date Gregorian holidays only. Lunar Buddhist holidays
--- (มาฆบูชา / วิสาขบูชา / อาฬหบูชา / เข้าพรรษา) shift each year per
+-- (มาฆบูชา / วิสาขบูชา / อาสาฬหบูชา / เข้าพรรษา) shift each year per
 -- the official government announcement (Royal Gazette) — add via the
 -- /hradmin/holidays admin UI when the year's calendar is published.
 --
@@ -32,11 +32,18 @@ ON CONFLICT (date, name) DO NOTHING;
 -- The dates below are best-effort approximations from common references.
 -- ⚠️  Update via /hradmin/holidays admin UI when the official Royal
 -- Gazette announcement for 2569 is consulted.
+DELETE FROM public.holidays
+WHERE date = '2026-07-29'
+  AND name IN (
+    'วันอาฬหบูชา (โดยประมาณ — โปรดยืนยัน)',
+    'วันอาสาฬหบูชา (โดยประมาณ — โปรดยืนยัน)'
+  );
+
 INSERT INTO public.holidays (date, name, type) VALUES
     ('2026-03-03', 'วันมาฆบูชา (โดยประมาณ — โปรดยืนยัน)',     'religious'),
     ('2026-05-31', 'วันวิสาขบูชา (โดยประมาณ — โปรดยืนยัน)',    'religious'),
-    ('2026-07-29', 'วันอาฬหบูชา (โดยประมาณ — โปรดยืนยัน)',     'religious')
+    ('2026-07-29', 'วันอาสาฬหบูชา / บริษัทกำหนด WFH',          'wfh')
 ON CONFLICT (date, name) DO NOTHING;
 
--- Verify (expect 18 rows: 15 fixed-date public + 3 tentative lunar religious):
+-- Verify (expect 18 rows: 15 fixed-date public + 2 tentative lunar religious + 1 company WFH):
 -- SELECT date, name, type FROM public.holidays WHERE year = 2026 ORDER BY date;
