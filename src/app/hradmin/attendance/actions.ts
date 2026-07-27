@@ -44,12 +44,11 @@ export async function getAttendanceForDate(dateStr: string) {
     const startOfDay = new Date(dateStr + 'T00:00:00+07:00')
     const endOfDay = new Date(dateStr + 'T23:59:59.999+07:00')
 
-    // 1. Get all active employees
+    // 1. Get all active employees (including advisors)
     const { data: employees, error: empError } = await supabaseAdmin
         .from('employees')
         .select('id, employee_code, first_name_th, last_name_th, nickname, department, position, photo_url, status, work_location')
         .eq('status', 'active')
-        .neq('is_advisor', true)
         .order('first_name_th', { ascending: true })
 
     if (empError) {

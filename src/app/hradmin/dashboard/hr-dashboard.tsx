@@ -627,14 +627,14 @@ function PendingRow({ item, onDone }: { item: any, onDone: (item: any) => void }
                     body: JSON.stringify({ id: item.id, action }),
                 })
                 if (res.ok) {
-                    toast.success(action === 'approve' ? 'อนุมัติใบลาแล้ว' : 'ปฏิเสธใบลาแล้ว')
+                    alert(action === 'approve' ? 'อนุมัติใบลาแล้ว' : 'ปฏิเสธใบลาแล้ว')
                     onDone(item)
                 } else {
                     const data = await res.json().catch(() => ({}))
-                    toast.error(data.error || 'ทำรายการไม่สำเร็จ')
+                    alert(data.error || 'ทำรายการไม่สำเร็จ')
                 }
             } catch {
-                toast.error('เกิดข้อผิดพลาด')
+                alert('เกิดข้อผิดพลาด')
             }
         })
     }

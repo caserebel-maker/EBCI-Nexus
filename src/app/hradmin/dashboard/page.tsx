@@ -305,7 +305,7 @@ export default async function AdminDashboard() {
     ])
 
     const activeEmployeeIds = new Set(
-        (employees ?? []).filter(e => e.status === 'active' && !e.is_advisor).map(e => e.id),
+        (employees ?? []).filter(e => e.status === 'active').map(e => e.id),
     )
     const checkinMap = new Map<string, string>()
     for (const c of todayCheckinsResult.data ?? []) {
