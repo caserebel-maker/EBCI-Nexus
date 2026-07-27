@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
     Users, CalendarDays, Clock, AlertTriangle, TrendingUp,
-    Cake, Building2, Loader2, Megaphone, Gift, X, UserX
+    Cake, Building2, Loader2, Megaphone, Gift, X, UserX, CheckCircle2, AlertCircle
 } from 'lucide-react'
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -598,7 +598,7 @@ function formatShortDate(date?: string | null) {
     }
 }
 
-function PendingRow({ item, onDone }: { item: any, onDone: (item: any) => void }) {
+function PendingRow({ item, onDone, onShowToast }: { item: any, onDone: (item: any) => void, onShowToast?: (type: 'success' | 'error', msg: string) => void }) {
     const [isPending, startTransition] = useTransition()
     const isWfh = item.kind === 'wfh'
     const isCancellation = !isWfh && item.status === 'cancellation_requested'
@@ -627,14 +627,14 @@ function PendingRow({ item, onDone }: { item: any, onDone: (item: any) => void }
                     body: JSON.stringify({ id: item.id, action }),
                 })
                 if (res.ok) {
-                    alert(action === 'approve' ? 'อนุมัติใบลาแล้ว' : 'ปฏิเสธใบลาแล้ว')
+                    onShowToast?.('success', action === 'approve' ? 'อนุมัติใบลาเรียบร้อยแล้ว' : 'ปฏิเสธใบลาเรียบร้อยแล้ว')
                     onDone(item)
                 } else {
                     const data = await res.json().catch(() => ({}))
-                    alert(data.error || 'ทำรายการไม่สำเร็จ')
+                    onShowToast?.('error', data.error || 'ทำรายการไม่สำเร็จ')
                 }
             } catch {
-                alert('เกิดข้อผิดพลาด')
+                onShowToast?.('error', 'เกิดข้อผิดพลาดในการทำรายการ')
             }
         })
     }
@@ -709,6 +709,13 @@ export function HRDashboard({
     const removePending = (item: any) => setPending(prev => prev.filter(r => pendingItemKey(r) !== pendingItemKey(item)))
     const [selectedNews, setSelectedNews] = useState<any>(null)
     const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+    const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
+
+    const showToast = (type: 'success' | 'error', msg: string) => {
+        setToast({ type, msg })
+        setTimeout(() => setToast(null), 4000)
+    }
+
     const pendingApprovalTotal = metrics.pendingApprovals ?? pending.length
     const pendingLeaveRequestCount = metrics.pendingLeaveRequests ?? metrics.pendingLeaves
     const pendingLeaveCancellationCount = metrics.pendingLeaveCancellations ?? 0
@@ -720,7 +727,18 @@ export function HRDashboard({
     }, [pendingApprovals, pendingLeaves])
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
+            {toast && (
+                <div className={cn(
+                    "fixed top-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-2xl text-sm font-semibold border backdrop-blur-md transition-all animate-in fade-in slide-in-from-top-2",
+                    toast.type === 'success'
+                        ? "bg-emerald-600/90 border-emerald-400/50 text-white shadow-emerald-950/40"
+                        : "bg-rose-600/90 border-rose-400/50 text-white shadow-rose-950/40"
+                )}>
+                    {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+                    <span>{toast.msg}</span>
+                </div>
+            )}
             <style jsx global>{`
                 @keyframes pending-leave-card-pulse {
                     0%, 100% {
@@ -1009,7 +1027,7 @@ export function HRDashboard({
                         ) : (
                             <div className="space-y-1">
                                 {pending.map(item => (
-                                    <PendingRow key={pendingItemKey(item)} item={item} onDone={removePending} />
+                                    <PendingRow key={pendingItemKey(item)} item={item} onDone={removePending} onShowToast={showToast} />
                                 ))}
                             </div>
                         )}
