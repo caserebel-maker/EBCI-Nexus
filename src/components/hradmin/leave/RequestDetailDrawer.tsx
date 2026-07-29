@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {
     X, ChevronLeft, Calendar, Clock, User, Paperclip, Phone,
@@ -31,14 +31,6 @@ interface Props {
  * document.body guarantees the drawer always sits at the page root.
  */
 export function RequestDetailDrawer({ item, onClose, onForceAction }: Props) {
-    const [mounted, setMounted] = useState(false)
-
-    useEffect(() => {
-        // SSR-safe portal gate — only render into document.body once we're
-        // on the client.
-        setMounted(true)
-    }, [])
-
     useEffect(() => {
         if (!item) return
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -51,7 +43,7 @@ export function RequestDetailDrawer({ item, onClose, onForceAction }: Props) {
         }
     }, [item, onClose])
 
-    if (!mounted || !item) return null
+    if (typeof document === 'undefined' || !item) return null
 
     const meta = STATUS_META[item.status] ?? STATUS_META.pending
     const emp = item.employee
@@ -180,6 +172,20 @@ export function RequestDetailDrawer({ item, onClose, onForceAction }: Props) {
                             {item.reason || <em className="text-white/45">ไม่ระบุ</em>}
                         </p>
                     </Section>
+
+                    {item.advance_notice_exception_required && (
+                        <div className="rounded-xl border border-yellow-500/70 bg-yellow-300 text-black p-3 shadow-lg shadow-yellow-950/20">
+                            <div className="flex items-start gap-2">
+                                <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                                <div className="min-w-0">
+                                    <p className="text-sm font-black">ขอยกเว้นเงื่อนไขล่วงหน้า</p>
+                                    <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap break-words">
+                                        {item.advance_notice_exception_reason || 'ไม่ระบุเหตุผล'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {item.contact_during_leave && (
                         <Section title="ติดต่อระหว่างลา" icon={Phone}>

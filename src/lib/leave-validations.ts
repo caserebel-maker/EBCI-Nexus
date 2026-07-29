@@ -14,6 +14,7 @@ export interface ValidateLeaveArgs {
     employeeId: string
     todayBangkokIso: string // YYYY-MM-DD in Bangkok
     holidaysMap?: Map<string, string> | Record<string, string>
+    advanceNoticeExceptionReason?: string | null
 }
 
 export type ValidationResult =
@@ -159,12 +160,28 @@ export async function validateLeaveRequest(
                 error: 'ประเภทนี้ไม่อนุญาตให้ยื่นลาในวันเดียวกัน',
             }
         }
-        // Rule 3 — advance notice from leave_types (e.g. annual/personal need at least 1 day)
+        // Rule 3 — advance notice from leave_types (e.g. annual/personal need at least 1 day).
+        // Annual leave may be submitted inside the notice window only when the
+        // employee supplies an exception reason, so the approver can explicitly
+        // judge the short-notice case instead of the system silently bypassing policy.
         if (advanceDays > 0 && startEpoch - todayEpoch < advanceDays) {
-            return {
-                ok: false,
-                field: 'date',
-                error: `ต้องขอล่วงหน้าอย่างน้อย ${advanceDays} วัน (${leaveType.name_th})`,
+            if (leaveType.id === 'annual') {
+                const exceptionReason = args.advanceNoticeExceptionReason?.trim() ?? ''
+                if (exceptionReason.length > 0) {
+                    // Allow submission; the caller persists the reason on leave_requests.
+                } else {
+                    return {
+                        ok: false,
+                        field: 'advance_notice_exception_reason',
+                        error: `ลาพักร้อนควรขอล่วงหน้าอย่างน้อย ${advanceDays} วัน — กรุณาระบุเหตุผลประกอบการขอลากระชั้นชิด`,
+                    }
+                }
+            } else {
+                return {
+                    ok: false,
+                    field: 'date',
+                    error: `ต้องขอล่วงหน้าอย่างน้อย ${advanceDays} วัน (${leaveType.name_th})`,
+                }
             }
         }
     }

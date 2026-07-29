@@ -45,6 +45,8 @@ export interface LeaveRequestItem {
     rejection_reason: string | null
     cancellation_reason?: string | null
     cancellation_requested_at?: string | null
+    advance_notice_exception_required: boolean | null
+    advance_notice_exception_reason: string | null
     attachment_url: string | null
     attachment_name: string | null
     is_half_day: boolean | null

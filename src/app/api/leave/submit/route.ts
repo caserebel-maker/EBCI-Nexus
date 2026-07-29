@@ -117,6 +117,8 @@ export async function POST(req: NextRequest) {
     const halfDayPeriod = String(form.get('half_day_period') ?? '').trim() || null
     const reason = String(form.get('reason') ?? '').trim()
     const contact = String(form.get('contact_during_leave') ?? '').trim() || null
+    const advanceNoticeExceptionReason =
+        String(form.get('advance_notice_exception_reason') ?? '').trim() || null
     const attachment = form.get('attachment') as File | null
 
     if (!leaveTypeId || !startDate || !endDate || !reason) {
@@ -162,11 +164,27 @@ export async function POST(req: NextRequest) {
         balance,
         employeeId,
         todayBangkokIso: bangkokTodayIso(),
+        advanceNoticeExceptionReason,
     })
     if (!validation.ok) {
         return NextResponse.json({ error: validation.error, field: validation.field }, { status: 400 })
     }
     const totalDays = validation.totalDays
+    const advanceNoticeExceptionRequired =
+        leaveTypeId === 'annual'
+        && Number(leaveType.advance_notice_days ?? 0) > 0
+        && (() => {
+            const start = new Date(`${startDate}T00:00:00+07:00`).getTime()
+            const today = new Date(`${bangkokTodayIso()}T00:00:00+07:00`).getTime()
+            return Number.isFinite(start) && Number.isFinite(today)
+                && Math.round((start - today) / 86400000) < Number(leaveType.advance_notice_days ?? 0)
+        })()
+    const policyExceptionNote = advanceNoticeExceptionRequired && advanceNoticeExceptionReason
+        ? `ขอยกเว้นเงื่อนไขล่วงหน้า: ${advanceNoticeExceptionReason}`
+        : ''
+    const reasonForMessages = policyExceptionNote
+        ? `${reason}\n\n${policyExceptionNote}`
+        : reason
 
     // Resolve approver (logged even if null so HR can see orphans in Session 2)
     //
@@ -215,6 +233,10 @@ export async function POST(req: NextRequest) {
             half_day_period: isHalfDay ? halfDayPeriod : null,
             reason,
             contact_during_leave: contact,
+            advance_notice_exception_required: advanceNoticeExceptionRequired,
+            advance_notice_exception_reason: advanceNoticeExceptionRequired
+                ? advanceNoticeExceptionReason
+                : null,
             status: 'pending',
             approver_id: approver.id,
             submitted_at: nowIso,
@@ -293,7 +315,7 @@ export async function POST(req: NextRequest) {
     // only — they have a dashboard.
     const employeeRow = await supabaseAdmin
         .from('employees')
-        .select('first_name_th, last_name_th, nickname, email')
+        .select('first_name_th, last_name_th, nickname, email, employee_code')
         .eq('id', employeeId)
         .maybeSingle()
     const employeeName = employeeRow.data
@@ -354,7 +376,7 @@ export async function POST(req: NextRequest) {
                     startDate,
                     endDate,
                     totalDays,
-                    reason,
+                    reason: reasonForMessages,
                 })
                     .then(r => { emailSent.employee = Boolean(r && 'success' in r && r.success) })
                     .catch(err => console.error('[leave/submit] employee email threw:', err)),
@@ -384,7 +406,7 @@ export async function POST(req: NextRequest) {
                 startDate,
                 endDate,
                 totalDays,
-                reason,
+                reason: reasonForMessages,
             }
             jobs.push(
                 sendLeaveSubmittedToApprover(emailCtx)
@@ -413,7 +435,7 @@ export async function POST(req: NextRequest) {
                 recipient_user_id: recipientUserId,
                 type: 'leave_request_pending',
                 title: `${applicantNick} ขอ${leaveTypeTh}`,
-                body: `${dateLabel} (${totalDays} วัน) — ${reason || 'ไม่ระบุเหตุผล'}`,
+                body: `${dateLabel} (${totalDays} วัน) — ${reasonForMessages || 'ไม่ระบุเหตุผล'}`,
                 action_url: approverInboxUrl,
                 action_label: 'ดูรายละเอียด',
                 entity_type: 'leave_request',
@@ -440,7 +462,7 @@ export async function POST(req: NextRequest) {
             `🔔 <b>รออนุมัติ${escapeTelegramHtml(leaveTypeTh)}</b>`,
             `👤 ${escapeTelegramHtml(applicantNick)}`,
             `📅 ${escapeTelegramHtml(dateLabel)} (${totalDays} วัน)`,
-            reason ? `📝 ${escapeTelegramHtml(reason.slice(0, 200))}` : '',
+            reasonForMessages ? `📝 ${escapeTelegramHtml(reasonForMessages.slice(0, 260))}` : '',
             `<a href="${escapeTelegramHtml(inboxUrl)}">เปิดกล่องอนุมัติใน Nexus →</a>`,
         ].filter(Boolean).join('\n')
 
@@ -505,7 +527,7 @@ export async function POST(req: NextRequest) {
                     startDate,
                     endDate,
                     totalDays,
-                    reason,
+                    reason: reasonForMessages,
                 }).catch(err => {
                     console.error('[leave/submit] MD email FYI failed:', err)
                     return null

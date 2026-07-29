@@ -61,6 +61,8 @@ interface RawLeaveRequest {
     rejection_reason: string | null
     cancellation_reason?: string | null
     cancellation_requested_at?: string | null
+    advance_notice_exception_required: boolean | null
+    advance_notice_exception_reason: string | null
     attachment_url: string | null
     attachment_name: string | null
     is_half_day: boolean | null
@@ -352,6 +354,7 @@ async function renderRequestsTab(sp: SearchParams, year: number) {
              reason, status, submitted_at, created_at, updated_at, reference_code,
              approver_id, approved_at, approval_notes, rejection_reason,
              cancellation_reason, cancellation_requested_at,
+             advance_notice_exception_required, advance_notice_exception_reason,
              attachment_url, attachment_name, is_half_day, half_day_period,
              contact_during_leave`,
             { count: 'exact' },
@@ -407,7 +410,8 @@ async function renderRequestsTab(sp: SearchParams, year: number) {
     const missingSupervisorIds = Array.from(new Set(
         Array.from(empMap.values())
             .map(e => e.supervisor_id)
-            .filter((id): id is string => Boolean(id) && !empMap.has(id))
+            .filter((id): id is string => Boolean(id))
+            .filter(id => !empMap.has(id))
     ))
     if (missingSupervisorIds.length > 0) {
         const { data: supervisors } = await supabaseAdmin
@@ -449,6 +453,8 @@ async function renderRequestsTab(sp: SearchParams, year: number) {
             rejection_reason: r.rejection_reason,
             cancellation_reason: r.cancellation_reason,
             cancellation_requested_at: r.cancellation_requested_at,
+            advance_notice_exception_required: r.advance_notice_exception_required,
+            advance_notice_exception_reason: r.advance_notice_exception_reason,
             attachment_url: r.attachment_url,
             attachment_name: r.attachment_name,
             is_half_day: r.is_half_day,

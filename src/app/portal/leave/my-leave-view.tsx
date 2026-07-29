@@ -15,13 +15,14 @@ import { calculateWorkingLeaveDays, isWorkingDate, toEpochDay } from '@/lib/leav
 // ── Validation field IDs + Thai labels ────────────────────────────────────────
 // Used by both validate() and the per-input red-border styling so the toast
 // list and the highlighted inputs stay consistent without duplicating labels.
-type FieldId = 'leaveType' | 'startDate' | 'endDate' | 'reason' | 'approver' | 'attachment'
+type FieldId = 'leaveType' | 'startDate' | 'endDate' | 'reason' | 'advanceNoticeExceptionReason' | 'approver' | 'attachment'
 
 const FIELD_LABEL: Record<FieldId, string> = {
     leaveType: 'ประเภทการลา',
     startDate: 'วันที่เริ่มลา',
     endDate: 'วันที่สิ้นสุดลา',
     reason: 'เหตุผลการลา',
+    advanceNoticeExceptionReason: 'เหตุผลประกอบการขอลาพักร้อนกระชั้นชิด',
     approver: 'ผู้บังคับบัญชา',
     attachment: 'เอกสารใบรับรองแพทย์',
 }
@@ -31,6 +32,7 @@ const FIELD_STEP: Record<FieldId, 1 | 2 | 3> = {
     startDate: 2,
     endDate: 2,
     reason: 2,
+    advanceNoticeExceptionReason: 2,
     approver: 2,
     attachment: 3,
 }
@@ -68,6 +70,8 @@ interface LeaveRequest {
     is_half_day: boolean | null
     half_day_period: string | null
     reason: string
+    advance_notice_exception_required: boolean | null
+    advance_notice_exception_reason: string | null
     contact_during_leave: string | null
     attachment_url: string | null
     attachment_name: string | null
@@ -105,6 +109,7 @@ interface LeaveDraftPayload {
     is_half_day?: boolean
     half_day_period?: 'morning' | 'afternoon' | null
     reason?: string | null
+    advance_notice_exception_reason?: string | null
     contact_during_leave?: string | null
     step?: number
 }
@@ -196,6 +201,22 @@ function todayBangkokIso(): string {
     const now = new Date(Date.now() + 7 * 60 * 60 * 1000)
     return now.toISOString().slice(0, 10)
 }
+
+function daysFromBangkokToday(dateIso: string): number | null {
+    const dateEpoch = toEpochDay(dateIso)
+    const todayEpoch = toEpochDay(todayBangkokIso())
+    if (!Number.isFinite(dateEpoch) || !Number.isFinite(todayEpoch)) return null
+    return dateEpoch - todayEpoch
+}
+
+function requiresAdvanceNoticeException(type: BalanceEntry | null, startDate: string): boolean {
+    if (!type || type.leave_type_id !== 'annual' || !startDate) return false
+    const advanceDays = type.advance_notice_days ?? 0
+    if (advanceDays <= 0) return false
+    const diffDays = daysFromBangkokToday(startDate)
+    return diffDays !== null && diffDays >= 0 && diffDays < advanceDays
+}
+
 function daysInclusive(start: string, end: string, half: boolean, holidaysMap?: Map<string, string>): number {
     return calculateWorkingLeaveDays(start, end, half, holidaysMap)
 }
@@ -889,6 +910,15 @@ function LeaveDetailModal({
                         <p className="text-sm text-white/85 whitespace-pre-wrap">{request.reason}</p>
                     </div>
 
+                    {request.advance_notice_exception_required && (
+                        <div className="p-3 rounded-lg bg-yellow-300 text-black border border-yellow-200">
+                            <p className="text-xs font-black mb-1">ขอยกเว้นเงื่อนไขล่วงหน้า</p>
+                            <p className="text-sm font-semibold whitespace-pre-wrap">
+                                {request.advance_notice_exception_reason || '—'}
+                            </p>
+                        </div>
+                    )}
+
                     {request.attachment_url && (
                         <div>
                             <p className="text-sm font-bold text-white/85 mb-1.5">เอกสารแนบ</p>
@@ -1056,6 +1086,7 @@ function NewLeaveModal({
         dp.half_day_period ?? 'morning',
     )
     const [reason, setReason] = useState(dp.reason ?? '')
+    const [advanceNoticeExceptionReason, setAdvanceNoticeExceptionReason] = useState(dp.advance_notice_exception_reason ?? '')
     const [contact, setContact] = useState(dp.contact_during_leave ?? '')
     const [attachment, setAttachment] = useState<File | null>(null)
     const [submitting, startSubmitTransition] = useTransition()
@@ -1131,15 +1162,17 @@ function NewLeaveModal({
         is_half_day: isHalfDay,
         half_day_period: isHalfDay ? halfDayPeriod : null,
         reason: reason || null,
+        advance_notice_exception_reason: advanceNoticeExceptionReason || null,
         contact_during_leave: contact || null,
         step,
-    }), [selectedTypeId, startDate, endDate, isHalfDay, halfDayPeriod, reason, contact, step])
+    }), [selectedTypeId, startDate, endDate, isHalfDay, halfDayPeriod, reason, advanceNoticeExceptionReason, contact, step])
 
     /** §2.4 — Skip autosave if every field is empty (avoids creating a
      *  ghost draft when the user opens then immediately closes). */
     const hasContent = useCallback((p: LeaveDraftPayload): boolean => {
         return Boolean(p.leave_type_id || p.start_date || p.end_date
             || (p.reason && p.reason.trim())
+            || (p.advance_notice_exception_reason && p.advance_notice_exception_reason.trim())
             || (p.contact_during_leave && p.contact_during_leave.trim()))
     }, [])
 
@@ -1184,12 +1217,14 @@ function NewLeaveModal({
         }
         const handle = window.setTimeout(() => { void saveDraft('auto') }, 10_000)
         return () => window.clearTimeout(handle)
-    }, [selectedTypeId, startDate, endDate, isHalfDay, halfDayPeriod, reason, contact, step, saveDraft])
+    }, [selectedTypeId, startDate, endDate, isHalfDay, halfDayPeriod, reason, advanceNoticeExceptionReason, contact, step, saveDraft])
 
     const selectedType = balances.find(b => b.leave_type_id === selectedTypeId) ?? null
-    const totalDays = startDate && endDate ? daysInclusive(startDate, endDate, isHalfDay, holidaysMap) : 0
+    const effectiveHolidaysMap = holidaysMap ?? new Map<string, string>()
+    const totalDays = startDate && endDate ? daysInclusive(startDate, endDate, isHalfDay, effectiveHolidaysMap) : 0
+    const advanceNoticeExceptionRequired = requiresAdvanceNoticeException(selectedType, startDate)
     const nonWorkingSummary = startDate && endDate && !isHalfDay
-        ? nonWorkingDateSummary(startDate, endDate, holidaysMap)
+        ? nonWorkingDateSummary(startDate, endDate, effectiveHolidaysMap)
         : null
 
     const attachmentRequired = requiresAttachmentForSelection(selectedType, totalDays)
@@ -1228,26 +1263,18 @@ function NewLeaveModal({
 
         // Validate policy constraints on the client side (same day / advance notice / sick leave rule)
         if (inScope('startDate') && selectedType && startDate) {
-            const todayStr = todayBangkokIso()
-            const startD = new Date(startDate)
-            const todayD = new Date(todayStr)
-            
-            startD.setHours(0,0,0,0)
-            todayD.setHours(0,0,0,0)
-
-            const diffTime = startD.getTime() - todayD.getTime()
-            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+            const diffDays = daysFromBangkokToday(startDate)
 
             const sameDayAllowed = selectedType.same_day_allowed !== false
             const advanceDays = selectedType.advance_notice_days ?? 0
 
             if (selectedType.leave_type_id === 'sick') {
-                if (diffDays > 0) {
+                if (diffDays !== null && diffDays > 0) {
                     errorIds.add('startDate')
                     missing.push('ลาป่วยล่วงหน้าไม่ได้ — ต้องเป็นวันนี้หรือวันที่ผ่านมาแล้ว')
                 }
             } else {
-                if (diffDays < 0) {
+                if (diffDays !== null && diffDays < 0) {
                     errorIds.add('startDate')
                     missing.push('ไม่สามารถยื่นลาย้อนหลังได้')
                 }
@@ -1255,11 +1282,16 @@ function NewLeaveModal({
                     errorIds.add('startDate')
                     missing.push('ประเภทนี้ไม่อนุญาตให้ยื่นลาในวันเดียวกัน')
                 }
-                if (advanceDays > 0 && diffDays < advanceDays) {
+                if (advanceDays > 0 && diffDays !== null && diffDays < advanceDays && selectedType.leave_type_id !== 'annual') {
                     errorIds.add('startDate')
                     missing.push(`ต้องขอล่วงหน้าอย่างน้อย ${advanceDays} วัน (${selectedType.name_th})`)
                 }
             }
+        }
+
+        if (inScope('advanceNoticeExceptionReason') && advanceNoticeExceptionRequired && !advanceNoticeExceptionReason.trim()) {
+            errorIds.add('advanceNoticeExceptionReason')
+            missing.push('เหตุผลประกอบการขอลาพักร้อนกระชั้นชิด')
         }
 
         // approverChain === null means "still loading" — don't block on it
@@ -1305,7 +1337,7 @@ function NewLeaveModal({
         }
 
         return { ok: missing.length === 0, missing, errorIds }
-    }, [selectedTypeId, startDate, endDate, reason, approverChain, selectedType, totalDays, nonWorkingSummary, attachmentRequired, attachment])
+    }, [selectedTypeId, startDate, endDate, reason, advanceNoticeExceptionRequired, advanceNoticeExceptionReason, approverChain, selectedType, totalDays, nonWorkingSummary, attachmentRequired, attachment])
 
     /** After a failed validate(): apply the red borders, open the toast,
      *  and scroll/focus the first errored field after a tick (so the
@@ -1317,7 +1349,7 @@ function NewLeaveModal({
         // Find the first field by step order so we jump to the lowest-step
         // missing field — same heuristic the user expects when reading the
         // toast top-to-bottom.
-        const order: FieldId[] = ['leaveType', 'startDate', 'endDate', 'reason', 'approver', 'attachment']
+        const order: FieldId[] = ['leaveType', 'startDate', 'endDate', 'reason', 'advanceNoticeExceptionReason', 'approver', 'attachment']
         const first = order.find(id => errorIds.has(id))
         if (!first) return
         const targetStep = FIELD_STEP[first]
@@ -1358,6 +1390,9 @@ function NewLeaveModal({
         form.append('is_half_day', String(isHalfDay))
         if (isHalfDay) form.append('half_day_period', halfDayPeriod)
         form.append('reason', reason.trim())
+        if (advanceNoticeExceptionRequired) {
+            form.append('advance_notice_exception_reason', advanceNoticeExceptionReason.trim())
+        }
         if (contact.trim()) form.append('contact_during_leave', contact.trim())
         if (attachment) form.append('attachment', attachment)
 
@@ -1461,6 +1496,9 @@ function NewLeaveModal({
                             halfDayPeriod={halfDayPeriod} setHalfDayPeriod={setHalfDayPeriod}
                             reason={reason}
                             setReason={(v) => { setReason(v); clearFieldError('reason') }}
+                            advanceNoticeExceptionRequired={advanceNoticeExceptionRequired}
+                            advanceNoticeExceptionReason={advanceNoticeExceptionReason}
+                            setAdvanceNoticeExceptionReason={(v) => { setAdvanceNoticeExceptionReason(v); clearFieldError('advanceNoticeExceptionReason') }}
                             contact={contact} setContact={setContact}
                             totalDays={totalDays}
                             nonWorkingSummary={nonWorkingSummary}
@@ -1483,6 +1521,8 @@ function NewLeaveModal({
                             startDate={startDate} endDate={endDate}
                             isHalfDay={isHalfDay} halfDayPeriod={halfDayPeriod}
                             reason={reason} contact={contact}
+                            advanceNoticeExceptionRequired={advanceNoticeExceptionRequired}
+                            advanceNoticeExceptionReason={advanceNoticeExceptionReason}
                             attachment={attachment}
                             totalDays={totalDays}
                             nonWorkingSummary={nonWorkingSummary}
@@ -1758,7 +1798,8 @@ function Step1TypePicker({
 function Step2Dates({
     type, startDate, setStartDate, endDate, setEndDate,
     isHalfDay, setIsHalfDay, halfDayPeriod, setHalfDayPeriod,
-    reason, setReason, contact, setContact, totalDays, nonWorkingSummary,
+    reason, setReason, advanceNoticeExceptionRequired, advanceNoticeExceptionReason,
+    setAdvanceNoticeExceptionReason, contact, setContact, totalDays, nonWorkingSummary,
     approverChain, errorFields,
 }: {
     type: BalanceEntry
@@ -1772,6 +1813,9 @@ function Step2Dates({
     setHalfDayPeriod: (v: 'morning' | 'afternoon') => void
     reason: string
     setReason: (v: string) => void
+    advanceNoticeExceptionRequired: boolean
+    advanceNoticeExceptionReason: string
+    setAdvanceNoticeExceptionReason: (v: string) => void
     contact: string
     setContact: (v: string) => void
     totalDays: number
@@ -1792,7 +1836,15 @@ function Step2Dates({
         const sameDayAllowed = type.same_day_allowed !== false
         const advanceDays = type.advance_notice_days ?? 0
 
-        if (advanceDays > 0) {
+        if (type.leave_type_id === 'annual') {
+            if (!sameDayAllowed) {
+                const tDate = new Date(today)
+                tDate.setDate(tDate.getDate() + 1)
+                minDate = tDate.toISOString().slice(0, 10)
+            } else {
+                minDate = today
+            }
+        } else if (advanceDays > 0) {
             const tDate = new Date(today)
             tDate.setDate(tDate.getDate() + advanceDays)
             minDate = tDate.toISOString().slice(0, 10)
@@ -1927,6 +1979,40 @@ function Step2Dates({
                     style={errorFields.has('reason') ? { boxShadow: '0 0 0 3px rgba(239,68,68,0.2)' } : undefined}
                 />
             </label>
+
+            {advanceNoticeExceptionRequired && (
+                <div
+                    data-field="advanceNoticeExceptionReason"
+                    className={cn(
+                        'rounded-xl bg-yellow-300 p-3 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.08)]',
+                        errorFields.has('advanceNoticeExceptionReason') && 'ring-2 ring-red-500 ring-offset-2 ring-offset-[#561e23]',
+                    )}
+                >
+                    <div className="flex items-start gap-2">
+                        <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                            <p className="text-sm font-black leading-snug">
+                                ลาพักร้อนควรยื่นล่วงหน้าอย่างน้อย {type.advance_notice_days ?? 3} วัน
+                            </p>
+                            <p className="mt-0.5 text-xs font-semibold leading-snug text-black/75">
+                                กรณีนี้สามารถส่งคำขอได้ แต่ต้องระบุเหตุผลประกอบเพื่อให้ผู้อนุมัติพิจารณาเป็นกรณีพิเศษ
+                            </p>
+                            <label className="mt-2 block">
+                                <span className="text-xs font-black">
+                                    เหตุผลประกอบการขอลาพักร้อนกระชั้นชิด <span className="text-red-700">*</span>
+                                </span>
+                                <textarea
+                                    value={advanceNoticeExceptionReason}
+                                    onChange={(e) => setAdvanceNoticeExceptionReason(e.target.value)}
+                                    rows={3}
+                                    placeholder="เช่น ลากิจใช้ครบสิทธิ์แล้ว จึงขอใช้วันลาพักร้อนแทน เนื่องจากมีธุระจำเป็น"
+                                    className="mt-1.5 w-full rounded-lg bg-white/90 border border-black/15 text-black text-sm px-3 py-2 focus:outline-none focus:border-black/50 placeholder:text-black/45"
+                                />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <label className="block">
                 <span className="text-sm font-bold text-white/85">
@@ -2130,7 +2216,9 @@ function Step3Attachment({
 
 // ── Step 4: review ───────────────────────────────────────────────────────────
 function Step4Review({
-    type, startDate, endDate, isHalfDay, halfDayPeriod, reason, contact, attachment, totalDays, nonWorkingSummary,
+    type, startDate, endDate, isHalfDay, halfDayPeriod, reason, contact,
+    advanceNoticeExceptionRequired, advanceNoticeExceptionReason,
+    attachment, totalDays, nonWorkingSummary,
 }: {
     type: BalanceEntry
     startDate: string
@@ -2139,6 +2227,8 @@ function Step4Review({
     halfDayPeriod: 'morning' | 'afternoon'
     reason: string
     contact: string
+    advanceNoticeExceptionRequired: boolean
+    advanceNoticeExceptionReason: string
     attachment: File | null
     totalDays: number
     nonWorkingSummary: string | null
@@ -2164,9 +2254,25 @@ function Step4Review({
                     <Field label="วันที่ลา" value={formatThaiDateRange(startDate, endDate)} />
                     <Field label="จำนวนวัน" value={`${totalDays} วัน${isHalfDay ? ` (ครึ่งวัน - ${halfDayPeriod === 'morning' ? 'เช้า' : 'บ่าย'})` : ''}`} />
                     <Field label="เหตุผล" value={reason} />
+                    {advanceNoticeExceptionRequired && (
+                        <Field
+                            label="เหตุผลขอยกเว้นล่วงหน้า"
+                            value={advanceNoticeExceptionReason || '—'}
+                        />
+                    )}
                     {contact && <Field label="ติดต่อระหว่างลา" value={contact} />}
                     <Field label="เอกสารแนบ" value={attachment ? attachment.name : '— ไม่แนบ'} />
                 </dl>
+                {advanceNoticeExceptionRequired && (
+                    <div className="mt-4 rounded-lg bg-yellow-300 px-3 py-2 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.08)]">
+                        <p className="text-sm font-black leading-snug">
+                            ใบลานี้เป็นลาพักร้อนกระชั้นชิด
+                        </p>
+                        <p className="mt-0.5 text-xs font-semibold leading-snug text-black/75">
+                            ระบบจะแจ้งผู้อนุมัติว่าเป็นการขอยกเว้นเงื่อนไขล่วงหน้า
+                        </p>
+                    </div>
+                )}
                 {totalDays <= 0 && nonWorkingSummary && (
                     <div className="mt-4 rounded-lg bg-yellow-300 px-3 py-2 text-black shadow-[0_0_0_1px_rgba(0,0,0,0.08)]">
                         <p className="text-sm font-black leading-snug">

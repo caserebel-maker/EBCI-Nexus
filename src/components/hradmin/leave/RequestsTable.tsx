@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { MoreHorizontal, CheckCircle2, XCircle, Ban, Eye, FileText, Clock } from 'lucide-react'
+import { MoreHorizontal, CheckCircle2, XCircle, Ban, Eye, FileText, Clock, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatEmployeeName, employeeInitials } from '@/lib/format-employee-name'
 import { STATUS_META, type LeaveRequestItem } from './types'
@@ -142,6 +142,12 @@ function RequestRow({
                 >
                     {leaveType?.name_th ?? '—'}
                 </span>
+                {item.advance_notice_exception_required && (
+                    <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-300 text-black text-[10px] font-bold">
+                        <AlertTriangle size={11} />
+                        ขอยกเว้นล่วงหน้า
+                    </span>
+                )}
             </td>
             <td className="px-4 py-3">
                 <p className="text-white/85 text-xs">{formatDateRange(item.start_date, item.end_date)}</p>
@@ -230,6 +236,12 @@ function RequestCard({
                         </span>
                         <span className="text-white/65">{formatDateRange(item.start_date, item.end_date)}</span>
                         <span className="text-white/45">· {item.total_days} วัน</span>
+                        {item.advance_notice_exception_required && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-300 text-black text-[10px] font-bold">
+                                <AlertTriangle size={11} />
+                                ขอยกเว้นล่วงหน้า
+                            </span>
+                        )}
                     </div>
                     <div className="mt-2 flex items-center justify-between text-[11px]">
                         <span className="text-white/40 font-mono">{item.reference_code ?? '—'}</span>

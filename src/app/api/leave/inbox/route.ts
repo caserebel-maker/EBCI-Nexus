@@ -34,6 +34,7 @@ export async function GET() {
     const inboxSelect = `
         id, reference_code, status, leave_type_id, start_date, end_date,
         total_days, is_half_day, half_day_period, reason,
+        advance_notice_exception_required, advance_notice_exception_reason,
         contact_during_leave, attachment_url, attachment_name,
         cancellation_reason, cancellation_requested_at,
         submitted_at, created_at,

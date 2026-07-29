@@ -24,6 +24,7 @@ export async function GET() {
         .select(`
             id, reference_code, leave_type_id, start_date, end_date, total_days,
             is_half_day, half_day_period, reason, contact_during_leave,
+            advance_notice_exception_required, advance_notice_exception_reason,
             attachment_url, attachment_name, status,
             approver_id, approved_at, approval_notes, rejection_reason,
             submitted_at, cancelled_at, cancellation_reason, created_at

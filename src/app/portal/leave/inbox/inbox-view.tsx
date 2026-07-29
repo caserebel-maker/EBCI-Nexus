@@ -17,7 +17,7 @@ interface InboxItem {
     reference_code: string
     /** API now surfaces both pending decisions and cancellation requests
      *  in one queue — the action set differs per status. */
-    status: 'pending' | 'cancellation_requested'
+    status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'cancellation_requested'
     leave_type_id: string
     start_date: string
     end_date: string
@@ -25,6 +25,8 @@ interface InboxItem {
     is_half_day: boolean | null
     half_day_period: string | null
     reason: string
+    advance_notice_exception_required: boolean | null
+    advance_notice_exception_reason: string | null
     contact_during_leave: string | null
     attachment_url: string | null
     attachment_name: string | null
@@ -70,6 +72,36 @@ interface InboxItem {
         after_current_request_days: number
         is_requested_type: boolean
     }>
+}
+
+interface TeamLeaveHistoryRaw {
+    id: string
+    referenceCode?: string | null
+    status: string
+    leaveType?: string | null
+    startDate?: string | null
+    endDate?: string | null
+    totalDays?: number | null
+    isHalfDay?: boolean | null
+    halfDayPeriod?: string | null
+    reason?: string | null
+    advanceNoticeExceptionRequired?: boolean | null
+    advanceNoticeExceptionReason?: string | null
+    contactDuringLeave?: string | null
+    attachmentUrl?: string | null
+    attachmentName?: string | null
+    createdAt?: string | null
+    employeeId: string
+    employee?: {
+        id: string
+        firstNameTH?: string | null
+        lastNameTH?: string | null
+        nickname?: string | null
+        department?: string | null
+        position?: string | null
+        photoUrl?: string | null
+        email?: string | null
+    } | null
 }
 
 type FilterKey = 'all' | 'oldest' | 'today'
@@ -176,17 +208,17 @@ export function InboxView() {
                 throw new Error(j?.error ?? `HTTP ${res.status}`)
             }
             const json = await res.json()
-            const rawList = json.data ?? []
+            const rawList = (json.data ?? []) as TeamLeaveHistoryRaw[]
             // Map raw prisma team leave requests to InboxItem format
-            const mapped = rawList
-                .filter((p: any) => p.status !== 'pending' && p.status !== 'cancellation_requested')
-                .map((p: any) => {
+            const mapped: InboxItem[] = rawList
+                .filter((p) => p.status !== 'pending' && p.status !== 'cancellation_requested')
+                .map((p) => {
                     const leaveTypeId = p.leaveType || 'annual'
                     const meta = LEAVE_TYPES_MAP[leaveTypeId] || { label: 'ใบลา', color: '#34D399' }
                     return {
                         id: p.id,
                         reference_code: p.referenceCode || p.id.slice(-8).toUpperCase(),
-                        status: p.status,
+                        status: p.status as InboxItem['status'],
                         leave_type_id: leaveTypeId,
                         start_date: p.startDate ? p.startDate.slice(0, 10) : '',
                         end_date: p.endDate ? p.endDate.slice(0, 10) : '',
@@ -194,6 +226,8 @@ export function InboxView() {
                         is_half_day: p.isHalfDay ?? false,
                         half_day_period: p.halfDayPeriod ?? null,
                         reason: p.reason ?? '',
+                        advance_notice_exception_required: p.advanceNoticeExceptionRequired ?? false,
+                        advance_notice_exception_reason: p.advanceNoticeExceptionReason ?? null,
                         contact_during_leave: p.contactDuringLeave ?? null,
                         attachment_url: p.attachmentUrl ?? null,
                         attachment_name: p.attachmentName ?? null,
@@ -540,6 +574,12 @@ function RequestCard({
                                     อนุมัติร่วม / แทน
                                 </span>
                             )}
+                            {item.advance_notice_exception_required && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-yellow-300 text-black border border-yellow-200">
+                                    <AlertCircle size={10} />
+                                    ขอยกเว้นล่วงหน้า
+                                </span>
+                            )}
                             <span
                                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider"
                                 style={{ background: `${typeColor}33`, color: typeColor.replace(/^#/, '') ? typeColor : '#fff' }}
@@ -583,6 +623,12 @@ function RequestCard({
                         <p className="text-[13px] text-white/75 mt-1.5 line-clamp-2">
                             &ldquo;{item.reason}&rdquo;
                         </p>
+                        {item.advance_notice_exception_required && item.advance_notice_exception_reason && (
+                            <p className="text-[12px] text-yellow-200 mt-1 line-clamp-2 inline-flex items-start gap-1">
+                                <AlertCircle size={11} className="mt-0.5 shrink-0" />
+                                <span>เหตุผลขอยกเว้น: <span className="text-yellow-100">{item.advance_notice_exception_reason}</span></span>
+                            </p>
+                        )}
                         {!isHistory && <ManagerBalanceSnapshot item={item} />}
                         {item.status === 'cancellation_requested' && item.cancellation_reason && (
                             <p className="text-[12px] text-amber-200/90 mt-1 line-clamp-2 inline-flex items-start gap-1">
@@ -610,6 +656,13 @@ function RequestCard({
                 <div className="px-4 pb-4 space-y-3 border-t border-white/5 pt-3">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <DetailField label="เหตุผลเต็ม" value={item.reason} multiline />
+                        {item.advance_notice_exception_required && (
+                            <DetailField
+                                label="เหตุผลขอยกเว้นล่วงหน้า"
+                                value={item.advance_notice_exception_reason ?? '—'}
+                                multiline
+                            />
+                        )}
                         <DetailField label="ช่องทางติดต่อขณะลา" value={item.contact_during_leave ?? null} icon={<Phone size={11} />} />
                         <DetailField label="ส่งคำขอเมื่อ" value={
                             item.submitted_at
@@ -929,6 +982,11 @@ function ApproveDialog({
                 {isCancelReq && item.cancellation_reason && (
                     <p className="text-sm text-amber-200/90 mt-2">
                         เหตุผลขอยกเลิก: <span className="text-amber-100">{item.cancellation_reason}</span>
+                    </p>
+                )}
+                {item.advance_notice_exception_required && item.advance_notice_exception_reason && (
+                    <p className="text-sm text-yellow-200 mt-2">
+                        ขอยกเว้นเงื่อนไขล่วงหน้า: <span className="text-yellow-100">{item.advance_notice_exception_reason}</span>
                     </p>
                 )}
             </div>
