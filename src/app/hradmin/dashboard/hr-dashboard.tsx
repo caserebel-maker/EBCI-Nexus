@@ -430,7 +430,10 @@ function DayLeaveModal({ date, onClose }: { date: Date; onClose: () => void }) {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        const iso = date.toISOString().split('T')[0]
+        const yyyy = date.getFullYear()
+        const mm = String(date.getMonth() + 1).padStart(2, '0')
+        const dd = String(date.getDate()).padStart(2, '0')
+        const iso = `${yyyy}-${mm}-${dd}`
         fetch(`/api/leave/by-date?date=${iso}`)
             .then(r => r.json())
             .then(data => { setLeaves(Array.isArray(data) ? data : []); setLoading(false) })
@@ -955,8 +958,17 @@ export function HRDashboard({
 
                     {/* Week calendar */}
                     <div style={glassStyle} className="p-5">
-                        <SectionHeader title={`ปฏิทินสัปดาห์นี้ · ลาวันนี้ ${leavesToday.length} คน`} icon={CalendarDays} />
-                        <WeekCalendar weekDays={weekDays} leavesToday={leavesToday} onDayClick={setSelectedDay} />
+                        <div className="flex items-center justify-between mb-4">
+                            <SectionHeader title={`ปฏิทินสัปดาห์นี้ · ลาวันนี้ ${leavesToday.length} คน`} icon={CalendarDays} className="mb-0" />
+                            <button
+                                type="button"
+                                onClick={() => router.push('/hradmin/leave?tab=calendar')}
+                                className="text-xs font-bold text-amber-200/70 hover:text-amber-100 transition-colors shrink-0"
+                            >
+                                ดูทั้งหมด →
+                            </button>
+                        </div>
+                        <WeekCalendar weekDays={weekDays} leavesToday={leavesToday} onDayClick={() => router.push('/hradmin/leave?tab=calendar')} />
                     </div>
 
                     {/* ใครไม่อยู่วันนี้ (Who is out today) */}
