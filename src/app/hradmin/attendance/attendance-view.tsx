@@ -1,17 +1,17 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition, type ReactNode } from 'react'
 import Link from 'next/link'
-import { MapPin, Users, Building, Home, HelpCircle, RefreshCw, Calendar, CheckCircle2, Clock, LogOut, MapPinOff, FileUp, AlertTriangle, Download } from 'lucide-react'
+import { MapPin, Users, Building, Home, HelpCircle, RefreshCw, Calendar, Clock, LogOut, MapPinOff, FileUp, AlertTriangle, Download, StickyNote, X, Loader2, type LucideIcon } from 'lucide-react'
 import { ExportAttendanceModal } from './export-modal'
 import { formatBangkokTime, toDate, todayBangkokKey } from '@/lib/datetime'
 import { cn } from '@/lib/utils'
-import { getAttendanceForDate, type AttendanceStats, type AttendanceRecord } from './actions'
+import { getAttendanceForDate, saveAttendanceHrNote, type AttendanceStats, type AttendanceRecord } from './actions'
 import { OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE } from '@/lib/outside-head-office'
 
 type FilterTab = 'all' | 'office' | 'wfh' | 'outside-head-office' | 'late' | 'not-checked-in'
 
-function isRecordLate(c: any): boolean {
+function isRecordLate(c: AttendanceRecord['checkin']): boolean {
     if (!c) return false
     if (c.late_minutes !== undefined && c.late_minutes !== null && c.late_minutes > 0) {
         return true
@@ -50,9 +50,9 @@ function formatTime(iso: string) {
     return formatBangkokTime(iso)
 }
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, currentTime: number): string {
     const d = toDate(iso, 'utc')
-    const seconds = d ? Math.floor((Date.now() - d.getTime()) / 1000) : 0
+    const seconds = d ? Math.floor((currentTime - d.getTime()) / 1000) : 0
     if (seconds < 60) return 'เพิ่งอัปเดต'
     const minutes = Math.floor(seconds / 60)
     if (minutes < 60) return `${minutes} นาทีที่แล้ว`
@@ -67,13 +67,18 @@ export function AttendanceView({ initialDate, initialData }: Props) {
     const [sortBy, setSortBy] = useState<'alphabet' | 'checkin-time'>('alphabet')
     const [isPending, startTransition] = useTransition()
     const [nowTick, setNowTick] = useState(0) // force re-render for "X minutes ago"
+    const [currentTime, setCurrentTime] = useState(() => Date.now())
     const [isExportOpen, setIsExportOpen] = useState(false)
+    const [noteTarget, setNoteTarget] = useState<AttendanceRecord | null>(null)
 
     // Update "time ago" text every 30 seconds
-    useState(() => {
-        const interval = setInterval(() => setNowTick((n) => n + 1), 30000)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setNowTick((n) => n + 1)
+            setCurrentTime(Date.now())
+        }, 30000)
         return () => clearInterval(interval)
-    })
+    }, [])
 
     const refresh = () => {
         startTransition(async () => {
@@ -136,7 +141,7 @@ export function AttendanceView({ initialDate, initialData }: Props) {
     // Quick date presets — Bangkok-local so users in Bangkok between
     // 00:00–06:59 don't see yesterday's date as "today".
     const presetToday = todayBangkokKey()
-    const yesterdayDate = new Date(Date.now() - 86400000)
+    const yesterdayDate = new Date(currentTime - 86400000)
     const presetYesterday = yesterdayDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
 
     return (
@@ -155,7 +160,7 @@ export function AttendanceView({ initialDate, initialData }: Props) {
                 <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
                     {data?.fetchedAt && (
                         <span key={nowTick} className="text-xs text-white/40 hidden sm:inline">
-                            อัปเดต {timeAgo(data.fetchedAt)}
+                            อัปเดต {timeAgo(data.fetchedAt, currentTime)}
                         </span>
                     )}
                     <Link
@@ -238,7 +243,7 @@ export function AttendanceView({ initialDate, initialData }: Props) {
             {/* Last Sync Status Banner */}
             {data?.lastSyncTime && (() => {
                 const syncDate = toDate(data.lastSyncTime, 'utc')
-                const delayMs = syncDate ? Date.now() - syncDate.getTime() : 0
+                const delayMs = syncDate ? currentTime - syncDate.getTime() : 0
                 const isStalled = delayMs > 2 * 3600 * 1000 // 2 hours
                 return (
                     <div className={cn(
@@ -329,16 +334,47 @@ export function AttendanceView({ initialDate, initialData }: Props) {
                     </div>
                 )}
                 {sortedRecords.map((r) => (
-                    <EmployeeRow key={r.employeeId} record={r} />
+                    <EmployeeRow key={r.employeeId} record={r} onEditNote={setNoteTarget} />
                 ))}
             </div>
 
             <ExportAttendanceModal open={isExportOpen} onClose={() => setIsExportOpen(false)} />
+            <HrNoteModal
+                key={noteTarget?.employeeId ?? 'hr-note-empty'}
+                date={date}
+                record={noteTarget}
+                onClose={() => setNoteTarget(null)}
+                onSaved={(employeeId, note, updatedAt) => {
+                    setData(current => current
+                        ? {
+                            ...current,
+                            records: current.records.map(record => record.employeeId === employeeId
+                                ? { ...record, hrNote: note, hrNoteUpdatedAt: updatedAt }
+                                : record),
+                        }
+                        : current)
+                    setNoteTarget(null)
+                }}
+            />
         </div>
     )
 }
 
-function StatCard({ icon: Icon, label, value, color, bg, border }: any) {
+function StatCard({
+    icon: Icon,
+    label,
+    value,
+    color,
+    bg,
+    border,
+}: {
+    icon: LucideIcon
+    label: string
+    value: number
+    color: string
+    bg: string
+    border: string
+}) {
     return (
         <div className={cn("rounded-2xl p-4 border", bg, border)}>
             <div className="flex items-center gap-2 mb-2">
@@ -350,7 +386,19 @@ function StatCard({ icon: Icon, label, value, color, bg, border }: any) {
     )
 }
 
-function FilterTabBtn({ active, onClick, count, children, variant = 'default' }: any) {
+function FilterTabBtn({
+    active,
+    onClick,
+    count,
+    children,
+    variant = 'default',
+}: {
+    active: boolean
+    onClick: () => void
+    count: number
+    children: ReactNode
+    variant?: 'default' | 'late' | 'not-checked-in'
+}) {
     let activeClass = "bg-[#882136] text-white shadow-lg shadow-[#882136]/40"
     let inactiveClass = "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border border-white/10"
 
@@ -379,7 +427,7 @@ function FilterTabBtn({ active, onClick, count, children, variant = 'default' }:
     )
 }
 
-function EmployeeRow({ record }: { record: AttendanceRecord }) {
+function EmployeeRow({ record, onEditNote }: { record: AttendanceRecord; onEditNote: (record: AttendanceRecord) => void }) {
     const c = record.checkin
     const isCheckedIn = !!c
     const isWorking = c && !c.checked_out_at
@@ -425,10 +473,30 @@ function EmployeeRow({ record }: { record: AttendanceRecord }) {
                     )}
                 </div>
                 <p className="text-xs text-white/50 truncate mt-0.5">{record.department ?? 'ไม่ระบุฝ่าย'} · {record.position ?? 'ไม่ระบุตำแหน่ง'}</p>
+                {record.hrNote && (
+                    <p className="mt-1 flex items-start gap-1.5 text-xs text-amber-100/85">
+                        <StickyNote size={12} className="mt-0.5 shrink-0 text-amber-200" />
+                        <span className="line-clamp-2">{record.hrNote}</span>
+                    </p>
+                )}
             </div>
 
             {/* Checkin status */}
             <div className="text-right shrink-0">
+                <button
+                    type="button"
+                    onClick={() => onEditNote(record)}
+                    className={cn(
+                        "mb-1 ml-auto flex h-8 w-8 items-center justify-center rounded-lg border transition-all",
+                        record.hrNote
+                            ? "border-amber-300/40 bg-amber-300/15 text-amber-100 hover:bg-amber-300/25"
+                            : "border-white/10 bg-white/5 text-white/45 hover:bg-white/10 hover:text-white/80",
+                    )}
+                    title={record.hrNote ? 'แก้หมายเหตุ HR' : 'เพิ่มหมายเหตุ HR'}
+                    aria-label={record.hrNote ? 'แก้หมายเหตุ HR' : 'เพิ่มหมายเหตุ HR'}
+                >
+                    <StickyNote size={14} />
+                </button>
                 {!isCheckedIn && (
                     <span className="text-xs text-amber-300 font-semibold">ยังไม่เช็คอิน</span>
                 )}
@@ -475,6 +543,122 @@ function EmployeeRow({ record }: { record: AttendanceRecord }) {
                         )}
                     </>
                 )}
+            </div>
+        </div>
+    )
+}
+
+function HrNoteModal({
+    date,
+    record,
+    onClose,
+    onSaved,
+}: {
+    date: string
+    record: AttendanceRecord | null
+    onClose: () => void
+    onSaved: (employeeId: string, note: string | null, updatedAt: string) => void
+}) {
+    const [draft, setDraft] = useState(record?.hrNote ?? '')
+    const [error, setError] = useState<string | null>(null)
+    const [isSaving, startSaving] = useTransition()
+
+    if (!record) return null
+
+    const displayName = record.nickname ? `${record.employeeName} (${record.nickname})` : record.employeeName
+    const trimmed = draft.trim()
+    const overLimit = trimmed.length > 500
+
+    const save = () => {
+        if (overLimit) return
+        setError(null)
+        startSaving(async () => {
+            const result = await saveAttendanceHrNote({
+                date,
+                employeeId: record.employeeId,
+                note: trimmed,
+            })
+            if ('error' in result) {
+                setError(result.error)
+                return
+            }
+            onSaved(record.employeeId, result.note, result.updatedAt)
+        })
+    }
+
+    return (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm">
+            <div className="absolute inset-0" onClick={() => !isSaving && onClose()} />
+            <div
+                role="dialog"
+                aria-label="หมายเหตุ HR"
+                className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/10 shadow-2xl"
+                style={{
+                    background: 'linear-gradient(160deg, rgba(30,8,12,0.98) 0%, rgba(86,30,35,0.98) 100%)',
+                    backdropFilter: 'blur(16px)',
+                }}
+            >
+                <header className="flex items-start justify-between gap-3 border-b border-white/10 px-5 py-4">
+                    <div className="min-w-0">
+                        <h2 className="flex items-center gap-2 text-base font-bold text-white">
+                            <StickyNote size={17} className="text-amber-200" />
+                            หมายเหตุ HR
+                        </h2>
+                        <p className="mt-1 truncate text-xs text-white/55">
+                            {displayName} · {record.employeeCode ?? 'ไม่มีรหัส'} · {date}
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={isSaving}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/55 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+                        aria-label="ปิด"
+                    >
+                        <X size={16} />
+                    </button>
+                </header>
+
+                <div className="space-y-3 px-5 py-4">
+                    <textarea
+                        value={draft}
+                        onChange={(event) => setDraft(event.target.value)}
+                        rows={5}
+                        placeholder="เช่น ออกก่อนเวลา 15:00 เนื่องจากเหตุฉุกเฉินส่วนตัว อนุโลมไม่หักลา"
+                        className="w-full resize-none rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm leading-relaxed text-white placeholder-white/35 outline-none transition focus:border-amber-300/50 focus:ring-1 focus:ring-amber-300/30"
+                    />
+                    <div className="flex items-center justify-between gap-3 text-[11px]">
+                        <span className={overLimit ? 'text-rose-200' : 'text-white/45'}>
+                            {trimmed.length}/500 ตัวอักษร
+                        </span>
+                        <span className="text-white/40">โน้ตนี้จะติดไปใน CSV export</span>
+                    </div>
+                    {error && (
+                        <p className="rounded-lg border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">
+                            {error}
+                        </p>
+                    )}
+                </div>
+
+                <footer className="flex items-center justify-end gap-2 border-t border-white/10 bg-white/[0.03] px-5 py-4">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={isSaving}
+                        className="rounded-lg px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+                    >
+                        ยกเลิก
+                    </button>
+                    <button
+                        type="button"
+                        onClick={save}
+                        disabled={isSaving || overLimit}
+                        className="inline-flex items-center gap-2 rounded-lg bg-amber-400 px-4 py-2 text-sm font-bold text-[#2a0a0e] shadow transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {isSaving ? <Loader2 size={14} className="animate-spin" /> : <StickyNote size={14} />}
+                        บันทึก
+                    </button>
+                </footer>
             </div>
         </div>
     )

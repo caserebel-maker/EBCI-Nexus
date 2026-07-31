@@ -1,6 +1,8 @@
 'use server'
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
+import { revalidatePath } from 'next/cache'
 import {
     OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE,
     normalizeOutsideHeadOfficeCheckin,
@@ -24,6 +26,8 @@ export interface AttendanceRecord {
     position: string | null
     photoUrl: string | null
     workLocation: string | null
+    hrNote: string | null
+    hrNoteUpdatedAt: string | null
     checkin: {
         id: string
         type: string
@@ -38,6 +42,10 @@ export interface AttendanceRecord {
 }
 
 type AttendanceCheckin = NonNullable<AttendanceRecord['checkin']>
+
+function isValidDateKey(value: string) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(value)
+}
 
 export async function getAttendanceForDate(dateStr: string) {
     // dateStr: 'YYYY-MM-DD'
@@ -108,6 +116,24 @@ export async function getAttendanceForDate(dateStr: string) {
         }
     }
 
+    const attendanceNotesByEmpId = new Map<string, { note: string | null; updatedAt: string | null }>()
+    const { data: attendanceNotes, error: notesError } = await supabaseAdmin
+        .from('attendance_logs')
+        .select('employee_id, hr_note, hr_note_updated_at')
+        .gte('date', `${dateStr}T00:00:00`)
+        .lte('date', `${dateStr}T23:59:59.999`)
+
+    if (notesError) {
+        console.warn('attendance_logs hr notes fetch warning:', notesError.message)
+    } else {
+        for (const row of attendanceNotes ?? []) {
+            attendanceNotesByEmpId.set(row.employee_id as string, {
+                note: (row.hr_note as string | null) ?? null,
+                updatedAt: (row.hr_note_updated_at as string | null) ?? null,
+            })
+        }
+    }
+
     const records: AttendanceRecord[] = (employees ?? []).map(emp => ({
         employeeId: emp.id,
         employeeCode: emp.employee_code ?? null,
@@ -117,6 +143,8 @@ export async function getAttendanceForDate(dateStr: string) {
         position: emp.position ?? null,
         photoUrl: emp.photo_url ?? null,
         workLocation: emp.work_location ?? null,
+        hrNote: attendanceNotesByEmpId.get(emp.id)?.note ?? null,
+        hrNoteUpdatedAt: attendanceNotesByEmpId.get(emp.id)?.updatedAt ?? null,
         checkin: checkinByEmpId.get(emp.id) ?? null,
     }))
 
@@ -165,4 +193,70 @@ export async function getAttendanceForDate(dateStr: string) {
         fetchedAt: new Date().toISOString(),
         lastSyncTime: lastScan?.created_at ?? null,
     }
+}
+
+export async function saveAttendanceHrNote(input: {
+    date: string
+    employeeId: string
+    note: string
+}) {
+    const auth = await getAuth()
+    if (!auth || !isHrStaff(auth)) {
+        return { error: 'ไม่มีสิทธิ์บันทึกหมายเหตุ' }
+    }
+
+    const date = String(input.date ?? '').trim()
+    const employeeId = String(input.employeeId ?? '').trim()
+    const note = String(input.note ?? '').trim()
+
+    if (!isValidDateKey(date)) return { error: 'รูปแบบวันที่ไม่ถูกต้อง' }
+    if (!employeeId) return { error: 'ไม่พบพนักงาน' }
+    if (note.length > 500) return { error: 'หมายเหตุยาวเกิน 500 ตัวอักษร' }
+
+    const dayStart = `${date}T00:00:00`
+    const dayEnd = `${date}T23:59:59.999`
+    const now = new Date().toISOString()
+
+    const { data: existing, error: existingError } = await supabaseAdmin
+        .from('attendance_logs')
+        .select('id')
+        .eq('employee_id', employeeId)
+        .gte('date', dayStart)
+        .lte('date', dayEnd)
+        .limit(1)
+        .maybeSingle()
+
+    if (existingError) return { error: existingError.message }
+
+    const nextValues: Record<string, unknown> = {
+        hr_note: note || null,
+        hr_note_updated_at: now,
+        hr_note_updated_by: auth.session.id,
+        updated_at: now,
+    }
+
+    if (existing?.id) {
+        const { error } = await supabaseAdmin
+            .from('attendance_logs')
+            .update(nextValues)
+            .eq('id', existing.id)
+        if (error) return { error: error.message }
+    } else {
+        const { error } = await supabaseAdmin
+            .from('attendance_logs')
+            .insert({
+                id: `al_${date.replace(/-/g, '')}_${employeeId.slice(0, 8)}_${Math.random()
+                    .toString(36)
+                    .slice(2, 8)}`,
+                employee_id: employeeId,
+                date: dayStart,
+                ...nextValues,
+                created_at: now,
+            })
+        if (error) return { error: error.message }
+    }
+
+    revalidatePath('/hradmin/attendance')
+    revalidatePath('/hradmin/attendance/reconcile')
+    return { success: true, note: note || null, updatedAt: now }
 }

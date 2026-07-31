@@ -116,6 +116,12 @@ type HolidayRow = {
     type: string | null
 }
 
+type AttendanceLogNoteRow = {
+    employee_id: string
+    date: string
+    hr_note: string | null
+}
+
 type DateSource = 'utc' | 'bangkok'
 
 const SUPABASE_PAGE_SIZE = 1000
@@ -330,6 +336,24 @@ async function fetchHolidays(fromDate: string, toDate: string): Promise<HolidayR
     return (data ?? []) as HolidayRow[]
 }
 
+async function fetchAttendanceLogNotes(fromDate: string, toDate: string): Promise<AttendanceLogNoteRow[]> {
+    const { data, error } = await supabaseAdmin
+        .from('attendance_logs')
+        .select('employee_id, date, hr_note')
+        .gte('date', `${fromDate}T00:00:00`)
+        .lte('date', `${toDate}T23:59:59.999`)
+        .not('hr_note', 'is', null)
+
+    if (error) {
+        if (error.message.includes('hr_note')) {
+            console.warn('[attendance-export] hr_note column missing; continuing without HR notes')
+            return []
+        }
+        throw new Error(error.message)
+    }
+    return (data ?? []) as AttendanceLogNoteRow[]
+}
+
 export async function GET(req: NextRequest) {
     const auth = await getAuth()
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -354,13 +378,14 @@ export async function GET(req: NextRequest) {
         const startOfDay = new Date(`${from}T00:00:00+07:00`)
         const endOfDay = new Date(`${to}T23:59:59.999+07:00`)
 
-        const [allEmployees, checkins, cardScans, leaves, wfhRequests, holidays] = await Promise.all([
+        const [allEmployees, checkins, cardScans, leaves, wfhRequests, holidays, attendanceLogNotes] = await Promise.all([
             fetchAllEmployees(),
             fetchAllCheckins(startOfDay.toISOString(), endOfDay.toISOString()),
             fetchAllCardScans(from, to),
             fetchAllLeaves(from, to),
             fetchAllWfhRequests(from, to),
             fetchHolidays(from, to),
+            fetchAttendanceLogNotes(from, to),
         ])
 
         const employees = allEmployees.filter(emp => emp.status === 'active' && !emp.is_advisor)
@@ -400,6 +425,9 @@ export async function GET(req: NextRequest) {
         const leaveMap = mapDateEmployeeRows(leaves)
         const wfhMap = mapDateEmployeeRows(wfhRequests)
         const holidayByDate = new Map(holidays.map(h => [h.date, h]))
+        const attendanceNoteByDateEmp = new Map(
+            attendanceLogNotes.map(row => [`${dateOnly(row.date)}_${row.employee_id}`, row.hr_note ?? '']),
+        )
         const dateRange = getDatesInRange(from, to)
 
         if (debug) {
@@ -414,6 +442,7 @@ export async function GET(req: NextRequest) {
                         leaves: leaves.length,
                         wfhRequests: wfhRequests.length,
                         holidays: holidays.length,
+                        attendanceLogNotes: attendanceLogNotes.length,
                     },
                     days: dateRange.map(dateStr => ({
                         date: dateStr,
@@ -497,6 +526,7 @@ export async function GET(req: NextRequest) {
             'ผู้อนุมัติ WFH',
             'เหตุผลปฏิเสธ/ยกเลิก WFH',
             'หมายเหตุ HR',
+            'หมายเหตุระบบ',
             'จุดที่ควรตรวจสอบ',
         ]
 
@@ -528,6 +558,7 @@ export async function GET(req: NextRequest) {
                     .sort((a, b) => compareTimestamp(a.scan_time, 'bangkok', b.scan_time, 'bangkok'))
                 const dayLeaves = leaveMap.get(key) ?? []
                 const dayWfh = wfhMap.get(key) ?? []
+                const hrNote = attendanceNoteByDateEmp.get(key) ?? '—'
                 const approvedLeaves = dayLeaves.filter(l => l.status === 'approved' || l.status === 'cancellation_requested')
                 const activeWfh = dayWfh.filter(w => w.status === 'approved')
                 const firstMobile = mobileCheckins[0] ?? null
@@ -711,6 +742,7 @@ export async function GET(req: NextRequest) {
                     uniqJoin(dayWfh.map(w => timestampLabel(w.approved_at, 'utc'))),
                     wfhApprover ? employeeFullName(wfhApprover) : '—',
                     uniqJoin(dayWfh.map(w => w.rejection_reason ?? w.cancellation_reason)),
+                    hrNote,
                     uniqJoin([
                         ...notes,
                         ...approvedLeaves.map(l => requestSummary(l, leaveTypeNames.get(l.leave_type_id ?? '') ?? l.leave_type_id ?? 'ลา')),
