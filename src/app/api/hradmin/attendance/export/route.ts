@@ -33,6 +33,7 @@ const HOLIDAY_TYPE_LABELS: Record<string, string> = {
 
 type EmployeeRow = {
     id: string
+    user_id?: string | null
     employee_code: string | null
     first_name_th: string | null
     last_name_th: string | null
@@ -120,6 +121,8 @@ type AttendanceLogNoteRow = {
     employee_id: string
     date: string
     hr_note: string | null
+    hr_note_updated_at: string | null
+    hr_note_updated_by: string | null
 }
 
 type DateSource = 'utc' | 'bangkok'
@@ -241,7 +244,7 @@ async function fetchAllEmployees(): Promise<EmployeeRow[]> {
     for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
         const { data, error } = await supabaseAdmin
             .from('employees')
-            .select('id, employee_code, first_name_th, last_name_th, nickname, email, department, position, work_location, status, is_advisor')
+            .select('id, user_id, employee_code, first_name_th, last_name_th, nickname, email, department, position, work_location, status, is_advisor')
             .order('employee_code', { ascending: true })
             .range(from, from + SUPABASE_PAGE_SIZE - 1)
 
@@ -293,7 +296,7 @@ async function fetchAllLeaves(fromDate: string, toDate: string): Promise<LeaveRo
     for (let from = 0; ; from += SUPABASE_PAGE_SIZE) {
         const { data, error } = await supabaseAdmin
             .from('leave_requests')
-            .select('id, reference_code, employee_id, leave_type_id, start_date, end_date, total_days, reason, status, approver_id, submitted_at, approved_at, rejection_reason, is_half_day, half_day_period, cancellation_requested_at, cancellation_decided_by, cancellation_decision_reason, created_at, updated_at')
+            .select('id, reference_code, employee_id, leave_type_id, start_date, end_date, total_days, reason, status, approver_id, current_approver_id, submitted_at, approved_at, rejection_reason, is_half_day, half_day_period, cancellation_requested_at, cancellation_decided_by, cancellation_decision_reason, created_at, updated_at')
             .lte('start_date', toDate)
             .gte('end_date', fromDate)
             .order('start_date', { ascending: true })
@@ -339,7 +342,7 @@ async function fetchHolidays(fromDate: string, toDate: string): Promise<HolidayR
 async function fetchAttendanceLogNotes(fromDate: string, toDate: string): Promise<AttendanceLogNoteRow[]> {
     const { data, error } = await supabaseAdmin
         .from('attendance_logs')
-        .select('employee_id, date, hr_note')
+        .select('employee_id, date, hr_note, hr_note_updated_at, hr_note_updated_by')
         .gte('date', `${fromDate}T00:00:00`)
         .lte('date', `${toDate}T23:59:59.999`)
         .not('hr_note', 'is', null)
@@ -390,6 +393,11 @@ export async function GET(req: NextRequest) {
 
         const employees = allEmployees.filter(emp => emp.status === 'active' && !emp.is_advisor)
         const employeeById = new Map(allEmployees.map(emp => [emp.id, emp]))
+        const employeeByUserId = new Map(
+            allEmployees
+                .filter(emp => Boolean(emp.user_id))
+                .map(emp => [emp.user_id as string, emp]),
+        )
         const employeeIdByCode = new Map<string, string>()
         for (const emp of allEmployees) {
             if (emp.employee_code) employeeIdByCode.set(emp.employee_code, emp.id)
@@ -426,7 +434,7 @@ export async function GET(req: NextRequest) {
         const wfhMap = mapDateEmployeeRows(wfhRequests)
         const holidayByDate = new Map(holidays.map(h => [h.date, h]))
         const attendanceNoteByDateEmp = new Map(
-            attendanceLogNotes.map(row => [`${dateOnly(row.date)}_${row.employee_id}`, row.hr_note ?? '']),
+            attendanceLogNotes.map(row => [`${dateOnly(row.date)}_${row.employee_id}`, row]),
         )
         const dateRange = getDatesInRange(from, to)
 
@@ -525,7 +533,10 @@ export async function GET(req: NextRequest) {
             'อนุมัติ WFH เมื่อ',
             'ผู้อนุมัติ WFH',
             'เหตุผลปฏิเสธ/ยกเลิก WFH',
+            'หมายเหตุอนุมัติ WFH',
             'หมายเหตุ HR',
+            'ผู้บันทึกหมายเหตุ HR',
+            'แก้ไขหมายเหตุ HR เมื่อ',
             'หมายเหตุระบบ',
             'จุดที่ควรตรวจสอบ',
         ]
@@ -558,7 +569,15 @@ export async function GET(req: NextRequest) {
                     .sort((a, b) => compareTimestamp(a.scan_time, 'bangkok', b.scan_time, 'bangkok'))
                 const dayLeaves = leaveMap.get(key) ?? []
                 const dayWfh = wfhMap.get(key) ?? []
-                const hrNote = attendanceNoteByDateEmp.get(key) ?? '—'
+                const hrNoteRecord = attendanceNoteByDateEmp.get(key) ?? null
+                const hrNoteActor = hrNoteRecord?.hr_note_updated_by
+                    ? employeeByUserId.get(hrNoteRecord.hr_note_updated_by) ?? employeeById.get(hrNoteRecord.hr_note_updated_by)
+                    : null
+                const hrNoteActorLabel = hrNoteRecord?.hr_note_updated_by
+                    ? hrNoteActor
+                        ? employeeFullName(hrNoteActor)
+                        : hrNoteRecord.hr_note_updated_by
+                    : '—'
                 const approvedLeaves = dayLeaves.filter(l => l.status === 'approved' || l.status === 'cancellation_requested')
                 const activeWfh = dayWfh.filter(w => w.status === 'approved')
                 const firstMobile = mobileCheckins[0] ?? null
@@ -673,7 +692,7 @@ export async function GET(req: NextRequest) {
                 const primaryLeave = dayLeaves[0] ?? null
                 const primaryWfh = dayWfh[0] ?? null
                 const approver = primaryLeave?.approver_id ? employeeById.get(primaryLeave.approver_id) : null
-                const currentApprover = null
+                const currentApprover = primaryLeave?.current_approver_id ? employeeById.get(primaryLeave.current_approver_id) : null
                 const wfhApprover = primaryWfh?.approver_id ? employeeById.get(primaryWfh.approver_id) : null
 
                 const row = [
@@ -742,7 +761,10 @@ export async function GET(req: NextRequest) {
                     uniqJoin(dayWfh.map(w => timestampLabel(w.approved_at, 'utc'))),
                     wfhApprover ? employeeFullName(wfhApprover) : '—',
                     uniqJoin(dayWfh.map(w => w.rejection_reason ?? w.cancellation_reason)),
-                    hrNote,
+                    uniqJoin(dayWfh.map(w => w.approval_notes)),
+                    hrNoteRecord?.hr_note ?? '—',
+                    hrNoteActorLabel,
+                    timestampLabel(hrNoteRecord?.hr_note_updated_at, 'utc'),
                     uniqJoin([
                         ...notes,
                         ...approvedLeaves.map(l => requestSummary(l, leaveTypeNames.get(l.leave_type_id ?? '') ?? l.leave_type_id ?? 'ลา')),
