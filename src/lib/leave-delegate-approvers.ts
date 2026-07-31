@@ -134,13 +134,9 @@ export async function canActOnLeaveRequest(args: {
     approverEmployeeId: string
     applicantEmployeeId: string
     primaryApproverId: string | null
+    isHr?: boolean
 }): Promise<boolean> {
-    // Employee/manager mode only:
-    //   - the assigned approver may act, or
-    //   - a configured delegate / co-approver may act.
-    //
-    // HR admin override lives in /api/hradmin/leave/force-action and is
-    // intentionally kept out of this helper so the two modes stay clear.
+    if (args.isHr) return true
     if (args.primaryApproverId === args.approverEmployeeId) return true
     const delegateIds = await getDelegateApproverIdsForApplicant(args.applicantEmployeeId)
     return delegateIds.includes(args.approverEmployeeId)

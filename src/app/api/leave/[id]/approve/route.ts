@@ -55,6 +55,7 @@ export async function POST(
         approverEmployeeId,
         applicantEmployeeId: row.employee_id as string,
         primaryApproverId: row.approver_id as string | null,
+        isHr: isHrStaff(auth),
     })
     if (!canAct) {
         return NextResponse.json(

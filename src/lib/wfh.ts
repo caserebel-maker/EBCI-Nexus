@@ -488,6 +488,7 @@ export async function decideWfhRequest(input: {
     approverEmployeeId: string
     decision: 'approve' | 'reject'
     note?: string | null
+    isHr?: boolean
 }): Promise<{ ok: true } | { error: string }> {
     const { data: existing, error: lookupErr } = await supabaseAdmin
         .from('wfh_requests')
@@ -495,7 +496,7 @@ export async function decideWfhRequest(input: {
         .eq('id', input.id)
         .maybeSingle()
     if (lookupErr || !existing) return { error: 'ไม่พบใบขอ WFH' }
-    if (existing.approver_id !== input.approverEmployeeId) {
+    if (existing.approver_id !== input.approverEmployeeId && !input.isHr) {
         return { error: 'ไม่มีสิทธิ์อนุมัติใบขอนี้' }
     }
     if (existing.status !== 'pending') {

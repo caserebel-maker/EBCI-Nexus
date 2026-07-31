@@ -19,6 +19,7 @@ import {
     type WfhStatus,
 } from '@/lib/wfh-shared'
 import { cn } from '@/lib/utils'
+import { WfhDetailActions } from './wfh-detail-actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -201,13 +202,16 @@ export default async function HrWfhRequestDetailPage({ params }: PageProps) {
                             {[applicant?.employee_code, applicant?.department, applicant?.position].filter(Boolean).join(' · ') || '—'}
                         </p>
                     </div>
-                    <Link
-                        href={employeeProfileHref}
-                        className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white/80 hover:bg-white/10"
-                    >
-                        <UserRound size={16} />
-                        เปิดโปรไฟล์พนักงาน
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <WfhDetailActions request={r} />
+                        <Link
+                            href={employeeProfileHref}
+                            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white/80 hover:bg-white/10"
+                        >
+                            <UserRound size={16} />
+                            เปิดโปรไฟล์พนักงาน
+                        </Link>
+                    </div>
                 </div>
 
                 <div className="grid gap-4 p-5 sm:p-6 lg:grid-cols-[1.15fr_0.85fr]">
