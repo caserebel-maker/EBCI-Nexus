@@ -21,14 +21,30 @@ export type ValidationResult =
     | { ok: true; totalDays: number }
     | { ok: false; field?: string; error: string }
 
-export function requiresLeaveAttachment(leaveType: LeaveType, totalDays: number): boolean {
-    if (leaveType.id === 'sick') return totalDays >= 3
+export function requiresLeaveAttachment(
+    leaveType: LeaveType,
+    totalDays: number,
+    isSickAdvanceNotice?: boolean,
+): boolean {
+    if (leaveType.id === 'sick') {
+        if (isSickAdvanceNotice) return true
+        return totalDays >= 3
+    }
     return leaveType.requires_attachment === true
 }
 
-export function leaveAttachmentDescription(leaveType: LeaveType, totalDays: number): string | null {
-    if (!requiresLeaveAttachment(leaveType, totalDays)) return null
-    if (leaveType.id === 'sick') return 'ใบรับรองแพทย์หรือสถานพยาบาลของทางราชการสำหรับการลาป่วยตั้งแต่ 3 วันทำงานติดต่อกัน'
+export function leaveAttachmentDescription(
+    leaveType: LeaveType,
+    totalDays: number,
+    isSickAdvanceNotice?: boolean,
+): string | null {
+    if (!requiresLeaveAttachment(leaveType, totalDays, isSickAdvanceNotice)) return null
+    if (leaveType.id === 'sick') {
+        if (isSickAdvanceNotice) {
+            return 'ใบรับรองแพทย์หรือใบนัดแพทย์สำหรับการลาป่วยล่วงหน้ามากกว่า 1 วัน'
+        }
+        return 'ใบรับรองแพทย์หรือสถานพยาบาลของทางราชการสำหรับการลาป่วยตั้งแต่ 3 วันทำงานติดต่อกัน'
+    }
     return leaveType.attachment_description ?? null
 }
 
@@ -137,17 +153,9 @@ export async function validateLeaveRequest(
     const sameDayAllowed = leaveType.same_day_allowed !== false
     const advanceDays = leaveType.advance_notice_days ?? 0
 
-    // Rule 4 — sick leave is retroactive only; spec wording:
-    // "ลาป่วยต้องเป็นวันที่ผ่านไปแล้ว" → start_date must be strictly in the past.
-    if (leaveType.id === 'sick') {
-        if (startEpoch > todayEpoch) {
-            return {
-                ok: false,
-                field: 'date',
-                error: 'ลาป่วยล่วงหน้าไม่ได้ — ต้องเป็นวันนี้หรือวันที่ผ่านมาแล้ว',
-            }
-        }
-    } else {
+    // Rule 4 — sick leave can be retroactive (today or past) or in advance.
+    // Non-sick leave checks (Rule 2 and Rule 3 advance notice) only apply if type is not sick.
+    if (leaveType.id !== 'sick') {
         // Rule 2 — non-sick leave must start today or later
         if (startEpoch < todayEpoch) {
             return { ok: false, field: 'date', error: 'ไม่สามารถยื่นลาย้อนหลังได้' }
@@ -227,8 +235,10 @@ export async function validateLeaveRequest(
     // Rule 5 — required attachment. Sick leave is a special company
     // policy: medical certificate is required only when total leave is
     // 3 days or more. Other leave types follow leave_types.requires_attachment.
-    if (requiresLeaveAttachment(leaveType, totalDays) && !hasAttachment) {
-        const description = leaveAttachmentDescription(leaveType, totalDays)
+    // Under Option A: Sick leave requested more than 1 day in advance also requires an attachment.
+    const isSickAdvanceNotice = leaveType.id === 'sick' && (startEpoch - todayEpoch > 1)
+    if (requiresLeaveAttachment(leaveType, totalDays, isSickAdvanceNotice) && !hasAttachment) {
+        const description = leaveAttachmentDescription(leaveType, totalDays, isSickAdvanceNotice)
         const note = description
             ? ` — ${description}`
             : ''

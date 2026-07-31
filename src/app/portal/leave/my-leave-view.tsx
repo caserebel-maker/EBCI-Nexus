@@ -131,14 +131,38 @@ const LEAVE_ICON: Record<string, typeof Palmtree> = {
     training: GraduationCap,
 }
 
-function requiresAttachmentForSelection(type: BalanceEntry | null, totalDays: number): boolean {
+function requiresAttachmentForSelection(type: BalanceEntry | null, totalDays: number, startDate?: string): boolean {
     if (!type) return false
-    if (type.leave_type_id === 'sick') return totalDays >= 3
+    if (type.leave_type_id === 'sick') {
+        if (startDate) {
+            const todayStr = todayBangkokIso()
+            const startD = new Date(startDate)
+            const todayD = new Date(todayStr)
+            startD.setHours(0,0,0,0)
+            todayD.setHours(0,0,0,0)
+            const diffTime = startD.getTime() - todayD.getTime()
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+            if (diffDays > 1) return true
+        }
+        return totalDays >= 3
+    }
     return !!type.requires_attachment
 }
 
-function attachmentHint(type: BalanceEntry, totalDays: number): string {
+function attachmentHint(type: BalanceEntry, totalDays: number, startDate?: string): string {
     if (type.leave_type_id === 'sick') {
+        if (startDate) {
+            const todayStr = todayBangkokIso()
+            const startD = new Date(startDate)
+            const todayD = new Date(todayStr)
+            startD.setHours(0,0,0,0)
+            todayD.setHours(0,0,0,0)
+            const diffTime = startD.getTime() - todayD.getTime()
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+            if (diffDays > 1) {
+                return 'ลาป่วยล่วงหน้ามากกว่า 1 วัน ต้องแนบใบรับรองแพทย์หรือใบนัดแพทย์'
+            }
+        }
         return totalDays >= 3
             ? 'ลาป่วยตั้งแต่ 3 วันขึ้นไป ต้องแนบใบรับรองแพทย์'
             : 'ลาป่วยไม่เกิน 2 วัน แนบใบรับรองแพทย์ได้ถ้ามี แต่ไม่บังคับ'
@@ -1510,6 +1534,7 @@ function NewLeaveModal({
                         <Step3Attachment
                             type={selectedType}
                             totalDays={totalDays}
+                            startDate={startDate}
                             file={attachment}
                             onFile={(f) => { setAttachment(f); if (f) clearFieldError('attachment') }}
                             errored={errorFields.has('attachment')}
@@ -1830,8 +1855,7 @@ function Step2Dates({
     let maxDate: string | undefined = undefined
 
     if (type.leave_type_id === 'sick') {
-        // sick leave must be today or in the past (cannot be in the future)
-        maxDate = today
+        // Option A: Sick leave allows advance notice, so we do not restrict maxDate to today.
     } else {
         const sameDayAllowed = type.same_day_allowed !== false
         const advanceDays = type.advance_notice_days ?? 0
@@ -2131,25 +2155,26 @@ function DateField({
 
 // ── Step 3: attachment ───────────────────────────────────────────────────────
 function Step3Attachment({
-    type, totalDays, file, onFile, errored,
+    type, totalDays, startDate, file, onFile, errored,
 }: {
     type: BalanceEntry
     totalDays: number
+    startDate: string
     file: File | null
     onFile: (f: File | null) => void
     errored?: boolean
 }) {
     const ref = useRef<HTMLInputElement>(null)
-    const required = requiresAttachmentForSelection(type, totalDays)
+    const required = requiresAttachmentForSelection(type, totalDays, startDate)
     return (
         <div className="space-y-3">
             <div className="p-3 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-100 text-xs inline-flex items-start gap-2 w-full">
                 <Paperclip size={13} className="mt-0.5 shrink-0" />
                 <span>
                     {required ? (
-                        <>ประเภทนี้ <strong>ต้องแนบเอกสาร</strong> — {attachmentHint(type, totalDays)}</>
+                        <>ประเภทนี้ <strong>ต้องแนบเอกสาร</strong> — {attachmentHint(type, totalDays, startDate)}</>
                     ) : (
-                        <>{attachmentHint(type, totalDays)}</>
+                        <>{attachmentHint(type, totalDays, startDate)}</>
                     )}
                 </span>
             </div>
