@@ -1293,10 +1293,7 @@ function NewLeaveModal({
             const advanceDays = selectedType.advance_notice_days ?? 0
 
             if (selectedType.leave_type_id === 'sick') {
-                if (diffDays !== null && diffDays > 0) {
-                    errorIds.add('startDate')
-                    missing.push('ลาป่วยล่วงหน้าไม่ได้ — ต้องเป็นวันนี้หรือวันที่ผ่านมาแล้ว')
-                }
+                // Option A: Sick leave allows advance notice, so we do not block diffDays > 0.
             } else {
                 if (diffDays !== null && diffDays < 0) {
                     errorIds.add('startDate')
