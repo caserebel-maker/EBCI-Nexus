@@ -223,6 +223,7 @@ export default async function AdminDashboard() {
     // ─── Birthdays this month ───
     const birthdays = (employees ?? [])
         .filter(e => {
+            if (e.status !== 'active' || e.end_date) return false
             if (!e.date_of_birth) return false
             const dob = new Date(e.date_of_birth)
             return dob.getMonth() + 1 === month
