@@ -86,6 +86,7 @@ interface LeaveRequest {
     cancellation_reason: string | null
     /** Set when employee files §1.4 cancel-request on an approved leave. */
     cancellation_requested_at: string | null
+    cancellation_decided_by: string | null
     /** Reason supplied by the approver when resolving a cancel request. */
     cancellation_decision_reason: string | null
     created_at: string
@@ -231,6 +232,51 @@ function daysFromBangkokToday(dateIso: string): number | null {
     const todayEpoch = toEpochDay(todayBangkokIso())
     if (!Number.isFinite(dateEpoch) || !Number.isFinite(todayEpoch)) return null
     return dateEpoch - todayEpoch
+}
+
+function leaveWillRefundOnCancellation(request: Pick<LeaveRequest, 'start_date'>): boolean {
+    return request.start_date >= todayBangkokIso()
+}
+
+function cancellationStatusHint(request: LeaveRequest): { tone: 'amber' | 'emerald' | 'red' | 'muted'; text: string } | null {
+    if (request.status === 'approved') {
+        if (request.cancellation_decision_reason) {
+            return {
+                tone: 'red',
+                text: `คำขอยกเลิกล่าสุดถูกปฏิเสธ · ใบนี้ยังอนุมัติอยู่และยังนับใช้สิทธิ์ (${request.cancellation_decision_reason})`,
+            }
+        }
+        return {
+            tone: 'amber',
+            text: leaveWillRefundOnCancellation(request)
+                ? 'ยังไม่ได้ขอยกเลิก · ถ้าต้องการคืนสิทธิ์ ให้เปิดรายการนี้แล้วส่งคำขอยกเลิก'
+                : 'ยังอนุมัติอยู่ · หากขอยกเลิกย้อนหลัง ระบบจะไม่คืนสิทธิ์อัตโนมัติ',
+        }
+    }
+    if (request.status === 'cancellation_requested') {
+        return {
+            tone: 'amber',
+            text: request.cancellation_requested_at
+                ? `ส่งคำขอยกเลิกแล้ว ${formatThaiDateTime(request.cancellation_requested_at)} · รอผู้อนุมัติ`
+                : 'ส่งคำขอยกเลิกแล้ว · รอผู้อนุมัติ',
+        }
+    }
+    if (request.status === 'cancelled') {
+        return {
+            tone: leaveWillRefundOnCancellation(request) ? 'emerald' : 'muted',
+            text: leaveWillRefundOnCancellation(request)
+                ? 'ยกเลิกแล้ว · วันลายังไม่ถึง ระบบคืนสิทธิ์ให้อัตโนมัติ'
+                : 'ยกเลิกแล้ว · วันลาเริ่มไปแล้ว ระบบไม่คืนสิทธิ์อัตโนมัติ',
+        }
+    }
+    return null
+}
+
+function hintClass(tone: 'amber' | 'emerald' | 'red' | 'muted') {
+    if (tone === 'amber') return 'text-amber-200'
+    if (tone === 'emerald') return 'text-emerald-200'
+    if (tone === 'red') return 'text-red-200'
+    return 'text-white/50'
 }
 
 function requiresAdvanceNoticeException(type: BalanceEntry | null, startDate: string): boolean {
@@ -458,10 +504,10 @@ export function MyLeaveView({ year }: Props) {
                     request={detail}
                     balance={balances.find(b => b.leave_type_id === detail.leave_type_id) ?? null}
                     onClose={() => setDetail(null)}
-                    onCancelled={() => {
+                    onCancelled={(message) => {
                         setDetail(null)
                         void loadAll()
-                        setToast('ยกเลิกใบลาเรียบร้อย')
+                        setToast(message ?? 'ยกเลิกใบลาเรียบร้อย')
                         window.setTimeout(() => setToast(null), 4000)
                     }}
                 />
@@ -760,6 +806,7 @@ function RequestsList({
             {requests.map(r => {
                 const bal = balances.find(b => b.leave_type_id === r.leave_type_id)
                 const Icon = LEAVE_ICON[r.leave_type_id] ?? CalendarDays
+                const cancelHint = cancellationStatusHint(r)
                 return (
                     <li key={r.id}>
                         <button
@@ -788,6 +835,11 @@ function RequestsList({
                                     {r.total_days} วัน · ยื่น {formatThaiDateTime(r.submitted_at ?? r.created_at)}
                                     {r.approver_name ? ` · ผู้อนุมัติ ${r.approver_name}` : ''}
                                 </p>
+                                {cancelHint && (
+                                    <p className={cn('mt-1 text-[11px] leading-snug line-clamp-2', hintClass(cancelHint.tone))}>
+                                        {cancelHint.text}
+                                    </p>
+                                )}
                             </div>
                             <ChevronRight size={14} className="text-white/40 shrink-0" />
                         </button>
@@ -822,7 +874,7 @@ function LeaveDetailModal({
     request: LeaveRequest
     balance: BalanceEntry | null
     onClose: () => void
-    onCancelled: () => void
+    onCancelled: (message?: string) => void
 }) {
     const [cancelling, setCancelling] = useState(false)
     const [cancelReason, setCancelReason] = useState('')
@@ -851,7 +903,7 @@ function LeaveDetailModal({
             })
             const json = await res.json()
             if (!res.ok) throw new Error(json?.error ?? 'ยกเลิกไม่สำเร็จ')
-            onCancelled()
+            onCancelled('ยกเลิกใบลาเรียบร้อย')
         } catch (e) {
             setCancelError(e instanceof Error ? e.message : 'ยกเลิกไม่สำเร็จ')
         } finally {
@@ -881,7 +933,7 @@ function LeaveDetailModal({
             })
             const json = await res.json()
             if (!res.ok) throw new Error(json?.error ?? 'ส่งคำขอไม่สำเร็จ')
-            onCancelled() // reuses the parent's "refresh + close" callback
+            onCancelled('ส่งคำขอยกเลิกแล้ว · รอผู้อนุมัติ')
         } catch (e) {
             setCancelError(e instanceof Error ? e.message : 'ส่งคำขอไม่สำเร็จ')
         } finally {
@@ -892,6 +944,7 @@ function LeaveDetailModal({
     const canCancel = request.status === 'pending'
     const canRequestCancellation = request.status === 'approved'
     const Icon = LEAVE_ICON[request.leave_type_id] ?? CalendarDays
+    const cancelHint = cancellationStatusHint(request)
 
     return (
         <div
@@ -928,6 +981,18 @@ function LeaveDetailModal({
                             <Field label="ช่องทางติดต่อ" value={request.contact_during_leave} />
                         )}
                     </dl>
+
+                    {cancelHint && (
+                        <div className={cn(
+                            'p-3 rounded-lg border text-sm leading-relaxed',
+                            cancelHint.tone === 'amber' && 'bg-amber-500/10 border-amber-500/30 text-amber-100',
+                            cancelHint.tone === 'emerald' && 'bg-emerald-500/10 border-emerald-500/30 text-emerald-100',
+                            cancelHint.tone === 'red' && 'bg-red-500/10 border-red-500/30 text-red-100',
+                            cancelHint.tone === 'muted' && 'bg-white/5 border-white/10 text-white/70',
+                        )}>
+                            {cancelHint.text}
+                        </div>
+                    )}
 
                     <div>
                         <p className="text-sm font-bold text-white/85 mb-1">เหตุผล</p>
@@ -1044,8 +1109,10 @@ function LeaveDetailModal({
                             />
                             {cancelError && <p className="text-red-300 text-sm">{cancelError}</p>}
                             <p className="text-[11px] text-white/55 leading-relaxed">
-                                ใบลานี้อนุมัติแล้ว — ระบบจะส่งคำขอยกเลิกไปยังผู้อนุมัติเพื่อพิจารณา
-                                ถ้าวันลายังไม่ถึง ระบบจะคืนวันลาให้อัตโนมัติเมื่ออนุมัติ
+                                ใบลานี้ยังอยู่สถานะอนุมัติแล้ว — สิทธิ์จะยังไม่คืนจนกว่าผู้อนุมัติจะอนุมัติคำขอยกเลิก
+                                {leaveWillRefundOnCancellation(request)
+                                    ? ' และเมื่ออนุมัติยกเลิกแล้ว ระบบจะคืนวันลาให้อัตโนมัติ'
+                                    : ' และเนื่องจากวันลาเริ่มไปแล้ว ระบบจะไม่คืนสิทธิ์อัตโนมัติ'}
                             </p>
                             <button
                                 type="button"
@@ -1849,7 +1916,7 @@ function Step2Dates({
 }) {
     const today = todayBangkokIso()
     let minDate: string | undefined = undefined
-    let maxDate: string | undefined = undefined
+    const maxDate: string | undefined = undefined
 
     if (type.leave_type_id === 'sick') {
         // Option A: Sick leave allows advance notice, so we do not restrict maxDate to today.

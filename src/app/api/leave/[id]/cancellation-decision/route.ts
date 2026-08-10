@@ -144,8 +144,8 @@ export async function POST(
                 await createNotification({
                     recipient_user_id: employeeUserId,
                     type: 'leave_cancelled',
-                    title: 'อนุมัติคำขอยกเลิกใบลา',
-                    body: `${row.start_date} → ${row.end_date} (${totalDays} วัน) — ใบลาถูกยกเลิกแล้ว${refundNote}${reason ? ` · ${reason}` : ''}`,
+                    title: `อนุมัติคำขอยกเลิกใบลา ${row.reference_code}`,
+                    body: `${row.reference_code} · ${row.start_date} → ${row.end_date} (${totalDays} วัน) — ใบลาถูกยกเลิกแล้ว${refundNote}${reason ? ` · ${reason}` : ''}`,
                     action_url: '/portal/leave',
                     action_label: 'ดูใบลา',
                     entity_type: 'leave_request',
@@ -296,8 +296,8 @@ export async function POST(
             await createNotification({
                 recipient_user_id: employeeUserId,
                 type: 'leave_cancellation_rejected',
-                title: 'ปฏิเสธคำขอยกเลิกใบลา',
-                body: `${row.start_date} → ${row.end_date} (${totalDays} วัน) — ใบลายังคงสถานะอนุมัติ · เหตุผล: ${reason ?? '—'}`,
+                title: `ปฏิเสธคำขอยกเลิกใบลา ${row.reference_code}`,
+                body: `${row.reference_code} · ${row.start_date} → ${row.end_date} (${totalDays} วัน) — ใบลายังคงสถานะอนุมัติ · เหตุผล: ${reason ?? '—'}`,
                 action_url: '/portal/leave',
                 action_label: 'ดูใบลา',
                 entity_type: 'leave_request',

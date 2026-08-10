@@ -27,7 +27,9 @@ export async function GET() {
             advance_notice_exception_required, advance_notice_exception_reason,
             attachment_url, attachment_name, status,
             approver_id, approved_at, approval_notes, rejection_reason,
-            submitted_at, cancelled_at, cancellation_reason, created_at
+            submitted_at, cancelled_at, cancellation_reason,
+            cancellation_requested_at, cancellation_decided_by, cancellation_decision_reason,
+            created_at
         `)
         .eq('employee_id', employeeId)
         .order('created_at', { ascending: false })
