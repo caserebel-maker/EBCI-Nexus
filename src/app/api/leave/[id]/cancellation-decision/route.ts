@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
 import { resolveSessionEmployeeId } from '@/lib/session-employee'
-import { bangkokTodayIso } from '@/lib/leave-validations'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
 import { canActOnLeaveRequest, getDelegateApproverIdsForApplicant } from '@/lib/leave-delegate-approvers'
 import { findHrNotifyTargets } from '@/lib/hr-notify'
@@ -17,9 +16,9 @@ export const dynamic = 'force-dynamic'
  *
  * Approver-only counterpart to /request-cancellation. Resolves a
  * `cancellation_requested` row by either:
- *   - approve  → status='cancelled' (and refund used_days IF the
- *                leave start_date is still in the future — leave that
- *                already started counts as taken)
+ *   - approve  → status='cancelled' and refund used_days. The approval
+ *                decision itself is the HR/manager confirmation that the
+ *                leave should no longer consume quota.
  *   - reject   → status='approved'  (revert to pre-request state, with
  *                a cancellation_decision_reason recorded)
  *
@@ -106,14 +105,10 @@ export async function POST(
             return NextResponse.json({ error: updErr.message }, { status: 500 })
         }
 
-        // Refund balance ONLY when the leave hasn't started yet. Leave
-        // that already began counts as taken — no refund makes sense
-        // even if the employee files cancellation post-hoc. Compare in
-        // Bangkok-local terms because start_date is a date-only field
-        // and "today in Bangkok" is the calendar day the user thinks in.
-        const todayIso = bangkokTodayIso()
-        const refundEligible = startDate >= todayIso
-        if (refundEligible && totalDays > 0) {
+        // Refund balance when the cancellation is approved. If HR/manager
+        // wants the day to remain consumed, they should reject the
+        // cancellation request instead.
+        if (totalDays > 0) {
             const year = new Date(startDate).getFullYear()
             const { data: balanceRow } = await supabaseAdmin
                 .from('leave_balances')
@@ -137,9 +132,7 @@ export async function POST(
         // Notify applicant
         try {
             const employeeUserId = await getEmployeeUserId(employeeId)
-            const refundNote = refundEligible
-                ? ' · ระบบคืนวันลาให้แล้ว'
-                : ' · ไม่คืนวันลา (วันลาผ่านไปแล้ว)'
+            const refundNote = ' · ระบบคืนวันลาให้แล้ว'
             if (employeeUserId) {
                 await createNotification({
                     recipient_user_id: employeeUserId,
