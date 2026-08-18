@@ -251,7 +251,7 @@ export async function POST(
                 reason: String(row.reason ?? ''),
                 cancellationApprovedByName: deciderName,
                 cancellationReason: reason ?? (row.cancellation_reason as string | null) ?? null,
-                refunded: refundEligible,
+                refunded: totalDays > 0,
             })
         } catch (err) {
             console.error('[leave/cancellation-decision] notification error:', err)
@@ -262,7 +262,7 @@ export async function POST(
             id,
             status: 'cancelled',
             cancelled_at: nowIso,
-            refunded: refundEligible,
+            refunded: totalDays > 0,
         })
     }
 
