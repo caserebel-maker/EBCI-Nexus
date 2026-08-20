@@ -2,7 +2,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
-import { bangkokDateKey } from '@/lib/datetime'
+import { bangkokDateKey, todayBangkokKey } from '@/lib/datetime'
 
 // ─── Attendance Report ───────────────────────────────────────────────────────
 
@@ -63,6 +63,15 @@ export interface ReportEmployeeOption {
  *  on cutoff(s) per role/office we'll move this into a config table. */
 const LATE_CUTOFF_MIN = 8 * 60
 
+const ATTENDANCE_ABSENCE_EXCLUDED_EMPLOYEE_CODES = new Set([
+    '001-29', // สายัณห์ จันทร์วิภาสวงศ์
+    '009-35', // ชรินทร์ทิพย์ ชมชูเวชช์
+    '021-42', // ศุภดล แสนทวีสุข
+    '048-45', // พันธ์ทิพย์ สร้อยมณี
+    '161-51', // ราเชนทร์ เข้มกลม
+    '491-67', // ชยุต กุลธนาวัฒน์
+])
+
 /** YYYY-MM-DD comparator helper. Strings sort correctly because the
  *  format is fixed-width. */
 const dateKeyInRange = (key: string, from: string, to: string) =>
@@ -83,6 +92,26 @@ function* dateKeysInclusive(from: string, to: string) {
         yield `${y}-${m}-${d}`
         cur.setUTCDate(cur.getUTCDate() + 1)
     }
+}
+
+function previousDateKey(dateKey: string) {
+    const [y, m, d] = dateKey.split('-').map(Number)
+    const date = new Date(Date.UTC(y, m - 1, d - 1))
+    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`
+}
+
+function isWeekdayWorkday(dateKey: string, holidayKeys: Set<string>) {
+    if (holidayKeys.has(dateKey)) return false
+    const [y, m, d] = dateKey.split('-').map(Number)
+    const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay()
+    return dow >= 1 && dow <= 5
+}
+
+function shouldExcludeAbsence(employee: { employee_code: string | null; is_advisor?: boolean | null }) {
+    return Boolean(
+        employee.is_advisor ||
+        (employee.employee_code && ATTENDANCE_ABSENCE_EXCLUDED_EMPLOYEE_CODES.has(employee.employee_code)),
+    )
 }
 
 /** Count weekdays (Mon=1 … Fri=5) between fromDate + toDate inclusive,
@@ -139,6 +168,8 @@ export async function getAttendanceReport(
     const [ty, tm, td] = toDate.split('-').map(Number)
     const start = new Date(Date.UTC(fy, fm - 1, fd, -7))           // Bangkok 00:00 of fromDate
     const end   = new Date(Date.UTC(ty, tm - 1, td + 1, -7))       // Bangkok 00:00 of (toDate + 1)
+    const cardStart = `${fromDate}T00:00:00`
+    const cardEnd = `${toDate}T23:59:59.999`
 
     // Detect "exactly one calendar month" so the legacy month/year
     // filename + chart copy can keep working unchanged. Both null
@@ -165,10 +196,15 @@ export async function getAttendanceReport(
         holidayKeys.add(h.date as string)
     }
     const { workdays, holidays } = countNetWorkdays(fromDate, toDate, holidayKeys)
+    const todayKey = todayBangkokKey()
+    const absenceToDate = toDate >= todayKey ? previousDateKey(todayKey) : toDate
+    const absenceWorkdayKeys = fromDate <= absenceToDate
+        ? Array.from(dateKeysInclusive(fromDate, absenceToDate)).filter(key => isWeekdayWorkday(key, holidayKeys))
+        : []
 
     const empQuery = supabaseAdmin
         .from('employees')
-        .select('id, employee_code, first_name_th, last_name_th, department')
+        .select('id, employee_code, first_name_th, last_name_th, department, is_advisor')
         .eq('status', 'active')
     if (department) empQuery.eq('department', department)
     if (employeeId) empQuery.eq('id', employeeId)
@@ -190,6 +226,14 @@ export async function getAttendanceReport(
         .lt('checked_in_at', end.toISOString())
         .in('employee_id', employeeIds)
     if (chkErr) return { error: chkErr.message }
+
+    const { data: cardScans, error: cardErr } = await supabaseAdmin
+        .from('card_scans')
+        .select('employee_id, scan_time')
+        .gte('scan_time', cardStart)
+        .lte('scan_time', cardEnd)
+        .in('employee_id', employeeIds)
+    if (cardErr) return { error: cardErr.message }
 
     // Approved leave requests overlapping the window. Compute the
     // per-employee count of days inside [fromDate, toDate] that fall
@@ -263,6 +307,41 @@ export async function getAttendanceReport(
         perEmp.set(c.employee_id, bucket)
     }
 
+    const firstCardScanByEmployeeDate = new Map<string, string>()
+    for (const scan of cardScans ?? []) {
+        const day = bangkokDateKey(scan.scan_time as string, 'bangkok')
+        if (!day) continue
+        if (!dateKeyInRange(day, fromDate, toDate)) continue
+        const bucket = perEmp.get(scan.employee_id) ?? {
+            office: new Set(), wfh: new Set(), offsite: new Set(), late: new Set(),
+        }
+        bucket.office.add(day)
+        perEmp.set(scan.employee_id, bucket)
+
+        const firstScanKey = `${scan.employee_id}:${day}`
+        const scanTime = String(scan.scan_time ?? '')
+        const existing = firstCardScanByEmployeeDate.get(firstScanKey)
+        if (!existing || scanTime < existing) {
+            firstCardScanByEmployeeDate.set(firstScanKey, scanTime)
+        }
+    }
+
+    for (const [key, scanTime] of firstCardScanByEmployeeDate.entries()) {
+        const [employeeId, day] = key.split(':')
+        const bucket = perEmp.get(employeeId)
+        if (!bucket || !day) continue
+        const raw = scanTime.trim()
+        const time = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Asia/Bangkok',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+        }).format(new Date(/[zZ]$|[+-]\d{2}:?\d{2}$/.test(raw) ? raw : `${raw}+07:00`))
+        const [hour, minute] = time.split(':').map(Number)
+        if (hour * 60 + minute > LATE_CUTOFF_MIN) bucket.late.add(day)
+        perEmp.set(employeeId, bucket)
+    }
+
     let totalOffice = 0
     let totalWfh = 0
     let totalOffsite = 0
@@ -277,23 +356,14 @@ export async function getAttendanceReport(
         const lateDays = b.late.size
         const leaveDays = leaveDaysByEmp.get(e.id)?.size ?? 0
         const totalDays = officeDays + wfhDays + offsiteDays
-        let absentDays = Math.max(0, workdays - totalDays - leaveDays)
-        let febAbsentWorkdays = 0
-        for (const key of dateKeysInclusive(fromDate, toDate)) {
-            if (key.startsWith('2026-02-')) {
-                if (holidayKeys.has(key)) continue
-                const [y, m, d] = key.split('-').map(Number)
-                const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay()
-                if (dow >= 1 && dow <= 5) {
-                    const present = b.office.has(key) || b.wfh.has(key) || b.offsite.has(key)
-                    const leave = leaveDaysByEmp.get(e.id)?.has(key) ?? false
-                    if (!present && !leave) {
-                        febAbsentWorkdays++
-                    }
-                }
-            }
-        }
-        absentDays = Math.max(0, absentDays - febAbsentWorkdays)
+        const leaveDateSet = leaveDaysByEmp.get(e.id) ?? new Set<string>()
+        const absentDays = shouldExcludeAbsence(e)
+            ? 0
+            : absenceWorkdayKeys.filter(key => {
+                const present = b.office.has(key) || b.wfh.has(key) || b.offsite.has(key)
+                const leave = leaveDateSet.has(key)
+                return !present && !leave
+            }).length
         totalOffice += officeDays
         totalWfh += wfhDays
         totalOffsite += offsiteDays
