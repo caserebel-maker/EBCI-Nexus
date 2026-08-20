@@ -367,6 +367,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const from = searchParams.get('from')
     const to = searchParams.get('to')
+    const employeeId = searchParams.get('employeeId')?.trim() || ''
     const debug = searchParams.get('debug') === '1'
 
     if (!from || !to || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
@@ -391,7 +392,11 @@ export async function GET(req: NextRequest) {
             fetchAttendanceLogNotes(from, to),
         ])
 
-        const employees = allEmployees.filter(emp => emp.status === 'active' && !emp.is_advisor)
+        const employees = allEmployees.filter(emp => {
+            if (emp.status !== 'active' || emp.is_advisor) return false
+            if (employeeId && emp.id !== employeeId) return false
+            return true
+        })
         const employeeById = new Map(allEmployees.map(emp => [emp.id, emp]))
         const employeeByUserId = new Map(
             allEmployees
@@ -443,6 +448,7 @@ export async function GET(req: NextRequest) {
                 {
                     from,
                     to,
+                    employeeId: employeeId || null,
                     activeEmployees: employees.length,
                     sourceRows: {
                         checkins: checkins.length,
@@ -778,7 +784,9 @@ export async function GET(req: NextRequest) {
         }
 
         const csvContent = '\uFEFF' + csvRows.join('\n')
-        const filename = `attendance_summary_report_${from}_to_${to}.csv`
+        const selectedEmployee = employeeId ? employees[0] : null
+        const employeeSuffix = selectedEmployee?.employee_code ? `_${selectedEmployee.employee_code}` : ''
+        const filename = `attendance_summary_report${employeeSuffix}_${from}_to_${to}.csv`
 
         return new NextResponse(csvContent, {
             status: 200,

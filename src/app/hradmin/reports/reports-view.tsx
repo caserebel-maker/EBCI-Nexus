@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useEffect, useRef, type ComponentType, type SVGProps } from 'react'
+import { useState, useTransition, useEffect, useMemo, useRef, type ComponentType, type SVGProps } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Calendar, Users, FileDown, Loader2, MapPin, Briefcase, ClipboardList } from 'lucide-react'
 
@@ -11,7 +11,7 @@ import {
 } from 'recharts'
 import {
     getAttendanceReport, getLeaveReport, getContractReport,
-    type AttendanceReport, type LeaveReport, type ContractReport,
+    type AttendanceReport, type LeaveReport, type ContractReport, type ReportEmployeeOption,
 } from './actions'
 
 const glassCard = {
@@ -121,16 +121,17 @@ function exportAttendanceCsv(data: AttendanceReport) {
         ]),
     ]
     const filename = data.month && data.year
-        ? `attendance_${data.year}_${String(data.month).padStart(2, '0')}.csv`
-        : `attendance_${data.fromDate}_to_${data.toDate}.csv`
+        ? `attendance_${data.rows.length === 1 ? `${data.rows[0].employeeCode}_` : ''}${data.year}_${String(data.month).padStart(2, '0')}.csv`
+        : `attendance_${data.rows.length === 1 ? `${data.rows[0].employeeCode}_` : ''}${data.fromDate}_to_${data.toDate}.csv`
     downloadCsv(filename, rows)
 }
 
 interface Props {
     departments: string[]
+    employees: ReportEmployeeOption[]
 }
 
-export function ReportsView({ departments }: Props) {
+export function ReportsView({ departments, employees }: Props) {
     // Honour ?tab= so a sidebar shortcut can deep-link straight into a
     // specific tab — Mod's "ส่งออกข้อมูลการเข้างาน" entry under เวลาทำงาน
     // points at /hradmin/reports?tab=attendance for that reason.
@@ -144,6 +145,7 @@ export function ReportsView({ departments }: Props) {
     const [year, setYear] = useState(now.getFullYear())
     const [month, setMonth] = useState(now.getMonth() + 1)
     const [department, setDepartment] = useState<string>('')
+    const [employeeId, setEmployeeId] = useState<string>('')
 
     // Attendance tab adds a granularity selector. Defaults are tuned
     // so a fresh page load lands on "current month" (the most common
@@ -166,20 +168,24 @@ export function ReportsView({ departments }: Props) {
     const [error, setError] = useState<string | null>(null)
     const [isPending, startTransition] = useTransition()
     const loadedKey = useRef<string>('')
+    const filteredEmployees = useMemo(
+        () => department ? employees.filter(emp => emp.department === department) : employees,
+        [department, employees],
+    )
 
     // Load data whenever filters change. Keyed string so we only fire once per combo.
-    const key = `${tab}|${year}|${attFrom}|${attTo}|${department}`
+    const key = `${tab}|${year}|${attFrom}|${attTo}|${department}|${employeeId}`
     useEffect(() => {
         if (loadedKey.current === key) return
         loadedKey.current = key
         startTransition(async () => {
             setError(null)
             if (tab === 'attendance') {
-                const res = await getAttendanceReport(attFrom, attTo, department || undefined)
+                const res = await getAttendanceReport(attFrom, attTo, department || undefined, employeeId || undefined)
                 if ('error' in res) setError(res.error)
                 else setAttData(res)
             } else if (tab === 'leave') {
-                const res = await getLeaveReport(year, department || undefined)
+                const res = await getLeaveReport(year, department || undefined, employeeId || undefined)
                 if ('error' in res) setError(res.error)
                 else setLeaveData(res)
             } else {
@@ -188,7 +194,7 @@ export function ReportsView({ departments }: Props) {
                 else setContractData(res)
             }
         })
-    }, [key, tab, year, attFrom, attTo, department])
+    }, [key, tab, year, attFrom, attTo, department, employeeId])
 
     return (
         <div className="space-y-4 lg:space-y-6">
@@ -314,20 +320,41 @@ export function ReportsView({ departments }: Props) {
                 )}
 
                 {tab !== 'contracts' && (
-                    <div className="flex items-center gap-2">
-                        <Users size={14} className="text-white/50" />
-                        <label className="text-white/70 text-sm">แผนก</label>
-                        <select
-                            value={department}
-                            onChange={e => setDepartment(e.target.value)}
-                            className="bg-white/10 text-white text-sm px-3 py-1.5 rounded-lg border border-white/15 focus:outline-none focus:ring-2 focus:ring-amber-300 min-w-[140px]"
-                        >
-                            <option value="" className="text-black">ทุกแผนก</option>
-                            {departments.map(d => (
-                                <option key={d} value={d} className="text-black">{d}</option>
-                            ))}
-                        </select>
-                    </div>
+                    <>
+                        <div className="flex items-center gap-2">
+                            <Users size={14} className="text-white/50" />
+                            <label className="text-white/70 text-sm">แผนก</label>
+                            <select
+                                value={department}
+                                onChange={e => {
+                                    setDepartment(e.target.value)
+                                    setEmployeeId('')
+                                }}
+                                className="bg-white/10 text-white text-sm px-3 py-1.5 rounded-lg border border-white/15 focus:outline-none focus:ring-2 focus:ring-amber-300 min-w-[140px]"
+                            >
+                                <option value="" className="text-black">ทุกแผนก</option>
+                                {departments.map(d => (
+                                    <option key={d} value={d} className="text-black">{d}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <label className="text-white/70 text-sm">พนักงาน</label>
+                            <select
+                                value={employeeId}
+                                onChange={e => setEmployeeId(e.target.value)}
+                                className="bg-white/10 text-white text-sm px-3 py-1.5 rounded-lg border border-white/15 focus:outline-none focus:ring-2 focus:ring-amber-300 min-w-[220px] max-w-full"
+                            >
+                                <option value="" className="text-black">พนักงานทั้งหมด</option>
+                                {filteredEmployees.map(emp => (
+                                    <option key={emp.id} value={emp.id} className="text-black">
+                                        {emp.employeeCode ? `${emp.employeeCode} · ` : ''}{emp.employeeName}{emp.nickname ? ` (${emp.nickname})` : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </>
                 )}
 
                 {isPending && (
@@ -513,7 +540,8 @@ function LeaveTab({ data }: { data: LeaveReport }) {
                 String(r.total),
             ]),
         ]
-        downloadCsv(`leave_${data.year}.csv`, rows)
+        const employeeSuffix = data.rows.length === 1 ? `${data.rows[0].employeeCode}_` : ''
+        downloadCsv(`leave_${employeeSuffix}${data.year}.csv`, rows)
     }
 
     return (

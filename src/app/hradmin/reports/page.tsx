@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { FileText } from 'lucide-react'
 import { getSession } from '@/lib/auth'
 import { ReportsView } from './reports-view'
-import { getDepartments } from './actions'
+import { getDepartments, getReportEmployees } from './actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,7 +12,10 @@ export default async function ReportsPage() {
     if (!session) redirect('/login')
     if (session.role !== 'hr_admin') redirect('/portal')
 
-    const departments = await getDepartments()
+    const [departments, employees] = await Promise.all([
+        getDepartments(),
+        getReportEmployees(),
+    ])
 
     return (
         <div className="space-y-6">
@@ -33,7 +36,7 @@ export default async function ReportsPage() {
                 boundary so the page can stream during the initial param
                 read instead of failing the build. */}
             <Suspense fallback={<div className="text-white/55 text-sm">กำลังโหลด...</div>}>
-                <ReportsView departments={departments} />
+                <ReportsView departments={departments} employees={employees} />
             </Suspense>
         </div>
     )

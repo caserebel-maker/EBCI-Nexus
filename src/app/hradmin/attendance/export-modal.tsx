@@ -2,15 +2,17 @@
 
 import { useState } from 'react'
 import { X, Calendar, Download } from 'lucide-react'
+import type { ReportEmployeeOption } from '../reports/actions'
 
 interface ExportAttendanceModalProps {
     open: boolean
     onClose: () => void
+    employees: ReportEmployeeOption[]
 }
 
 type ExportType = 'date' | 'range' | 'month' | 'preset'
 
-export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalProps) {
+export function ExportAttendanceModal({ open, onClose, employees }: ExportAttendanceModalProps) {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
     const [exportType, setExportType] = useState<ExportType>('date')
     const [selectedDate, setSelectedDate] = useState(today)
@@ -33,6 +35,7 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
 
     // Preset state (months count)
     const [selectedPreset, setSelectedPreset] = useState('1')
+    const [employeeId, setEmployeeId] = useState('')
 
     if (!open) return null
 
@@ -66,7 +69,13 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
         if (!from || !to) return
 
         // Open download in a new window/tab to trigger browser download
-        const url = `/api/hradmin/attendance/export?from=${from}&to=${to}&_ts=${Date.now()}`
+        const params = new URLSearchParams({
+            from,
+            to,
+            _ts: String(Date.now()),
+        })
+        if (employeeId) params.set('employeeId', employeeId)
+        const url = `/api/hradmin/attendance/export?${params.toString()}`
         window.open(url, '_blank')
         onClose()
     }
@@ -99,6 +108,22 @@ export function ExportAttendanceModal({ open, onClose }: ExportAttendanceModalPr
                 <div className="p-5 space-y-4 font-sans">
                     <div className="rounded-lg border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-xs leading-relaxed text-emerald-50">
                         รวมข้อมูลเช็คอิน แตะบัตร ลา WFH วันหยุด ขาด มาสาย และจุดที่ควรตรวจสอบ แบบ 1 แถวต่อพนักงานต่อวัน
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-white/50">พนักงาน</label>
+                        <select
+                            value={employeeId}
+                            onChange={(e) => setEmployeeId(e.target.value)}
+                            className="w-full h-10 px-3 rounded-lg border border-white/15 bg-black/40 text-white text-sm focus:outline-none focus:border-emerald-500 cursor-pointer"
+                        >
+                            <option value="" className="bg-slate-900">พนักงานทั้งหมด</option>
+                            {employees.map(emp => (
+                                <option key={emp.id} value={emp.id} className="bg-slate-900">
+                                    {emp.employeeCode ? `${emp.employeeCode} · ` : ''}{emp.employeeName}{emp.nickname ? ` (${emp.nickname})` : ''}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     {/* Select Export Type */}

@@ -49,6 +49,14 @@ export interface AttendanceReport {
     typeBreakdown: { type: string; count: number; color: string }[]
 }
 
+export interface ReportEmployeeOption {
+    id: string
+    employeeCode: string
+    employeeName: string
+    nickname: string | null
+    department: string | null
+}
+
 /** Cutoff used to flag a check-in as "มาสาย".
  *  08:00 = Bangkok minutes-of-day = 480. Hard-coded for v1 because
  *  EBCI doesn't yet store a per-office shift schedule; once HR settles
@@ -111,6 +119,7 @@ export async function getAttendanceReport(
     fromDate: string,
     toDate: string,
     department?: string,
+    employeeId?: string,
 ): Promise<AttendanceReport | { error: string }> {
     const session = await getSession()
     if (!session || session.role !== 'hr_admin') return { error: 'ไม่มีสิทธิ์เข้าถึง' }
@@ -162,6 +171,7 @@ export async function getAttendanceReport(
         .select('id, employee_code, first_name_th, last_name_th, department')
         .eq('status', 'active')
     if (department) empQuery.eq('department', department)
+    if (employeeId) empQuery.eq('id', employeeId)
     const { data: employees, error: empErr } = await empQuery
     if (empErr) return { error: empErr.message }
 
@@ -343,7 +353,11 @@ export interface LeaveReport {
     rows: LeaveRow[]
 }
 
-export async function getLeaveReport(year: number, department?: string): Promise<LeaveReport | { error: string }> {
+export async function getLeaveReport(
+    year: number,
+    department?: string,
+    employeeId?: string,
+): Promise<LeaveReport | { error: string }> {
     const session = await getSession()
     if (!session || session.role !== 'hr_admin') return { error: 'ไม่มีสิทธิ์เข้าถึง' }
 
@@ -382,9 +396,11 @@ export async function getLeaveReport(year: number, department?: string): Promise
             department: string | null
         }
     }
-    const filtered = (leaves as unknown as LeaveRow0[] ?? []).filter(
-        l => !department || l.employees?.department === department
-    )
+    const filtered = (leaves as unknown as LeaveRow0[] ?? []).filter(l => {
+        if (department && l.employees?.department !== department) return false
+        if (employeeId && l.employee_id !== employeeId) return false
+        return true
+    })
 
     const perEmp = new Map<string, LeaveRow>()
     const typeTotals: Record<string, number> = {}
@@ -500,4 +516,20 @@ export async function getDepartments(): Promise<string[]> {
         new Set((data ?? []).map(e => e.department as string | null).filter((d): d is string => !!d))
     )
     return unique.sort()
+}
+
+export async function getReportEmployees(): Promise<ReportEmployeeOption[]> {
+    const { data } = await supabaseAdmin
+        .from('employees')
+        .select('id, employee_code, first_name_th, last_name_th, nickname, department')
+        .eq('status', 'active')
+        .order('employee_code', { ascending: true })
+
+    return (data ?? []).map(e => ({
+        id: e.id as string,
+        employeeCode: (e.employee_code as string | null) ?? '',
+        employeeName: `${e.first_name_th ?? ''} ${e.last_name_th ?? ''}`.trim(),
+        nickname: (e.nickname as string | null) ?? null,
+        department: (e.department as string | null) ?? null,
+    }))
 }

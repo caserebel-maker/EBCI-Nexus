@@ -8,6 +8,7 @@ import { formatBangkokTime, toDate, todayBangkokKey } from '@/lib/datetime'
 import { cn } from '@/lib/utils'
 import { getAttendanceForDate, saveAttendanceHrNote, type AttendanceStats, type AttendanceRecord } from './actions'
 import { OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE } from '@/lib/outside-head-office'
+import type { ReportEmployeeOption } from '../reports/actions'
 
 type FilterTab = 'all' | 'office' | 'wfh' | 'outside-head-office' | 'late' | 'not-checked-in'
 
@@ -34,6 +35,7 @@ interface InitialData {
 interface Props {
     initialDate: string
     initialData: InitialData | null
+    employees: ReportEmployeeOption[]
 }
 
 const MONTHS_TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
@@ -60,7 +62,7 @@ function timeAgo(iso: string, currentTime: number): string {
     return `${hours} ชั่วโมงที่แล้ว`
 }
 
-export function AttendanceView({ initialDate, initialData }: Props) {
+export function AttendanceView({ initialDate, initialData, employees }: Props) {
     const [date, setDate] = useState(initialDate)
     const [data, setData] = useState<InitialData | null>(initialData)
     const [filter, setFilter] = useState<FilterTab>('all')
@@ -338,7 +340,7 @@ export function AttendanceView({ initialDate, initialData }: Props) {
                 ))}
             </div>
 
-            <ExportAttendanceModal open={isExportOpen} onClose={() => setIsExportOpen(false)} />
+            <ExportAttendanceModal open={isExportOpen} onClose={() => setIsExportOpen(false)} employees={employees} />
             <HrNoteModal
                 key={noteTarget?.employeeId ?? 'hr-note-empty'}
                 date={date}
