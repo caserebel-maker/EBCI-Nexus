@@ -158,41 +158,36 @@ async function findLatestLateCheckin(employeeId: string, sinceDate: string):
         .limit(2000)
     const scans = (scanRaw ?? []) as Array<{ scan_time: string }>
 
-    // Group scans by Bangkok date, keep earliest per day. Card scans are
-    // stored as Thai local wall-clock; mobile checkins are UTC wall-clock.
-    const earliestScanPerDay = new Map<string, string>()
-    for (const s of scans) {
-        const date = bangkokDateKey(s.scan_time, 'bangkok')
-        if (date && !earliestScanPerDay.has(date)) earliestScanPerDay.set(date, s.scan_time)
-    }
+    // Consolidate to find the single EARLIEST arrival timestamp per day across all sources.
+    // An employee's arrival time for a day is min(earliest_mobile, earliest_card_scan).
+    const earliestArrivalPerDay = new Map<string, { iso: string; source: 'utc' | 'bangkok'; ms: number }>()
 
-    const earliestMobilePerDay = new Map<string, string>()
     for (const m of mobile) {
         const date = bangkokDateKey(m.checked_in_at, 'utc')
         if (!date) continue
-        const previous = earliestMobilePerDay.get(date)
-        const currentInstant = toDate(m.checked_in_at, 'utc')?.getTime() ?? Infinity
-        const previousInstant = toDate(previous, 'utc')?.getTime() ?? Infinity
-        if (!previous || currentInstant < previousInstant) {
-            earliestMobilePerDay.set(date, m.checked_in_at)
+        const ms = toDate(m.checked_in_at, 'utc')?.getTime() ?? Infinity
+        const prev = earliestArrivalPerDay.get(date)
+        if (!prev || ms < prev.ms) {
+            earliestArrivalPerDay.set(date, { iso: m.checked_in_at, source: 'utc', ms })
         }
     }
 
-    // Combine candidates: mobile arrivals + earliest-per-day scans.
-    const candidates: Array<{ date: string; iso: string; source: 'utc' | 'bangkok' }> = []
-    for (const [date, iso] of earliestMobilePerDay) {
-        candidates.push({ date, iso, source: 'utc' })
-    }
-    for (const [date, iso] of earliestScanPerDay) {
-        candidates.push({ date, iso, source: 'bangkok' })
+    for (const s of scans) {
+        const date = bangkokDateKey(s.scan_time, 'bangkok')
+        if (!date) continue
+        const ms = toDate(s.scan_time, 'bangkok')?.getTime() ?? Infinity
+        const prev = earliestArrivalPerDay.get(date)
+        if (!prev || ms < prev.ms) {
+            earliestArrivalPerDay.set(date, { iso: s.scan_time, source: 'bangkok', ms })
+        }
     }
 
-    // Find latest late one. Sort descending by date, return first that
-    // crosses cutoff. (We can't pre-filter at DB level — see comment above.)
-    candidates.sort((a, b) => b.date.localeCompare(a.date))
-    for (const c of candidates) {
+    // Sort days descending by date, find the most recent day where the EARLIEST arrival was late.
+    const sortedDays = Array.from(earliestArrivalPerDay.keys()).sort((a, b) => b.localeCompare(a))
+    for (const date of sortedDays) {
+        const c = earliestArrivalPerDay.get(date)!
         if (isLateBangkok(c.iso, c.source, cutoff)) {
-            return { ...c, time: formatBangkokTime(c.iso, c.source) }
+            return { date, iso: c.iso, source: c.source, time: formatBangkokTime(c.iso, c.source) }
         }
     }
     return null
