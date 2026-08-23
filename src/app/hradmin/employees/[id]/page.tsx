@@ -21,84 +21,146 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
     const session = await getSession()
     const isHrAdmin = session?.role === 'hr_admin'
 
-    // ── Fetch employee — try employee_code first, fallback to UUID ─────────────
-    // employee_code: text ID used in URLs (e.g. EMP001)
-    // id (UUID): legacy links may still use this
+    // ── Fetch employee — intelligently match UUID vs employee_code in 1 query ───
     const SELECT = `*, applicants (photo_path, nickname, phone, email, current_address)`
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
 
-    const { data: byCode, error: codeError } = await supabaseAdmin
+    let { data: employee, error: fetchError } = await supabaseAdmin
         .from('employees')
         .select(SELECT)
-        .eq('employee_code', id)
+        .eq(isUuid ? 'id' : 'employee_code', id)
         .maybeSingle()
 
-    let employee = byCode
     if (!employee) {
-        console.error(`[employee-detail] employee_code lookup failed for "${id}":`, JSON.stringify(codeError))
-        // Fallback: try UUID (old links)
-        const { data: byUuid, error: uuidError } = await supabaseAdmin
+        // Fallback: try the alternate column if first attempt failed
+        const { data: fallbackEmp } = await supabaseAdmin
             .from('employees')
             .select(SELECT)
-            .eq('id', id)
+            .eq(isUuid ? 'employee_code' : 'id', id)
             .maybeSingle()
-        if (byUuid) {
-            employee = byUuid
+        if (fallbackEmp) {
+            employee = fallbackEmp
         } else {
-            console.error(`[employee-detail] UUID lookup also failed for "${id}":`, JSON.stringify(uuidError))
+            console.error(`[employee-detail] Employee lookup failed for "${id}":`, fetchError)
             notFound()
         }
     }
 
     const displayName = `${employee.first_name_th} ${employee.last_name_th}`
+    const currentYear = new Date().getFullYear()
+    const yearStart = `${currentYear}-01-01`
+    const yearEnd = `${currentYear}-12-31`
 
-    // ── Photo URL ──────────────────────────────────────────────────────────────
-    let photoUrl: string | null = employee.photo_url ?? null
-    if (!photoUrl) {
-        const legacyPath = employee.applicants?.photo_path
-        if (legacyPath) {
-            const { data } = await supabaseAdmin.storage
-                .from('applicant-assets')
-                .createSignedUrl(legacyPath, 3600)
-            photoUrl = data?.signedUrl ?? null
+    // ── Primary parallel data fetching ───────────────────────────────────────────
+    const photoUrlPromise = (!employee.photo_url && employee.applicants?.photo_path)
+        ? supabaseAdmin.storage
+            .from('applicant-assets')
+            .createSignedUrl(employee.applicants.photo_path, 3600)
+            .then(r => r.data?.signedUrl ?? null)
+            .catch(() => null)
+        : Promise.resolve(employee.photo_url ?? null)
+
+    const [
+        photoUrl,
+        allEmployeesRes,
+        leaveBalancesRes,
+        leaveTypesRes,
+        perms,
+        contractsRes,
+        recentLeavesRes,
+        wfhRowsRes,
+        attendanceSummary,
+        streak,
+        expenseBenefits,
+    ] = await Promise.all([
+        photoUrlPromise,
+        supabaseAdmin
+            .from('employees')
+            .select('id, first_name_th, last_name_th, position')
+            .eq('status', 'active')
+            .neq('id', employee.id)
+            .order('first_name_th', { ascending: true }),
+        supabaseAdmin
+            .from('leave_balances')
+            .select('id, employee_id, leave_type_id, total_days, used_days, pending_days, remaining_days, is_manually_adjusted, last_adjusted_by, last_adjusted_at, notes')
+            .eq('employee_id', employee.id)
+            .eq('year', currentYear),
+        supabaseAdmin
+            .from('leave_types')
+            .select('id, name_th, color, icon, display_order')
+            .eq('is_active', true)
+            .order('display_order', { ascending: true, nullsFirst: false }),
+        getCurrentPermissions(),
+        supabaseAdmin
+            .from('employee_contracts')
+            .select('id, contract_type, signed_date, effective_start, effective_end, file_path, file_name, file_size, mime_type, page_count, notes, uploaded_at')
+            .eq('employee_id', employee.id)
+            .is('deleted_at', null)
+            .order('signed_date', { ascending: false }),
+        supabaseAdmin
+            .from('leave_requests')
+            .select('id, leave_type_id, start_date, end_date, total_days, status, created_at, reason')
+            .eq('employee_id', employee.id)
+            .order('created_at', { ascending: false }),
+        supabaseAdmin
+            .from('wfh_requests')
+            .select('id, start_date, end_date, total_days, status')
+            .eq('employee_id', employee.id)
+            .lte('start_date', yearEnd)
+            .gte('end_date', yearStart),
+        getEmployeeAttendanceSummary(employee.id),
+        getStreakInfo(employee.id),
+        fetchEmployeeExpenses(employee.id),
+    ])
+
+    const allEmployees: { id: string; first_name_th: string; last_name_th: string; position: string }[] =
+        allEmployeesRes.data ?? []
+
+    const canViewPayroll = perms.can_manage_payroll === true
+
+    // ── Secondary parallel data fetching (dependent queries) ─────────────────────
+    let supervisorName = '—'
+    let salarySlips: Array<{
+        id: string; year: number; month: number;
+        file_name: string | null; file_size: number | null;
+        mime_type: string | null; notes: string | null;
+        uploaded_at: string;
+    }> = []
+
+    const secondaryPromises: Promise<any>[] = []
+
+    if (employee.manager_id) {
+        const sup = allEmployees.find(e => e.id === employee.manager_id)
+        if (sup) {
+            supervisorName = `${sup.first_name_th} ${sup.last_name_th}`
+        } else {
+            secondaryPromises.push(
+                supabaseAdmin
+                    .from('employees')
+                    .select('first_name_th, last_name_th')
+                    .eq('id', employee.manager_id)
+                    .single()
+                    .then(r => {
+                        if (r.data) supervisorName = `${r.data.first_name_th} ${r.data.last_name_th}`
+                    })
+            )
         }
     }
 
-    // ── All employees for supervisor dropdown ──────────────────────────────────
-    const { data: allEmployeesRaw } = await supabaseAdmin
-        .from('employees')
-        .select('id, first_name_th, last_name_th, position')
-        .eq('status', 'active')
-        .neq('id', employee.id)
-        .order('first_name_th', { ascending: true })
-
-    const allEmployees: { id: string; first_name_th: string; last_name_th: string; position: string }[] =
-        allEmployeesRaw ?? []
-
-    // ── Supervisor name ────────────────────────────────────────────────────────
-    let supervisorName = '—'
-    if (employee.manager_id) {
-        const sup = allEmployeesRaw?.find(e => e.id === employee.manager_id)
-            ?? (await supabaseAdmin
-                .from('employees')
-                .select('first_name_th, last_name_th')
-                .eq('id', employee.manager_id)
-                .single()
-                .then(r => r.data))
-        if (sup) supervisorName = `${sup.first_name_th} ${sup.last_name_th}`
+    if (canViewPayroll) {
+        secondaryPromises.push(
+            supabaseAdmin
+                .from('salary_slips')
+                .select('id, year, month, file_name, file_size, mime_type, notes, uploaded_at')
+                .eq('employee_id', employee.id)
+                .is('deleted_at', null)
+                .order('year', { ascending: false })
+                .order('month', { ascending: false })
+                .then(r => {
+                    salarySlips = (r.data ?? []) as typeof salarySlips
+                })
+        )
     }
-
-    // ── Leave balances (current year) ──────────────────────────────────────────
-    // Pulls every leave-type row even when the employee hasn't taken any
-    // — the AdjustBalanceModal needs the full set so HR can grant a
-    // type that hasn't been seeded yet (e.g. ลาคลอด for someone newly
-    // assigned female after gender update). Numeric columns come back
-    // as strings from PG, so we coerce defensively before passing on.
-    const currentYear = new Date().getFullYear()
-    const { data: leaveBalancesRaw } = await supabaseAdmin
-        .from('leave_balances')
-        .select('id, employee_id, leave_type_id, total_days, used_days, pending_days, remaining_days, is_manually_adjusted, last_adjusted_by, last_adjusted_at, notes')
-        .eq('employee_id', employee.id)
-        .eq('year', currentYear)
 
     type RawBalance = {
         id: string
@@ -121,7 +183,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
     }
 
     const balanceCells: Record<string, BalanceCell> = {}
-    for (const b of (leaveBalancesRaw ?? []) as RawBalance[]) {
+    for (const b of (leaveBalancesRes.data ?? []) as RawBalance[]) {
         balanceCells[b.leave_type_id] = {
             id: b.id,
             employee_id: b.employee_id,
@@ -138,47 +200,41 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
         }
     }
 
-    // Resolve adjuster names so the modal's history footer shows who
-    // last touched each row (matches the balances tab affordance).
     const adjusterIds = Array.from(new Set(
         Object.values(balanceCells)
             .map(c => c.last_adjusted_by)
             .filter((v): v is string => !!v),
     ))
     if (adjusterIds.length > 0) {
-        const { data: adjusters } = await supabaseAdmin
-            .from('User')
-            .select('id, name, username')
-            .in('id', adjusterIds)
-        const nameById = new Map((adjusters ?? []).map(u => [u.id as string, (u.name as string | null) ?? (u.username as string | null) ?? null]))
-        for (const cell of Object.values(balanceCells)) {
-            if (cell.last_adjusted_by) {
-                cell.last_adjusted_by_name = nameById.get(cell.last_adjusted_by) ?? null
-            }
-        }
+        secondaryPromises.push(
+            supabaseAdmin
+                .from('User')
+                .select('id, name, username')
+                .in('id', adjusterIds)
+                .then(r => {
+                    const nameById = new Map((r.data ?? []).map(u => [u.id as string, (u.name as string | null) ?? (u.username as string | null) ?? null]))
+                    for (const cell of Object.values(balanceCells)) {
+                        if (cell.last_adjusted_by) {
+                            cell.last_adjusted_by_name = nameById.get(cell.last_adjusted_by) ?? null
+                        }
+                    }
+                })
+        )
     }
 
-    // Active leave types — needed to populate the modal's row list and
-    // surface types the employee hasn't taken yet but might be granted.
-    const { data: leaveTypesRaw } = await supabaseAdmin
-        .from('leave_types')
-        .select('id, name_th, color, icon, display_order')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true, nullsFirst: false })
-    const leaveTypes = (leaveTypesRaw ?? []) as Array<{
+    if (secondaryPromises.length > 0) {
+        await Promise.all(secondaryPromises)
+    }
+
+    const leaveTypes = (leaveTypesRes.data ?? []) as Array<{
         id: string
         name_th: string
         color: string | null
         icon: string | null
         display_order: number | null
     }>
-
     const leaveTypeNameById = new Map(leaveTypes.map(t => [t.id, t.name_th]))
 
-    // Legacy chart shape — kept until the chart in employee-profile-view
-    // is migrated to read `total_days` directly. Include the Thai label
-    // from leave_types so profile charts do not leak raw ids such as
-    // `marriage` / `training` / `military_service`.
     const leaveBalances = Object.values(balanceCells).map(c => ({
         leave_type: c.leave_type_id,
         leave_type_name: leaveTypeNameById.get(c.leave_type_id) ?? c.leave_type_id,
@@ -187,42 +243,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
         remaining_days: c.remaining_days ?? Math.max(0, c.total_days - c.used_days - c.pending_days),
     }))
 
-    // ── Payroll permission gate ────────────────────────────────────────────────
-    // Only users with can_manage_payroll see the salary-slips card.
-    // HR Manager (มด) hits this page fine but the slips section is hidden.
-    const perms = await getCurrentPermissions()
-    const canViewPayroll = perms.can_manage_payroll === true
-
-    // ── Salary slips (only fetched when viewer has the flag) ───────────────────
-    let salarySlips: Array<{
-        id: string; year: number; month: number;
-        file_name: string | null; file_size: number | null;
-        mime_type: string | null; notes: string | null;
-        uploaded_at: string;
-    }> = []
-    if (canViewPayroll) {
-        const { data: slipsRaw } = await supabaseAdmin
-            .from('salary_slips')
-            .select('id, year, month, file_name, file_size, mime_type, notes, uploaded_at')
-            .eq('employee_id', employee.id)
-            .is('deleted_at', null)
-            .order('year', { ascending: false })
-            .order('month', { ascending: false })
-        salarySlips = (slipsRaw ?? []) as typeof salarySlips
-    }
-
-    // ── Employment contracts (HR scans) ────────────────────────────────────────
-    // Returned newest-first so the most recent contract is the one HR
-    // sees first when scrolling. Soft-deleted rows are filtered out
-    // so HR doesn't have to ignore the trash.
-    const { data: contractsRaw } = await supabaseAdmin
-        .from('employee_contracts')
-        .select('id, contract_type, signed_date, effective_start, effective_end, file_path, file_name, file_size, mime_type, page_count, notes, uploaded_at')
-        .eq('employee_id', employee.id)
-        .is('deleted_at', null)
-        .order('signed_date', { ascending: false })
-
-    const contracts = (contractsRaw ?? []) as Array<{
+    const contracts = (contractsRes.data ?? []) as Array<{
         id: string
         contract_type: 'probation' | 'permanent' | 'amendment' | 'renewal' | 'termination'
         signed_date: string
@@ -237,13 +258,6 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
         uploaded_at: string
     }>
 
-    // ── All leave requests ─────────────────────────────────────────────────────
-    const { data: recentLeavesRaw } = await supabaseAdmin
-        .from('leave_requests')
-        .select('id, leave_type_id, start_date, end_date, total_days, status, created_at, reason')
-        .eq('employee_id', employee.id)
-        .order('created_at', { ascending: false })
-
     const recentLeaves: {
         id: string
         leave_type: string
@@ -254,7 +268,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
         status: string
         created_at: string
         reason: string | null
-    }[] = ((recentLeavesRaw ?? []) as Array<{
+    }[] = ((recentLeavesRes.data ?? []) as Array<{
         id: string
         leave_type_id: string
         start_date: string
@@ -275,17 +289,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
         reason: r.reason,
     }))
 
-    // ── WFH request statistics (current year) ────────────────────────────────
-    const yearStart = `${currentYear}-01-01`
-    const yearEnd = `${currentYear}-12-31`
-    const { data: wfhRowsRaw } = await supabaseAdmin
-        .from('wfh_requests')
-        .select('id, start_date, end_date, total_days, status')
-        .eq('employee_id', employee.id)
-        .lte('start_date', yearEnd)
-        .gte('end_date', yearStart)
-
-    const wfhRows = (wfhRowsRaw ?? []) as Array<{
+    const wfhRows = (wfhRowsRes.data ?? []) as Array<{
         id: string
         start_date: string
         end_date: string
@@ -327,10 +331,6 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
         else if (row.status === 'rejected') bucket.rejected += days
         else if (row.status === 'cancelled') bucket.cancelled += days
     }
-
-    const attendanceSummary = await getEmployeeAttendanceSummary(employee.id)
-    const streak = await getStreakInfo(employee.id)
-    const expenseBenefits = await fetchEmployeeExpenses(employee.id)
 
     // ── Tenure ─────────────────────────────────────────────────────────────────
     const startDate = new Date(employee.start_date)

@@ -363,6 +363,7 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                                         <tr
                                             key={employee.id}
                                             onClick={() => openEmployee(employee.employeeCode)}
+                                            onMouseEnter={() => router.prefetch(`/hradmin/employees/${employee.employeeCode}`)}
                                             aria-busy={navigatingTo === employee.employeeCode}
                                             className={cn(
                                                 "hover:bg-white/5 transition-colors cursor-pointer text-white/90",
@@ -410,6 +411,7 @@ export function EmployeesTable({ initialData, isHrAdmin }: EmployeesTableProps) 
                                         <tr
                                             key={employee.id}
                                             onClick={() => openEmployee(employee.employeeCode)}
+                                            onMouseEnter={() => router.prefetch(`/hradmin/employees/${employee.employeeCode}`)}
                                             aria-busy={navigatingTo === employee.employeeCode}
                                             className={cn(
                                                 "hover:bg-white/5 transition-colors cursor-pointer text-white/90",
