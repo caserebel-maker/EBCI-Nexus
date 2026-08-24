@@ -5,9 +5,9 @@ import dynamic from 'next/dynamic'
 const CheckinMap = dynamic(() => import('@/components/checkin/checkin-map').then(m => m.CheckinMap), { ssr: false, loading: () => <div className="h-64 rounded-2xl bg-white/5 animate-pulse flex items-center justify-center text-white/40 text-sm">กำลังโหลดแผนที่...</div> })
 
 import { useCallback, useState, useEffect } from 'react'
-import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut, X, Briefcase, Palmtree, IdCard, Clock } from 'lucide-react'
+import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut, X, Briefcase, Palmtree, IdCard, Clock, MapPinOff, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { checkIn, checkOut, startFieldTrip, endFieldTrip } from './actions'
+import { checkIn, checkOut, startFieldTrip, endFieldTrip, requestAttendanceGpsReview } from './actions'
 import { haversineDistance } from '@/lib/geo'
 import { formatBangkokTime, formatBangkokDateTime } from '@/lib/datetime'
 import type { LeaveTodayInfo } from '@/lib/leave-today'
@@ -95,6 +95,10 @@ function wfhEligibilityHelperText(wfhEligibility: WfhEligibility) {
     return 'คำขอ WFH ของคุณได้รับอนุมัติแล้ว'
 }
 
+function errorMessage(err: unknown, fallback: string) {
+    return err instanceof Error ? err.message : fallback
+}
+
 export function CheckinView({
     office,
     todayCheckin,
@@ -118,6 +122,9 @@ export function CheckinView({
     const [midDayFieldMode, setMidDayFieldMode] = useState(false)
     const [midDayPurpose, setMidDayPurpose] = useState('')
     const [midDayReturnTime, setMidDayReturnTime] = useState('')
+    const [gpsReviewOpen, setGpsReviewOpen] = useState(false)
+    const [gpsReviewNote, setGpsReviewNote] = useState('')
+    const [gpsReviewSubmitting, setGpsReviewSubmitting] = useState(false)
 
     // Late check-in tracking — declarations live here, but the actual
     // late-minutes value is computed BELOW after `isCheckedIn` is in
@@ -299,6 +306,36 @@ export function CheckinView({
         handleCheckin('field', trimmed)
     }
 
+    const handleGpsReviewSubmit = async () => {
+        const trimmed = gpsReviewNote.trim()
+        if (trimmed.length < 5) {
+            showToast('error', 'กรุณาระบุรายละเอียดอย่างน้อย 5 ตัวอักษร')
+            return
+        }
+
+        setGpsReviewSubmitting(true)
+        try {
+            const result = await requestAttendanceGpsReview({
+                note: trimmed,
+                gpsError,
+                latitude: gps?.lat ?? null,
+                longitude: gps?.lng ?? null,
+                accuracy: gps?.accuracy ?? null,
+            })
+            if ('error' in result) {
+                showToast('error', result.error)
+                return
+            }
+            showToast('success', result.message)
+            setGpsReviewOpen(false)
+            setGpsReviewNote('')
+        } catch (err: unknown) {
+            showToast('error', errorMessage(err, 'ส่งคำขอไม่สำเร็จ'))
+        } finally {
+            setGpsReviewSubmitting(false)
+        }
+    }
+
     const handleMidDayFieldSubmit = async () => {
         const trimmed = midDayPurpose.trim()
         if (trimmed.length < 5) {
@@ -324,8 +361,8 @@ export function CheckinView({
                 setMidDayReturnTime('')
                 setTimeout(() => window.location.reload(), 1500)
             }
-        } catch (err: any) {
-            showToast('error', err.message || 'เกิดข้อผิดพลาด')
+        } catch (err: unknown) {
+            showToast('error', errorMessage(err, 'เกิดข้อผิดพลาด'))
         } finally {
             setLoading(false)
         }
@@ -348,8 +385,8 @@ export function CheckinView({
                 showToast('success', 'บันทึกการกลับเข้าออฟฟิศสำเร็จ')
                 setTimeout(() => window.location.reload(), 1500)
             }
-        } catch (err: any) {
-            showToast('error', err.message || 'เกิดข้อผิดพลาด')
+        } catch (err: unknown) {
+            showToast('error', errorMessage(err, 'เกิดข้อผิดพลาด'))
         } finally {
             setLoading(false)
         }
@@ -968,6 +1005,70 @@ export function CheckinView({
                             </div>
                         )}
                     </div>
+
+                    {(gpsState === 'error' || (gpsState === 'success' && !isAtOffice)) && (
+                        <div className="rounded-2xl border border-amber-300/30 bg-amber-500/10 p-4 space-y-3">
+                            <div className="flex items-start gap-3">
+                                <MapPinOff size={18} className="mt-0.5 shrink-0 text-amber-200" />
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-bold text-amber-100">
+                                        อยู่ที่ออฟฟิศ แต่ระบบจับตำแหน่งไม่ได้?
+                                    </p>
+                                    <p className="mt-1 text-xs leading-relaxed text-white/65">
+                                        ส่งคำขอให้ HR ตรวจสอบแทนการเช็คอิน ระบบจะไม่บันทึกเวลาเข้าให้อัตโนมัติจนกว่า HR จะตรวจสอบ
+                                    </p>
+                                </div>
+                            </div>
+
+                            {!gpsReviewOpen ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setGpsReviewOpen(true)}
+                                    disabled={loading || gpsReviewSubmitting}
+                                    className="w-full rounded-xl border border-amber-300/40 bg-amber-400/90 px-4 py-3 text-sm font-bold text-[#1a0a0d] transition-colors hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    ฉันอยู่ที่ออฟฟิศแต่ GPS มีปัญหา
+                                </button>
+                            ) : (
+                                <div className="space-y-3">
+                                    <textarea
+                                        value={gpsReviewNote}
+                                        onChange={e => setGpsReviewNote(e.target.value)}
+                                        maxLength={500}
+                                        rows={3}
+                                        placeholder='เช่น "อยู่ที่โต๊ะบัญชีแล้ว แต่ iPhone ไม่ขึ้นให้อนุญาตตำแหน่ง"'
+                                        className="w-full rounded-xl border border-white/15 bg-black/25 px-3 py-2 text-sm text-white placeholder-white/35 outline-none transition-colors focus:border-amber-300/60 resize-none"
+                                    />
+                                    <div className="flex items-center justify-between gap-2 text-[11px] text-white/45">
+                                        <span>{gpsReviewNote.trim().length}/500</span>
+                                        {gps && <span>GPS ±{Math.round(gps.accuracy)} ม.</span>}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setGpsReviewOpen(false)
+                                                setGpsReviewNote('')
+                                            }}
+                                            disabled={gpsReviewSubmitting}
+                                            className="flex-1 rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-semibold text-white/85 transition-colors hover:bg-white/15 disabled:opacity-60"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleGpsReviewSubmit}
+                                            disabled={gpsReviewSubmitting || gpsReviewNote.trim().length < 5}
+                                            className="flex-[1.5] rounded-xl border border-amber-300/40 bg-amber-400/90 px-4 py-3 text-sm font-bold text-[#1a0a0d] transition-colors hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center gap-2"
+                                        >
+                                            {gpsReviewSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                                            ส่งให้ HR ตรวจสอบ
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {fieldMode ? (
                         /* Field check-in expansion — replaces the three

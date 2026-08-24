@@ -28,6 +28,13 @@ export interface AttendanceRecord {
     workLocation: string | null
     hrNote: string | null
     hrNoteUpdatedAt: string | null
+    gpsReviewRequest: {
+        id: string
+        status: string
+        employee_note: string | null
+        gps_error: string | null
+        created_at: string
+    } | null
     checkin: {
         id: string
         type: string
@@ -117,20 +124,50 @@ export async function getAttendanceForDate(dateStr: string) {
     }
 
     const attendanceNotesByEmpId = new Map<string, { note: string | null; updatedAt: string | null }>()
-    const { data: attendanceNotes, error: notesError } = await supabaseAdmin
-        .from('attendance_logs')
-        .select('employee_id, hr_note, hr_note_updated_at')
-        .gte('date', `${dateStr}T00:00:00`)
-        .lte('date', `${dateStr}T23:59:59.999`)
+    const gpsReviewByEmpId = new Map<string, {
+        id: string
+        status: string
+        employee_note: string | null
+        gps_error: string | null
+        created_at: string
+    }>()
+    const [attendanceNotesResult, gpsReviewResult] = await Promise.all([
+        supabaseAdmin
+            .from('attendance_logs')
+            .select('employee_id, hr_note, hr_note_updated_at')
+            .gte('date', `${dateStr}T00:00:00`)
+            .lte('date', `${dateStr}T23:59:59.999`),
+        supabaseAdmin
+            .from('attendance_gps_review_requests')
+            .select('id, employee_id, status, employee_note, gps_error, created_at')
+            .eq('requested_for_date', dateStr)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false }),
+    ])
 
-    if (notesError) {
-        console.warn('attendance_logs hr notes fetch warning:', notesError.message)
+    if (attendanceNotesResult.error) {
+        console.warn('attendance_logs hr notes fetch warning:', attendanceNotesResult.error.message)
     } else {
-        for (const row of attendanceNotes ?? []) {
+        for (const row of attendanceNotesResult.data ?? []) {
             attendanceNotesByEmpId.set(row.employee_id as string, {
                 note: (row.hr_note as string | null) ?? null,
                 updatedAt: (row.hr_note_updated_at as string | null) ?? null,
             })
+        }
+    }
+    if (gpsReviewResult.error) {
+        console.warn('attendance_gps_review_requests fetch warning:', gpsReviewResult.error.message)
+    } else {
+        for (const row of gpsReviewResult.data ?? []) {
+            if (!gpsReviewByEmpId.has(row.employee_id as string)) {
+                gpsReviewByEmpId.set(row.employee_id as string, {
+                    id: String(row.id),
+                    status: String(row.status),
+                    employee_note: (row.employee_note as string | null) ?? null,
+                    gps_error: (row.gps_error as string | null) ?? null,
+                    created_at: String(row.created_at),
+                })
+            }
         }
     }
 
@@ -145,6 +182,7 @@ export async function getAttendanceForDate(dateStr: string) {
         workLocation: emp.work_location ?? null,
         hrNote: attendanceNotesByEmpId.get(emp.id)?.note ?? null,
         hrNoteUpdatedAt: attendanceNotesByEmpId.get(emp.id)?.updatedAt ?? null,
+        gpsReviewRequest: gpsReviewByEmpId.get(emp.id) ?? null,
         checkin: checkinByEmpId.get(emp.id) ?? null,
     }))
 

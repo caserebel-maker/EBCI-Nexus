@@ -123,6 +123,7 @@ export function getNotificationIcon(type: string): string {
         case 'application_received':        return 'UserPlus'
         case 'application_status_changed':  return 'Briefcase'
         case 'email_delivery_problem':      return 'MailWarning'
+        case 'attendance_gps_review_requested': return 'MapPinOff'
         case 'system':
         case 'system_test':                 return 'Info'
         default:                            return 'Bell'
@@ -139,6 +140,7 @@ export function getDefaultColor(type: string): NotificationColor {
         case 'application_received':        return 'blue'
         case 'application_status_changed':  return 'amber'
         case 'email_delivery_problem':      return 'red'
+        case 'attendance_gps_review_requested': return 'amber'
         default:                            return 'maroon'
     }
 }

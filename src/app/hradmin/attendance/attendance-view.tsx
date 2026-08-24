@@ -10,7 +10,7 @@ import { getAttendanceForDate, saveAttendanceHrNote, type AttendanceStats, type 
 import { OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE } from '@/lib/outside-head-office'
 import type { ReportEmployeeOption } from '../reports/actions'
 
-type FilterTab = 'all' | 'office' | 'wfh' | 'outside-head-office' | 'late' | 'not-checked-in'
+type FilterTab = 'all' | 'office' | 'wfh' | 'outside-head-office' | 'late' | 'gps-review' | 'not-checked-in'
 
 function isRecordLate(c: AttendanceRecord['checkin']): boolean {
     if (!c) return false
@@ -114,6 +114,7 @@ export function AttendanceView({ initialDate, initialData, employees }: Props) {
     const stats = data?.stats ?? { totalEmployees: 0, officeCount: 0, wfhCount: 0, outsideHeadOfficeCount: 0, offsiteCount: 0, notCheckedInCount: 0 }
     const records = data?.records ?? []
     const lateCount = records.filter(r => isRecordLate(r.checkin)).length
+    const gpsReviewCount = records.filter(r => !!r.gpsReviewRequest).length
 
     const filteredRecords = records.filter((r) => {
         if (filter === 'all') return true
@@ -122,6 +123,7 @@ export function AttendanceView({ initialDate, initialData, employees }: Props) {
         if (filter === 'wfh') return r.checkin?.type === 'wfh'
         if (filter === 'outside-head-office') return r.checkin?.type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
         if (filter === 'late') return isRecordLate(r.checkin)
+        if (filter === 'gps-review') return !!r.gpsReviewRequest
         return true
     })
 
@@ -295,6 +297,9 @@ export function AttendanceView({ initialDate, initialData, employees }: Props) {
                     <FilterTabBtn active={filter === 'late'} onClick={() => setFilter('late')} count={lateCount} variant="late">
                         ⏰ เข้างานสาย
                     </FilterTabBtn>
+                    <FilterTabBtn active={filter === 'gps-review'} onClick={() => setFilter('gps-review')} count={gpsReviewCount} variant="gps-review">
+                        📍 รอตรวจ GPS
+                    </FilterTabBtn>
                     <FilterTabBtn active={filter === 'not-checked-in'} onClick={() => setFilter('not-checked-in')} count={stats.notCheckedInCount} variant="not-checked-in">
                         ❓ ยังไม่เช็คอิน
                     </FilterTabBtn>
@@ -399,7 +404,7 @@ function FilterTabBtn({
     onClick: () => void
     count: number
     children: ReactNode
-    variant?: 'default' | 'late' | 'not-checked-in'
+    variant?: 'default' | 'late' | 'gps-review' | 'not-checked-in'
 }) {
     let activeClass = "bg-[#882136] text-white shadow-lg shadow-[#882136]/40"
     let inactiveClass = "bg-white/5 text-white/60 hover:bg-white/10 hover:text-white border border-white/10"
@@ -410,6 +415,9 @@ function FilterTabBtn({
     } else if (variant === 'late') {
         activeClass = "bg-[#ffff00] text-black border-2 border-black scale-105 shadow-lg shadow-[#ffff00]/50"
         inactiveClass = "bg-[#ffff00] text-black opacity-75 hover:opacity-100 border border-transparent"
+    } else if (variant === 'gps-review') {
+        activeClass = "bg-amber-400 text-black border-2 border-white scale-105 shadow-lg shadow-amber-400/40"
+        inactiveClass = "bg-amber-400/85 text-black hover:bg-amber-300 border border-transparent"
     }
 
     return (
@@ -480,6 +488,24 @@ function EmployeeRow({ record, onEditNote }: { record: AttendanceRecord; onEditN
                         <StickyNote size={12} className="mt-0.5 shrink-0 text-amber-200" />
                         <span className="line-clamp-2">{record.hrNote}</span>
                     </p>
+                )}
+                {record.gpsReviewRequest && (
+                    <div className="mt-2 rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-100">
+                        <div className="flex items-start gap-1.5 font-semibold">
+                            <MapPinOff size={13} className="mt-0.5 shrink-0 text-amber-200" />
+                            <span>พนักงานแจ้ง GPS มีปัญหา · {formatTime(record.gpsReviewRequest.created_at)} น.</span>
+                        </div>
+                        {record.gpsReviewRequest.employee_note && (
+                            <p className="mt-1 pl-5 text-amber-50/80 line-clamp-2">
+                                {record.gpsReviewRequest.employee_note}
+                            </p>
+                        )}
+                        {record.gpsReviewRequest.gps_error && (
+                            <p className="mt-1 pl-5 text-white/45 line-clamp-1">
+                                Error: {record.gpsReviewRequest.gps_error}
+                            </p>
+                        )}
+                    </div>
                 )}
             </div>
 

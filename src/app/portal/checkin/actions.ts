@@ -10,6 +10,7 @@ import { checkWfhEligibility } from '@/lib/wfh-eligibility'
 import { bangkokTodayIso } from '@/lib/leave-validations'
 import { resolveLeaveApprover } from '@/lib/leave-approval'
 import { createNotification, getEmployeeUserId } from '@/lib/notifications'
+import { findHrNotifyTargets } from '@/lib/hr-notify'
 import {
     OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE,
     OUTSIDE_HEAD_OFFICE_DEFAULT_NOTE,
@@ -73,6 +74,14 @@ export interface CheckInPayload {
     lateReason?: string
 }
 
+export interface AttendanceGpsReviewRequestPayload {
+    note?: string
+    gpsError?: string | null
+    latitude?: number | null
+    longitude?: number | null
+    accuracy?: number | null
+}
+
 // Official workday start (Bangkok wall-clock minutes from midnight).
 // 08:00 = 8*60 = 480. Anything past this counts as late.
 const OFFICIAL_START_MIN = 8 * 60
@@ -84,6 +93,8 @@ const LATE_TIER3_MIN = 60   // > 60 min = manager notified
  *  the audit dashboard but short enough that a real reason fits
  *  ("ประชุม ABC", "ส่งของ X"). */
 const FIELD_NOTE_MIN_LENGTH = 5
+const GPS_REVIEW_NOTE_MIN_LENGTH = 5
+const GPS_REVIEW_NOTE_MAX_LENGTH = 500
 
 
 function getBangkokTodayUtcRange() {
@@ -92,6 +103,163 @@ function getBangkokTodayUtcRange() {
         start: new Date(`${today}T00:00:00+07:00`).toISOString(),
         end: new Date(`${today}T23:59:59.999+07:00`).toISOString(),
         dateKey: today,
+    }
+}
+
+export async function requestAttendanceGpsReview(payload: AttendanceGpsReviewRequestPayload) {
+    const session = await getSession()
+    if (!session) {
+        return { error: 'กรุณาเข้าสู่ระบบใหม่อีกครั้ง' }
+    }
+
+    const employeeId = await getEmployeeId()
+    if (!employeeId) {
+        return { error: 'ไม่พบข้อมูลพนักงาน — กรุณาติดต่อ HR' }
+    }
+
+    const note = String(payload.note ?? '').trim()
+    if (note.length < GPS_REVIEW_NOTE_MIN_LENGTH) {
+        return { error: `กรุณาระบุรายละเอียดอย่างน้อย ${GPS_REVIEW_NOTE_MIN_LENGTH} ตัวอักษร` }
+    }
+    if (note.length > GPS_REVIEW_NOTE_MAX_LENGTH) {
+        return { error: `รายละเอียดต้องไม่เกิน ${GPS_REVIEW_NOTE_MAX_LENGTH} ตัวอักษร` }
+    }
+
+    const today = bangkokTodayIso()
+    const todayRange = getBangkokTodayUtcRange()
+    const [{ data: existingCheckin }, { data: cardScanToday }, { data: employee }] = await Promise.all([
+        supabaseAdmin
+            .from('checkins')
+            .select('id')
+            .eq('employee_id', employeeId)
+            .gte('checked_in_at', todayRange.start)
+            .lte('checked_in_at', todayRange.end)
+            .limit(1)
+            .maybeSingle(),
+        supabaseAdmin
+            .from('card_scans')
+            .select('id')
+            .eq('employee_id', employeeId)
+            .gte('scan_time', `${today}T00:00:00`)
+            .lte('scan_time', `${today}T23:59:59.999`)
+            .limit(1)
+            .maybeSingle(),
+        supabaseAdmin
+            .from('employees')
+            .select('employee_code, first_name_th, last_name_th, nickname')
+            .eq('id', employeeId)
+            .maybeSingle(),
+    ])
+
+    if (existingCheckin?.id) {
+        return { error: 'คุณเช็คอินผ่านแอปแล้ววันนี้ ไม่ต้องส่งคำขอให้ HR ตรวจสอบซ้ำ' }
+    }
+    if (cardScanToday?.id) {
+        return { error: 'ระบบพบข้อมูลทาบบัตรของคุณวันนี้แล้ว ไม่ต้องส่งคำขอให้ HR ตรวจสอบซ้ำ' }
+    }
+
+    const h = await headers()
+    const forwardedFor = h.get('x-forwarded-for')
+    const realIp = h.get('x-real-ip')
+    const ipAddress = forwardedFor?.split(',')[0].trim() || realIp || null
+    const userAgent = h.get('user-agent')
+    const nowIso = new Date().toISOString()
+    const employeeName = employee?.nickname?.trim()
+        || `${employee?.first_name_th ?? ''} ${employee?.last_name_th ?? ''}`.trim()
+        || 'พนักงาน'
+
+    let requestId: string | null = null
+    let alreadyPending = false
+    try {
+        const { data: existingRequest, error: existingRequestError } = await supabaseAdmin
+            .from('attendance_gps_review_requests')
+            .select('id')
+            .eq('employee_id', employeeId)
+            .eq('requested_for_date', today)
+            .eq('status', 'pending')
+            .limit(1)
+            .maybeSingle()
+
+        if (existingRequestError) throw existingRequestError
+
+        if (existingRequest?.id) {
+            requestId = String(existingRequest.id)
+            alreadyPending = true
+        } else {
+            const { data: inserted, error: insertError } = await supabaseAdmin
+                .from('attendance_gps_review_requests')
+                .insert({
+                    employee_id: employeeId,
+                    requested_for_date: today,
+                    employee_note: note,
+                    gps_error: payload.gpsError ? String(payload.gpsError).slice(0, 500) : null,
+                    latitude: payload.latitude ?? null,
+                    longitude: payload.longitude ?? null,
+                    accuracy_meters: payload.accuracy ?? null,
+                    user_agent: userAgent,
+                    ip_address: ipAddress,
+                    created_at: nowIso,
+                    updated_at: nowIso,
+                })
+                .select('id')
+                .single()
+
+            if (insertError) throw insertError
+            requestId = String(inserted.id)
+        }
+    } catch (err) {
+        console.warn('[checkin/gps-review] request table unavailable; continuing with HR notification only:', err)
+    }
+
+    const hrTargets = await findHrNotifyTargets().catch(err => {
+        console.error('[checkin/gps-review] HR targets failed:', err)
+        return []
+    })
+    const actionUrl = `/hradmin/attendance?date=${today}&gpsReview=1`
+    const body = `${employeeName}${employee?.employee_code ? ` (${employee.employee_code})` : ''} แจ้งว่าอยู่ที่ออฟฟิศแต่ GPS มีปัญหา · ${note}`
+
+    await Promise.all(hrTargets.map(hr => hr.userId
+        ? createNotification({
+            recipient_user_id: hr.userId,
+            type: 'attendance_gps_review_requested',
+            title: 'ขอตรวจสอบเช็คอิน: GPS มีปัญหา',
+            body,
+            action_url: actionUrl,
+            action_label: 'ดูการเข้างาน',
+            entity_type: 'attendance_gps_review_request',
+            entity_id: requestId,
+            reference_code: employee?.employee_code ? `GPS-${today}-${employee.employee_code}` : `GPS-${today}`,
+            icon: 'MapPinOff',
+            color: 'amber',
+            sender_user_id: session.id,
+            sender_name: employeeName,
+            metadata: {
+                employeeId,
+                date: today,
+                note,
+                gpsError: payload.gpsError ?? null,
+                alreadyPending,
+            },
+        })
+        : Promise.resolve(null)))
+
+    revalidatePath('/portal/checkin')
+    revalidatePath('/hradmin/attendance')
+
+    if (alreadyPending) {
+        return {
+            success: true,
+            alreadyPending: true,
+            message: 'คุณเคยส่งคำขอวันนี้แล้ว ระบบแจ้ง HR ไว้ให้อีกครั้ง',
+        }
+    }
+
+    return {
+        success: true,
+        alreadyPending: false,
+        message: hrTargets.length > 0
+            ? 'ส่งคำขอให้ HR ตรวจสอบแล้ว'
+            : 'บันทึกคำขอแล้ว แต่ยังไม่พบผู้รับแจ้งเตือน HR กรุณาแจ้ง HR โดยตรงอีกครั้ง',
     }
 }
 
