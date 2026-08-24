@@ -96,6 +96,9 @@ const FIELD_NOTE_MIN_LENGTH = 5
 const GPS_REVIEW_NOTE_MIN_LENGTH = 5
 const GPS_REVIEW_NOTE_MAX_LENGTH = 500
 
+type GpsReviewNotifyTarget = {
+    userId: string | null
+}
 
 function getBangkokTodayUtcRange() {
     const today = bangkokTodayIso()
@@ -104,6 +107,32 @@ function getBangkokTodayUtcRange() {
         end: new Date(`${today}T23:59:59.999+07:00`).toISOString(),
         dateKey: today,
     }
+}
+
+async function findAttendanceGpsReviewNotifyTargets(): Promise<GpsReviewNotifyTarget[]> {
+    const [hrTargets, { data: suriyaRows, error: suriyaError }] = await Promise.all([
+        findHrNotifyTargets(),
+        supabaseAdmin
+            .from('employees')
+            .select('user_id')
+            .eq('employee_code', '506-69')
+            .eq('status', 'active'),
+    ])
+
+    if (suriyaError) {
+        console.error('[checkin/gps-review] Suriya notify target failed:', suriyaError)
+    }
+
+    const byUserId = new Map<string, GpsReviewNotifyTarget>()
+    for (const target of hrTargets) {
+        if (target.userId) byUserId.set(target.userId, { userId: target.userId })
+    }
+    for (const row of suriyaRows ?? []) {
+        const userId = typeof row.user_id === 'string' ? row.user_id : null
+        if (userId) byUserId.set(userId, { userId })
+    }
+
+    return Array.from(byUserId.values())
 }
 
 export async function requestAttendanceGpsReview(payload: AttendanceGpsReviewRequestPayload) {
@@ -211,7 +240,7 @@ export async function requestAttendanceGpsReview(payload: AttendanceGpsReviewReq
         console.warn('[checkin/gps-review] request table unavailable; continuing with HR notification only:', err)
     }
 
-    const hrTargets = await findHrNotifyTargets().catch(err => {
+    const hrTargets = await findAttendanceGpsReviewNotifyTargets().catch(err => {
         console.error('[checkin/gps-review] HR targets failed:', err)
         return []
     })
