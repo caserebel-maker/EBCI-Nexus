@@ -63,7 +63,7 @@ const SHORTCUTS = [
     { label: 'ปฏิทิน',         icon: Calendar,  href: '/portal/calendar' },
     { label: 'เช็คอิน',        icon: MapPin,    href: '/portal/checkin' },
     { label: 'จองห้องประชุม', icon: DoorOpen,  href: '/portal/meeting-room' },
-    { label: 'ทายบอลโลก',     icon: Sparkles,  href: '/portal/events/world-cup', isEvent: true },
+    { label: 'ทายบอลโลก',     icon: Sparkles,  href: '/portal/events/world-cup' },
 ]
 
 const GENDER_LEAVE_LABEL: Record<string, string> = {
@@ -794,27 +794,21 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
                 <div className="grid grid-cols-3 gap-3">
                     {SHORTCUTS.map((shortcut) => {
                         const { label, icon: Icon, href } = shortcut
-                        const isEvent = 'isEvent' in shortcut && shortcut.isEvent
                         return (
                             <Link
                                 key={label}
                                 href={href}
-                                className={[
-                                    'flex flex-col items-center gap-2 py-4 rounded-2xl text-center transition-all active:scale-95',
-                                    isEvent ? 'relative overflow-hidden ring-2 ring-yellow-400/90 shadow-[0_0_15px_rgba(250,204,21,0.5)] border-yellow-400 bg-gradient-to-b from-yellow-500/15 via-white/5 to-white/5 animate-pulse' : ''
-                                ].join(' ')}
+                                className="flex flex-col items-center gap-2 py-4 rounded-2xl text-center transition-all active:scale-95 hover:bg-white/10"
                                 style={{ 
-                                    background: isEvent ? undefined : 'rgba(255,255,255,0.07)', 
-                                    border: isEvent ? '1px solid rgba(250,204,21,0.4)' : '1px solid rgba(255,255,255,0.12)' 
+                                    background: 'rgba(255,255,255,0.07)', 
+                                    border: '1px solid rgba(255,255,255,0.12)' 
                                 }}
                             >
                                 <Icon 
                                     size={28} 
-                                    className={[
-                                        isEvent ? 'text-yellow-300 animate-bounce' : 'text-white/90',
-                                    ].join(' ')} 
+                                    className="text-white/90" 
                                 />
-                                <span className={isEvent ? 'text-yellow-100 font-extrabold leading-tight' : 'text-white/85 font-medium leading-tight'} style={{ fontSize: '15px' }}>
+                                <span className="text-white/85 font-medium leading-tight" style={{ fontSize: '15px' }}>
                                     {label}
                                 </span>
                             </Link>
