@@ -120,13 +120,35 @@ async function findLatestStreakBreakingLeave(employeeId: string, sinceDate: stri
     }
 }
 
+async function findAttendanceReviewDates(employeeId: string, sinceDate: string): Promise<Set<string>> {
+    const today = bangkokTodayIso()
+    const { data, error } = await supabaseAdmin
+        .from('attendance_gps_review_requests')
+        .select('requested_for_date, status')
+        .eq('employee_id', employeeId)
+        .in('status', ['pending', 'reviewed'])
+        .gte('requested_for_date', sinceDate)
+        .lte('requested_for_date', today)
+
+    if (error) {
+        console.error('[streak] attendance review lookup error:', error)
+        return new Set()
+    }
+
+    return new Set(
+        ((data ?? []) as Array<{ requested_for_date: string }>)
+            .map(row => row.requested_for_date?.slice(0, 10))
+            .filter((dateKey): dateKey is string => Boolean(dateKey)),
+    )
+}
+
 /**
  * Find the most recent late check-in or card scan since `sinceDate`.
  * We union both sources because some employees use the mobile app
  * and some tap the office card — both should reset the streak if
  * either was late.
  */
-async function findLatestLateCheckin(employeeId: string, sinceDate: string):
+async function findLatestLateCheckin(employeeId: string, sinceDate: string, ignoredDates = new Set<string>()):
     Promise<{ date: string; iso: string; source: 'utc' | 'bangkok'; time: string } | null>
 {
     const cutoff = getLateCutoff()
@@ -185,6 +207,7 @@ async function findLatestLateCheckin(employeeId: string, sinceDate: string):
     // Sort days descending by date, find the most recent day where the EARLIEST arrival was late.
     const sortedDays = Array.from(earliestArrivalPerDay.keys()).sort((a, b) => b.localeCompare(a))
     for (const date of sortedDays) {
+        if (ignoredDates.has(date)) continue
         const c = earliestArrivalPerDay.get(date)!
         if (isLateBangkok(c.iso, c.source, cutoff)) {
             return { date, iso: c.iso, source: c.source, time: formatBangkokTime(c.iso, c.source) }
@@ -227,10 +250,11 @@ export async function getStreakInfo(employeeId: string): Promise<StreakInfo> {
     // (We never look further back than start_date because anything
     // before that is pre-employment and irrelevant. We also don't use
     // pre-launch imported HIP noise as an employee-facing reset reason.)
-    const [leaveBreak, lateBreak] = await Promise.all([
+    const [leaveBreak, attendanceReviewDates] = await Promise.all([
         findLatestStreakBreakingLeave(employeeId, streakFloorDate),
-        findLatestLateCheckin(employeeId, streakFloorDate),
+        findAttendanceReviewDates(employeeId, streakFloorDate),
     ])
+    const lateBreak = await findLatestLateCheckin(employeeId, streakFloorDate, attendanceReviewDates)
 
     // Pick the more recent of the two events as the reset point.
     let lastResetEvent: StreakResetEvent | null = null

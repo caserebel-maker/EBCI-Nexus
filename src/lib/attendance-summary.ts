@@ -35,6 +35,11 @@ type HolidayRow = {
     year: number
 }
 
+type AttendanceReviewRow = {
+    requested_for_date: string
+    status: string
+}
+
 export type EmployeeAttendanceSummary = {
     monthIso: string
     monthLabel: string
@@ -137,6 +142,7 @@ export async function getEmployeeAttendanceSummary(employeeId: string, rawMonth?
         leavesRes,
         wfhRes,
         holidaysRes,
+        attendanceReviewsRes,
     ] = await Promise.all([
         supabaseAdmin
             .from('checkins')
@@ -169,6 +175,13 @@ export async function getEmployeeAttendanceSummary(employeeId: string, rawMonth?
             .select('date, name, type, year')
             .gte('date', startKey)
             .lte('date', cappedEndKey),
+        supabaseAdmin
+            .from('attendance_gps_review_requests')
+            .select('requested_for_date, status')
+            .eq('employee_id', employeeId)
+            .in('status', ['pending', 'reviewed'])
+            .gte('requested_for_date', startKey)
+            .lte('requested_for_date', cappedEndKey),
     ])
 
     if (checkinsRes.error) throw new Error(checkinsRes.error.message)
@@ -176,6 +189,9 @@ export async function getEmployeeAttendanceSummary(employeeId: string, rawMonth?
     if (leavesRes.error) throw new Error(leavesRes.error.message)
     if (wfhRes.error) throw new Error(wfhRes.error.message)
     if (holidaysRes.error) throw new Error(holidaysRes.error.message)
+    if (attendanceReviewsRes.error) {
+        console.warn('[attendance-summary] review lookup error:', attendanceReviewsRes.error.message)
+    }
 
     const holidays = mergeHolidays((holidaysRes.data ?? []) as HolidayRow[], year) as HolidayRow[]
     const holidayByDate = new Map(holidays.map(h => [h.date, h]))
@@ -190,6 +206,11 @@ export async function getEmployeeAttendanceSummary(employeeId: string, rawMonth?
     const lateByDate = new Map<string, number>()
     const leaveDays = new Set<string>()
     const wfhDays = new Set<string>()
+    const reviewDays = new Set(
+        ((attendanceReviewsRes.data ?? []) as AttendanceReviewRow[])
+            .map(row => row.requested_for_date?.slice(0, 10))
+            .filter((dateKey): dateKey is string => Boolean(dateKey)),
+    )
 
     for (const row of (checkinsRes.data ?? []) as CheckinRow[]) {
         const dateKey = bangkokDateKey(row.checked_in_at, 'utc')
@@ -237,7 +258,8 @@ export async function getEmployeeAttendanceSummary(employeeId: string, rawMonth?
         !attendedDays.has(dateKey)
         && !leaveDays.has(dateKey)
         && !wfhDays.has(dateKey)
-        && !companyWfhDays.has(dateKey),
+        && !companyWfhDays.has(dateKey)
+        && !reviewDays.has(dateKey),
     )
 
     if (monthIso === '2026-02') {

@@ -247,6 +247,17 @@ export async function getAttendanceReport(
         .gte('end_date', fromDate)
         .in('employee_id', employeeIds)
 
+    const { data: attendanceReviewRows, error: attendanceReviewErr } = await supabaseAdmin
+        .from('attendance_gps_review_requests')
+        .select('employee_id, requested_for_date, status')
+        .in('employee_id', employeeIds)
+        .in('status', ['pending', 'reviewed'])
+        .gte('requested_for_date', fromDate)
+        .lte('requested_for_date', toDate)
+    if (attendanceReviewErr) {
+        console.warn('[reports] attendance review lookup error:', attendanceReviewErr.message)
+    }
+
     const leaveDaysByEmp = new Map<string, Set<string>>()
     for (const lr of leaveRows ?? []) {
         const empId = lr.employee_id as string
@@ -266,6 +277,16 @@ export async function getAttendanceReport(
             set.add(key)
         }
         leaveDaysByEmp.set(empId, set)
+    }
+
+    const attendanceReviewDaysByEmp = new Map<string, Set<string>>()
+    for (const review of attendanceReviewRows ?? []) {
+        const empId = review.employee_id as string
+        const dateKey = String(review.requested_for_date ?? '').slice(0, 10)
+        if (!dateKey) continue
+        const set = attendanceReviewDaysByEmp.get(empId) ?? new Set<string>()
+        set.add(dateKey)
+        attendanceReviewDaysByEmp.set(empId, set)
     }
 
     // Count unique days per employee per type (not per checkin).
@@ -357,12 +378,14 @@ export async function getAttendanceReport(
         const leaveDays = leaveDaysByEmp.get(e.id)?.size ?? 0
         const totalDays = officeDays + wfhDays + offsiteDays
         const leaveDateSet = leaveDaysByEmp.get(e.id) ?? new Set<string>()
+        const reviewDateSet = attendanceReviewDaysByEmp.get(e.id) ?? new Set<string>()
         const absentDays = shouldExcludeAbsence(e)
             ? 0
             : absenceWorkdayKeys.filter(key => {
                 const present = b.office.has(key) || b.wfh.has(key) || b.offsite.has(key)
                 const leave = leaveDateSet.has(key)
-                return !present && !leave
+                const underReview = reviewDateSet.has(key)
+                return !present && !leave && !underReview
             }).length
         totalOffice += officeDays
         totalWfh += wfhDays
