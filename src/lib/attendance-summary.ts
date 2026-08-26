@@ -1,4 +1,5 @@
 import { bangkokDateKey, todayBangkokKey } from '@/lib/datetime'
+import { isHipOutageGraceDate, shouldApplyHipOutageGrace } from '@/lib/hip-outage-grace'
 import { isWorkdaySaturday, mergeHolidays } from '@/lib/saturday-rules'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
@@ -217,7 +218,9 @@ export async function getEmployeeAttendanceSummary(employeeId: string, rawMonth?
         if (!dateKey) continue
         attendedDays.add(dateKey)
         const late = Number(row.late_minutes ?? 0)
-        if (late > 0) lateByDate.set(dateKey, Math.max(lateByDate.get(dateKey) ?? 0, late))
+        if (late > 0 && !isHipOutageGraceDate(dateKey)) {
+            lateByDate.set(dateKey, Math.max(lateByDate.get(dateKey) ?? 0, late))
+        }
     }
 
     const firstCardScanByDate = new Map<string, CardScanRow>()
@@ -232,7 +235,7 @@ export async function getEmployeeAttendanceSummary(employeeId: string, rawMonth?
     }
 
     for (const [dateKey, row] of firstCardScanByDate.entries()) {
-        if (isLateBangkokTime(row.scan_time, 'bangkok')) {
+        if (isLateBangkokTime(row.scan_time, 'bangkok') && !isHipOutageGraceDate(dateKey)) {
             lateByDate.set(dateKey, Math.max(lateByDate.get(dateKey) ?? 0, 1))
         }
     }
@@ -254,6 +257,19 @@ export async function getEmployeeAttendanceSummary(employeeId: string, rawMonth?
     }
 
     const companyWfhDays = new Set(holidays.filter(h => h.type === 'wfh').map(h => h.date))
+    for (const dateKey of absenceWorkdayKeys) {
+        if (shouldApplyHipOutageGrace({
+            dateKey,
+            isWorkday: true,
+            hasAttendance: attendedDays.has(dateKey),
+            hasApprovedLeave: leaveDays.has(dateKey),
+            hasApprovedWfh: wfhDays.has(dateKey),
+            isCompanyWfh: companyWfhDays.has(dateKey),
+        })) {
+            attendedDays.add(dateKey)
+        }
+    }
+
     let absentDates = absenceWorkdayKeys.filter(dateKey =>
         !attendedDays.has(dateKey)
         && !leaveDays.has(dateKey)

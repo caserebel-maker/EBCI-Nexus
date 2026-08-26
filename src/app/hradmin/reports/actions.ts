@@ -3,6 +3,12 @@
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getSession } from '@/lib/auth'
 import { bangkokDateKey, todayBangkokKey } from '@/lib/datetime'
+import {
+    HIP_OUTAGE_GRACE_CHECKIN_TIME,
+    HIP_OUTAGE_GRACE_NOTE,
+    isHipOutageGraceDate,
+    shouldApplyHipOutageGrace,
+} from '@/lib/hip-outage-grace'
 
 // ─── Attendance Report ───────────────────────────────────────────────────────
 
@@ -26,6 +32,7 @@ export interface AttendanceRow {
      *  `workdays` first so they don't read as "absent". Never below 0. */
     absentDays: number
     totalDays: number
+    systemNote?: string
 }
 
 export interface AttendanceReport {
@@ -247,6 +254,14 @@ export async function getAttendanceReport(
         .gte('end_date', fromDate)
         .in('employee_id', employeeIds)
 
+    const { data: wfhRows } = await supabaseAdmin
+        .from('wfh_requests')
+        .select('employee_id, start_date, end_date, status')
+        .eq('status', 'approved')
+        .lte('start_date', toDate)
+        .gte('end_date', fromDate)
+        .in('employee_id', employeeIds)
+
     const { data: attendanceReviewRows, error: attendanceReviewErr } = await supabaseAdmin
         .from('attendance_gps_review_requests')
         .select('employee_id, requested_for_date, status')
@@ -289,6 +304,24 @@ export async function getAttendanceReport(
         attendanceReviewDaysByEmp.set(empId, set)
     }
 
+    const wfhDaysByEmp = new Map<string, Set<string>>()
+    for (const wfh of wfhRows ?? []) {
+        const empId = wfh.employee_id as string
+        const set = wfhDaysByEmp.get(empId) ?? new Set<string>()
+        for (const key of dateKeysInclusive(
+            (wfh.start_date as string).slice(0, 10),
+            (wfh.end_date as string).slice(0, 10),
+        )) {
+            if (!dateKeyInRange(key, fromDate, toDate)) continue
+            if (holidayKeys.has(key)) continue
+            const [y, m, d] = key.split('-').map(Number)
+            const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay()
+            if (dow < 1 || dow > 5) continue
+            set.add(key)
+        }
+        wfhDaysByEmp.set(empId, set)
+    }
+
     // Count unique days per employee per type (not per checkin).
     // `checked_in_at` is stored as UTC wall-clock — slicing the raw
     // ISO directly produces the wrong calendar date for events between
@@ -323,7 +356,7 @@ export async function getAttendanceReport(
             const bkkMs = utcDate.getTime() + 7 * 60 * 60 * 1000
             const bkk = new Date(bkkMs)
             const minOfDay = bkk.getUTCHours() * 60 + bkk.getUTCMinutes()
-            if (minOfDay > LATE_CUTOFF_MIN) bucket.late.add(day)
+            if (minOfDay > LATE_CUTOFF_MIN && !isHipOutageGraceDate(day)) bucket.late.add(day)
         }
         perEmp.set(c.employee_id, bucket)
     }
@@ -359,7 +392,7 @@ export async function getAttendanceReport(
             hour12: false,
         }).format(new Date(/[zZ]$|[+-]\d{2}:?\d{2}$/.test(raw) ? raw : `${raw}+07:00`))
         const [hour, minute] = time.split(':').map(Number)
-        if (hour * 60 + minute > LATE_CUTOFF_MIN) bucket.late.add(day)
+        if (hour * 60 + minute > LATE_CUTOFF_MIN && !isHipOutageGraceDate(day)) bucket.late.add(day)
         perEmp.set(employeeId, bucket)
     }
 
@@ -371,14 +404,42 @@ export async function getAttendanceReport(
         const b: EmpBucket = perEmp.get(e.id) ?? {
             office: new Set(), wfh: new Set(), offsite: new Set(), late: new Set(),
         }
+        const leaveDateSet = leaveDaysByEmp.get(e.id) ?? new Set<string>()
+        const approvedWfhDateSet = wfhDaysByEmp.get(e.id) ?? new Set<string>()
+        const reviewDateSet = attendanceReviewDaysByEmp.get(e.id) ?? new Set<string>()
+        const graceDateSet = new Set<string>()
+
+        for (const key of approvedWfhDateSet) {
+            b.wfh.add(key)
+        }
+
+        if (!shouldExcludeAbsence(e)) {
+            for (const key of absenceWorkdayKeys) {
+                const present = b.office.has(key) || b.wfh.has(key) || b.offsite.has(key)
+                const leave = leaveDateSet.has(key)
+                const approvedWfh = approvedWfhDateSet.has(key)
+                const underReview = reviewDateSet.has(key)
+                if (underReview) continue
+                if (shouldApplyHipOutageGrace({
+                    dateKey: key,
+                    isWorkday: true,
+                    hasAttendance: present,
+                    hasApprovedLeave: leave,
+                    hasApprovedWfh: approvedWfh,
+                    isCompanyWfh: false,
+                })) {
+                    b.office.add(key)
+                    graceDateSet.add(key)
+                }
+            }
+        }
+
         const officeDays = b.office.size
         const wfhDays = b.wfh.size
         const offsiteDays = b.offsite.size
         const lateDays = b.late.size
-        const leaveDays = leaveDaysByEmp.get(e.id)?.size ?? 0
+        const leaveDays = leaveDateSet.size
         const totalDays = officeDays + wfhDays + offsiteDays
-        const leaveDateSet = leaveDaysByEmp.get(e.id) ?? new Set<string>()
-        const reviewDateSet = attendanceReviewDaysByEmp.get(e.id) ?? new Set<string>()
         const absentDays = shouldExcludeAbsence(e)
             ? 0
             : absenceWorkdayKeys.filter(key => {
@@ -402,6 +463,9 @@ export async function getAttendanceReport(
             leaveDays,
             absentDays,
             totalDays,
+            systemNote: graceDateSet.size
+                ? `${HIP_OUTAGE_GRACE_NOTE} (${graceDateSet.size} วัน, เวลา ${HIP_OUTAGE_GRACE_CHECKIN_TIME})`
+                : undefined,
         }
     })
 

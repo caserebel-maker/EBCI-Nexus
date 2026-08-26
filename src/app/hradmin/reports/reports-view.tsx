@@ -100,7 +100,7 @@ function exportAttendanceCsv(data: AttendanceReport) {
     const header = [
         'รหัส', 'ชื่อ-นามสกุล', 'แผนก',
         'เข้าออฟฟิศ', 'WFH', 'Off-site', 'รวม',
-        'มาสาย', 'ลา', 'ขาดงาน', 'วันทำงาน', 'ช่วงเวลา',
+        'มาสาย', 'ลา', 'ขาดงาน', 'วันทำงาน', 'ช่วงเวลา', 'หมายเหตุระบบ',
     ]
     const rangeLabel = `${data.fromDate} ถึง ${data.toDate}`
     const rows = [
@@ -118,6 +118,7 @@ function exportAttendanceCsv(data: AttendanceReport) {
             String(r.absentDays),
             String(data.workdays),
             rangeLabel,
+            r.systemNote ?? '',
         ]),
     ]
     const filename = data.month && data.year

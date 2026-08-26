@@ -1,6 +1,7 @@
 import 'server-only'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { bangkokDateKey, formatBangkokTime, toDate } from '@/lib/datetime'
+import { getHipOutageGraceDates } from '@/lib/hip-outage-grace'
 import { bangkokTodayIso } from '@/lib/leave-validations'
 import { WORK_SCHEDULE } from '@/lib/leave-constants'
 import {
@@ -254,7 +255,11 @@ export async function getStreakInfo(employeeId: string): Promise<StreakInfo> {
         findLatestStreakBreakingLeave(employeeId, streakFloorDate),
         findAttendanceReviewDates(employeeId, streakFloorDate),
     ])
-    const lateBreak = await findLatestLateCheckin(employeeId, streakFloorDate, attendanceReviewDates)
+    const ignoredLateDates = new Set([
+        ...attendanceReviewDates,
+        ...getHipOutageGraceDates(streakFloorDate, today),
+    ])
+    const lateBreak = await findLatestLateCheckin(employeeId, streakFloorDate, ignoredLateDates)
 
     // Pick the more recent of the two events as the reset point.
     let lastResetEvent: StreakResetEvent | null = null

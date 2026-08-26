@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { bangkokDateKey, formatBangkokDateTime, formatBangkokTime, todayBangkokKey, toDate } from '@/lib/datetime'
+import {
+    HIP_OUTAGE_GRACE_CHECKIN_TIME,
+    HIP_OUTAGE_GRACE_NOTE,
+    isHipOutageGraceDate,
+    shouldApplyHipOutageGrace,
+} from '@/lib/hip-outage-grace'
 import { isWorkdaySaturday } from '@/lib/saturday-rules'
 import { getCheckinTypeLabel, normalizeOutsideHeadOfficeCheckin } from '@/lib/outside-head-office'
 
@@ -623,14 +629,24 @@ export async function GET(req: NextRequest) {
                 const hasCard = dayScans.length > 0
                 const hasMobile = mobileCheckins.length > 0
                 const hasAnyCheckin = hasCard || hasMobile
-                const checkinMatchStatus = hasCard && hasMobile
+                const appliesGrace = shouldApplyHipOutageGrace({
+                    dateKey: dateStr,
+                    isWorkday,
+                    hasAttendance: hasAnyCheckin,
+                    hasApprovedLeave: approvedLeaves.length > 0,
+                    hasApprovedWfh: activeWfh.length > 0,
+                    isCompanyWfh,
+                })
+                const graceDate = isHipOutageGraceDate(dateStr)
+
+                let checkinMatchStatus = hasCard && hasMobile
                     ? 'ตรงกัน (มีทั้งแตะบัตรและมือถือ)'
                     : hasCard
                         ? 'เฉพาะบัตร'
                         : hasMobile
                             ? 'เฉพาะมือถือ'
                             : 'ไม่มีข้อมูลเช็คอิน'
-                const sourceLabel = hasCard && hasMobile
+                let sourceLabel = hasCard && hasMobile
                     ? 'สแกนบัตร + มือถือ'
                     : hasCard
                         ? 'สแกนบัตร'
@@ -639,15 +655,19 @@ export async function GET(req: NextRequest) {
                             : '—'
 
                 const mobileTypes = mobileCheckins.map(c => c.type ? getCheckinTypeLabel(c.type) : 'ไม่ระบุ')
-                const actualType = firstSource === 'card'
+                let actualType = firstSource === 'card'
                     ? 'ออฟฟิศ'
                     : firstMobile?.type
                         ? getCheckinTypeLabel(firstMobile.type)
                         : hasMobile
                             ? 'มือถือไม่ระบุประเภท'
                             : '—'
-                const maxLateMinutes = Math.max(0, ...dayCheckins.map(c => Number(c.late_minutes ?? 0)))
-                const lateReasons = uniqJoin(dayCheckins.map(c => c.late_reason))
+                const rawMaxLateMinutes = Math.max(0, ...dayCheckins.map(c => Number(c.late_minutes ?? 0)))
+                const lateExcused = graceDate && rawMaxLateMinutes > 0
+                const maxLateMinutes = lateExcused ? 0 : rawMaxLateMinutes
+                const lateReasons = lateExcused
+                    ? 'ยกเว้นช่วง HIP ขัดข้อง'
+                    : uniqJoin(dayCheckins.map(c => c.late_reason))
                 const autoClosed = dayCheckins.some(c => Boolean(c.auto_closed_at)) ? 'ใช่' : 'ไม่ใช่'
                 const leaveTypeLabels = dayLeaves.map(l => leaveTypeNames.get(l.leave_type_id ?? '') ?? l.leave_type_id ?? 'ลา')
                 const approvedLeaveType = approvedLeaves.length > 0
@@ -657,9 +677,23 @@ export async function GET(req: NextRequest) {
                 const issues: string[] = []
                 const notes: string[] = []
 
+                if (appliesGrace) {
+                    clockIn = HIP_OUTAGE_GRACE_CHECKIN_TIME
+                    checkinMatchStatus = 'เครดิตระบบช่วง HIP ขัดข้อง (ไม่มีข้อมูลเช็คอินจริง)'
+                    sourceLabel = 'ระบบยกประโยชน์ช่วง HIP ขัดข้อง'
+                    actualType = 'ออฟฟิศ (เครดิตระบบ)'
+                    notes.push(HIP_OUTAGE_GRACE_NOTE)
+                }
+                if (lateExcused) {
+                    notes.push(`ช่วง HIP ขัดข้อง: พบเวลาจริงสาย ${rawMaxLateMinutes} นาที แต่ไม่คิดเป็นมาสาย`)
+                }
+
                 if (hasAnyCheckin && approvedLeaves.length > 0) issues.push('มีเช็คอินในวันที่มีใบลาอนุมัติ')
                 if (hasCard && activeWfh.length > 0) issues.push('มีแตะบัตรในวันที่มี WFH อนุมัติ')
-                if (hasMobile && !hasCard) issues.push('มีเฉพาะเช็คอินมือถือ')
+                if (hasMobile && !hasCard) {
+                    if (graceDate) notes.push('ช่วง HIP ขัดข้อง: มีเฉพาะเช็คอินมือถือ')
+                    else issues.push('มีเฉพาะเช็คอินมือถือ')
+                }
                 if (hasCard && !hasMobile) issues.push('มีเฉพาะแตะบัตร')
                 if (dayLeaves.length > 1) issues.push('มีใบลาหลายรายการในวันเดียวกัน')
                 if (dayWfh.length > 1) issues.push('มีคำขอ WFH หลายรายการในวันเดียวกัน')
@@ -690,6 +724,8 @@ export async function GET(req: NextRequest) {
                 } else if (!isWorkday) {
                     dailyStatus = 'วันหยุด'
                     notes.push(dayType)
+                } else if (appliesGrace) {
+                    dailyStatus = `เข้าออฟฟิศ (เครดิตระบบ ${HIP_OUTAGE_GRACE_CHECKIN_TIME})`
                 } else if (dateStr < todayStr) {
                     dailyStatus = 'ขาดเช็คอิน'
                     issues.push('วันทำงานที่ผ่านมาแล้วแต่ไม่มีเช็คอิน/ใบลา/WFH')
