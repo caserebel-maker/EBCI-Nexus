@@ -1027,7 +1027,7 @@ export function CheckinView({
                                     disabled={loading || gpsReviewSubmitting}
                                     className="w-full rounded-xl border border-amber-300/40 bg-amber-400/90 px-4 py-3 text-sm font-bold text-[#1a0a0d] transition-colors hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
-                                    ฉันอยู่ที่ออฟฟิศแต่ GPS มีปัญหา
+                                    คลิกที่นี่ หากอยู่ที่ออฟฟิศแต่ GPS มีปัญหา
                                 </button>
                             ) : (
                                 <div className="space-y-3">
