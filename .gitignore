@@ -29,9 +29,12 @@
 hip-captures/
 hip-code-map*.json
 hip-sql-sync*.log
+hip-time*.log
 welcome-server*.log
 .sql-sync-state.json
 scripts/.sql-sync-state.json
+SQLEXPR*/
+*.png.tmp
 apps/welcome-tv-overlay/config.json
 apps/welcome-tv-overlay/node_modules/
 apps/welcome-tv-overlay/dist/

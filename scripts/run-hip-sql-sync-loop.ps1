@@ -1,7 +1,9 @@
 $ErrorActionPreference = 'Continue'
 
-$ScriptPath = Join-Path $PSScriptRoot 'run-hip-sql-sync.ps1'
-$RepoRoot = Split-Path -Parent $PSScriptRoot
+$ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+if (-not $ScriptDir) { $ScriptDir = "C:\EBCI-Nexus\scripts" }
+$ScriptPath = Join-Path $ScriptDir 'run-hip-sql-sync.ps1'
+$RepoRoot = Split-Path -Parent $ScriptDir
 $LoopLog = Join-Path $RepoRoot 'hip-sql-sync-loop.log'
 $LoopPidFile = Join-Path $RepoRoot '.hip-sql-sync-loop.pid'
 

@@ -124,9 +124,11 @@ node scripts/hip-card-agent.mjs sql-sync --once
 
 To ensure the sync agent runs continuously and restarts automatically on Windows boot, use one of the following methods:
 
-### Method A: Windows Task Scheduler (Automated Setup Batch Script)
+### Method A: Windows Task Scheduler (Automated Setup Batch Script) [RECOMMENDED]
 Right-click `scripts\setup-hip-agent.bat` and select **"Run as administrator"**.
-* This creates a Windows Scheduled Task named `EBCI_HIP_Agent` that starts on user logon.
+* This registers two Windows Scheduled Tasks:
+  1. `EBCI_HIP_Time_Auto` — Auto-starts HIP TIME 4.0 and connects to reader `192.168.1.40:5005` at user logon.
+  2. `EBCI_HIP_SQL_Sync` — Starts the 60-second continuous background sync loop at user logon.
 
 ### Method B: PowerShell Background Loop (Recommended for Dedicated PC)
 Run the built-in sync loop with lockfile handling and auto-retry:

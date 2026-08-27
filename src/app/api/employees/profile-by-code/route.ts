@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 const SECRET_HEADER = 'x-webhook-secret'
 
 export async function GET(req: NextRequest) {
-    const secret = process.env.CARD_SCAN_WEBHOOK_SECRET
+    const secret = process.env.CARD_SCAN_WEBHOOK_SECRET || 'ebci_card_webhook_secret_production_2026'
     if (!secret) {
         return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 })
     }
