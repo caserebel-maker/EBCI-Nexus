@@ -190,17 +190,11 @@ export async function POST(req: NextRequest) {
             continue
         }
 
+        const todayDate = time.split('T')[0]
         const timePart = (time.split('T')[1] || '').trim()
-        const isAfter1630 = timePart >= '16:30:00'
+        const currentMs = new Date(time.replace(' ', 'T') + '+07:00').getTime()
 
-        const scanType = scan?.scan_type
-            ? String(scan.scan_type).toLowerCase().trim()
-            : null
-        const explicitScanType = scanType === 'in' || scanType === 'out' ? scanType : null
-        // Scans at or after 16:30:00 Bangkok time are automatically marked as 'out' (checkout)
-        const normalizedScanType: string = explicitScanType ?? (isAfter1630 ? 'out' : 'in')
-
-        // Idempotency check — same employee + same exact timestamp
+        // 1. Idempotency check — same employee + same exact timestamp
         const { data: existing } = await supabaseAdmin
             .from('card_scans')
             .select('id, scan_type')
@@ -208,28 +202,49 @@ export async function POST(req: NextRequest) {
             .eq('scan_time', time)
             .maybeSingle()
         if (existing) {
-            if (existing.scan_type !== normalizedScanType) {
-                await supabaseAdmin
-                    .from('card_scans')
-                    .update({ scan_type: normalizedScanType })
-                    .eq('id', existing.id)
-            }
-            if (isAfter1630 && employeeId) {
-                const today = time.split('T')[0]
-                try {
-                    await supabaseAdmin
-                        .from('checkins')
-                        .update({ checked_out_at: time })
-                        .eq('employee_id', employeeId)
-                        .is('checked_out_at', null)
-                        .gte('checked_in_at', `${today}T00:00:00`)
-                        .lte('checked_in_at', `${today}T23:59:59.999`)
-                } catch (cerr) {
-                    console.warn('[webhooks/card-scan] auto-checkout mobile session error:', cerr)
-                }
-            }
             outcomes.push({ employee_code: code, scan_time: time, status: 'duplicate' })
             continue
+        }
+
+        // 2. Fetch existing scans today for this employee to determine state
+        const { data: prevScans } = await supabaseAdmin
+            .from('card_scans')
+            .select('id, scan_time, scan_type')
+            .eq('employee_id', employeeId)
+            .gte('scan_time', `${todayDate}T00:00:00`)
+            .lte('scan_time', `${todayDate}T23:59:59.999`)
+            .order('scan_time', { ascending: true })
+
+        // Check if there is a recent scan within 5 minutes (Debounce check)
+        const recentScanWithin5Min = (prevScans ?? []).find(ps => {
+            const psMs = new Date(String(ps.scan_time).replace(' ', 'T') + '+07:00').getTime()
+            return Math.abs(currentMs - psMs) < 5 * 60 * 1000
+        })
+
+        const scanTypeExplicit = scan?.scan_type
+            ? String(scan.scan_type).toLowerCase().trim()
+            : null
+        const explicitScanType = scanTypeExplicit === 'in' || scanTypeExplicit === 'out' ? scanTypeExplicit : null
+
+        let normalizedScanType: string
+        let rawDataPayload = { ...(scan?.raw_data ?? {}) }
+
+        if (explicitScanType) {
+            normalizedScanType = explicitScanType
+        } else if (recentScanWithin5Min) {
+            // Debounce tap within 5 minutes: keep the same scan_type as previous scan, and log debounce note
+            normalizedScanType = recentScanWithin5Min.scan_type || 'in'
+            rawDataPayload = {
+                ...rawDataPayload,
+                debounce: true,
+                note: `Tapped within 5 minutes of previous scan at ${recentScanWithin5Min.scan_time}`,
+            }
+        } else if (!prevScans || prevScans.length === 0) {
+            // First tap of the day (e.g. 07:45 AM or evening shift 17:15 PM) -> Always Check-in (IN)
+            normalizedScanType = 'in'
+        } else {
+            // Subsequent tap (>= 5 minutes after first tap) -> Check-out (OUT)
+            normalizedScanType = 'out'
         }
 
         const { error: insErr } = await supabaseAdmin
@@ -240,7 +255,7 @@ export async function POST(req: NextRequest) {
                 scan_time: time,
                 scan_type: normalizedScanType,
                 device_id: scan?.device_id ?? null,
-                raw_data: scan?.raw_data ?? null,
+                raw_data: rawDataPayload,
                 imported_at: nowIso,
                 imported_by: 'webhook',
                 source_file: 'webhook',
@@ -251,17 +266,16 @@ export async function POST(req: NextRequest) {
             continue
         }
 
-        // When scanned at or after 16:30, also auto-close any active open mobile checkin for today
-        if (isAfter1630 && employeeId) {
-            const today = time.split('T')[0]
+        // When scan is OUT (and not a debounce tap), auto-close any active open mobile checkin for today
+        if (normalizedScanType === 'out' && !recentScanWithin5Min && employeeId) {
             try {
                 await supabaseAdmin
                     .from('checkins')
                     .update({ checked_out_at: time })
                     .eq('employee_id', employeeId)
                     .is('checked_out_at', null)
-                    .gte('checked_in_at', `${today}T00:00:00`)
-                    .lte('checked_in_at', `${today}T23:59:59.999`)
+                    .gte('checked_in_at', `${todayDate}T00:00:00`)
+                    .lte('checked_in_at', `${todayDate}T23:59:59.999`)
             } catch (cerr) {
                 console.warn('[webhooks/card-scan] auto-checkout mobile session error:', cerr)
             }
