@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Search, Calendar, Clock, CreditCard, ChevronLeft, ChevronRight, RefreshCw, FileSpreadsheet, Layers } from 'lucide-react'
+import { ArrowLeft, Search, Calendar, CreditCard, ChevronLeft, ChevronRight, RefreshCw, FileSpreadsheet, Layers } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getCardScans, type CardScanWithEmployee } from './actions'
 
@@ -31,26 +31,50 @@ export function CardScansView({ initialData }: Props) {
 
     const [isPending, startTransition] = useTransition()
     const [expandedScanId, setExpandedScanId] = useState<string | null>(null)
+    const refreshInFlight = useRef(false)
 
-    const fetchScans = (targetPage: number) => {
+    const fetchScans = useCallback((targetPage: number) => {
+        if (refreshInFlight.current) return
+        refreshInFlight.current = true
         startTransition(async () => {
-            const res = await getCardScans({
-                search,
-                startDate,
-                endDate,
-                scanType,
-                page: targetPage,
-                limit: 50
-            })
-            if (res.success && res.scans) {
-                setScans(res.scans)
-                setTotalCount(res.totalCount)
-                setPage(res.page)
-                setTotalPages(res.totalPages)
-                setFetchedAt(res.fetchedAt ?? new Date().toISOString())
+            try {
+                const res = await getCardScans({
+                    search,
+                    startDate,
+                    endDate,
+                    scanType,
+                    page: targetPage,
+                    limit: 50
+                })
+                if (res.success && res.scans) {
+                    setScans(res.scans)
+                    setTotalCount(res.totalCount)
+                    setPage(res.page)
+                    setTotalPages(res.totalPages)
+                    setFetchedAt(res.fetchedAt ?? new Date().toISOString())
+                }
+            } finally {
+                refreshInFlight.current = false
             }
         })
-    }
+    }, [search, startDate, endDate, scanType])
+
+    // Show new punches without requiring HR to refresh the page. Polling the
+    // server action keeps this reliable even if Supabase Realtime publication
+    // is disabled or the browser briefly loses its websocket connection.
+    useEffect(() => {
+        const refreshLatest = () => {
+            if (document.visibilityState === 'visible') fetchScans(1)
+        }
+
+        const timer = window.setInterval(refreshLatest, 2000)
+        document.addEventListener('visibilitychange', refreshLatest)
+
+        return () => {
+            window.clearInterval(timer)
+            document.removeEventListener('visibilitychange', refreshLatest)
+        }
+    }, [fetchScans])
 
     // Trigger search when filters change (debounced search is nice, but simple button/enter trigger or change trigger works)
     // Let's trigger fetch on filter changes directly for dates/types, and provide a search button or search trigger for keyword.
@@ -134,7 +158,13 @@ export function CardScansView({ initialData }: Props) {
                             <h1 className="text-xl font-bold text-white leading-tight">ล็อกการแตะบัตรดิบ (Raw Logs)</h1>
                             {isPending && <RefreshCw size={14} className="animate-spin text-sky-400" />}
                         </div>
-                        <p className="text-xs text-white/50">ประวัติการทาบบัตรพนักงานทั้งหมดจากเครื่องอ่านโดยไม่มีการกรองออก</p>
+                        <div className="flex items-center gap-2 text-xs text-white/50">
+                            <span>ประวัติการทาบบัตรพนักงานทั้งหมดจากเครื่องอ่านโดยไม่มีการกรองออก</span>
+                            <span className="inline-flex items-center gap-1 text-emerald-300/80">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                อัปเดตอัตโนมัติ · ล่าสุด {new Date(fetchedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            </span>
+                        </div>
                     </div>
                 </div>
                 
