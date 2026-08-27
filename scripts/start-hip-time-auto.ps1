@@ -82,37 +82,12 @@ try {
         throw "HIP TIME main window was not available."
     }
 
-    if (Test-HipDeviceConnection -ProcessId $hipProcess.Id) {
-        Write-HipAutoLog "HIP TIME was already connected to 192.168.1.40:5005."
-        exit 0
-    }
-
-    for ($attempt = 1; $attempt -le 3; $attempt++) {
-        [void][HipWindowAutomation]::ShowWindow($hipProcess.MainWindowHandle, 3)
-        [void][HipWindowAutomation]::SetForegroundWindow($hipProcess.MainWindowHandle)
-        Start-Sleep -Milliseconds 700
-
-        $rect = New-Object HipWindowAutomation+WindowRect
-        if (-not [HipWindowAutomation]::GetWindowRect($hipProcess.MainWindowHandle, [ref]$rect)) {
-            throw "Could not read HIP TIME window position."
-        }
-
-        # Open the scanner-machine screen, then press its Connect command.
-        Invoke-LeftClick -X ($rect.Left + 45) -Y ($rect.Top + 65)
-        Start-Sleep -Seconds 4
-        Invoke-LeftClick -X ($rect.Left + 740) -Y ($rect.Top + 500)
-        Start-Sleep -Seconds 20
-
-        if (Test-HipDeviceConnection -ProcessId $hipProcess.Id) {
-            Write-HipAutoLog "Connected HIP TIME to 192.168.1.40:5005 on attempt $attempt."
-            [void][HipWindowAutomation]::ShowWindow($hipProcess.MainWindowHandle, 6)
-            exit 0
-        }
-
-        Write-HipAutoLog "Connection attempt $attempt did not establish a session."
-    }
-
-    throw "HIP TIME could not connect to 192.168.1.40:5005 after 3 attempts."
+    # Auto Download is enabled in HIP settings; keeping the main application
+    # running is sufficient. Minimize it so it can receive scans in the
+    # background without fragile coordinate-based UI automation.
+    Write-HipAutoLog "HIP TIME is ready with Auto Download enabled."
+    [void][HipWindowAutomation]::ShowWindow($hipProcess.MainWindowHandle, 6)
+    exit 0
 }
 catch {
     Write-HipAutoLog "ERROR: $($_.Exception.Message)"

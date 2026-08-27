@@ -33,5 +33,5 @@ while ($true) {
     } catch {
         Write-LoopLog "Loop error: $($_.Exception.Message)"
     }
-    Start-Sleep -Seconds 60
+    Start-Sleep -Seconds 2
 }
