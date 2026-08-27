@@ -334,6 +334,23 @@ export async function POST(request: Request) {
         const name: string = meta.name ?? meta.full_name ?? data.user.email ?? 'User'
         const employeeId: string | undefined = meta.employeeId ?? undefined
 
+        let sessionVersion = 1
+        const { data: sessionUser } = await supabaseAdmin
+            .from('User')
+            .select('session_version')
+            .eq('id', data.user.id)
+            .maybeSingle()
+        if (sessionUser) {
+            sessionVersion = Number(sessionUser.session_version ?? 1)
+        } else {
+            const { data: sessionUserByEmail } = await supabaseAdmin
+                .from('User')
+                .select('session_version')
+                .ilike('username', emailLower)
+                .maybeSingle()
+            sessionVersion = Number(sessionUserByEmail?.session_version ?? 1)
+        }
+
         const wantsRemember = rememberMe === true || rememberMe === 'on'
         const sessionLifetime = wantsRemember
             ? SESSION_COOKIE_REMEMBER_AGE_SECONDS
@@ -345,6 +362,7 @@ export async function POST(request: Request) {
                 name,
                 email: data.user.email ?? emailLower,
                 employeeId,
+                sessionVersion,
             },
             { expiresInSeconds: sessionLifetime },
         )

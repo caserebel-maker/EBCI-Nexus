@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
 import { Mail, ArrowLeft, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 
 export default function ForgotPasswordPage() {
@@ -22,31 +21,23 @@ export default function ForgotPasswordPage() {
 
         setLoading(true)
 
-        // resetPasswordForEmail sends a recovery link. The link routes the
-        // user to /reset-password (existing page), which establishes the
-        // recovery session via onAuthStateChange and lets them pick a new
-        // password. We never reveal whether the email exists — Supabase's
-        // response is the same either way.
-        const appUrl = (
-            process.env.NEXT_PUBLIC_APP_URL
-            ?? (typeof window !== 'undefined' ? window.location.origin : '')
-        ).replace(/\/$/, '')
-
-        const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
-            redirectTo: `${appUrl}/reset-password`,
+        const response = await fetch('/api/auth/password-change-requests', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: trimmed, source: 'forgot_password' }),
         })
+        const result = await response.json().catch(() => null) as { message?: string; error?: string } | null
 
         setLoading(false)
 
-        if (error) {
-            console.error('[forgot-password] error:', error)
-            setStatus({ type: 'error', message: 'เกิดข้อผิดพลาด ลองใหม่อีกครั้ง' })
+        if (!response.ok) {
+            setStatus({ type: 'error', message: result?.error ?? 'เกิดข้อผิดพลาด ลองใหม่อีกครั้ง' })
             return
         }
 
         setStatus({
             type: 'success',
-            message: 'ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว — กรุณาตรวจสอบกล่องจดหมาย (รวมโฟลเดอร์ Spam)',
+            message: result?.message ?? 'รับคำขอแล้ว Super Admin จะตรวจสอบก่อนส่งลิงก์ตั้งรหัสผ่านใหม่',
         })
         setEmail('')
     }
@@ -68,7 +59,7 @@ export default function ForgotPasswordPage() {
                     ลืมรหัสผ่าน
                 </h1>
                 <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', textAlign: 'center', marginBottom: '24px', lineHeight: 1.5 }}>
-                    กรอกอีเมลที่ใช้เข้าสู่ระบบ ระบบจะส่งลิงก์ตั้งรหัสผ่านใหม่ให้
+                    กรอกอีเมลที่ใช้เข้าสู่ระบบ Super Admin จะตรวจสอบคำขอก่อนส่งลิงก์ตั้งรหัสผ่านใหม่
                 </p>
 
                 {status?.type === 'success' ? (
@@ -131,7 +122,7 @@ export default function ForgotPasswordPage() {
                                 }}
                             >
                                 {loading && <Loader2 size={14} className="animate-spin" style={{ animation: 'spin 0.8s linear infinite' }} />}
-                                {loading ? 'กำลังส่ง...' : 'ส่งลิงก์รีเซ็ตรหัสผ่าน'}
+                                {loading ? 'กำลังส่ง...' : 'ส่งคำขอเปลี่ยนรหัสผ่าน'}
                             </button>
                         </form>
 

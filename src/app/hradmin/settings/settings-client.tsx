@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { MapPin, Save, Loader2, CheckCircle2, XCircle, CreditCard, Wifi, WifiOff, ShieldCheck, ChevronRight, History } from 'lucide-react'
+import { MapPin, Save, Loader2, CheckCircle2, XCircle, CreditCard, Wifi, WifiOff, ShieldCheck, ChevronRight, History, KeyRound } from 'lucide-react'
 import { updateOfficeLocation } from './actions'
 
 interface Location {
@@ -14,7 +14,7 @@ interface Location {
     is_active: boolean
 }
 
-export function SettingsClient({ initialLocation }: { initialLocation: Location | null }) {
+export function SettingsClient({ initialLocation, canManagePasswords }: { initialLocation: Location | null; canManagePasswords: boolean }) {
     const [form, setForm] = useState({
         id: initialLocation?.id,
         name: initialLocation?.name ?? 'EBCI Office',
@@ -75,6 +75,21 @@ export function SettingsClient({ initialLocation }: { initialLocation: Location 
 
             {/* Quick links — sub-pages live under this settings tree */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {canManagePasswords && (
+                    <Link
+                        href="/hradmin/settings/password-requests"
+                        className="group flex items-center gap-3 p-4 rounded-2xl border border-white/10 bg-white/[0.05] hover:bg-white/[0.08] hover:border-emerald-300/30 transition-all"
+                    >
+                        <div className="h-10 w-10 rounded-lg bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-200 shrink-0">
+                            <KeyRound size={18} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[15px] font-bold text-white">คำขอเปลี่ยนรหัสผ่าน</p>
+                            <p className="text-[12px] text-white/55 leading-snug">ตรวจสอบ อนุมัติ หรือปฏิเสธคำขอจากพนักงาน</p>
+                        </div>
+                        <ChevronRight size={16} className="text-white/40 group-hover:text-emerald-300 transition-colors" />
+                    </Link>
+                )}
                 <Link
                     href="/hradmin/settings/permissions"
                     className="group flex items-center gap-3 p-4 rounded-2xl border border-white/10 bg-white/[0.05] hover:bg-white/[0.08] hover:border-amber-300/30 transition-all"
@@ -258,14 +273,14 @@ export function SettingsClient({ initialLocation }: { initialLocation: Location 
                     <div>
                         <label className="block text-[13px] font-medium text-white/75 mb-1.5">โหมดการ Sync</label>
                         <div className="grid grid-cols-3 gap-2">
-                            {[
+                            {([
                                 { value: 'manual', label: 'Manual', desc: 'กด sync เอง' },
                                 { value: 'auto_15min', label: 'Auto 15 นาที', desc: 'sync อัตโนมัติ' },
                                 { value: 'auto_1hour', label: 'Auto 1 ชั่วโมง', desc: 'sync รายชั่วโมง' },
-                            ].map((mode) => (
+                            ] as const).map((mode) => (
                                 <button
                                     key={mode.value}
-                                    onClick={() => setCardReader({ ...cardReader, syncMode: mode.value as any })}
+                                    onClick={() => setCardReader({ ...cardReader, syncMode: mode.value })}
                                     className={`p-3 rounded-lg border transition-all text-left ${
                                         cardReader.syncMode === mode.value
                                             ? 'bg-amber-500/20 border-amber-400/50 ring-2 ring-amber-400/30'

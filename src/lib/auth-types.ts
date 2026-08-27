@@ -7,4 +7,5 @@ export interface SessionUser {
     name: string
     email?: string
     employeeId?: string // linked employee record id
+    sessionVersion?: number
 }

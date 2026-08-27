@@ -1,9 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 import { SettingsClient } from './settings-client'
+import { getAuth, canManageSystem } from '@/lib/route-auth'
 
 export const dynamic = 'force-dynamic'
 
 export default async function SettingsPage() {
+    const auth = await getAuth()
     const supabase = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -17,5 +19,5 @@ export default async function SettingsPage() {
         .limit(1)
         .maybeSingle()
 
-    return <SettingsClient initialLocation={location} />
+    return <SettingsClient initialLocation={location} canManagePasswords={Boolean(auth && canManageSystem(auth))} />
 }

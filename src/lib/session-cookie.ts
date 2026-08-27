@@ -79,6 +79,10 @@ function isSessionUser(value: unknown): value is SessionUser {
             candidate.employeeId === undefined
             || typeof candidate.employeeId === 'string'
         )
+        && (
+            candidate.sessionVersion === undefined
+            || (Number.isInteger(candidate.sessionVersion) && candidate.sessionVersion >= 1)
+        )
 }
 
 export async function createSessionCookie(
@@ -136,6 +140,7 @@ export async function verifySessionCookie(cookieValue: string | undefined | null
             name: payload.name,
             ...(payload.email ? { email: payload.email } : {}),
             ...(payload.employeeId ? { employeeId: payload.employeeId } : {}),
+            ...(payload.sessionVersion ? { sessionVersion: payload.sessionVersion } : {}),
         }
     } catch {
         return null
