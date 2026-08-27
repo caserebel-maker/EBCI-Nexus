@@ -15,6 +15,8 @@ export interface PasswordRequestRow {
     requestedAt: string
     reviewedAt: string | null
     reviewNote: string | null
+    requestedIp?: string | null
+    requestedUserAgent?: string | null
 }
 
 const statusLabel = {
@@ -62,7 +64,7 @@ export function PasswordRequestsClient({ rows }: { rows: PasswordRequestRow[] })
 
             <div className="flex gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4 text-sm leading-relaxed text-white/75">
                 <ShieldAlert size={20} className="mt-0.5 shrink-0 text-amber-200" />
-                <p>ตรวจสอบชื่อและอีเมลก่อนอนุมัติ ระบบจะส่งลิงก์ตั้งรหัสใหม่ให้เจ้าของบัญชี และบันทึกผู้อนุมัติกับเวลาไว้ทุกครั้ง</p>
+                <p>ตรวจสอบชื่อ อีเมล และ IP Address ก่อนอนุมัติ ระบบจะส่งลิงก์ตั้งรหัสใหม่ให้เจ้าของบัญชี และบันทึกผู้อนุมัติกับเวลาไว้ทุกครั้ง</p>
             </div>
 
             {message && <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-sm text-white">{message}</div>}
@@ -81,7 +83,19 @@ export function PasswordRequestsClient({ rows }: { rows: PasswordRequestRow[] })
                                         <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${row.status === 'pending' ? 'bg-amber-300/15 text-amber-200' : row.status === 'approved' ? 'bg-emerald-300/15 text-emerald-200' : row.status === 'processing' ? 'bg-sky-300/15 text-sky-200' : 'bg-red-300/15 text-red-200'}`}>{statusLabel[row.status]}</span>
                                     </div>
                                     <p className="mt-1 break-all text-sm text-white/65">{row.email}</p>
-                                    <p className="mt-1 text-xs text-white/45">{row.source === 'in_app' ? 'ส่งจากหน้าตั้งค่าในระบบ' : 'ส่งจากหน้าลืมรหัสผ่าน'} · {new Date(row.requestedAt).toLocaleString('th-TH')}</p>
+                                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white/55">
+                                        <span>{row.source === 'in_app' ? '📱 ตั้งค่าในระบบ' : '🌐 หน้าลืมรหัสผ่าน'}</span>
+                                        <span>·</span>
+                                        <span>{new Date(row.requestedAt).toLocaleString('th-TH')}</span>
+                                        {row.requestedIp && (
+                                            <>
+                                                <span>·</span>
+                                                <span className="rounded-md bg-white/10 px-2 py-0.5 font-mono text-[11px] text-amber-300">
+                                                    IP: {row.requestedIp}
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
                                     {!isPending && row.reviewedAt && <p className="mt-2 text-xs text-white/45">ดำเนินการ {new Date(row.reviewedAt).toLocaleString('th-TH')}{row.reviewNote ? ` · ${row.reviewNote}` : ''}</p>}
                                 </div>
                             </div>

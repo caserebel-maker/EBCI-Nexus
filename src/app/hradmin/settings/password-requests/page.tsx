@@ -12,7 +12,7 @@ export default async function PasswordRequestsPage() {
 
     const { data: requests } = await supabaseAdmin
         .from('password_change_requests')
-        .select('id,user_id,email,source,status,requested_at,reviewed_at,review_note')
+        .select('id,user_id,email,source,status,requested_at,reviewed_at,review_note,requested_ip,requested_user_agent')
         .order('requested_at', { ascending: false })
         .limit(100)
     const userIds = [...new Set((requests ?? []).map((row) => String(row.user_id)))]
@@ -31,6 +31,8 @@ export default async function PasswordRequestsPage() {
         requestedAt: String(row.requested_at),
         reviewedAt: row.reviewed_at ? String(row.reviewed_at) : null,
         reviewNote: row.review_note ? String(row.review_note) : null,
+        requestedIp: (row as any).requested_ip ?? null,
+        requestedUserAgent: (row as any).requested_user_agent ?? null,
     }))
     return <PasswordRequestsClient rows={rows} />
 }

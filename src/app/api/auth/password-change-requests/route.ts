@@ -118,8 +118,35 @@ export async function POST(request: Request) {
 
     if (existing) return NextResponse.json({ success: true, message: GENERIC_MESSAGE })
 
+    const callerAuth = await getAuth()
+    let loggedInUserOnDevice: string | null = null
+    if (callerAuth?.session) {
+        loggedInUserOnDevice = `${callerAuth.session.name}${callerAuth.session.employeeId ? ` [${callerAuth.session.employeeId}]` : ''}`
+    }
+
     const reqIp = requestIp(request)
-    const reqUa = request.headers.get('user-agent')
+    const reqUa = request.headers.get('user-agent') ?? ''
+
+    // Helper to parse human-readable device info from user agent
+    const parseDevice = (ua: string) => {
+        let os = 'อุปกรณ์ไม่ทราบชนิด'
+        if (/iPhone/i.test(ua)) os = 'iPhone (iOS)'
+        else if (/iPad/i.test(ua)) os = 'iPad (iPadOS)'
+        else if (/Android/i.test(ua)) os = 'โทรศัพท์ Android'
+        else if (/Macintosh|Mac OS/i.test(ua)) os = 'เครื่อง Mac'
+        else if (/Windows/i.test(ua)) os = 'เครื่องคอมพิวเตอร์ Windows'
+        else if (/Linux/i.test(ua)) os = 'Linux PC'
+
+        let browser = 'เบราว์เซอร์'
+        if (/Edg/i.test(ua)) browser = 'Microsoft Edge'
+        else if (/Chrome/i.test(ua)) browser = 'Google Chrome'
+        else if (/Safari/i.test(ua)) browser = 'Safari'
+        else if (/Firefox/i.test(ua)) browser = 'Mozilla Firefox'
+
+        return `${os} · ${browser}`
+    }
+
+    const readableDevice = parseDevice(reqUa)
 
     const { data: created, error: insertError } = await supabaseAdmin
         .from('password_change_requests')
@@ -170,7 +197,7 @@ export async function POST(request: Request) {
         : 'มีคำขอเปลี่ยนรหัสผ่าน'
 
     const notifBody = isHighPriorityAccount
-        ? `มีผู้พยายามขอเปลี่ยนรหัสผ่านของบัญชีผู้บริหาร/แอดมิน: ${displayName}${empCodeStr}${positionStr} — โปรดตรวจสอบทันที!`
+        ? `มีผู้พยายามขอเปลี่ยนรหัสผ่านของบัญชีผู้บริหาร/แอดมิน: ${displayName}${empCodeStr}${positionStr} (IP: ${reqIp ?? 'ไม่ระบุ'}${loggedInUserOnDevice ? ` · ล็อกอินค้าง: ${loggedInUserOnDevice}` : ''})`
         : `${displayName}${empCodeStr} ส่งคำขอเปลี่ยนรหัสผ่าน`
 
     const { data: superAdmins } = await supabaseAdmin
@@ -192,7 +219,7 @@ export async function POST(request: Request) {
         color: isHighPriorityAccount ? 'rose' : 'amber',
         sender_user_id: userId,
         sender_name: displayName,
-        metadata: { source, email, isHighPriorityAccount, ip: reqIp },
+        metadata: { source, email, isHighPriorityAccount, ip: reqIp, loggedInUserOnDevice, device: readableDevice },
     })))
 
     const adminEmails = (superAdmins ?? [])
@@ -203,42 +230,46 @@ export async function POST(request: Request) {
         const safeName = escapeHtml(displayName)
         const safeEmail = escapeHtml(email)
         const safeIp = escapeHtml(reqIp ?? 'ไม่ระบุ')
+        const safeDevice = escapeHtml(readableDevice)
+        const safeSession = loggedInUserOnDevice ? escapeHtml(loggedInUserOnDevice) : null
         const nowStr = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })
 
         const emailSubject = isHighPriorityAccount
-            ? `🚨 [ความปลอดภัยสูง] แจ้งเตือน: มีผู้พยายามขอเปลี่ยนรหัสผ่านของ ${displayName}${nicknameStr}${positionStr}`
+            ? `🚨 [ความปลอดภัยสูง] แจ้งเตือน IP: มีผู้พยายามขอเปลี่ยนรหัสผ่านของ ${displayName}${nicknameStr}${positionStr}`
             : `[EBCI Nexus] คำขอเปลี่ยนรหัสผ่านจาก ${displayName}`
 
         const htmlContent = isHighPriorityAccount
             ? `<div style="font-family: sans-serif; line-height: 1.6; color: #1e293b;">
                 <div style="background: #fef2f2; border: 1px solid #f87171; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-                    <h2 style="color: #b91c1c; margin-top: 0; font-size: 18px;">🚨 มีผู้พยายามขอเปลี่ยนรหัสผ่านบัญชีผู้บริหาร / แอดมิน</h2>
+                    <h2 style="color: #b91c1c; margin-top: 0; font-size: 18px;">🚨 แจ้งเตือนความปลอดภัย: มีผู้พยายามขอเปลี่ยนรหัสผ่านบัญชีผู้บริหาร / แอดมิน</h2>
                     <p style="margin: 0; font-weight: 600; color: #991b1b;">
                         บัญชีเป้าหมาย: <strong>${safeName}</strong>${escapeHtml(empCodeStr)}${escapeHtml(positionStr)} (${safeEmail})
                     </p>
                 </div>
-                <p>ระบบตรวจพบการยื่นคำขอเปลี่ยนรหัสผ่าน โดยมีรายละเอียดดังนี้:</p>
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                    <tr><td style="padding: 6px 0; color: #64748b; width: 120px;">เวลาที่ร้องขอ:</td><td style="padding: 6px 0; font-weight: bold;">${nowStr} น.</td></tr>
-                    <tr><td style="padding: 6px 0; color: #64748b;">IP Address:</td><td style="padding: 6px 0; font-weight: bold;">${safeIp}</td></tr>
-                    <tr><td style="padding: 6px 0; color: #64748b;">ช่องทาง:</td><td style="padding: 6px 0;">${source === 'forgot_password' ? 'หน้าลืมรหัสผ่าน (Forgot Password)' : 'ตั้งค่าในระบบ (Portal Settings)'}</td></tr>
+                <p><strong>ข้อมูลและหลักฐานในการระบุตัวผู้ส่งคำขอ (Forensics Data):</strong></p>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; background: #f8fafc; border-radius: 8px; overflow: hidden;">
+                    <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px 14px; color: #64748b; width: 140px; font-weight: bold;">เวลาที่ร้องขอ:</td><td style="padding: 10px 14px; font-weight: bold; color: #0f172a;">${nowStr} น.</td></tr>
+                    <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px 14px; color: #64748b; font-weight: bold;">IP Address:</td><td style="padding: 10px 14px; font-weight: bold; color: #dc2626; font-size: 15px;">${safeIp}</td></tr>
+                    <tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 10px 14px; color: #64748b; font-weight: bold;">อุปกรณ์ที่ใช้:</td><td style="padding: 10px 14px; color: #334155;">${safeDevice}</td></tr>
+                    ${safeSession ? `<tr style="border-bottom: 1px solid #e2e8f0; background: #fff1f2;"><td style="padding: 10px 14px; color: #e11d48; font-weight: bold;">บัญชีที่ค้างในเครื่อง:</td><td style="padding: 10px 14px; font-weight: bold; color: #be123c;">⚠️ พบ Session บัญชี: ${safeSession}</td></tr>` : ''}
+                    <tr><td style="padding: 10px 14px; color: #64748b; font-weight: bold;">ช่องทางที่กด:</td><td style="padding: 10px 14px; color: #334155;">${source === 'forgot_password' ? 'หน้าลืมรหัสผ่าน (Forgot Password)' : 'ตั้งค่าในระบบ (Portal Settings)'}</td></tr>
                 </table>
-                <p style="color: #b91c1c; font-weight: bold;">⚠️ เพื่อความปลอดภัย: หากท่านหรือเจ้าของบัญชีไม่ได้เป็นผู้กดขอด้วยตนเอง โปรดกด "ปฏิเสธคำขอ" ในระบบ</p>
-                <p><a href="https://ebci-nexus.vercel.app${actionUrl}" style="display: inline-block; background: #dc2626; color: #ffffff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold;">เปิดตรวจสอบและจัดการคำขอ →</a></p>
+                <p style="color: #b91c1c; font-weight: bold; margin-top: 15px;">⚠️ คำแนะนำความปลอดภัย: หากท่านหรือเจ้าของบัญชีไม่ได้เป็นผู้ดำเนินการด้วยตนเอง โปรดกด "ปฏิเสธคำขอ" ทันที เพื่อระงับไม่ให้ระบบส่งลิงก์เปลี่ยนรหัสผ่าน</p>
+                <p style="margin-top: 20px;"><a href="https://ebci-nexus.vercel.app${actionUrl}" style="display: inline-block; background: #dc2626; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px;">เปิดระบบเพื่อตรวจสอบและปฏิเสธคำขอ →</a></p>
                </div>`
-            : `<p><strong>${safeName}</strong> (${safeEmail}) ส่งคำขอเปลี่ยนรหัสผ่าน</p><p>IP Address: ${safeIp} | เวลา: ${nowStr} น.</p><p>กรุณาเข้า EBCI Nexus เมนูตั้งค่าระบบ เพื่อตรวจสอบและอนุมัติคำขอ</p>`;
+            : `<p><strong>${safeName}</strong> (${safeEmail}) ส่งคำขอเปลี่ยนรหัสผ่าน</p><p>IP Address: <strong>${safeIp}</strong> | อุปกรณ์: ${safeDevice} | เวลา: ${nowStr} น.</p>${safeSession ? `<p>บัญชีที่ล็อกอินค้างในเครื่อง: ${safeSession}</p>` : ''}<p>กรุณาเข้า EBCI Nexus เมนูตั้งค่าระบบ เพื่อตรวจสอบและอนุมัติคำขอ</p>`;
 
         await sendEmail({
             to: adminEmails,
             subject: emailSubject,
             sender: 'system',
-            text: `${notifTitle}\n${displayName} (${email}) ส่งคำขอเปลี่ยนรหัสผ่าน (IP: ${safeIp}, เวลา: ${nowStr})\nกรุณาเข้า Nexus เพื่อตรวจสอบ: ${actionUrl}`,
+            text: `${notifTitle}\n${displayName} (${email}) ส่งคำขอเปลี่ยนรหัสผ่าน\nIP: ${safeIp}\nอุปกรณ์: ${readableDevice}\n${loggedInUserOnDevice ? `บัญชีที่ค้างในเครื่อง: ${loggedInUserOnDevice}\n` : ''}เวลา: ${nowStr}\nกรุณาเข้า Nexus เพื่อตรวจสอบ: ${actionUrl}`,
             html: htmlContent,
             audit: {
                 category: 'password_change_requested',
                 entityType: 'password_change_request',
                 entityId: String(created.id),
-                metadata: { source, requestedUserId: userId, isHighPriorityAccount, ip: reqIp },
+                metadata: { source, requestedUserId: userId, isHighPriorityAccount, ip: reqIp, loggedInUserOnDevice, device: readableDevice },
             },
         })
     }
