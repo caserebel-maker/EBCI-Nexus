@@ -26,19 +26,23 @@ There are two operational modes available for syncing card scans:
 
 ---
 
-## 📦 2. Prerequisites on the New Computer
+## 📦 2. Prerequisites & Official Download Links
 
-Ensure the following software packages are installed on the new Windows PC:
+Ensure the following software packages are downloaded and installed on the new Windows PC:
 
-1. **Node.js LTS** (v18.x, v20.x, or v22.x):  
-   Download from [https://nodejs.org/](https://nodejs.org/) (Ensure `Add to PATH` is checked during installation).
-2. **Git for Windows**:  
-   Download from [https://git-scm.com/](https://git-scm.com/).
-3. **Microsoft SQL Server Express & Command Line Utilities (`sqlcmd`)** *(Required if using Mode A)*:
-   - SQL Server Express (2019 / 2022) with database name `Synctime` or default HIP installation.
-   - `sqlcmd` utility must be accessible in system `PATH`.
-4. **HIP Desktop Software**:
-   - HIP Premium Time / HIP Time 4.0 / Synctime software provided by HIP Global.
+1. **HIP TIME 4.0 Setup (Official HIP Program for Ci100S)**:
+   - 📥 **Direct Download Link**: [Setup-hip-time4-0.zip](https://hipcare.net/download/program/Setup-hip-time4-0.zip)
+   - 🌐 **Download Portal**: [HIP Service Center - HIP TIME 4.0](https://hip-servicecenter.com/newpro/HIPTIME4-0/)
+   - 📖 **User Manual**: [HIP TIME4 (FINAL).pdf](https://hip-servicecenter.com/newpro/HIPTIME4-0/file/HIP%20TIME4(FINAL).pdf) / [Easy Guide (PDF)](https://hip-servicecenter.com/newpro/HIPTIME4-0/file/ESY_GUIDE_HIP_TIME4.0.PDF)
+2. **Microsoft SQL Server Express & `sqlcmd`** *(Required for Mode A - Synctime DB)*:
+   - 📥 **SQL Server 64-bit Package**: [SQLEXPRADV_x64_ENU_Update270964.rar](https://hip-servicecenter.com/newpro/HIPTIME4-0/file/SQLEXPRADV_x64_ENU_Update270964.rar)
+   - 📥 **SQL Server 32-bit Package**: [SQLEXPRADV_x86_ENU.rar](https://hip-servicecenter.com/newpro/HIPTIME4-0/file/SQLEXPRADV_x86_ENU.rar)
+   - 📖 **SQL Server Setup Manual**: [คู่มือการติดตั้ง SQL SERVER.pdf](https://hip-servicecenter.com/newpro/HIPTIME4-0/file/คู่มือการติดตั้ง%20SQL%20SERVER.pdf)
+   - *Note*: Ensure `sqlcmd` command-line utility is in the system `PATH`.
+3. **Node.js LTS** (v18.x, v20.x, or v22.x):  
+   - Download from [https://nodejs.org/](https://nodejs.org/) (Ensure `Add to PATH` is checked during installation).
+4. **Git for Windows**:  
+   - Download from [https://git-scm.com/](https://git-scm.com/).
 
 ---
 
