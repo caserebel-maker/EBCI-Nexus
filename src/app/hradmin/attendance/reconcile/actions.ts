@@ -167,29 +167,30 @@ export async function reconcileDate(
             const normalizedEarliest = earliestScan.replace(' ', 'T')
             const earliestScanTimePart = normalizedEarliest.split('T')[1] || ''
             
-            // Smart matching for off-site staff: if the earliest card scan is after 15:00,
-            // and they checked in on mobile in the morning (before 15:00), we treat their
+            // Smart matching for off-site staff: if the earliest card scan is after 16:30,
+            // and they checked in on mobile in the morning (before 16:30), we treat their
             // card scans as checkout-only. This avoids creating a check-in discrepancy.
-            const hasMobileCheckInBefore15 = (() => {
+            const hasMobileCheckInBefore1630 = (() => {
                 const mobTime = mobileByEmp.get(eid)
                 if (!mobTime) return false
                 const d = new Date(mobTime)
                 const bkkHour = (d.getUTCHours() + 7) % 24
-                return bkkHour < 15
+                const bkkMin = d.getUTCMinutes()
+                return (bkkHour * 60 + bkkMin) < (16 * 60 + 30)
             })()
 
-            if (earliestScanTimePart >= '15:00:00' && hasMobileCheckInBefore15) {
+            if (earliestScanTimePart >= '16:30:00' && hasMobileCheckInBefore1630) {
                 cardCheckoutByEmp.set(eid, times[times.length - 1])
             } else {
                 cardByEmp.set(eid, earliestScan)
                 
-                // Only scans at or after 15:00 (Bangkok time) are eligible for checkout.
+                // Only scans at or after 16:30:00 (Bangkok time) are eligible for checkout.
                 // This prevents lunch or afternoon errand card taps from being counted as final check-out.
                 // The check-out scan must also be a different scan than the check-in scan.
                 const checkoutCandidates = times.slice(1).filter(t => {
                     const normalized = t.replace(' ', 'T')
                     const timePart = normalized.split('T')[1] || ''
-                    return timePart >= '15:00:00'
+                    return timePart >= '16:30:00'
                 })
                 if (checkoutCandidates.length > 0) {
                     cardCheckoutByEmp.set(eid, checkoutCandidates[checkoutCandidates.length - 1])

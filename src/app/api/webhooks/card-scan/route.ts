@@ -203,11 +203,15 @@ export async function POST(req: NextRequest) {
             continue
         }
 
+        const timePart = (time.split('T')[1] || '').trim()
+        const isAfter1630 = timePart >= '16:30:00'
+
         const scanType = scan?.scan_type
             ? String(scan.scan_type).toLowerCase().trim()
             : null
-        const normalizedScanType: string | null =
-            scanType === 'in' || scanType === 'out' ? scanType : null
+        const explicitScanType = scanType === 'in' || scanType === 'out' ? scanType : null
+        // Scans at or after 16:30:00 Bangkok time are automatically marked as 'out' (checkout)
+        const normalizedScanType: string = explicitScanType ?? (isAfter1630 ? 'out' : 'in')
 
         const { error: insErr } = await supabaseAdmin
             .from('card_scans')
@@ -227,6 +231,23 @@ export async function POST(req: NextRequest) {
             outcomes.push({ employee_code: code, scan_time: time, status: 'error', error: insErr.message })
             continue
         }
+
+        // When scanned at or after 16:30, also auto-close any active open mobile checkin for today
+        if (isAfter1630 && employeeId) {
+            const today = time.split('T')[0]
+            try {
+                await supabaseAdmin
+                    .from('checkins')
+                    .update({ checked_out_at: time })
+                    .eq('employee_id', employeeId)
+                    .is('checked_out_at', null)
+                    .gte('checked_in_at', `${today}T00:00:00`)
+                    .lte('checked_in_at', `${today}T23:59:59.999`)
+            } catch (cerr) {
+                console.warn('[webhooks/card-scan] auto-checkout mobile session error:', cerr)
+            }
+        }
+
         outcomes.push({ employee_code: code, scan_time: time, status: 'inserted' })
     }
 

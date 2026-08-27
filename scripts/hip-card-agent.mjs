@@ -248,12 +248,17 @@ function normalizeSqlScan(row, codeMap) {
     const { employeeCode } = normalizeHipEmployeeCode(row, codeMap)
     const scanTime = normalizeHipSqlDate(row.datetimescan)
     if (!employeeCode || !scanTime) return null
-    const scanType = String(row.timetype ?? '').trim().toLowerCase()
+    const timePart = scanTime.split('T')[1] || ''
+    const isAfter1630 = timePart >= '16:30:00'
+    const rawScanType = String(row.timetype ?? '').trim().toLowerCase()
+    const scanType = (rawScanType === 'in' || rawScanType === 'out')
+        ? rawScanType
+        : (isAfter1630 ? 'out' : 'in')
     return {
         device_id: `HIP-${row.machineno || config.deviceId}`,
         employee_code: employeeCode,
         scan_time: scanTime,
-        scan_type: scanType === 'in' || scanType === 'out' ? scanType : undefined,
+        scan_type: scanType,
         raw_data: {
             source: 'hip-sql-sync',
             sql_server: config.sqlServer,

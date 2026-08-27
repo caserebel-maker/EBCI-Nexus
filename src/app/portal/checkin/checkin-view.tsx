@@ -138,8 +138,12 @@ export function CheckinView({
 
     const isCheckedIn = !!todayCheckin && !todayCheckin.checked_out_at
     const isFullyCheckedOut = !!todayCheckin && !!todayCheckin.checked_out_at
-    const isCardCheckedOut = !!cardScanToday?.scans && cardScanToday.scans.length > 0 &&
-        cardScanToday.scans[cardScanToday.scans.length - 1].scanType === 'out'
+    const isCardCheckedOut = !!cardScanToday && (
+        Boolean(cardScanToday.hasCheckedOut) ||
+        cardScanToday.latestScanType === 'out' ||
+        (cardScanToday.scanCount > 0 && formatScanClock(cardScanToday.latestScanTime) >= '16:30') ||
+        (!!cardScanToday.scans && cardScanToday.scans.length > 0 && cardScanToday.scans[cardScanToday.scans.length - 1].scanType === 'out')
+    )
     const isCheckedOut = isFullyCheckedOut || isCardCheckedOut
     // §3.1 Phase 1 — show card-scan ack when:
     //   - we found a card scan today, AND
@@ -323,7 +327,7 @@ export function CheckinView({
                 accuracy: gps?.accuracy ?? null,
             })
             if ('error' in result) {
-                showToast('error', result.error)
+                showToast('error', result.error || 'เกิดข้อผิดพลาด')
                 return
             }
             showToast('success', result.message)
@@ -576,33 +580,45 @@ export function CheckinView({
                 when the user clicks "ฉันยังไม่ได้ทาบบัตร". */}
             {cardScanSuppressed && !showManualOverride ? (
                 <div
-                    className="rounded-2xl p-6 border border-emerald-500/40 bg-emerald-500/10"
+                    className={cn(
+                        "rounded-2xl p-6 border",
+                        isCardCheckedOut
+                            ? "border-amber-500/40 bg-amber-500/10"
+                            : "border-emerald-500/40 bg-emerald-500/10"
+                    )}
                     style={{ backdropFilter: 'blur(8px)' }}
                 >
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="h-12 w-12 rounded-full bg-emerald-500/25 flex items-center justify-center">
-                            <IdCard size={24} className="text-emerald-200" />
+                        <div className={cn(
+                            "h-12 w-12 rounded-full flex items-center justify-center",
+                            isCardCheckedOut ? "bg-amber-500/25 text-amber-200" : "bg-emerald-500/25 text-emerald-200"
+                        )}>
+                            {isCardCheckedOut ? <LogOut size={24} /> : <IdCard size={24} />}
                         </div>
                         <div>
-                            <p className="text-sm text-emerald-200/80">บัตรของคุณถูก scan แล้ว</p>
+                            <p className={cn("text-sm", isCardCheckedOut ? "text-amber-200/90 font-medium" : "text-emerald-200/80")}>
+                                {isCardCheckedOut ? "✓ สแกนบัตรออกงานเรียบร้อยแล้ว" : "บัตรของคุณถูก scan แล้ว"}
+                            </p>
                             <p className="text-lg font-bold text-white tabular-nums">
-                                {formatScanClock(cardScanToday!.earliestScanTime)} น.
-                                {cardScanToday!.earliestScanType === 'in' && (
-                                    <span className="ml-2 text-sm font-normal text-emerald-200/70">(เข้างาน)</span>
-                                )}
-                                {cardScanToday!.earliestScanType === 'out' && (
-                                    <span className="ml-2 text-sm font-normal text-amber-200/70">(ออกงาน)</span>
-                                )}
+                                {formatScanClock(isCardCheckedOut ? cardScanToday!.latestScanTime : cardScanToday!.earliestScanTime)} น.
+                                <span className={cn(
+                                    "ml-2 text-sm font-normal",
+                                    isCardCheckedOut ? "text-amber-200/90 font-semibold" : "text-emerald-200/70"
+                                )}>
+                                    {isCardCheckedOut ? "(ออกงานอัตโนมัติ)" : "(เข้างาน)"}
+                                </span>
                             </p>
                             <p className="text-xs text-white/50 mt-0.5">
                                 {cardScanToday!.scanCount > 1
-                                    ? `บันทึก ${cardScanToday!.scanCount} ครั้งวันนี้ (ล่าสุด ${formatScanClock(cardScanToday!.latestScanTime)} น.)`
-                                    : 'ระบบบันทึกเวลาเข้างานให้แล้ว'}
+                                    ? `เข้างาน ${formatScanClock(cardScanToday!.earliestScanTime)} น. · ล่าสุด ${formatScanClock(cardScanToday!.latestScanTime)} น.`
+                                    : (isCardCheckedOut ? 'ระบบบันทึกเวลาเลิกงาน (Check-out) ให้อัตโนมัติแล้ว' : 'ระบบบันทึกเวลาเข้างานให้แล้ว')}
                             </p>
                         </div>
                     </div>
                     <p className="text-sm text-white/75 leading-relaxed">
-                        ไม่ต้องเช็คอินผ่านแอปซ้ำ — ระบบจะรวมข้อมูลบัตรเข้ากับ attendance log อัตโนมัติ
+                        {isCardCheckedOut 
+                            ? 'ระบบบันทึกเวลาออกงานให้อัตโนมัติแล้ว — เดินทางกลับบ้านปลอดภัยครับ/ค่ะ' 
+                            : 'ไม่ต้องเช็คอินผ่านแอปซ้ำ — ระบบจะรวมข้อมูลบัตรเข้ากับ attendance log อัตโนมัติ'}
                     </p>
                     {cardScanToday!.scans && cardScanToday!.scans.length > 0 && (
                         <div className="mt-4 pt-3 border-t border-emerald-500/25 text-xs text-emerald-200/75 space-y-1.5 max-w-xs">

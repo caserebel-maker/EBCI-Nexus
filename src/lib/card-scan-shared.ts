@@ -17,6 +17,10 @@ export interface CardScanTodayInfo {
     scanCount: number
     /** Earliest scan_type when set ('in'|'out'|null). */
     earliestScanType: 'in' | 'out' | null
+    /** Latest scan_type when set ('in'|'out'|null). Automatically 'out' if scan is after 16:30. */
+    latestScanType?: 'in' | 'out' | null
+    /** Whether employee has scanned out today (scan >= 16:30 or scan_type == 'out'). */
+    hasCheckedOut?: boolean
     /** All scans today. */
     scans?: Array<{ scanTime: string; scanType: 'in' | 'out' | null }>
 }
