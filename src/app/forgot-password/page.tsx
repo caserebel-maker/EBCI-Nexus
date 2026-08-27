@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
                     ลืมรหัสผ่าน
                 </h1>
                 <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', textAlign: 'center', marginBottom: '24px', lineHeight: 1.5 }}>
-                    กรอกอีเมลที่ใช้เข้าสู่ระบบ เพื่อเริ่มขั้นตอนการยืนยันตัวตนและความปลอดภัยของบัญชี
+                    กรอกรหัสพนักงานหรืออีเมล เพื่อเริ่มขั้นตอนการยืนยันตัวตนและความปลอดภัยของบัญชี
                 </p>
 
                 {status?.type === 'success' ? (
@@ -78,16 +78,16 @@ export default function ForgotPasswordPage() {
                         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <div>
                                 <label style={{ display: 'block', fontSize: '13px', color: 'rgba(255,255,255,0.7)', marginBottom: '6px', fontWeight: 600 }}>
-                                    อีเมล
+                                    รหัสพนักงาน หรือ อีเมล
                                 </label>
                                 <div style={{ position: 'relative' }}>
                                     <Mail size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
                                     <input
-                                        type="email"
+                                        type="text"
                                         value={email}
                                         onChange={e => setEmail(e.target.value)}
-                                        placeholder="you@example.com"
-                                        autoComplete="email"
+                                        placeholder="you@example.com หรือ 506-69"
+                                        autoComplete="username"
                                         required
                                         style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '10px', padding: '12px 12px 12px 36px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
                                     />
