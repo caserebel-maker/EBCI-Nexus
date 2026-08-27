@@ -190,19 +190,6 @@ export async function POST(req: NextRequest) {
             continue
         }
 
-        // Idempotency check — same employee + same exact timestamp
-        // already exists? Skip. (Webhook retry / agent dual-run guard.)
-        const { data: existing } = await supabaseAdmin
-            .from('card_scans')
-            .select('id')
-            .eq('employee_id', employeeId)
-            .eq('scan_time', time)
-            .maybeSingle()
-        if (existing) {
-            outcomes.push({ employee_code: code, scan_time: time, status: 'duplicate' })
-            continue
-        }
-
         const timePart = (time.split('T')[1] || '').trim()
         const isAfter1630 = timePart >= '16:30:00'
 
@@ -212,6 +199,38 @@ export async function POST(req: NextRequest) {
         const explicitScanType = scanType === 'in' || scanType === 'out' ? scanType : null
         // Scans at or after 16:30:00 Bangkok time are automatically marked as 'out' (checkout)
         const normalizedScanType: string = explicitScanType ?? (isAfter1630 ? 'out' : 'in')
+
+        // Idempotency check — same employee + same exact timestamp
+        const { data: existing } = await supabaseAdmin
+            .from('card_scans')
+            .select('id, scan_type')
+            .eq('employee_id', employeeId)
+            .eq('scan_time', time)
+            .maybeSingle()
+        if (existing) {
+            if (existing.scan_type !== normalizedScanType) {
+                await supabaseAdmin
+                    .from('card_scans')
+                    .update({ scan_type: normalizedScanType })
+                    .eq('id', existing.id)
+            }
+            if (isAfter1630 && employeeId) {
+                const today = time.split('T')[0]
+                try {
+                    await supabaseAdmin
+                        .from('checkins')
+                        .update({ checked_out_at: time })
+                        .eq('employee_id', employeeId)
+                        .is('checked_out_at', null)
+                        .gte('checked_in_at', `${today}T00:00:00`)
+                        .lte('checked_in_at', `${today}T23:59:59.999`)
+                } catch (cerr) {
+                    console.warn('[webhooks/card-scan] auto-checkout mobile session error:', cerr)
+                }
+            }
+            outcomes.push({ employee_code: code, scan_time: time, status: 'duplicate' })
+            continue
+        }
 
         const { error: insErr } = await supabaseAdmin
             .from('card_scans')
