@@ -37,7 +37,7 @@ export default function ForgotPasswordPage() {
 
         setStatus({
             type: 'success',
-            message: result?.message ?? 'รับคำขอแล้ว Super Admin จะตรวจสอบก่อนส่งลิงก์ตั้งรหัสผ่านใหม่',
+            message: result?.message ?? 'ระบบได้รับคำขอเรียบร้อยแล้ว อยู่ระหว่างการตรวจสอบความปลอดภัยของบัญชีโดยระบบอัตโนมัติ (ใช้เวลาประมาณ 1–2 ชั่วโมง) หากข้อมูลถูกต้อง ระบบจะจัดส่งลิงก์ตั้งรหัสผ่านใหม่ไปยังอีเมลที่ลงทะเบียนไว้',
         })
         setEmail('')
     }
@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
                     ลืมรหัสผ่าน
                 </h1>
                 <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', textAlign: 'center', marginBottom: '24px', lineHeight: 1.5 }}>
-                    กรอกอีเมลที่ใช้เข้าสู่ระบบ Super Admin จะตรวจสอบคำขอก่อนส่งลิงก์ตั้งรหัสผ่านใหม่
+                    กรอกอีเมลที่ใช้เข้าสู่ระบบ เพื่อเริ่มขั้นตอนการยืนยันตัวตนและความปลอดภัยของบัญชี
                 </p>
 
                 {status?.type === 'success' ? (

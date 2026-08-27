@@ -4,7 +4,7 @@ import { getAuth } from '@/lib/route-auth'
 import { createNotification } from '@/lib/notifications'
 import { sendEmail } from '@/lib/email'
 
-const GENERIC_MESSAGE = 'รับคำขอแล้ว Super Admin จะตรวจสอบก่อนส่งลิงก์ตั้งรหัสผ่านใหม่'
+const GENERIC_MESSAGE = 'ระบบได้รับคำขอเรียบร้อยแล้ว อยู่ระหว่างการตรวจสอบความปลอดภัยของบัญชีโดยระบบอัตโนมัติ (ใช้เวลาประมาณ 1–2 ชั่วโมง) หากข้อมูลถูกต้อง ระบบจะจัดส่งลิงก์ตั้งรหัสผ่านใหม่ไปยังอีเมลที่ลงทะเบียนไว้'
 
 function escapeHtml(value: string): string {
     return value.replace(/[&<>"']/g, (char) => ({
