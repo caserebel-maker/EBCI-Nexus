@@ -45,6 +45,7 @@ export default async function AdminDashboard() {
         { data: pendingWfhRequests, count: pendingWfhTotal },
         { data: announcements },
         { data: newsAnnouncements },
+        { data: pendingPasswordRequests },
     ] = await Promise.all([
         getCurrentPermissions(),
         // All employees (include date_of_birth for birthday section)
@@ -104,6 +105,13 @@ export default async function AdminDashboard() {
         supabaseAdmin.from('announcements').select('id, headline, publish_date, priority, content, image_path')
             .eq('publishStatus', 'published')
             .order('publish_date', { ascending: false }).limit(5),
+
+        // Pending password change requests (for Super Admin)
+        supabaseAdmin.from('password_change_requests')
+            .select('id, user_id, email, source, created_at, status')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false })
+            .limit(10),
     ])
 
     // ─── Generate signed URLs for announcement images ───
@@ -255,13 +263,23 @@ export default async function AdminDashboard() {
         kind: 'wfh' as const,
         employee: empMap[wfh.employee_id] ?? null,
     }))
-    const pendingApprovalItems = [...pendingLeaveEnriched, ...pendingWfhEnriched]
+    const pendingPasswordEnriched = (pendingPasswordRequests ?? []).map(pr => {
+        const empByUserId = (employees ?? []).find(e => e.id === pr.user_id)
+        const empByEmail = (employees ?? []).find(e => e.email?.toLowerCase() === pr.email?.toLowerCase())
+        return {
+            ...pr,
+            kind: 'password_request' as const,
+            employee: empByUserId ?? empByEmail ?? null,
+        }
+    })
+    const pendingPasswordCount = (pendingPasswordRequests ?? []).length
+    const pendingApprovalItems = [...pendingLeaveEnriched, ...pendingWfhEnriched, ...pendingPasswordEnriched]
         .sort((a: any, b: any) => {
             const timeOf = (item: any) => new Date(item.cancellation_requested_at ?? item.submitted_at ?? item.created_at ?? '1970-01-01').getTime()
             return timeOf(b) - timeOf(a)
         })
-        .slice(0, 6)
-    const pendingApprovalTotal = pendingLeaveRequestCount + pendingLeaveCancellationCount + pendingWfhCount
+        .slice(0, 8)
+    const pendingApprovalTotal = pendingLeaveRequestCount + pendingLeaveCancellationCount + pendingWfhCount + pendingPasswordCount
 
     const leavesTodayEnriched = (leavesToday ?? []).map(lr => ({
         ...lr,

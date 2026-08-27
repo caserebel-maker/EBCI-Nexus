@@ -604,23 +604,32 @@ function formatShortDate(date?: string | null) {
 
 function PendingRow({ item, onDone, onShowToast }: { item: any, onDone: (item: any) => void, onShowToast?: (type: 'success' | 'error', msg: string) => void }) {
     const [isPending, startTransition] = useTransition()
+    const isPasswordReq = item.kind === 'password_request'
     const isWfh = item.kind === 'wfh'
-    const isCancellation = !isWfh && item.status === 'cancellation_requested'
-    const empName = item.employee ? `${item.employee.first_name_th} ${item.employee.last_name_th}` : 'ไม่ทราบชื่อ'
+    const isCancellation = !isWfh && !isPasswordReq && item.status === 'cancellation_requested'
+    const empName = item.employee
+        ? `${item.employee.first_name_th} ${item.employee.last_name_th}${item.employee.nickname ? ` (${item.employee.nickname})` : ''}`
+        : (item.email ?? 'ไม่ทราบชื่อ')
     const leaveTypeLabel = getLeaveTypeLabel(item.leave_type)
     const dateLabel = isWfh
         ? formatShortDate(item.date || item.start_date)
-        : formatShortDate(item.start_date)
+        : isPasswordReq
+            ? formatShortDate(item.created_at)
+            : formatShortDate(item.start_date)
     const dayCount = Number(item.days_count ?? item.total_days ?? 1)
-    const detailHref = isWfh
-        ? `/hradmin/wfh/${item.id}`
-        : `/hradmin/leave?tab=requests&status=${isCancellation ? 'cancellation_requested' : 'pending'}&request=${item.id}`
-    const typeBadge = isWfh ? 'WFH' : isCancellation ? 'ยกเลิกลา' : leaveTypeLabel
-    const meta = isWfh
-        ? `ขอ WFH · ${dayCount} วัน${dateLabel ? ` · ${dateLabel}` : ''}`
-        : isCancellation
-            ? `ขอยกเลิก${leaveTypeLabel} · ${dayCount} วัน${dateLabel ? ` · ${dateLabel}` : ''}`
-            : `${leaveTypeLabel} · ${dayCount} วัน${dateLabel ? ` · ${dateLabel}` : ''}`
+    const detailHref = isPasswordReq
+        ? '/hradmin/settings/password-requests'
+        : isWfh
+            ? `/hradmin/wfh/${item.id}`
+            : `/hradmin/leave?tab=requests&status=${isCancellation ? 'cancellation_requested' : 'pending'}&request=${item.id}`
+    const typeBadge = isPasswordReq ? 'ขอเปลี่ยนรหัสผ่าน' : isWfh ? 'WFH' : isCancellation ? 'ยกเลิกลา' : leaveTypeLabel
+    const meta = isPasswordReq
+        ? `ส่งคำขอเมื่อ ${dateLabel || 'วันนี้'} · อีเมล: ${item.email}`
+        : isWfh
+            ? `ขอ WFH · ${dayCount} วัน${dateLabel ? ` · ${dateLabel}` : ''}`
+            : isCancellation
+                ? `ขอยกเลิก${leaveTypeLabel} · ${dayCount} วัน${dateLabel ? ` · ${dateLabel}` : ''}`
+                : `${leaveTypeLabel} · ${dayCount} วัน${dateLabel ? ` · ${dateLabel}` : ''}`
 
     const handleLeaveAction = async (action: 'approve' | 'reject') => {
         startTransition(async () => {
@@ -648,13 +657,16 @@ function PendingRow({ item, onDone, onShowToast }: { item: any, onDone: (item: a
             <div className="flex items-start gap-3">
                 <div className={cn(
                     'h-2.5 w-2.5 rounded-full mt-2 shrink-0',
-                    isWfh ? 'bg-blue-300' : isCancellation ? 'bg-orange-300' : 'bg-yellow-300'
+                    isPasswordReq ? 'bg-amber-400 ring-2 ring-amber-400/40' : isWfh ? 'bg-blue-300' : isCancellation ? 'bg-orange-300' : 'bg-yellow-300'
                 )} />
                 <div className="min-w-0 flex-1">
                     <Link href={detailHref} className="block group">
                         <div className="flex flex-wrap items-center gap-2">
                             <p className="font-bold text-white truncate group-hover:text-yellow-200">{empName}</p>
-                            <span className="rounded-full bg-yellow-400/15 px-2 py-0.5 text-[11px] font-bold text-yellow-200">
+                            <span className={cn(
+                                "rounded-full px-2 py-0.5 text-[11px] font-bold",
+                                isPasswordReq ? "bg-amber-500/25 text-amber-200 border border-amber-400/30" : "bg-yellow-400/15 text-yellow-200"
+                            )}>
                                 {typeBadge}
                             </span>
                         </div>
@@ -662,7 +674,14 @@ function PendingRow({ item, onDone, onShowToast }: { item: any, onDone: (item: a
                         <p className="mt-2 text-xs text-yellow-200/90">ดูรายละเอียด →</p>
                     </Link>
                 </div>
-                {!isWfh && !isCancellation ? (
+                {isPasswordReq ? (
+                    <Link
+                        href="/hradmin/settings/password-requests"
+                        className="shrink-0 rounded-lg bg-amber-500/25 border border-amber-400/40 text-amber-200 hover:bg-amber-500/35 px-3 py-2 text-sm font-bold transition-colors"
+                    >
+                        ตรวจคำขอ
+                    </Link>
+                ) : !isWfh && !isCancellation ? (
                     <div className="flex gap-2 shrink-0">
                         <button
                             disabled={isPending}

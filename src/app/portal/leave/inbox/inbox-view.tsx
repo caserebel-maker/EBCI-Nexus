@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
     Inbox, Filter, Clock, Calendar as CalendarIcon, CheckCircle2, XCircle,
     Loader2, AlertCircle, ChevronDown, Paperclip, Phone, Building2,
-    Sparkles, X, Ban,
+    Sparkles, X, Ban, KeyRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog'
@@ -179,6 +179,7 @@ export function InboxView() {
     const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending')
     const [historyItems, setHistoryItems] = useState<InboxItem[]>([])
     const [loadingHistory, setLoadingHistory] = useState(false)
+    const [pendingPasswordCount, setPendingPasswordCount] = useState(0)
 
     const load = useCallback(async () => {
         setErr(null); setLoading(true)
@@ -191,6 +192,7 @@ export function InboxView() {
             const json = await res.json()
             setItems(json.items ?? [])
             setCurrentApproverId(json.approverId ?? null)
+            setPendingPasswordCount(Number(json.pendingPasswordCount ?? 0))
         } catch (e) {
             setErr(e instanceof Error ? e.message : 'โหลดข้อมูลไม่สำเร็จ')
         } finally {
@@ -346,6 +348,35 @@ export function InboxView() {
                     </p>
                 </div>
             </div>
+
+            {/* Super Admin Password Change Requests Alert */}
+            {pendingPasswordCount > 0 && (
+                <div className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-amber-400/40 bg-gradient-to-r from-amber-500/25 via-amber-600/15 to-transparent p-4 shadow-lg shadow-amber-950/30">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-400/25 text-amber-300 ring-1 ring-amber-400/40 shrink-0">
+                            <KeyRound size={20} />
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold text-white flex items-center gap-2">
+                                <span>คำขอเปลี่ยนรหัสผ่านรอการอนุมัติ</span>
+                                <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-amber-400 text-black">
+                                    {pendingPasswordCount} รายการ
+                                </span>
+                            </p>
+                            <p className="text-xs text-white/65 mt-0.5">
+                                มีคำขอรีเซ็ตรหัสผ่านส่งถึงคุณ (Super Admin) สามารถตรวจสอบและอนุมัติได้โดยตรง
+                            </p>
+                        </div>
+                    </div>
+                    <Link
+                        href="/hradmin/settings/password-requests"
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2 text-xs font-bold text-black hover:bg-amber-300 transition-all shrink-0 shadow-md shadow-amber-950/20"
+                    >
+                        <span>เปิดตรวจคำขอ</span>
+                        <span>→</span>
+                    </Link>
+                </div>
+            )}
 
             {/* Tabs */}
             <div className="flex border-b border-white/10 mb-2 gap-2">

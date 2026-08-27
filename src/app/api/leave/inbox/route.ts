@@ -199,5 +199,15 @@ export async function GET() {
         }
     })
 
-    return NextResponse.json({ items, count: items.length, approverId })
+    let pendingPasswordCount = 0
+    if (session.can_manage_system) {
+        const { count } = await supabaseAdmin
+            .from('password_change_requests')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'pending')
+        pendingPasswordCount = count ?? 0
+    }
+
+    return NextResponse.json({ items, count: items.length, approverId, pendingPasswordCount })
 }
+
