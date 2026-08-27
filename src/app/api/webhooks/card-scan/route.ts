@@ -269,9 +269,10 @@ export async function POST(req: NextRequest) {
         // When scan is OUT (and not a debounce tap), auto-close any active open mobile checkin for today
         if (normalizedScanType === 'out' && !recentScanWithin5Min && employeeId) {
             try {
+                const checkoutUtcIso = new Date(time.replace(' ', 'T') + '+07:00').toISOString()
                 await supabaseAdmin
                     .from('checkins')
-                    .update({ checked_out_at: time })
+                    .update({ checked_out_at: checkoutUtcIso })
                     .eq('employee_id', employeeId)
                     .is('checked_out_at', null)
                     .gte('checked_in_at', `${todayDate}T00:00:00`)
