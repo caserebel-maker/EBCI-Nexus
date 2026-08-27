@@ -99,16 +99,26 @@ export async function getCardScans(params: {
         const totalCount = count ?? 0
         const totalPages = Math.ceil(totalCount / limit)
 
+        const formattedScans: CardScanWithEmployee[] = (data ?? []).map((s: any) => {
+            const timePart = (s.scan_time?.split('T')[1] || '').trim()
+            const isAfter1630 = timePart >= '16:30:00'
+            const effectiveType = (s.scan_type === 'out' || isAfter1630) ? 'out' : (s.scan_type === 'in' ? 'in' : (isAfter1630 ? 'out' : 'in'))
+            return {
+                ...s,
+                scan_type: effectiveType,
+            }
+        })
+
         return {
             success: true,
-            scans: (data ?? []) as unknown as CardScanWithEmployee[],
+            scans: formattedScans,
             totalCount,
             page,
             totalPages,
             fetchedAt: new Date().toISOString()
         }
-    } catch (e: any) {
-        console.error('getCardScans exception:', e)
-        return { success: false, error: e?.message ?? 'Unknown error' }
+    } catch (err: any) {
+        console.error('getCardScans error:', err)
+        return { success: false, error: err.message ?? 'เกิดข้อผิดพลาดในการดึงข้อมูล' }
     }
 }

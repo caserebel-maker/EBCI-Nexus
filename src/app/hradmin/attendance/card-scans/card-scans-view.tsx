@@ -110,9 +110,10 @@ export function CardScansView({ initialData }: Props) {
             const empName = s.employee ? `${s.employee.first_name_th} ${s.employee.last_name_th}` : '—'
             const nickname = s.employee?.nickname ? `(${s.employee.nickname})` : ''
             const dept = s.employee?.department ?? '—'
-            const pos = s.employee?.position ?? '—'
-            const type = s.scan_type === 'in' ? 'เข้า (IN)' : s.scan_type === 'out' ? 'ออก (OUT)' : 'ไม่ระบุ'
-            const sqlId = s.raw_data?.transcantime_id ?? '—'
+            const timePart = (s.scan_time?.split('T')[1] || '').trim()
+            const isAfter1630 = timePart >= '16:30:00'
+            const isOut = s.scan_type === 'out' || isAfter1630
+            const type = isOut ? 'ออก (OUT)' : 'เข้า (IN)'
             
             return [
                 idx + 1,
@@ -313,19 +314,23 @@ export function CardScansView({ initialData }: Props) {
                                                 {employee?.position ?? '—'}
                                             </td>
                                             <td className="px-4 py-3 whitespace-nowrap">
-                                                {scan.scan_type === 'in' ? (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 border border-emerald-500/25 text-emerald-300">
-                                                        เข้า (IN)
-                                                    </span>
-                                                ) : scan.scan_type === 'out' ? (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 border border-rose-500/25 text-rose-300">
-                                                        ออก (OUT)
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-white/50">
-                                                        ไม่ระบุ
-                                                    </span>
-                                                )}
+                                                {(() => {
+                                                    const timePart = (scan.scan_time?.split('T')[1] || '').trim()
+                                                    const isAfter1630 = timePart >= '16:30:00'
+                                                    const isOut = scan.scan_type === 'out' || isAfter1630
+                                                    if (isOut) {
+                                                        return (
+                                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 border border-amber-500/25 text-amber-300">
+                                                                ออก (OUT{isAfter1630 ? ' · ออโต้' : ''})
+                                                            </span>
+                                                        )
+                                                    }
+                                                    return (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 border border-emerald-500/25 text-emerald-300">
+                                                            เข้า (IN)
+                                                        </span>
+                                                    )
+                                                })()}
                                             </td>
                                             <td className="px-4 py-3 font-mono text-xs text-white/50 whitespace-nowrap">
                                                 {scan.device_id ?? '—'}
