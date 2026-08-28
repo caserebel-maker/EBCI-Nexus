@@ -30,6 +30,7 @@ hip-captures/
 hip-code-map*.json
 hip-sql-sync*.log
 hip-time*.log
+system-health.log
 welcome-server*.log
 .sql-sync-state.json
 scripts/.sql-sync-state.json

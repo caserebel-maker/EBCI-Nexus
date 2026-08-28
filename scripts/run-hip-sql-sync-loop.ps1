@@ -3,9 +3,12 @@ $ErrorActionPreference = 'Continue'
 $ScriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 if (-not $ScriptDir) { $ScriptDir = "C:\EBCI-Nexus\scripts" }
 $ScriptPath = Join-Path $ScriptDir 'run-hip-sql-sync.ps1'
+$HealthScriptPath = Join-Path $ScriptDir 'report-system-health.ps1'
 $RepoRoot = Split-Path -Parent $ScriptDir
 $LoopLog = Join-Path $RepoRoot 'hip-sql-sync-loop.log'
 $LoopPidFile = Join-Path $RepoRoot '.hip-sql-sync-loop.pid'
+$HealthIntervalSeconds = 60
+$LastHealthReportAt = (Get-Date).AddSeconds(-$HealthIntervalSeconds)
 
 function Write-LoopLog {
     param([string] $Message)
@@ -32,6 +35,15 @@ while ($true) {
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $ScriptPath
     } catch {
         Write-LoopLog "Loop error: $($_.Exception.Message)"
+    }
+    if ((Test-Path -LiteralPath $HealthScriptPath) -and (((Get-Date) - $LastHealthReportAt).TotalSeconds -ge $HealthIntervalSeconds)) {
+        try {
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $HealthScriptPath
+            $LastHealthReportAt = Get-Date
+        } catch {
+            Write-LoopLog "System health report error: $($_.Exception.Message)"
+            $LastHealthReportAt = Get-Date
+        }
     }
     Start-Sleep -Seconds 2
 }
