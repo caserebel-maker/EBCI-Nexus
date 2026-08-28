@@ -58,6 +58,20 @@ function classifyTemperature(temp: number | null): 'ok' | 'warning' | 'critical'
     return 'ok'
 }
 
+function isReferenceTemperature(source: string | null | undefined): boolean {
+    const lowered = (source ?? '').toLowerCase()
+    return lowered.includes('acpi') || lowered.includes('thermal zone') || lowered.includes('reference only')
+}
+
+function formatTemperatureSource(source: string | null | undefined): string {
+    if (!source) return 'Windows ยังไม่ส่งค่า sensor'
+    if (source.includes('reference only')) return 'ACPI thermal zone · ค่าอ้างอิง ไม่ใช่ CPU temp'
+    if (source.startsWith('LibreHardwareMonitor:')) {
+        return source.replace('LibreHardwareMonitor:', 'LHM · ')
+    }
+    return source
+}
+
 export function SettingsClient({ initialLocation, canManagePasswords }: { initialLocation: Location | null; canManagePasswords: boolean }) {
     const [form, setForm] = useState({
         id: initialLocation?.id,
@@ -417,6 +431,7 @@ function SystemHealthCard({
     onRefresh: () => void
 }) {
     const tempStatus = classifyTemperature(health?.temperature_c ?? null)
+    const referenceTemperature = isReferenceTemperature(health?.temperature_source)
     const reportedAt = health?.reported_at ? new Date(health.reported_at) : null
     const ageMs = reportedAt && !Number.isNaN(reportedAt.getTime()) && now > 0 ? now - reportedAt.getTime() : null
     const isFresh = ageMs !== null && ageMs < 10 * 60 * 1000
@@ -430,7 +445,9 @@ function SystemHealthCard({
         : isFresh
             ? 'bg-emerald-500/20 text-emerald-100 border-emerald-500/35'
             : 'bg-amber-500/20 text-amber-100 border-amber-500/35'
-    const tempClass = tempStatus === 'critical'
+    const tempClass = referenceTemperature
+        ? 'text-amber-100'
+        : tempStatus === 'critical'
         ? 'text-red-200'
         : tempStatus === 'warning'
             ? 'text-amber-200'
@@ -476,7 +493,7 @@ function SystemHealthCard({
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <HealthMetric
                     icon={Thermometer}
-                    label="อุณหภูมิ"
+                    label={referenceTemperature ? 'อุณหภูมิอ้างอิง' : 'อุณหภูมิ'}
                     value={
                         health?.temperature_c !== null && health?.temperature_c !== undefined
                             ? `${Number(health.temperature_c).toFixed(1)}°C`
@@ -484,7 +501,7 @@ function SystemHealthCard({
                                 ? 'กำลังโหลด'
                                 : 'อ่านไม่ได้'
                     }
-                    detail={health?.temperature_source ?? 'Windows ยังไม่ส่งค่า sensor'}
+                    detail={formatTemperatureSource(health?.temperature_source)}
                     valueClassName={tempClass}
                 />
                 <HealthMetric
@@ -518,6 +535,11 @@ function SystemHealthCard({
             {tempStatus === 'warning' && (
                 <p className="mt-3 text-[12px] text-amber-100 bg-amber-500/10 border border-amber-500/25 rounded-lg px-3 py-2">
                     เครื่องเริ่มร้อน ควรเช็กช่องลม/พัดลม และลดโปรแกรมที่ไม่จำเป็น
+                </p>
+            )}
+            {referenceTemperature && health?.temperature_c !== null && health?.temperature_c !== undefined && (
+                <p className="mt-3 text-[12px] text-amber-100 bg-amber-500/10 border border-amber-500/25 rounded-lg px-3 py-2">
+                    ค่าอุณหภูมินี้มาจาก ACPI thermal zone จึงเป็นค่าอ้างอิงของระบบ ไม่ใช่อุณหภูมิ CPU/ผิวเครื่องโดยตรง ถ้าจับเครื่องแล้วร้อน ให้ดูร่วมกับ CPU/RAM และการระบายอากาศ
                 </p>
             )}
             {tempStatus === 'critical' && (

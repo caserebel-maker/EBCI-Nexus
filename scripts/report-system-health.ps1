@@ -29,8 +29,9 @@ function Import-DotEnv {
 function Get-TemperatureReading {
     $readings = @()
 
+    $enableLhm = [Environment]::GetEnvironmentVariable('ENABLE_LHM_TEMPERATURE', 'Process') -eq 'true'
     $lhmLib = 'C:\Tools\LibreHardwareMonitor\LibreHardwareMonitorLib.dll'
-    if (Test-Path -LiteralPath $lhmLib) {
+    if ($enableLhm -and (Test-Path -LiteralPath $lhmLib)) {
         $lhmDir = Split-Path -Parent $lhmLib
         try {
             Push-Location -LiteralPath $lhmDir
@@ -51,6 +52,7 @@ function Get-TemperatureReading {
                             $readings += [PSCustomObject]@{
                                 value = $celsius
                                 source = "LibreHardwareMonitor:$($hardware.Name):$($sensor.Name)"
+                                priority = Get-TemperaturePriority -Source "LibreHardwareMonitor:$($hardware.Name):$($sensor.Name)"
                             }
                         }
                     }
@@ -64,6 +66,7 @@ function Get-TemperatureReading {
                                 $readings += [PSCustomObject]@{
                                     value = $celsius
                                     source = "LibreHardwareMonitor:$($sub.Name):$($sensor.Name)"
+                                    priority = Get-TemperaturePriority -Source "LibreHardwareMonitor:$($sub.Name):$($sensor.Name)"
                                 }
                             }
                         }
@@ -85,7 +88,8 @@ function Get-TemperatureReading {
             if ($celsius -gt 0 -and $celsius -lt 120) {
                 $readings += [PSCustomObject]@{
                     value = $celsius
-                    source = "ACPI:$($zone.InstanceName)"
+                    source = "ACPI thermal zone (reference only, not CPU package):$($zone.InstanceName)"
+                    priority = 10
                 }
             }
         }
@@ -97,12 +101,36 @@ function Get-TemperatureReading {
         return [PSCustomObject]@{ value = $null; source = $null; candidates = @() }
     }
 
-    $best = $readings | Sort-Object value -Descending | Select-Object -First 1
+    $best = $readings |
+        Sort-Object @{ Expression = 'priority'; Descending = $true }, @{ Expression = 'value'; Descending = $true } |
+        Select-Object -First 1
     return [PSCustomObject]@{
         value = [double]$best.value
         source = [string]$best.source
         candidates = $readings
     }
+}
+
+function Get-TemperaturePriority {
+    param([string] $Source)
+
+    $lower = $Source.ToLowerInvariant()
+    if ($lower -match 'cpu.*(package|core|max|tdie|tctl)' -or $lower -match '(package|core|max|tdie|tctl).*cpu') {
+        return 100
+    }
+    if ($lower -match 'gpu') {
+        return 80
+    }
+    if ($lower -match 'storage|ssd|nvme|hdd') {
+        return 65
+    }
+    if ($lower -match 'motherboard|mainboard|board|chipset') {
+        return 50
+    }
+    if ($lower -match 'acpi|thermal zone') {
+        return 10
+    }
+    return 40
 }
 
 Import-DotEnv -Path $EnvPath
