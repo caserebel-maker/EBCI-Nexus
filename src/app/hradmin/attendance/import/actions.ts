@@ -32,11 +32,15 @@ export interface ValidationResult {
     duplicateCount: number
 }
 
-function normalizeAction(raw: string): 'in' | 'out' | null {
-    const s = raw.trim().toLowerCase()
-    if (!s) return null
+function normalizeAction(raw?: string, time?: string): 'in' | 'out' | null {
+    const s = (raw || '').trim().toLowerCase()
     if (['in', 'check-in', 'checkin', 'เข้า', 'เข้างาน', '1'].includes(s)) return 'in'
     if (['out', 'check-out', 'checkout', 'ออก', 'ออกงาน', '0'].includes(s)) return 'out'
+    if (time) {
+        const trimmedTime = time.trim()
+        if (trimmedTime >= '16:20') return 'out'
+        if (trimmedTime < '12:00') return 'in'
+    }
     return null
 }
 
@@ -104,7 +108,7 @@ export async function validateCardRows(
     const validated: ValidatedRow[] = rows.map(r => {
         const code = r.employeeCode.trim()
         const emp = empByCode.get(code)
-        const normalizedAction = normalizeAction(r.action)
+        const normalizedAction = normalizeAction(r.action, r.time)
 
         let error: string | null = null
         if (!code) error = 'รหัสพนักงานว่าง'

@@ -593,8 +593,32 @@ export async function GET(req: NextRequest) {
                 const approvedLeaves = dayLeaves.filter(l => l.status === 'approved' || l.status === 'cancellation_requested')
                 const activeWfh = dayWfh.filter(w => w.status === 'approved')
                 const firstMobile = mobileCheckins[0] ?? null
-                const firstCard = dayScans[0] ?? null
-                const latestCard = dayScans.length > 1 ? dayScans[dayScans.length - 1] : null
+                let firstCard: CardScanRow | null = null
+                let latestCard: CardScanRow | null = null
+
+                if (dayScans.length > 0) {
+                    const earliestScan = dayScans[0]
+                    const earliestTimePart = earliestScan.scan_time.replace(' ', 'T').split('T')[1] || ''
+                    const hasMobileBefore1620 = firstMobile ? (() => {
+                        const d = new Date(firstMobile.checked_in_at)
+                        const bkkHour = (d.getUTCHours() + 7) % 24
+                        const bkkMin = d.getUTCMinutes()
+                        return (bkkHour * 60 + bkkMin) < (16 * 60 + 20)
+                    })() : false
+
+                    if (earliestTimePart >= '16:20:00' && hasMobileBefore1620) {
+                        latestCard = dayScans[dayScans.length - 1]
+                    } else {
+                        firstCard = earliestScan
+                        const checkoutCandidates = dayScans.slice(1).filter(s => {
+                            const timePart = s.scan_time.replace(' ', 'T').split('T')[1] || ''
+                            return timePart >= '16:20:00'
+                        })
+                        if (checkoutCandidates.length > 0) {
+                            latestCard = checkoutCandidates[checkoutCandidates.length - 1]
+                        }
+                    }
+                }
 
                 let firstSource: 'card' | 'mobile' | null = null
                 if (firstCard && firstMobile) {

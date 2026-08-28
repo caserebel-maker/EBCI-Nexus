@@ -225,6 +225,7 @@ export async function POST(req: NextRequest) {
             ? String(scan.scan_type).toLowerCase().trim()
             : null
         const explicitScanType = scanTypeExplicit === 'in' || scanTypeExplicit === 'out' ? scanTypeExplicit : null
+        const timePart = time.split('T')[1] || ''
 
         let normalizedScanType: string
         let rawDataPayload = { ...(scan?.raw_data ?? {}) }
@@ -239,8 +240,11 @@ export async function POST(req: NextRequest) {
                 debounce: true,
                 note: `Tapped within 5 minutes of previous scan at ${recentScanWithin5Min.scan_time}`,
             }
+        } else if (timePart >= '16:20:00') {
+            // Card scan at or after 16:20:00 -> Count as Check-out (OUT)
+            normalizedScanType = 'out'
         } else if (!prevScans || prevScans.length === 0) {
-            // First tap of the day (e.g. 07:45 AM or evening shift 17:15 PM) -> Always Check-in (IN)
+            // First tap of the day (before 16:20) -> Check-in (IN)
             normalizedScanType = 'in'
         } else {
             // Subsequent tap (>= 5 minutes after first tap) -> Check-out (OUT)

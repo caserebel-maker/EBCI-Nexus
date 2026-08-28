@@ -167,29 +167,32 @@ export async function reconcileDate(
             const normalizedEarliest = earliestScan.replace(' ', 'T')
             const earliestScanTimePart = normalizedEarliest.split('T')[1] || ''
             
-            // Smart matching for off-site staff: if the earliest card scan is after 16:30,
-            // and they checked in on mobile in the morning (before 16:30), we treat their
+            // Smart matching for off-site staff: if the earliest card scan is after 16:20,
+            // and they checked in on mobile in the morning (before 16:20), we treat their
             // card scans as checkout-only. This avoids creating a check-in discrepancy.
-            const hasMobileCheckInBefore1630 = (() => {
+            const hasMobileCheckInBefore1620 = (() => {
                 const mobTime = mobileByEmp.get(eid)
                 if (!mobTime) return false
                 const d = new Date(mobTime)
                 const bkkHour = (d.getUTCHours() + 7) % 24
                 const bkkMin = d.getUTCMinutes()
-                return (bkkHour * 60 + bkkMin) < (16 * 60 + 30)
+                const bkkTotalMin = bkkHour * 60 + bkkMin
+                return bkkTotalMin < (16 * 60 + 20) // before 16:20
             })()
 
-            if (earliestScanTimePart >= '16:30:00' && hasMobileCheckInBefore1630) {
+            if (earliestScanTimePart >= '16:20:00' && hasMobileCheckInBefore1620) {
                 cardCheckoutByEmp.set(eid, times[times.length - 1])
             } else {
                 cardByEmp.set(eid, earliestScan)
                 
-                // The check-out scan must be at least 5 minutes after the check-in scan.
-                // This prevents duplicate accidental taps (within 5 mins) from being counted as final checkout.
+                // The check-out scan must be at or after 16:20 (Bangkok time) and at least 5 minutes after check-in.
+                // This prevents lunch or duplicate accidental taps (within 5 mins) from being counted as final checkout.
                 const earliestMs = new Date(normalizedEarliest + '+07:00').getTime()
                 const checkoutCandidates = times.slice(1).filter(t => {
-                    const tMs = new Date(t.replace(' ', 'T') + '+07:00').getTime()
-                    return (tMs - earliestMs) >= 5 * 60 * 1000
+                    const normalized = t.replace(' ', 'T')
+                    const timePart = normalized.split('T')[1] || ''
+                    const tMs = new Date(normalized + '+07:00').getTime()
+                    return timePart >= '16:20:00' && (tMs - earliestMs) >= 5 * 60 * 1000
                 })
                 if (checkoutCandidates.length > 0) {
                     cardCheckoutByEmp.set(eid, checkoutCandidates[checkoutCandidates.length - 1])
