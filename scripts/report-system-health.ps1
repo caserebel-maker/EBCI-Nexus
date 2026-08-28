@@ -6,7 +6,8 @@ $LogPath = Join-Path $RepoRoot 'system-health.log'
 
 function Write-HealthLog {
     param([string] $Message)
-    Add-Content -LiteralPath $LogPath -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $Message"
+    $stamp = [DateTime]::Now.ToString('yyyy-MM-dd HH:mm:ss', [Globalization.CultureInfo]::InvariantCulture)
+    Add-Content -LiteralPath $LogPath -Value "[$stamp] $Message"
 }
 
 function Import-DotEnv {
@@ -27,6 +28,55 @@ function Import-DotEnv {
 
 function Get-TemperatureReading {
     $readings = @()
+
+    $lhmLib = 'C:\Tools\LibreHardwareMonitor\LibreHardwareMonitorLib.dll'
+    if (Test-Path -LiteralPath $lhmLib) {
+        $lhmDir = Split-Path -Parent $lhmLib
+        try {
+            Push-Location -LiteralPath $lhmDir
+            Add-Type -Path $lhmLib -ErrorAction SilentlyContinue
+            $computer = [LibreHardwareMonitor.Hardware.Computer]::new()
+            $computer.IsCpuEnabled = $true
+            $computer.IsGpuEnabled = $true
+            $computer.IsMotherboardEnabled = $true
+            $computer.IsStorageEnabled = $true
+            $computer.Open()
+
+            foreach ($hardware in $computer.Hardware) {
+                $hardware.Update()
+                foreach ($sensor in $hardware.Sensors) {
+                    if ($sensor.SensorType.ToString() -eq 'Temperature' -and $null -ne $sensor.Value) {
+                        $celsius = [math]::Round([double]$sensor.Value, 1)
+                        if ($celsius -gt 0 -and $celsius -lt 120) {
+                            $readings += [PSCustomObject]@{
+                                value = $celsius
+                                source = "LibreHardwareMonitor:$($hardware.Name):$($sensor.Name)"
+                            }
+                        }
+                    }
+                }
+                foreach ($sub in $hardware.SubHardware) {
+                    $sub.Update()
+                    foreach ($sensor in $sub.Sensors) {
+                        if ($sensor.SensorType.ToString() -eq 'Temperature' -and $null -ne $sensor.Value) {
+                            $celsius = [math]::Round([double]$sensor.Value, 1)
+                            if ($celsius -gt 0 -and $celsius -lt 120) {
+                                $readings += [PSCustomObject]@{
+                                    value = $celsius
+                                    source = "LibreHardwareMonitor:$($sub.Name):$($sensor.Name)"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            $computer.Close()
+        } catch {
+            Write-HealthLog "LibreHardwareMonitor temperature unavailable: $($_.Exception.Message)"
+        } finally {
+            Pop-Location -ErrorAction SilentlyContinue
+        }
+    }
 
     try {
         $thermalZones = Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction Stop
