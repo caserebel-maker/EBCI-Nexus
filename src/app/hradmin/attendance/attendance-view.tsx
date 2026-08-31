@@ -65,7 +65,7 @@ function timeAgo(iso: string, currentTime: number): string {
 export function AttendanceView({ initialDate, initialData, employees }: Props) {
     const [date, setDate] = useState(initialDate)
     const [data, setData] = useState<InitialData | null>(initialData)
-    const [filter, setFilter] = useState<FilterTab>('all')
+    const [filter, setFilter] = useState<FilterTab>('office')
     const [sortBy, setSortBy] = useState<'alphabet' | 'checkin-time'>('alphabet')
     const [isPending, startTransition] = useTransition()
     const [nowTick, setNowTick] = useState(0) // force re-render for "X minutes ago"
@@ -272,11 +272,11 @@ export function AttendanceView({ initialDate, initialData, employees }: Props) {
 
             {/* Stats cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
-                <StatCard icon={Users} label="พนักงานทั้งหมด" value={stats.totalEmployees} color="text-white/70" bg="bg-white/5" border="border-white/10" />
-                <StatCard icon={Building} label="เข้าออฟฟิศ" value={stats.officeCount} color="text-emerald-300" bg="bg-emerald-500/10" border="border-emerald-500/30" />
-                <StatCard icon={Home} label="WFH" value={stats.wfhCount} color="text-blue-300" bg="bg-blue-500/10" border="border-blue-500/30" />
-                <StatCard icon={MapPin} label="นอก Head Office" value={stats.outsideHeadOfficeCount} color="text-cyan-300" bg="bg-cyan-500/10" border="border-cyan-500/30" />
-                <StatCard icon={HelpCircle} label="ยังไม่เช็คอิน" value={stats.notCheckedInCount} color="text-amber-300" bg="bg-amber-500/10" border="border-amber-500/30" />
+                <StatCard icon={Users} label="พนักงานทั้งหมด" value={stats.totalEmployees} color="text-white/70" bg="bg-white/5" border="border-white/10" active={filter === 'all'} onClick={() => setFilter('all')} />
+                <StatCard icon={Building} label="เข้าออฟฟิศ" value={stats.officeCount} color="text-emerald-300" bg="bg-emerald-500/10" border="border-emerald-500/30" active={filter === 'office'} onClick={() => setFilter('office')} />
+                <StatCard icon={Home} label="WFH" value={stats.wfhCount} color="text-blue-300" bg="bg-blue-500/10" border="border-blue-500/30" active={filter === 'wfh'} onClick={() => setFilter('wfh')} />
+                <StatCard icon={MapPin} label="นอก Head Office" value={stats.outsideHeadOfficeCount} color="text-cyan-300" bg="bg-cyan-500/10" border="border-cyan-500/30" active={filter === 'outside-head-office'} onClick={() => setFilter('outside-head-office')} />
+                <StatCard icon={HelpCircle} label="ยังไม่เช็คอิน" value={stats.notCheckedInCount} color="text-amber-300" bg="bg-amber-500/10" border="border-amber-500/30" active={filter === 'not-checked-in'} onClick={() => setFilter('not-checked-in')} />
             </div>
 
             {/* Filter tabs and Sorting */}
@@ -374,6 +374,8 @@ function StatCard({
     color,
     bg,
     border,
+    active,
+    onClick,
 }: {
     icon: LucideIcon
     label: string
@@ -381,15 +383,27 @@ function StatCard({
     color: string
     bg: string
     border: string
+    active?: boolean
+    onClick?: () => void
 }) {
     return (
-        <div className={cn("rounded-2xl p-4 border", bg, border)}>
+        <button
+            type="button"
+            onClick={onClick}
+            className={cn(
+                "rounded-2xl p-4 border text-left transition-all",
+                bg,
+                border,
+                onClick ? "cursor-pointer hover:opacity-90 hover:scale-[1.02]" : "",
+                active ? "ring-2 ring-white/50 shadow-lg" : ""
+            )}
+        >
             <div className="flex items-center gap-2 mb-2">
                 <Icon size={16} className={color} />
                 <span className="text-[11px] uppercase tracking-wider font-semibold text-white/50">{label}</span>
             </div>
             <div className={cn("text-3xl font-bold", color)}>{value}</div>
-        </div>
+        </button>
     )
 }
 
