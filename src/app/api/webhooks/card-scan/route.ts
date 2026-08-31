@@ -225,7 +225,6 @@ export async function POST(req: NextRequest) {
             ? String(scan.scan_type).toLowerCase().trim()
             : null
         const explicitScanType = scanTypeExplicit === 'in' || scanTypeExplicit === 'out' ? scanTypeExplicit : null
-        const timePart = time.split('T')[1] || ''
 
         let normalizedScanType: string
         let rawDataPayload = { ...(scan?.raw_data ?? {}) }
