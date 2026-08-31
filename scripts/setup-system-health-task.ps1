@@ -13,12 +13,11 @@ function Assert-Administrator {
 
 Assert-Administrator
 
-$pwsh = Get-Command 'pwsh.exe' -ErrorAction SilentlyContinue
-$runner = if ($pwsh -and $pwsh.Source) { $pwsh.Source } else { 'PowerShell.exe' }
+$runner = 'PowerShell.exe'
 
 $action = New-ScheduledTaskAction `
     -Execute $runner `
-    -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`""
+    -Argument "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`""
 
 $logonTrigger = New-ScheduledTaskTrigger -AtLogOn
 $minuteTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) `

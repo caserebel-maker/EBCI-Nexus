@@ -1,5 +1,28 @@
 $ErrorActionPreference = 'Stop'
 
+try {
+    Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+
+public static class EbciConsoleWindow
+{
+    [DllImport("kernel32.dll")]
+    public static extern IntPtr GetConsoleWindow();
+
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+}
+"@ -ErrorAction SilentlyContinue
+
+    $consoleWindow = [EbciConsoleWindow]::GetConsoleWindow()
+    if ($consoleWindow -ne [IntPtr]::Zero) {
+        [void][EbciConsoleWindow]::ShowWindow($consoleWindow, 0)
+    }
+} catch {
+    # Best effort only. If Windows blocks window hiding, still report health.
+}
+
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $EnvPath = Join-Path $RepoRoot '.env.local'
 $LogPath = Join-Path $RepoRoot 'system-health.log'

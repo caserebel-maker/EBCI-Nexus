@@ -10,10 +10,6 @@ $LoopPidFile = Join-Path $RepoRoot '.hip-sql-sync-loop.pid'
 $HealthIntervalSeconds = 60
 $LastHealthReportAt = (Get-Date).AddSeconds(-$HealthIntervalSeconds)
 $HealthPowerShell = 'powershell.exe'
-$pwshCommand = Get-Command 'pwsh.exe' -ErrorAction SilentlyContinue
-if ($pwshCommand -and $pwshCommand.Source) {
-    $HealthPowerShell = $pwshCommand.Source
-}
 
 function Write-LoopLog {
     param([string] $Message)
