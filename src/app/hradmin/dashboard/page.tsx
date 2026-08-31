@@ -16,6 +16,7 @@ function endOf(date: Date) {
 }
 
 export default async function AdminDashboard() {
+    const now = new Date()
     // Bangkok wall-clock (UTC+7)
     const nowBkk = new Date(Date.now() + 7 * 60 * 60 * 1000)
     const year = nowBkk.getUTCFullYear()
@@ -177,7 +178,7 @@ export default async function AdminDashboard() {
     const monthlyLeave: Record<string, Record<string, number>> = {}
     const leaveTypes = ['sick', 'personal', 'annual', 'maternity', 'ordination']
     for (let i = 11; i >= 0; i--) {
-        const d = new Date(now)
+        const d = new Date(nowBkk)
         d.setMonth(d.getMonth() - i)
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
         monthlyLeave[key] = { sick: 0, personal: 0, annual: 0, maternity: 0, ordination: 0 }
