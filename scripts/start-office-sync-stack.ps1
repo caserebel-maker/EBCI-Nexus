@@ -16,16 +16,11 @@ try {
     Write-StartupLog 'Starting EBCI office sync stack.'
 
     if (Test-Path -LiteralPath $HipScript) {
-        $hipRunning = Get-Process -Name 'HIPSchool_Zee' -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($hipRunning) {
-            Write-StartupLog "HIP TIME already running as PID $($hipRunning.Id)."
-        } else {
-            Start-Process -FilePath 'powershell.exe' `
-                -ArgumentList "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$HipScript`"" `
-                -WorkingDirectory $RepoRoot `
-                -WindowStyle Hidden
-            Write-StartupLog 'HIP TIME auto-start dispatched.'
-        }
+        Start-Process -FilePath 'powershell.exe' `
+            -ArgumentList "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$HipScript`"" `
+            -WorkingDirectory $RepoRoot `
+            -WindowStyle Hidden
+        Write-StartupLog 'HIP TIME auto-start/check dispatched.'
     } else {
         Write-StartupLog "HIP auto-start script not found: $HipScript"
     }
