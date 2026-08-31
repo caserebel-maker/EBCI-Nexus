@@ -16,23 +16,27 @@ function endOf(date: Date) {
 }
 
 export default async function AdminDashboard() {
-    const now = new Date()
-    const todayStart = startOf(now).toISOString()
-    const todayEnd = endOf(now).toISOString()
-    const in30days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
-    const year = now.getFullYear()
-    const month = now.getMonth() + 1
+    // Bangkok wall-clock (UTC+7)
+    const nowBkk = new Date(Date.now() + 7 * 60 * 60 * 1000)
+    const year = nowBkk.getUTCFullYear()
+    const month = nowBkk.getUTCMonth() + 1
+    const day = nowBkk.getUTCDate()
+    const bangkokDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+
+    const todayStart = `${bangkokDate}T00:00:00+07:00`
+    const todayEnd = `${bangkokDate}T23:59:59.999+07:00`
+    const in30days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
     const yearStart = `${year}-01-01`
     const nextYearStart = `${year + 1}-01-01`
 
     // 12 months ago for leave stats
-    const twelveMonthsAgo = new Date(now)
-    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11)
-    twelveMonthsAgo.setDate(1)
-    twelveMonthsAgo.setHours(0, 0, 0, 0)
+    const twelveMonthsAgo = new Date(Date.now() + 7 * 60 * 60 * 1000)
+    twelveMonthsAgo.setUTCMonth(twelveMonthsAgo.getUTCMonth() - 11)
+    twelveMonthsAgo.setUTCDate(1)
+    twelveMonthsAgo.setUTCHours(0, 0, 0, 0)
 
     // 30 days ago for weekly attendance
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
     const [
         permissions,
@@ -217,32 +221,37 @@ export default async function AdminDashboard() {
     const anniversaries = (employees ?? []).filter(e => {
         if (e.status !== 'active' || e.is_advisor) return false
         if (!e.start_date) return false
-        const start = new Date(e.start_date)
-        return start.getMonth() + 1 === month && start.getDate() >= now.getDate()
-    }).map(e => ({
-        ...e,
-        years: year - new Date(e.start_date!).getFullYear()
-    })).filter(e => e.years > 0).sort((a, b) => {
-        const da = new Date(a.start_date!).getDate()
-        const db = new Date(b.start_date!).getDate()
-        return da - db
-    })
+        const parts = e.start_date.split('T')[0].split('-').map(Number)
+        if (parts.length < 3) return false
+        const [, startM, startD] = parts
+        return startM === month && startD >= day
+    }).map(e => {
+        const parts = e.start_date!.split('T')[0].split('-').map(Number)
+        const [startY, , startD] = parts
+        return {
+            ...e,
+            years: year - startY,
+            startDay: startD,
+        }
+    }).filter(e => e.years > 0).sort((a, b) => a.startDay - b.startDay)
 
     // ─── Birthdays this month ───
     const birthdays = (employees ?? [])
         .filter(e => {
             if (e.status !== 'active' || e.end_date) return false
             if (!e.date_of_birth) return false
-            const dob = new Date(e.date_of_birth)
-            return dob.getMonth() + 1 === month
+            const parts = e.date_of_birth.split('T')[0].split('-').map(Number)
+            if (parts.length < 3) return false
+            const [, birthM] = parts
+            return birthM === month
         })
         .map(e => {
-            const dob = new Date(e.date_of_birth!)
+            const [birthY, birthM, birthD] = e.date_of_birth!.split('T')[0].split('-').map(Number)
             return {
                 ...e,
-                age: year - dob.getFullYear(),
-                dobDay: dob.getDate(),
-                dobMonth: dob.getMonth() + 1,
+                age: year - birthY,
+                dobDay: birthD,
+                dobMonth: birthM,
             }
         })
         .sort((a, b) => a.dobDay - b.dobDay)
@@ -287,26 +296,16 @@ export default async function AdminDashboard() {
     }))
 
     // ─── Week calendar (Mon–Sun this week) ───
-    const monday = new Date(now)
-    const day = monday.getDay()
-    monday.setDate(monday.getDate() - (day === 0 ? 6 : day - 1))
-    monday.setHours(0, 0, 0, 0)
+    const monday = new Date(nowBkk)
+    const dayOfWeek = monday.getUTCDay()
+    monday.setUTCDate(monday.getUTCDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
+    monday.setUTCHours(0, 0, 0, 0)
     const weekDays = Array.from({ length: 7 }, (_, i) => {
         const d = new Date(monday)
-        d.setDate(d.getDate() + i)
+        d.setUTCDate(d.getUTCDate() + i)
         return d
     })
 
-    // HIP card scans use Bangkok wall-clock timestamps, while mobile
-    // checkins use UTC. Read both sources so the live dashboard reflects
-    // employees who physically tapped their card without waiting for the
-    // attendance reconciliation batch.
-    const bangkokDate = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Asia/Bangkok',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-    }).format(now)
     const mobileDayStart = new Date(`${bangkokDate}T00:00:00+07:00`).toISOString()
     const mobileDayEnd = new Date(`${bangkokDate}T23:59:59.999+07:00`).toISOString()
     const [todayCheckinsResult, todayCardScansResult] = await Promise.all([
