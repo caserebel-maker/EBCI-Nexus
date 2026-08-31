@@ -58,6 +58,12 @@ export function WfhView() {
 
     useEffect(() => { void loadAll() }, [loadAll])
 
+    useEffect(() => {
+        if (!toast) return
+        const timer = window.setTimeout(() => setToast(null), 3500)
+        return () => window.clearTimeout(timer)
+    }, [toast])
+
     const counts = useMemo(() => {
         const c: Record<WfhStatus | 'all', number> = {
             all: items.length, pending: 0, approved: 0, rejected: 0, cancelled: 0,
@@ -78,7 +84,6 @@ export function WfhView() {
             const json = await res.json().catch(() => ({}))
             if (!res.ok) throw new Error(json?.error ?? 'ยกเลิกไม่สำเร็จ')
             setToast(`ยกเลิก ${r.reference_code} แล้ว`)
-            window.setTimeout(() => setToast(null), 3000)
             void loadAll()
         } catch (e) {
             setErr(e instanceof Error ? e.message : 'ยกเลิกไม่สำเร็จ')
@@ -157,14 +162,19 @@ export function WfhView() {
                         setFormOpen(false)
                         setToast(msg)
                         void loadAll()
-                        window.setTimeout(() => setToast(null), 5000)
                     }}
                 />
             )}
 
             {toast && (
-                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] px-4 py-3 rounded-xl bg-emerald-600 text-white text-sm shadow-2xl inline-flex items-center gap-2">
-                    <CheckCircle2 size={16} /> {toast}
+                <div className="pointer-events-none fixed inset-0 z-[90] grid place-items-center px-5" aria-live="polite">
+                    <div
+                        role="status"
+                        className="flex w-full max-w-sm items-start gap-3 rounded-xl border border-emerald-300/30 bg-emerald-600 px-5 py-4 text-sm leading-relaxed text-white shadow-2xl shadow-black/40"
+                    >
+                        <CheckCircle2 size={20} className="mt-0.5 shrink-0" />
+                        <span>{toast}</span>
+                    </div>
                 </div>
             )}
         </div>
