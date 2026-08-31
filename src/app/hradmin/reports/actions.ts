@@ -1,7 +1,7 @@
 'use server'
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getSession } from '@/lib/auth'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { bangkokDateKey, todayBangkokKey } from '@/lib/datetime'
 import {
     HIP_OUTAGE_GRACE_CHECKIN_TIME,
@@ -157,8 +157,8 @@ export async function getAttendanceReport(
     department?: string,
     employeeId?: string,
 ): Promise<AttendanceReport | { error: string }> {
-    const session = await getSession()
-    if (!session || session.role !== 'hr_admin') return { error: 'ไม่มีสิทธิ์เข้าถึง' }
+    const auth = await getAuth()
+    if (!auth || !isHrStaff(auth)) return { error: 'ไม่มีสิทธิ์เข้าถึง' }
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fromDate) || !/^\d{4}-\d{2}-\d{2}$/.test(toDate)) {
         return { error: 'รูปแบบวันที่ไม่ถูกต้อง (ต้องเป็น YYYY-MM-DD)' }
@@ -515,8 +515,8 @@ export async function getLeaveReport(
     department?: string,
     employeeId?: string,
 ): Promise<LeaveReport | { error: string }> {
-    const session = await getSession()
-    if (!session || session.role !== 'hr_admin') return { error: 'ไม่มีสิทธิ์เข้าถึง' }
+    const auth = await getAuth()
+    if (!auth || !isHrStaff(auth)) return { error: 'ไม่มีสิทธิ์เข้าถึง' }
 
     const start = new Date(Date.UTC(year, 0, 1)).toISOString()
     const end = new Date(Date.UTC(year + 1, 0, 1)).toISOString()
@@ -623,8 +623,8 @@ const EMP_TYPE_COLORS: Record<string, string> = {
 }
 
 export async function getContractReport(): Promise<ContractReport | { error: string }> {
-    const session = await getSession()
-    if (!session || session.role !== 'hr_admin') return { error: 'ไม่มีสิทธิ์เข้าถึง' }
+    const auth = await getAuth()
+    if (!auth || !isHrStaff(auth)) return { error: 'ไม่มีสิทธิ์เข้าถึง' }
 
     const { data: employees, error } = await supabaseAdmin
         .from('employees')

@@ -1,16 +1,16 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { FileText } from 'lucide-react'
-import { getSession } from '@/lib/auth'
+import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { ReportsView } from './reports-view'
 import { getDepartments, getReportEmployees } from './actions'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ReportsPage() {
-    const session = await getSession()
-    if (!session) redirect('/login')
-    if (session.role !== 'hr_admin') redirect('/portal')
+    const auth = await getAuth()
+    if (!auth) redirect('/login')
+    if (!isHrStaff(auth)) redirect('/portal')
 
     const [departments, employees] = await Promise.all([
         getDepartments(),
