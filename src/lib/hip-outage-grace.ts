@@ -1,19 +1,20 @@
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 
 export const HIP_OUTAGE_GRACE_START = '2026-08-20'
+export const HIP_OUTAGE_GRACE_DEFAULT_END = '2026-08-28'
 export const HIP_OUTAGE_GRACE_CHECKIN_TIME = '07:45'
 export const HIP_OUTAGE_GRACE_NOTE =
-    'ช่วงคอม/เครื่อง HIP แตะบัตรมีปัญหา บริษัทจึงยกประโยชน์เรื่องเช็คอินและมาสายให้พนักงาน โดยนับเวลาเข้าอัตโนมัติ 07:45 เมื่อไม่มีข้อมูลเช็คอินจริง'
+    'ช่วงคอมพิวเตอร์ที่ใช้รันเครื่องแตะบัตร (HIP) เสีย/ขัดข้อง บริษัทจึงยกประโยชน์เรื่องเวลาเข้างานและการมาสายให้พนักงานทุกคน (ไม่มีใครมาสายในสัปดาห์นี้)'
 
-export function getHipOutageGraceEnd(): string | null {
+export function getHipOutageGraceEnd(): string {
     const value = process.env.HIP_OUTAGE_GRACE_END?.trim()
-    return value && DATE_KEY_PATTERN.test(value) ? value : null
+    return value && DATE_KEY_PATTERN.test(value) ? value : HIP_OUTAGE_GRACE_DEFAULT_END
 }
 
 export function isHipOutageGraceDate(dateKey: string) {
     if (!DATE_KEY_PATTERN.test(dateKey)) return false
     const end = getHipOutageGraceEnd()
-    return dateKey >= HIP_OUTAGE_GRACE_START && (!end || dateKey <= end)
+    return dateKey >= HIP_OUTAGE_GRACE_START && dateKey <= end
 }
 
 export function shouldApplyHipOutageGrace(params: {

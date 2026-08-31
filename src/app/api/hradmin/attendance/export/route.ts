@@ -690,7 +690,7 @@ export async function GET(req: NextRequest) {
                 const lateExcused = graceDate && rawMaxLateMinutes > 0
                 const maxLateMinutes = lateExcused ? 0 : rawMaxLateMinutes
                 const lateReasons = lateExcused
-                    ? 'ยกเว้นช่วง HIP ขัดข้อง'
+                    ? 'ยกเว้นช่วงคอมพิวเตอร์ HIP เสีย'
                     : uniqJoin(dayCheckins.map(c => c.late_reason))
                 const autoClosed = dayCheckins.some(c => Boolean(c.auto_closed_at)) ? 'ใช่' : 'ไม่ใช่'
                 const leaveTypeLabels = dayLeaves.map(l => leaveTypeNames.get(l.leave_type_id ?? '') ?? l.leave_type_id ?? 'ลา')
@@ -701,15 +701,19 @@ export async function GET(req: NextRequest) {
                 const issues: string[] = []
                 const notes: string[] = []
 
+                if (graceDate) {
+                    notes.push('ช่วงคอมพิวเตอร์รัน HIP เสีย (21-28 ส.ค. 2569): บริษัทยกประโยชน์เรื่องเข้างานและมาสายให้พนักงาน')
+                }
+
                 if (appliesGrace) {
                     clockIn = HIP_OUTAGE_GRACE_CHECKIN_TIME
-                    checkinMatchStatus = 'เครดิตระบบช่วง HIP ขัดข้อง (ไม่มีข้อมูลเช็คอินจริง)'
-                    sourceLabel = 'ระบบยกประโยชน์ช่วง HIP ขัดข้อง'
+                    checkinMatchStatus = 'เครดิตระบบช่วงคอม HIP เสีย (ไม่มีข้อมูลเช็คอินจริง)'
+                    sourceLabel = 'ระบบยกประโยชน์ช่วงคอม HIP เสีย'
                     actualType = 'ออฟฟิศ (เครดิตระบบ)'
                     notes.push(HIP_OUTAGE_GRACE_NOTE)
                 }
                 if (lateExcused) {
-                    notes.push(`ช่วง HIP ขัดข้อง: พบเวลาจริงสาย ${rawMaxLateMinutes} นาที แต่ไม่คิดเป็นมาสาย`)
+                    notes.push(`ช่วงคอม HIP เสีย: เวลาเช็คอินจริงเกินกำหนด (${rawMaxLateMinutes} นาที) แต่ระบบยกประโยชน์ไม่คิดเป็นมาสาย`)
                 }
 
                 if (hasAnyCheckin && approvedLeaves.length > 0) issues.push('มีเช็คอินในวันที่มีใบลาอนุมัติ')
@@ -749,7 +753,7 @@ export async function GET(req: NextRequest) {
                     dailyStatus = 'วันหยุด'
                     notes.push(dayType)
                 } else if (appliesGrace) {
-                    dailyStatus = `เข้าออฟฟิศ (เครดิตระบบ ${HIP_OUTAGE_GRACE_CHECKIN_TIME})`
+                    dailyStatus = `เข้าออฟฟิศ (ยกประโยชน์ช่วงคอม HIP เสีย ${HIP_OUTAGE_GRACE_CHECKIN_TIME})`
                 } else if (dateStr < todayStr) {
                     dailyStatus = 'ขาดเช็คอิน'
                     issues.push('วันทำงานที่ผ่านมาแล้วแต่ไม่มีเช็คอิน/ใบลา/WFH')
