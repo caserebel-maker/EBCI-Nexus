@@ -33,13 +33,23 @@ Write-LoopLog 'HIP SQL sync loop started.'
 
 while ($true) {
     try {
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $ScriptPath
+        $syncProcess = Start-Process -FilePath 'powershell.exe' `
+            -ArgumentList "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" `
+            -WorkingDirectory $RepoRoot `
+            -WindowStyle Hidden `
+            -PassThru
+        $syncProcess.WaitForExit()
     } catch {
         Write-LoopLog "Loop error: $($_.Exception.Message)"
     }
     if ((Test-Path -LiteralPath $HealthScriptPath) -and (((Get-Date) - $LastHealthReportAt).TotalSeconds -ge $HealthIntervalSeconds)) {
         try {
-            & $HealthPowerShell -NoProfile -ExecutionPolicy Bypass -File $HealthScriptPath
+            $healthProcess = Start-Process -FilePath $HealthPowerShell `
+                -ArgumentList "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$HealthScriptPath`"" `
+                -WorkingDirectory $RepoRoot `
+                -WindowStyle Hidden `
+                -PassThru
+            $healthProcess.WaitForExit()
             $LastHealthReportAt = Get-Date
         } catch {
             Write-LoopLog "System health report error: $($_.Exception.Message)"
