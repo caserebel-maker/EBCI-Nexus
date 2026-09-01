@@ -24,10 +24,11 @@ function Set-TaskHidden {
 }
 
 try {
-    Set-TaskHidden `
-        -TaskName 'EBCI_System_Health_Report' `
-        -Execute 'PowerShell.exe' `
-        -Arguments '-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File "C:\EBCI-Nexus\scripts\report-system-health.ps1"'
+    $healthTask = Get-ScheduledTask -TaskName 'EBCI_System_Health_Report' -ErrorAction SilentlyContinue
+    if ($healthTask) {
+        Disable-ScheduledTask -TaskName 'EBCI_System_Health_Report' | Out-Null
+        Write-FixLog 'Disabled scheduled task EBCI_System_Health_Report because the hidden sync loop reports health without spawning a visible PowerShell window.'
+    }
 
     Set-TaskHidden `
         -TaskName 'EBCI_Nightly_Hibernate_2200' `
