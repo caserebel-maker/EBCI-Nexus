@@ -40,12 +40,8 @@ export default async function AdminDashboard() {
     // 30 days ago for weekly attendance
     const thirtyDaysAgo = new Date(nowMs - 30 * 24 * 60 * 60 * 1000)
 
-    // 2 minutes ago for live online active users
-    const twoMinutesAgoIso = new Date(nowMs - 2 * 60 * 1000).toISOString()
-
     const [
         permissions,
-        { count: onlineCount },
         { data: employees },
         { data: leavesToday },
         { data: leavesPending },
@@ -58,8 +54,6 @@ export default async function AdminDashboard() {
         { data: pendingPasswordRequests },
     ] = await Promise.all([
         getCurrentPermissions(),
-        // Live online active users within 2 minutes
-        supabaseAdmin.from('employees').select('id', { count: 'exact', head: true }).eq('status', 'active').gte('last_active_at', twoMinutesAgoIso),
 
         // All employees (include date_of_birth for birthday section)
         supabaseAdmin.from('employees').select('id, employee_code, first_name_th, last_name_th, nickname, department, start_date, status, end_date, title, date_of_birth, is_advisor, photo_url, email'),
@@ -390,7 +384,6 @@ export default async function AdminDashboard() {
             newsAnnouncements={newsWithImages}
             birthdays={birthdays}
             canViewAttendanceInsights={permissions.can_view_attendance_insights}
-            onlineCount={onlineCount ?? 0}
         />
     )
 }

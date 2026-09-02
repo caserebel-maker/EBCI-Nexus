@@ -105,7 +105,6 @@ interface Props {
     newsAnnouncements: any[]
     birthdays: any[]
     canViewAttendanceInsights?: boolean
-    onlineCount?: number
 }
 
 function fullName(firstName: string, lastName: string, nickname?: string | null) {
@@ -726,7 +725,6 @@ export function HRDashboard({
     pendingLeaves, pendingApprovals, contractsExpiring, anniversaries,
     weekDays, leavesToday, urgentBanners, newsAnnouncements, birthdays,
     canViewAttendanceInsights = false,
-    onlineCount = 0,
 }: Props) {
     const router = useRouter()
     const initialPendingApprovals = pendingApprovals && pendingApprovals.length > 0 ? pendingApprovals : pendingLeaves
@@ -835,26 +833,6 @@ export function HRDashboard({
 
                 {/* ══ LEFT COL (2/3) ══ */}
                 <div className="xl:col-span-2 space-y-6">
-
-                    {/* Live Online Presence Badge */}
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <Link
-                            href="/hradmin/settings/login-monitor"
-                            className="inline-flex items-center gap-2.5 rounded-full border border-emerald-400/35 bg-emerald-500/15 hover:bg-emerald-500/25 px-3.5 py-1.5 text-xs font-bold text-emerald-200 transition-all shadow-md shadow-emerald-950/30 group"
-                            title="ดูรายชื่อและหน้าที่พนักงานกำลังเปิดใช้งานอยู่แบบ Realtime"
-                        >
-                            <span className="relative flex h-2.5 w-2.5">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-sm shadow-emerald-400" />
-                            </span>
-                            <span>
-                                กำลังใช้งาน Nexus: <strong className="text-white font-black text-sm">{onlineCount}</strong> คน
-                            </span>
-                            <span className="text-emerald-400/70 group-hover:text-emerald-200 group-hover:translate-x-0.5 transition-all text-xs font-bold">
-                                ดูผู้ใช้งานขณะนี้ →
-                            </span>
-                        </Link>
-                    </div>
 
                     {/* Metric Cards */}
                     <div className="grid grid-cols-2 2xl:grid-cols-4 gap-3 lg:gap-4">

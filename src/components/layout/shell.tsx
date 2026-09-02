@@ -59,6 +59,56 @@ interface DashboardShellProps {
     }
 }
 
+function LivePresenceBadge() {
+    const [count, setCount] = React.useState<number | null>(null)
+
+    React.useEffect(() => {
+        let cancelled = false
+        const load = async () => {
+            try {
+                const res = await fetch('/api/portal/active-count?scope=all', {
+                    cache: 'no-store',
+                })
+                const json = await res.json()
+                if (!cancelled) {
+                    setCount(typeof json.activeCount === 'number' ? json.activeCount : 1)
+                }
+            } catch {
+                if (!cancelled) setCount(1)
+            }
+        }
+
+        load()
+        const interval = window.setInterval(load, 30 * 1000)
+        return () => {
+            cancelled = true
+            window.clearInterval(interval)
+        }
+    }, [])
+
+    return (
+        <Link
+            href="/hradmin/settings/login-monitor"
+            className={cn(
+                'hidden sm:inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1',
+                'border-emerald-400/30 bg-emerald-500/12 hover:bg-emerald-500/22',
+                'text-[10px] font-bold leading-none text-emerald-100 transition-all',
+                'shadow-sm shadow-emerald-950/25',
+            )}
+            title="ดูรายชื่อและหน้าที่พนักงานกำลังเปิดใช้งานอยู่แบบ Realtime"
+        >
+            <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-300/70" />
+            </span>
+            <span className="whitespace-nowrap">
+                Nexus <strong className="text-white text-[11px] font-black">{count ?? '-'}</strong> คน
+            </span>
+            <span className="text-emerald-300/75">→</span>
+        </Link>
+    )
+}
+
 export function DashboardShell({ children, role, userName, showBottomNav = false, profile, emergencyBanner, permissions }: DashboardShellProps) {
     const pathname = usePathname()
     const { t } = useTranslation()
@@ -384,6 +434,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                         the user menu's preferences section, freeing up ~40px
                         of horizontal real estate that was crowding iPhones. */}
                     <div className="flex items-center gap-1 relative z-[60] ml-auto">
+                        {role === 'hr_admin' && pathname?.startsWith('/hradmin') && <LivePresenceBadge />}
                         <button
                             onClick={() => window.location.reload()}
                             className="lg:hidden h-9 w-9 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 text-white active:scale-95 transition-all"
