@@ -108,7 +108,7 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'สิทธิ์การเข้าถึงระบบ', desc: 'กำหนดสิทธิ์แอดมิน', href: '/hradmin/settings/permissions', icon: ShieldCheck },
         { label: 'Audit log',             desc: 'ประวัติการแก้ไข',    href: '/hradmin/settings/audit',       icon: FileText },
         { label: 'ระบบและทรัพยากร',      desc: 'Quota + storage',    href: '/hradmin/settings/quota',       icon: Activity },
-        { label: 'ตรวจล็อกอินวันอบรม',    desc: 'ใครเข้าระบบแล้วบ้าง', href: '/hradmin/settings/login-monitor', icon: UserCheck },
+        { label: 'ผู้ใช้งานขณะนี้',        desc: 'ดูใครกำลังเปิดใช้งาน Nexus', href: '/hradmin/settings/login-monitor', icon: UserCheck },
         { label: 'Email Audit',          desc: 'ตรวจสอบประวัติอีเมล', href: '/hradmin/settings/email',        icon: MailWarning },
         { label: 'รายงาน',                desc: 'CSV exports',        href: '/hradmin/reports',              icon: FileText },
         { label: 'แบ็กอัพข้อมูล',         desc: 'Download ZIP สำรอง', href: '/hradmin/settings/backup',      icon: ShieldCheck },
