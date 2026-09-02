@@ -104,7 +104,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
                 { label: 'สิทธิ์การเข้าถึงระบบ', href: '/hradmin/settings/permissions', icon: ShieldCheck },
                 { label: 'Audit log',              href: '/hradmin/settings/audit',       icon: FileText },
                 { label: 'ระบบและทรัพยากร',       href: '/hradmin/settings/quota',       icon: Database },
-                { label: 'ตรวจล็อกอินวันอบรม',     href: '/hradmin/settings/login-monitor', icon: UserCheck },
+                { label: 'ผู้ใช้งานขณะนี้ (Live)', href: '/hradmin/settings/login-monitor', icon: UserCheck },
                 { label: 'Email Audit',            href: '/hradmin/settings/email',       icon: MailWarning },
                 { label: 'รายงาน',                href: '/hradmin/reports',              icon: FileText },
                 { label: 'แบ็กอัพข้อมูล',         href: '/hradmin/settings/backup',      icon: ShieldCheck },

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
         const body = await req.json().catch(() => null)
         const path = typeof body?.path === 'string' ? body.path : null
 
-        // Throttled update: only update DB if last_active_at was > 45 seconds ago
+        // Throttled update: only update DB if last_active_at was > 15 seconds ago
         // or if the current active path has changed.
         const { data: emp } = await supabaseAdmin
             .from('employees')
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
             const lastActive = emp.last_active_at ? new Date(emp.last_active_at) : null
             const hasPathChanged = emp.last_active_path !== path
 
-            if (!lastActive || hasPathChanged || (now.getTime() - lastActive.getTime() > 45 * 1000)) {
+            if (!lastActive || hasPathChanged || (now.getTime() - lastActive.getTime() > 15 * 1000)) {
                 await supabaseAdmin
                     .from('employees')
                     .update({ 

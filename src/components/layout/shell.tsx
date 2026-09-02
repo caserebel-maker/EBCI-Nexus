@@ -65,7 +65,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
 
     React.useEffect(() => {
         const sendHeartbeat = () => {
-            if (document.visibilityState === 'hidden') return
+            if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
             fetch('/api/portal/heartbeat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -73,7 +73,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
             }).catch(() => {})
         }
         sendHeartbeat()
-        const interval = setInterval(sendHeartbeat, 300 * 1000)
+        const interval = setInterval(sendHeartbeat, 30 * 1000) // 30s heartbeat
         const onVisibilityChange = () => {
             if (document.visibilityState === 'visible') sendHeartbeat()
         }
@@ -82,7 +82,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
             clearInterval(interval)
             document.removeEventListener('visibilitychange', onVisibilityChange)
         }
-    }, [])
+    }, [pathname])
 
     // Navigation Items — HR Admin in /portal sees employee nav (their "portal mode")
     const effectiveRole = (role === 'hr_admin' && pathname?.startsWith('/portal')) ? 'employee' : role
