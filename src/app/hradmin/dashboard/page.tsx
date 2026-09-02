@@ -4,21 +4,22 @@ import { getCurrentPermissions } from '@/lib/permissions-server'
 
 export const dynamic = 'force-dynamic'
 
-function startOf(date: Date) {
-    const d = new Date(date)
-    d.setHours(0, 0, 0, 0)
-    return d
+type AnnouncementWithImage = {
+    image_path?: string | null
+    [key: string]: unknown
 }
-function endOf(date: Date) {
-    const d = new Date(date)
-    d.setHours(23, 59, 59, 999)
-    return d
+
+type PendingApprovalItem = {
+    cancellation_requested_at?: string | null
+    submitted_at?: string | null
+    created_at?: string | null
 }
 
 export default async function AdminDashboard() {
     const now = new Date()
+    const nowMs = now.getTime()
     // Bangkok wall-clock (UTC+7)
-    const nowBkk = new Date(Date.now() + 7 * 60 * 60 * 1000)
+    const nowBkk = new Date(nowMs + 7 * 60 * 60 * 1000)
     const year = nowBkk.getUTCFullYear()
     const month = nowBkk.getUTCMonth() + 1
     const day = nowBkk.getUTCDate()
@@ -26,18 +27,21 @@ export default async function AdminDashboard() {
 
     const todayStart = `${bangkokDate}T00:00:00+07:00`
     const todayEnd = `${bangkokDate}T23:59:59.999+07:00`
-    const in30days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    const in30days = new Date(nowMs + 30 * 24 * 60 * 60 * 1000).toISOString()
     const yearStart = `${year}-01-01`
     const nextYearStart = `${year + 1}-01-01`
 
     // 12 months ago for leave stats
-    const twelveMonthsAgo = new Date(Date.now() + 7 * 60 * 60 * 1000)
+    const twelveMonthsAgo = new Date(nowMs + 7 * 60 * 60 * 1000)
     twelveMonthsAgo.setUTCMonth(twelveMonthsAgo.getUTCMonth() - 11)
     twelveMonthsAgo.setUTCDate(1)
     twelveMonthsAgo.setUTCHours(0, 0, 0, 0)
 
+    // 30 days ago for weekly attendance
+    const thirtyDaysAgo = new Date(nowMs - 30 * 24 * 60 * 60 * 1000)
+
     // 2 minutes ago for live online active users
-    const twoMinutesAgoIso = new Date(Date.now() - 2 * 60 * 1000).toISOString()
+    const twoMinutesAgoIso = new Date(nowMs - 2 * 60 * 1000).toISOString()
 
     const [
         permissions,
@@ -58,7 +62,7 @@ export default async function AdminDashboard() {
         supabaseAdmin.from('employees').select('id', { count: 'exact', head: true }).eq('status', 'active').gte('last_active_at', twoMinutesAgoIso),
 
         // All employees (include date_of_birth for birthday section)
-        supabaseAdmin.from('employees').select('id, employee_code, first_name_th, last_name_th, nickname, department, start_date, status, end_date, title, date_of_birth, is_advisor, photo_url'),
+        supabaseAdmin.from('employees').select('id, employee_code, first_name_th, last_name_th, nickname, department, start_date, status, end_date, title, date_of_birth, is_advisor, photo_url, email'),
 
         // Leaves today (approved)
         supabaseAdmin.from('leave_requests')
@@ -125,7 +129,7 @@ export default async function AdminDashboard() {
 
     // ─── Generate signed URLs for announcement images ───
     const newsWithImages = await Promise.all(
-        (newsAnnouncements ?? []).map(async (a: any) => {
+        ((newsAnnouncements ?? []) as AnnouncementWithImage[]).map(async (a) => {
             if (!a.image_path) return a
             const { data } = await supabaseAdmin.storage
                 .from('announcement-images')
@@ -204,7 +208,6 @@ export default async function AdminDashboard() {
     const weeklyMap: Record<string, { present: number; absent: number; week: string }> = {}
     const totalActiveEmployees = (employees ?? []).filter(e => e.status === 'active' && !e.is_advisor).length
     for (let i = 0; i < 5; i++) {
-        const weekStart = new Date(thirtyDaysAgo.getTime() + i * 7 * 24 * 60 * 60 * 1000)
         const key = `สัปดาห์ที่ ${i + 1}`
         weeklyMap[key] = { week: key, present: totalActiveEmployees, absent: 0 }
     }
@@ -288,8 +291,8 @@ export default async function AdminDashboard() {
     })
     const pendingPasswordCount = (pendingPasswordRequests ?? []).length
     const pendingApprovalItems = [...pendingLeaveEnriched, ...pendingWfhEnriched, ...pendingPasswordEnriched]
-        .sort((a: any, b: any) => {
-            const timeOf = (item: any) => new Date(item.cancellation_requested_at ?? item.submitted_at ?? item.created_at ?? '1970-01-01').getTime()
+        .sort((a: PendingApprovalItem, b: PendingApprovalItem) => {
+            const timeOf = (item: PendingApprovalItem) => new Date(item.cancellation_requested_at ?? item.submitted_at ?? item.created_at ?? '1970-01-01').getTime()
             return timeOf(b) - timeOf(a)
         })
         .slice(0, 8)
