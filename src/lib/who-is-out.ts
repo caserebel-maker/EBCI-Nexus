@@ -113,15 +113,26 @@ export async function fetchWhoIsOutToday(): Promise<WhoIsOutEntry[]> {
             .gte('end_date', today),
         supabaseAdmin
             .from('checkins')
-            .select('employee_id, notes')
-            .eq('type', 'field')
+            .select('employee_id, notes, type')
+            .in('type', ['field', 'wfh'])
             .gte('checked_in_at', todayBkkStartUtc)
             .lt('checked_in_at', tomorrowBkkStartUtc),
     ])
 
     const leaveRows = (leavesRes.data ?? []) as LeaveRow[]
     const wfhRows = (wfhRes.data ?? []) as WfhRow[]
-    const fieldRows = (fieldRes.data ?? []) as FieldCheckinRow[]
+    const rawCheckins = (fieldRes.data ?? []) as Array<{ employee_id: string; notes: string | null; type: string }>
+    const fieldRows: FieldCheckinRow[] = rawCheckins.filter(c => c.type === 'field').map(c => ({ employee_id: c.employee_id, notes: c.notes }))
+
+    // Also include anyone who checked in as WFH today
+    for (const c of rawCheckins.filter(c => c.type === 'wfh')) {
+        if (!wfhRows.some(w => w.employee_id === c.employee_id)) {
+            wfhRows.push({
+                employee_id: c.employee_id,
+                contact_during_wfh: null,
+            })
+        }
+    }
 
     // Collect all employee IDs we care about + look up names in one round-trip
     const allEmpIds = Array.from(new Set([

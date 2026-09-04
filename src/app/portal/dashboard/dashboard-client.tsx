@@ -46,6 +46,7 @@ interface Props {
     /** Set when today's date matches a row in the company calendar
      *  (`holidays` table). Used to render the WFH/holiday banner. */
     todayCalendarEntry: TodayCalendarEntry | null
+    onlineCount?: number
 }
 
 // "ยื่นใบลา" + "ดูสถานะลา" used to be two tiles that pointed at the same
@@ -663,7 +664,7 @@ function TodayCalendarBanner({ entry }: { entry: TodayCalendarEntry }) {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-export function PortalDashboardClient({ sessionName, employee, announcements, leaveBalances, attendanceData, todayCalendarEntry }: Props) {
+export function PortalDashboardClient({ sessionName, employee, announcements, leaveBalances, attendanceData, todayCalendarEntry, onlineCount = 0 }: Props) {
     const [openPopup, setOpenPopup] = useState<'late' | 'leave' | null>(null)
 
     // ── Attendance data ───────────────────────────────────────────────────────
@@ -685,6 +686,19 @@ export function PortalDashboardClient({ sessionName, employee, announcements, le
 
     return (
         <div className="max-w-lg mx-auto space-y-4 pb-4">
+
+            {/* Live Online Presence Pill */}
+            {onlineCount > 0 && (
+                <div className="flex items-center justify-between px-1">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-200 shadow-sm shadow-emerald-950/20">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-sm shadow-emerald-300" />
+                        </span>
+                        <span>กำลังออนไลน์ {onlineCount} คน</span>
+                    </div>
+                </div>
+            )}
 
             {/* 1. Daily greeting — desktop only (mobile shell header already shows it) */}
             <div className="hidden lg:block">

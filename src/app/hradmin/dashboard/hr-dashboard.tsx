@@ -101,10 +101,24 @@ interface Props {
     anniversaries: any[]
     weekDays: string[]
     leavesToday: any[]
+    whoIsOutToday?: WhoIsOutEntryItem[]
     urgentBanners: any[]
     newsAnnouncements: any[]
     birthdays: any[]
     canViewAttendanceInsights?: boolean
+}
+
+export interface WhoIsOutEntryItem {
+    employeeId: string
+    firstNameTh: string
+    lastNameTh: string | null
+    nickname: string | null
+    department: string | null
+    position: string | null
+    kind: 'leave' | 'wfh' | 'field'
+    statusLabel: string
+    photoUrl: string | null
+    [key: string]: any
 }
 
 function fullName(firstName: string, lastName: string, nickname?: string | null) {
@@ -424,6 +438,21 @@ const LEAVE_BADGE: Record<string, string> = {
     ordination: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
 }
 
+function getWhoIsOutBadgeStyle(kind: string, label: string): string {
+    if (kind === 'wfh') {
+        return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 font-bold'
+    }
+    if (kind === 'field') {
+        return 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+    }
+    if (label.includes('ป่วย')) return 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+    if (label.includes('กิจ')) return 'bg-pink-500/20 text-pink-300 border-pink-500/30'
+    if (label.includes('พัก')) return 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+    if (label.includes('คลอด')) return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+    if (label.includes('บวช')) return 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+    return 'bg-white/10 text-white/70 border-white/15'
+}
+
 function DayLeaveModal({ date, onClose }: { date: Date; onClose: () => void }) {
     const router = useRouter()
     const [leaves, setLeaves] = useState<any[] | null>(null)
@@ -723,7 +752,7 @@ const MONTHS_TH = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', '�
 export function HRDashboard({
     metrics, attendanceStats, leaveChartData, deptData, attendanceData,
     pendingLeaves, pendingApprovals, contractsExpiring, anniversaries,
-    weekDays, leavesToday, urgentBanners, newsAnnouncements, birthdays,
+    weekDays, leavesToday, whoIsOutToday = [], urgentBanners, newsAnnouncements, birthdays,
     canViewAttendanceInsights = false,
 }: Props) {
     const router = useRouter()
@@ -833,6 +862,7 @@ export function HRDashboard({
 
                 {/* ══ LEFT COL (2/3) ══ */}
                 <div className="xl:col-span-2 space-y-6">
+
 
                     {/* Metric Cards */}
                     <div className="grid grid-cols-2 2xl:grid-cols-4 gap-3 lg:gap-4">
@@ -991,53 +1021,69 @@ export function HRDashboard({
                         <WeekCalendar weekDays={weekDays} leavesToday={leavesToday} onDayClick={() => router.push('/hradmin/leave?tab=calendar')} />
                     </div>
 
-                    {/* ใครไม่อยู่วันนี้ (Who is out today) */}
-                    <div style={glassStyle} className="p-5">
-                        <SectionHeader title={`ใครไม่อยู่วันนี้ (${leavesToday.length})`} icon={UserX} />
-                        {leavesToday.length === 0 ? (
-                            <p className="text-sm text-white/30 italic text-center py-4">ไม่มีพนักงานลาวันนี้</p>
-                        ) : (
-                            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                                {leavesToday.map(lr => {
-                                    const emp = lr.employees
-                                    if (!emp) return null
-                                    const name = fullName(emp.first_name_th, emp.last_name_th, emp.nickname)
-                                    return (
-                                        <div 
-                                            key={lr.id} 
-                                            onClick={() => router.push(`/hradmin/employees/${emp.id}`)}
-                                            onMouseEnter={() => router.prefetch(`/hradmin/employees/${emp.id}`)}
-                                            className="flex items-center gap-2.5 py-2 px-2.5 rounded-xl hover:bg-white/5 transition-colors cursor-pointer group"
-                                        >
-                                            {emp.photo_url ? (
-                                                <img 
-                                                    src={emp.photo_url} 
-                                                    alt={emp.first_name_th ?? ''} 
-                                                    className="h-9 w-9 rounded-full object-cover border border-white/10 shrink-0"
-                                                />
-                                            ) : (
-                                                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-rose-500/80 to-purple-600/80 flex items-center justify-center text-xs font-black text-white border border-white/10 shrink-0">
-                                                    {emp.first_name_th?.charAt(0)}
+                    {/* ใครไม่อยู่วันนี้ (Who is out today: leaves + WFH) */}
+                    {(() => {
+                        const displayWhoIsOut: WhoIsOutEntryItem[] = (whoIsOutToday && whoIsOutToday.length > 0)
+                            ? whoIsOutToday
+                            : (leavesToday ?? []).map(lr => ({
+                                employeeId: lr.employees?.id ?? lr.employee_id,
+                                firstNameTh: lr.employees?.first_name_th ?? '',
+                                lastNameTh: lr.employees?.last_name_th ?? '',
+                                nickname: lr.employees?.nickname ?? null,
+                                department: lr.employees?.department ?? '',
+                                position: lr.employees?.position ?? '',
+                                photoUrl: lr.employees?.photo_url ?? null,
+                                kind: 'leave' as const,
+                                statusLabel: LEAVE_LABELS[lr.leave_type] ?? lr.leave_type,
+                            }))
+
+                        return (
+                            <div style={glassStyle} className="p-5">
+                                <SectionHeader title={`ใครไม่อยู่วันนี้ (${displayWhoIsOut.length})`} icon={UserX} />
+                                {displayWhoIsOut.length === 0 ? (
+                                    <p className="text-sm text-white/30 italic text-center py-4">ทุกคนอยู่ที่ออฟฟิศ (ไม่มีใครลาหรือ WFH วันนี้)</p>
+                                ) : (
+                                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                                        {displayWhoIsOut.map(item => {
+                                            const name = fullName(item.firstNameTh, item.lastNameTh ?? '', item.nickname)
+                                            return (
+                                                <div 
+                                                    key={`${item.kind}-${item.employeeId}`} 
+                                                    onClick={() => router.push(`/hradmin/employees/${item.employeeId}`)}
+                                                    onMouseEnter={() => router.prefetch(`/hradmin/employees/${item.employeeId}`)}
+                                                    className="flex items-center gap-2.5 py-2 px-2.5 rounded-xl hover:bg-white/5 transition-colors cursor-pointer group"
+                                                >
+                                                    {item.photoUrl ? (
+                                                        <img 
+                                                            src={item.photoUrl} 
+                                                            alt={item.firstNameTh ?? ''} 
+                                                            className="h-9 w-9 rounded-full object-cover border border-white/10 shrink-0"
+                                                        />
+                                                    ) : (
+                                                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-rose-500/80 to-purple-600/80 flex items-center justify-center text-xs font-black text-white border border-white/10 shrink-0">
+                                                            {item.firstNameTh?.charAt(0)}
+                                                        </div>
+                                                    )}
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-xs font-bold text-white group-hover:text-amber-200 transition-colors truncate">
+                                                            {name}
+                                                        </p>
+                                                        <p className="text-[10px] text-white/45 truncate mt-0.5">{item.department}</p>
+                                                    </div>
+                                                    <span className={cn(
+                                                        'text-[10px] font-black px-2.5 py-0.5 rounded-full border shrink-0',
+                                                        getWhoIsOutBadgeStyle(item.kind, item.statusLabel)
+                                                    )}>
+                                                        {item.statusLabel}
+                                                    </span>
                                                 </div>
-                                            )}
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-bold text-white group-hover:text-amber-200 transition-colors truncate">
-                                                    {name}
-                                                </p>
-                                                <p className="text-[10px] text-white/45 truncate mt-0.5">{emp.department}</p>
-                                            </div>
-                                            <span className={cn(
-                                                'text-[10px] font-black px-2.5 py-0.5 rounded-full border shrink-0',
-                                                LEAVE_BADGE[lr.leave_type] ?? 'bg-white/10 text-white/60 border-white/15'
-                                            )}>
-                                                {LEAVE_LABELS[lr.leave_type] ?? lr.leave_type}
-                                            </span>
-                                        </div>
-                                    )
-                                })}
+                                            )
+                                        })}
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
+                        )
+                    })()}
 
                     {/* Pending approvals */}
                     <div

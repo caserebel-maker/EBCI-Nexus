@@ -227,7 +227,7 @@ export default async function LiveActivityMonitorPage({ searchParams }: PageProp
                     </div>
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-3">
-                            ผู้ใช้งานขณะนี้
+                            ระบบติดตามการเข้าใช้งาน
                             <span className="text-base font-bold text-emerald-300 bg-emerald-500/20 px-3 py-0.5 rounded-full border border-emerald-400/30">
                                 ออนไลน์ {onlineCount} คน
                             </span>

@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { HRDashboard } from './hr-dashboard'
 import { getCurrentPermissions } from '@/lib/permissions-server'
+import { fetchWhoIsOutToday } from '@/lib/who-is-out'
 
 export const dynamic = 'force-dynamic'
 
@@ -310,7 +311,7 @@ export default async function AdminDashboard() {
 
     const mobileDayStart = new Date(`${bangkokDate}T00:00:00+07:00`).toISOString()
     const mobileDayEnd = new Date(`${bangkokDate}T23:59:59.999+07:00`).toISOString()
-    const [todayCheckinsResult, todayCardScansResult] = await Promise.all([
+    const [todayCheckinsResult, todayCardScansResult, whoIsOutToday] = await Promise.all([
         supabaseAdmin
             .from('checkins')
             .select('employee_id, type, checked_in_at')
@@ -322,6 +323,10 @@ export default async function AdminDashboard() {
             .select('employee_id')
             .gte('scan_time', `${bangkokDate}T00:00:00`)
             .lte('scan_time', `${bangkokDate}T23:59:59.999`),
+        fetchWhoIsOutToday().catch(err => {
+            console.error('[dashboard] fetchWhoIsOutToday failed:', err)
+            return []
+        }),
     ])
 
     const activeEmployeeIds = new Set(
@@ -380,6 +385,7 @@ export default async function AdminDashboard() {
             anniversaries={anniversaries}
             weekDays={weekDays.map(d => d.toISOString())}
             leavesToday={leavesTodayEnriched}
+            whoIsOutToday={whoIsOutToday}
             urgentBanners={announcements ?? []}
             newsAnnouncements={newsWithImages}
             birthdays={birthdays}

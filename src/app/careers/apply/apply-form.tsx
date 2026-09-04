@@ -25,6 +25,7 @@ import { Step5References } from './steps/step5-references'
 interface Props {
     initialRef: string | null
     initialStep: number
+    initialPosition: string | null
 }
 
 // ─── Tiny design tokens ─────────────────────────────────────────────────────
@@ -51,14 +52,17 @@ function buildFieldsPayload(values: ApplyFormValues): Record<string, unknown> {
 }
 
 // ─── Main ───────────────────────────────────────────────────────────────────
-export function ApplyForm({ initialRef, initialStep }: Props) {
+export function ApplyForm({ initialRef, initialStep, initialPosition }: Props) {
     const router = useRouter()
 
     // Identity pair that proves ownership to every server call
     const [applicationId, setApplicationId] = useState<string | null>(null)
     const [referenceCode, setReferenceCode] = useState<string | null>(initialRef)
 
-    const [values, setValues] = useState<ApplyFormValues>(() => defaultApplyFormValues())
+    const [values, setValues] = useState<ApplyFormValues>(() => ({
+        ...defaultApplyFormValues(),
+        position_applied: initialPosition ?? '',
+    }))
     const [step, setStep] = useState<number>(initialStep)
     const [completedSteps, setCompletedSteps] = useState<number[]>([])
 
