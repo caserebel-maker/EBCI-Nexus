@@ -651,16 +651,119 @@ export async function checkOut() {
         }
     }
 
-    if (!openCheckin) {
+    let targetCheckinId = openCheckin?.id
+
+    // If no open checkin, check if there is an already checked-out record today that can be updated (e.g. OT / continued work)
+    if (!targetCheckinId) {
+        const { data: alreadyCheckedOut } = await supabaseAdmin
+            .from('checkins')
+            .select('id, checked_out_at')
+            .eq('employee_id', employeeId)
+            .not('checked_out_at', 'is', null)
+            .gte('checked_in_at', todayRange.start)
+            .lte('checked_in_at', todayRange.end)
+            .order('checked_in_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+        if (alreadyCheckedOut) {
+            targetCheckinId = alreadyCheckedOut.id
+        }
+    }
+
+    if (!targetCheckinId) {
         return { error: 'ยังไม่ได้เช็คอินวันนี้' }
     }
 
     const { error } = await supabaseAdmin
         .from('checkins')
         .update({ checked_out_at: new Date().toISOString() })
-        .eq('id', openCheckin.id)
+        .eq('id', targetCheckinId)
 
     if (error) return { error: error.message }
+
+    // Auto-close any unreturned field trips for today
+    await supabaseAdmin
+        .from('field_trips')
+        .update({ returned_at: new Date().toISOString() })
+        .eq('employee_id', employeeId)
+        .is('returned_at', null)
+
+    revalidatePath('/portal/checkin')
+    return { success: true }
+}
+
+export async function checkOutWithMissedCheckin(payload: {
+    type?: string
+    approximateStartTime?: string
+    reason: string
+    latitude?: number | null
+    longitude?: number | null
+    accuracy?: number | null
+}) {
+    const employeeId = await getEmployeeId()
+    if (!employeeId) {
+        return { error: 'ไม่พบข้อมูลพนักงาน' }
+    }
+
+    const trimmedReason = (payload.reason ?? '').trim()
+    if (trimmedReason.length < 5) {
+        return { error: 'กรุณาระบุเหตุผลหรือหมายเหตุอย่างน้อย 5 ตัวอักษร' }
+    }
+
+    const todayRange = getBangkokTodayUtcRange()
+    const bkkToday = todayRange.dateKey
+
+    // Check if open checkin already exists
+    const { data: openCheckin } = await supabaseAdmin
+        .from('checkins')
+        .select('id')
+        .eq('employee_id', employeeId)
+        .is('checked_out_at', null)
+        .gte('checked_in_at', todayRange.start)
+        .lte('checked_in_at', todayRange.end)
+        .order('checked_in_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+    if (openCheckin) {
+        return await checkOut()
+    }
+
+    // Format start time
+    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/
+    const startTimeStr = payload.approximateStartTime && timeRegex.test(payload.approximateStartTime)
+        ? payload.approximateStartTime
+        : '08:00'
+
+    const checkedInAt = new Date(`${bkkToday}T${startTimeStr}:00+07:00`).toISOString()
+    const checkedOutAt = new Date().toISOString()
+
+    // Determine type
+    let finalType = payload.type || 'field'
+    if (finalType === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE) {
+        finalType = 'field'
+    }
+
+    const noteText = `${trimmedReason} (ลงเวลาออกงานย้อนหลังเวลาเข้า ${startTimeStr} น.)`
+
+    const { error: insertError } = await supabaseAdmin
+        .from('checkins')
+        .insert({
+            employee_id: employeeId,
+            checked_in_at: checkedInAt,
+            checked_out_at: checkedOutAt,
+            type: finalType,
+            notes: noteText,
+            latitude: payload.latitude ?? null,
+            longitude: payload.longitude ?? null,
+            accuracy_meters: payload.accuracy ?? null,
+            source: 'app',
+        })
+
+    if (insertError) {
+        return { error: 'ไม่สามารถบันทึกข้อมูลได้: ' + insertError.message }
+    }
 
     // Auto-close any unreturned field trips for today
     await supabaseAdmin

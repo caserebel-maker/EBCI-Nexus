@@ -7,7 +7,7 @@ const CheckinMap = dynamic(() => import('@/components/checkin/checkin-map').then
 import { useCallback, useState, useEffect } from 'react'
 import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut, X, Briefcase, Palmtree, IdCard, Clock, MapPinOff, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { checkIn, checkOut, startFieldTrip, endFieldTrip, requestAttendanceGpsReview } from './actions'
+import { checkIn, checkOut, checkOutWithMissedCheckin, startFieldTrip, endFieldTrip, requestAttendanceGpsReview } from './actions'
 import { haversineDistance } from '@/lib/geo'
 import { formatBangkokTime, formatBangkokDateTime } from '@/lib/datetime'
 import type { LeaveTodayInfo } from '@/lib/leave-today'
@@ -125,6 +125,12 @@ export function CheckinView({
     const [gpsReviewOpen, setGpsReviewOpen] = useState(false)
     const [gpsReviewNote, setGpsReviewNote] = useState('')
     const [gpsReviewSubmitting, setGpsReviewSubmitting] = useState(false)
+
+    // Missed morning check-in states (for staff who forgot to punch in the morning)
+    const [missedMorningModalOpen, setMissedMorningModalOpen] = useState(false)
+    const [missedMorningStartTime, setMissedMorningStartTime] = useState('08:00')
+    const [missedMorningReason, setMissedMorningReason] = useState('')
+    const [missedMorningType, setMissedMorningType] = useState<CheckInType>('field')
 
     // Late check-in tracking — declarations live here, but the actual
     // late-minutes value is computed BELOW after `isCheckedIn` is in
@@ -405,11 +411,19 @@ export function CheckinView({
             ? todayCheckin.checked_in_at 
             : new Date(`${cardScanToday!.earliestScanTime.replace(' ', 'T')}+07:00`).toISOString()
 
+        const isReCheckout = isFullyCheckedOut || isCardCheckedOut
+
         const ok = await confirm({
-            title: isCurrentlyOut ? 'สิ้นสุดการทำงานและกลับบ้านเลย?' : 'สิ้นสุดการทำงานของวันนี้?',
-            body: isCurrentlyOut 
-                ? 'คุณกำลังอยู่ระหว่างการปฏิบัติงานนอกสถานที่ ต้องการบันทึกเวลาเลิกงานและสิ้นสุดการทำงานของวันนี้ทันทีใช่หรือไม่? (ระบบจะปิดบันทึกการออกไปปฏิบัติงานข้างนอกให้อัตโนมัติ)' 
-                : 'คุณต้องการกดเช็คเอาท์เพื่อบันทึกเวลาเลิกงานและสิ้นสุดการทำงานของวันนี้ใช่หรือไม่? เมื่อบันทึกแล้วจะไม่สามารถเช็คอินซ้ำในวันเดียวกันได้',
+            title: isReCheckout
+                ? 'อัปเดตเวลาเช็คเอาท์เป็นปัจจุบัน?'
+                : isCurrentlyOut 
+                    ? 'สิ้นสุดการทำงานและกลับบ้านเลย?' 
+                    : 'สิ้นสุดการทำงานของวันนี้?',
+            body: isReCheckout
+                ? 'คุณได้บันทึกเวลาออกงานไปแล้ว ต้องการอัปเดตเวลาเช็คเอาท์เป็นเวลาปัจจุบันใช่หรือไม่? (สำหรับผู้ที่อยู่ปฏิบัติงานต่อ หรือทำงานล่วงเวลา/OT)'
+                : isCurrentlyOut 
+                    ? 'คุณกำลังอยู่ระหว่างการปฏิบัติงานนอกสถานที่ ต้องการบันทึกเวลาเลิกงานและสิ้นสุดการทำงานของวันนี้ทันทีใช่หรือไม่? (ระบบจะปิดบันทึกการออกไปปฏิบัติงานข้างนอกให้อัตโนมัติ)' 
+                    : 'คุณต้องการกดเช็คเอาท์เพื่อบันทึกเวลาเลิกงานและสิ้นสุดการทำงานของวันนี้ใช่หรือไม่? เมื่อบันทึกแล้วจะไม่สามารถเช็คอินซ้ำในวันเดียวกันได้',
             summary: (
                 <div className="space-y-1">
                     <p>⏱ เช็คอินเวลา {formatBangkokTime(checkinTime)} น.</p>
@@ -417,11 +431,17 @@ export function CheckinView({
                     {isCurrentlyOut && (
                         <p className="text-amber-300">🚙 ปลายทาง: {activeFieldTrip.purpose}</p>
                     )}
+                    {todayCheckin?.checked_out_at && (
+                        <p className="text-white/60">⏱ เช็คเอาท์เดิม: {formatBangkokTime(todayCheckin.checked_out_at)} น.</p>
+                    )}
+                    {isReCheckout && (
+                        <p className="text-emerald-300 font-semibold">⏱ เช็คเอาท์ใหม่ (ปัจจุบัน): {formatBangkokTime(new Date().toISOString())} น.</p>
+                    )}
                     <p>⌛ ระยะเวลา: {formatWorkDuration(checkinTime)}</p>
                 </div>
             ),
-            confirmLabel: 'ยืนยันเช็คเอาท์',
-            variant: 'destructive',
+            confirmLabel: isReCheckout ? 'ยืนยันอัปเดตเวลาเช็คเอาท์' : 'ยืนยันเช็คเอาท์',
+            variant: isReCheckout ? undefined : 'destructive',
         })
         if (!ok) return
 
@@ -431,7 +451,35 @@ export function CheckinView({
         if (result.error) {
             showToast('error', result.error)
         } else {
-            showToast('success', 'เช็คเอาท์สำเร็จ')
+            showToast('success', isReCheckout ? 'อัปเดตเวลาเช็คเอาท์สำเร็จ' : 'เช็คเอาท์สำเร็จ')
+            setTimeout(() => window.location.reload(), 1500)
+        }
+    }
+
+    const handleMissedMorningSubmit = async () => {
+        const trimmed = missedMorningReason.trim()
+        if (trimmed.length < 5) {
+            showToast('error', 'กรุณาระบุเหตุผลหรือหมายเหตุอย่างน้อย 5 ตัวอักษร')
+            return
+        }
+
+        setLoading(true)
+        const defaultType = outsideHeadOfficeEligible ? OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE : missedMorningType
+        const result = await checkOutWithMissedCheckin({
+            type: defaultType,
+            approximateStartTime: missedMorningStartTime || '08:00',
+            reason: trimmed,
+            latitude: gps?.lat ?? null,
+            longitude: gps?.lng ?? null,
+            accuracy: gps?.accuracy ?? null,
+        })
+        setLoading(false)
+
+        if (result.error) {
+            showToast('error', result.error)
+        } else {
+            showToast('success', 'บันทึกเวลาออกงานสำเร็จ')
+            setMissedMorningModalOpen(false)
             setTimeout(() => window.location.reload(), 1500)
         }
     }
@@ -562,6 +610,113 @@ export function CheckinView({
                 </div>
             )}
 
+            {/* Missed morning check-in modal (for staff who arrived in morning but forgot to check in) */}
+            {missedMorningModalOpen && (
+                <div
+                    className="fixed inset-0 z-[75] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150"
+                    onClick={(e) => { if (e.target === e.currentTarget && !loading) setMissedMorningModalOpen(false) }}
+                >
+                    <div className="w-full max-w-md rounded-2xl border border-amber-500/30 bg-[#161c28] p-5 text-left shadow-2xl space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                            <div className="flex items-center gap-2 text-amber-300">
+                                <Clock size={20} />
+                                <h3 className="font-bold text-base text-white">บันทึกเวลาออกงาน (ลืมเช็คอินตอนเช้า)</h3>
+                            </div>
+                            <button
+                                onClick={() => { if (!loading) setMissedMorningModalOpen(false) }}
+                                className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <p className="text-xs text-white/70 leading-relaxed">
+                            ระบบจะบันทึกเวลาเข้างานย้อนหลังตามที่คุณระบุ และบันทึกเวลาออกงานเป็นเวลาปัจจุบัน ({formatBangkokTime(new Date().toISOString())} น.)
+                        </p>
+
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-xs text-white/60 mb-1">
+                                    เวลาเข้างานจริงในช่วงเช้า <span className="text-red-400">*</span>
+                                </label>
+                                <input
+                                    type="time"
+                                    value={missedMorningStartTime}
+                                    onChange={e => setMissedMorningStartTime(e.target.value)}
+                                    className="w-full rounded-lg bg-white/10 border border-white/20 text-white text-sm px-3 py-2.5 focus:outline-none focus:border-amber-300"
+                                />
+                            </div>
+
+                            {!outsideHeadOfficeEligible && (
+                                <div>
+                                    <label className="block text-xs text-white/60 mb-1">
+                                        รูปแบบการปฏิบัติงาน
+                                    </label>
+                                    <select
+                                        value={missedMorningType}
+                                        onChange={e => setMissedMorningType(e.target.value as CheckInType)}
+                                        className="w-full rounded-lg bg-white/10 border border-white/20 text-white text-sm px-3 py-2.5 focus:outline-none focus:border-amber-300 [&>option]:bg-slate-900"
+                                    >
+                                        <option value="field">🚛 ภาคสนาม / ไซต์งาน</option>
+                                        <option value="office">🏢 ออฟฟิศ</option>
+                                        {wfhEligibility.allowed && <option value="wfh">🏠 WFH</option>}
+                                    </select>
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-xs text-white/60 mb-1">
+                                    สถานที่ / หน้างาน / เหตุผล <span className="text-red-400">*</span>
+                                </label>
+                                <textarea
+                                    value={missedMorningReason}
+                                    onChange={e => setMissedMorningReason(e.target.value)}
+                                    placeholder='เช่น "ปฏิบัติงานหน้างาน SCG แก่งคอย ลืมเปิดแอปช่วงเช้า"'
+                                    rows={3}
+                                    autoFocus
+                                    className="w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm px-3 py-2 focus:outline-none focus:border-amber-300 resize-none"
+                                />
+                                <span className={cn(
+                                    'text-[11px] block mt-1 transition-colors',
+                                    missedMorningReason.trim().length >= 5 ? 'text-emerald-300' : 'text-white/40',
+                                )}>
+                                    {missedMorningReason.trim().length >= 5
+                                        ? '✓ ระบุเหตุผลเรียบร้อย'
+                                        : `อย่างน้อย 5 ตัวอักษร (ตอนนี้ ${missedMorningReason.trim().length})`}
+                                </span>
+                            </div>
+
+                            {gpsState === 'success' && gps && (
+                                <div className="text-[11px] text-white/45 flex items-center gap-1.5 pt-1">
+                                    <MapPin size={12} className="text-emerald-400" />
+                                    <span>พิกัดปัจจุบัน: {gps.lat.toFixed(4)}, {gps.lng.toFixed(4)} (±{Math.round(gps.accuracy)} ม.)</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setMissedMorningModalOpen(false)}
+                                disabled={loading}
+                                className="flex-1 py-2.5 rounded-xl border border-white/15 bg-white/10 text-white font-semibold text-sm hover:bg-white/15 transition-colors disabled:opacity-60"
+                            >
+                                ยกเลิก
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleMissedMorningSubmit}
+                                disabled={loading || missedMorningReason.trim().length < 5}
+                                className="flex-[1.5] py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loading ? <Loader2 size={16} className="animate-spin" /> : <LogOut size={16} />}
+                                บันทึกออกงาน
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-white/15 flex items-center justify-center text-amber-300 ring-1 ring-white/25">
@@ -620,6 +775,18 @@ export function CheckinView({
                             ? 'ระบบบันทึกเวลาออกงานให้อัตโนมัติแล้ว — เดินทางกลับบ้านปลอดภัยครับ/ค่ะ' 
                             : 'ไม่ต้องเช็คอินผ่านแอปซ้ำ — ระบบจะรวมข้อมูลบัตรเข้ากับ attendance log อัตโนมัติ'}
                     </p>
+                    {isCardCheckedOut && (
+                        <div className="mt-3 pt-3 border-t border-amber-500/25 space-y-1">
+                            <button
+                                onClick={handleCheckout}
+                                disabled={loading}
+                                className="w-full py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/30 font-semibold text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+                            >
+                                <Clock size={14} />
+                                ทำงานต่อ / ทำ OT — อัปเดตเวลาเช็คเอาท์เป็นปัจจุบัน
+                            </button>
+                        </div>
+                    )}
                     {cardScanToday!.scans && cardScanToday!.scans.length > 0 && (
                         <div className="mt-4 pt-3 border-t border-emerald-500/25 text-xs text-emerald-200/75 space-y-1.5 max-w-xs">
                             <p className="font-semibold text-white/90 flex items-center gap-1.5 mb-2">
@@ -931,6 +1098,20 @@ export function CheckinView({
                     <p className="text-[11px] text-white/40 text-center mt-4">
                         ขอบคุณสำหรับการทำงานวันนี้ 🙏
                     </p>
+
+                    <div className="mt-4 pt-4 border-t border-slate-500/20 space-y-2">
+                        <button
+                            onClick={handleCheckout}
+                            disabled={loading}
+                            className="w-full py-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/30 font-semibold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+                        >
+                            {loading ? <Loader2 className="animate-spin" size={16} /> : <Clock size={16} />}
+                            อัปเดตเวลาเช็คเอาท์ (ทำงานต่อ / OT ถึงปัจจุบัน)
+                        </button>
+                        <p className="text-[11px] text-white/40 text-center">
+                            สำหรับผู้ที่อยู่เวร ปฏิบัติหน้าที่ต่อ หรือทำงานล่วงเวลา (OT) เกินเวลาที่เช็คเอาท์ไว้
+                        </p>
+                    </div>
                 </div>
             ) : (
                 <>
@@ -1166,6 +1347,11 @@ export function CheckinView({
                                             {lateTier === 3 && ' — หัวหน้าจะได้รับแจ้งเตือน'}
                                         </span>
                                     </div>
+                                    {minutesOfDayBkk >= 15 * 60 && (
+                                        <p className="text-xs text-amber-200/90 leading-relaxed">
+                                            💡 หากคุณมาปฏิบัติงานตั้งแต่เช้าแต่ลืมกดเช็คอิน ให้กดปุ่ม <strong>&ldquo;บันทึกเวลาออกงาน (ลืมเช็คอินตอนเช้า)&rdquo;</strong> ด้านล่างเพื่อไม่ให้ระบบนับว่ามาสาย
+                                        </p>
+                                    )}
                                     {lateTier >= 2 && (
                                         <div>
                                             <textarea
@@ -1183,6 +1369,33 @@ export function CheckinView({
                                             </p>
                                         </div>
                                     )}
+                                </div>
+                            )}
+
+                            {minutesOfDayBkk >= 15 * 60 && (
+                                <div className="rounded-2xl border border-amber-400/40 bg-amber-500/15 p-4 space-y-2.5">
+                                    <div className="flex items-start gap-3">
+                                        <Clock size={20} className="text-amber-300 mt-0.5 shrink-0" />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-bold text-amber-100">
+                                                เลิกงานแล้ว แต่ลืมเช็คอินตอนเช้า?
+                                            </p>
+                                            <p className="text-xs text-white/70 mt-0.5 leading-relaxed">
+                                                หากคุณมาทำงานตั้งแต่ช่วงเช้าแต่ลืมกดเช็คอิน สามารถบันทึกเวลาออกงานพร้อมระบุเวลาเข้างานย้อนหลังได้ทันที
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setMissedMorningType(outsideHeadOfficeEligible ? OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE : 'field')
+                                            setMissedMorningModalOpen(true)
+                                        }}
+                                        className="w-full py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-lg shadow-amber-500/10"
+                                    >
+                                        <LogOut size={16} />
+                                        บันทึกเวลาออกงาน (ลืมเช็คอินตอนเช้า)
+                                    </button>
                                 </div>
                             )}
 
