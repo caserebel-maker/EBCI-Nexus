@@ -3,7 +3,7 @@ import {
     CalendarDays, ClipboardCheck, ShieldCheck, MapPin, Network, Palmtree,
     ScrollText, BarChart3, Clock, Calendar, Briefcase, User,
     Wallet, CheckCircle, Database, DoorOpen, GitBranch, CalendarHeart, Home,
-    MailWarning, AlertTriangle, UserCheck, MessageSquare, ReceiptText, type LucideIcon,
+    MailWarning, AlertTriangle, UserCheck, MessageSquare, ReceiptText, Activity, type LucideIcon,
 } from 'lucide-react'
 import { ROLES, type UserRole } from './roles'
 
