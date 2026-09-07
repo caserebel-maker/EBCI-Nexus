@@ -59,10 +59,11 @@ export function CardScansView({ initialData }: Props) {
         })
     }, [search, startDate, endDate, scanType])
 
-    // Show new punches without requiring HR to refresh the page. Polling the
-    // server action keeps this reliable even if Supabase Realtime publication
-    // is disabled or the browser briefly loses its websocket connection.
+    // Keep only the newest page live. Refreshing a historical page would
+    // interrupt HR's review by replacing it with page one.
     useEffect(() => {
+        if (page !== 1) return
+
         const refreshLatest = () => {
             if (document.visibilityState === 'visible') fetchScans(1)
         }
@@ -74,7 +75,7 @@ export function CardScansView({ initialData }: Props) {
             window.clearInterval(timer)
             document.removeEventListener('visibilitychange', refreshLatest)
         }
-    }, [fetchScans])
+    }, [fetchScans, page])
 
     // Trigger search when filters change (debounced search is nice, but simple button/enter trigger or change trigger works)
     // Let's trigger fetch on filter changes directly for dates/types, and provide a search button or search trigger for keyword.
