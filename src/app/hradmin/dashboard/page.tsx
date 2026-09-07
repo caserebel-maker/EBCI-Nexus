@@ -351,6 +351,11 @@ export default async function AdminDashboard() {
             .filter(([employeeId, type]) => type === 'wfh' && !officeEmployeeIds.has(employeeId))
             .map(([employeeId]) => employeeId),
     )
+    const outsideHeadOfficeEmployeeIds = new Set(
+        Array.from(checkinMap)
+            .filter(([employeeId, type]) => (type === 'field' || type === 'outside_head_office' || type === 'onsite') && !officeEmployeeIds.has(employeeId))
+            .map(([employeeId]) => employeeId),
+    )
     const checkedInEmployeeIds = new Set([
         ...officeEmployeeIds,
         ...checkinMap.keys(),
@@ -358,6 +363,7 @@ export default async function AdminDashboard() {
     const attendanceStats = {
         officeCount: officeEmployeeIds.size,
         wfhCount: wfhEmployeeIds.size,
+        outsideHeadOfficeCount: outsideHeadOfficeEmployeeIds.size,
         checkedInCount: checkedInEmployeeIds.size,
         totalActive: activeEmployeeIds.size,
     }
