@@ -82,26 +82,11 @@ try {
         throw "HIP TIME main window was not available."
     }
 
-    # Auto Download is enabled in HIP settings, but HIP TIME can miss early
-    # morning scans until the first manual download button is pressed. Bring
-    # the window forward and click the top "ดึงข้อมูล" button once at startup.
-    #
-    # Important: do not minimize HIP to tray here. On this office PC the tray
-    # prompt can block HIP behind the scenes and prevent new scans from being
-    # downloaded into SQL, which makes Nexus show zero office check-ins.
-    [void][HipWindowAutomation]::ShowWindow($hipProcess.MainWindowHandle, 9)
-    [void][HipWindowAutomation]::SetForegroundWindow($hipProcess.MainWindowHandle)
-    Start-Sleep -Milliseconds 800
-
-    $rect = New-Object HipWindowAutomation+WindowRect
-    if ([HipWindowAutomation]::GetWindowRect($hipProcess.MainWindowHandle, [ref]$rect)) {
-        # Coordinates are relative to the HIP TIME main window measured on the
-        # "ส่งข้อมูล" tab: center of the "ดึงข้อมูล" button.
-        Invoke-LeftClick -X ($rect.Left + 526) -Y ($rect.Top + 161)
-        Write-HipAutoLog "HIP TIME is ready; clicked Download once to prime SQL sync."
-    } else {
-        Write-HipAutoLog "HIP TIME is ready, but could not resolve window bounds for startup download click."
-    }
+    # HIP's immediate Auto Download setting handles new scans without any UI
+    # clicks. Do not click fixed coordinates here: its last-opened tab can be
+    # "Export data", where the same coordinate is an unrelated Send button.
+    # Leaving HIP running also avoids the tray confirmation dialog blocking it.
+    Write-HipAutoLog "HIP TIME is ready; waiting for immediate Auto Download."
     exit 0
 }
 catch {

@@ -42,6 +42,12 @@ try {
         Write-FixLog 'Updated scheduled task EBCI_Daily_Wake_0500 to run hidden.'
     }
 
+    $watcher = Get-ScheduledTask -TaskName 'EBCI_Auto_Watcher' -ErrorAction SilentlyContinue
+    if ($watcher) {
+        Disable-ScheduledTask -TaskName 'EBCI_Auto_Watcher' | Out-Null
+        Write-FixLog 'Disabled duplicate EBCI_Auto_Watcher task; the Startup shortcut owns the office sync stack.'
+    }
+
     Write-FixLog 'PowerShell popup scheduled-task fix completed.'
 } catch {
     Write-FixLog "ERROR: $($_.Exception.Message)"
