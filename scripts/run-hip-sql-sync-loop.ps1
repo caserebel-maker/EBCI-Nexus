@@ -8,7 +8,7 @@ $LoopLog = Join-Path $RepoRoot 'hip-sql-sync-loop.log'
 $LoopPidFile = Join-Path $RepoRoot '.hip-sql-sync-loop.pid'
 $SyncLog = Join-Path $RepoRoot 'hip-sql-sync.log'
 $LockFile = Join-Path $RepoRoot '.hip-sql-sync.lock'
-$SyncIntervalSeconds = 60
+$SyncIntervalSeconds = 10
 $HealthIntervalSeconds = 60
 $LastHealthReportAt = (Get-Date).AddSeconds(-$HealthIntervalSeconds)
 
