@@ -48,6 +48,15 @@ try {
         Write-FixLog 'Disabled duplicate EBCI_Auto_Watcher task; the Startup shortcut owns the office sync stack.'
     }
 
+    $directSyncTask = Get-ScheduledTask -TaskName 'EBCI_Direct_Card_Sync' -ErrorAction SilentlyContinue
+    if ($directSyncTask) {
+        Set-TaskHidden `
+            -TaskName 'EBCI_Direct_Card_Sync' `
+            -Execute 'C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe' `
+            -Arguments '-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File "C:\EBCI-Nexus\scripts\sync-direct-fk.ps1"'
+        Write-FixLog 'Updated EBCI_Direct_Card_Sync to run hidden.'
+    }
+
     Write-FixLog 'PowerShell popup scheduled-task fix completed.'
 } catch {
     Write-FixLog "ERROR: $($_.Exception.Message)"
