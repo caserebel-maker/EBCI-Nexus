@@ -79,7 +79,7 @@ function LivePresenceBadge() {
         }
 
         load()
-        const interval = window.setInterval(load, 30 * 1000)
+        const interval = window.setInterval(load, 60 * 1000)
         return () => {
             cancelled = true
             window.clearInterval(interval)
@@ -123,7 +123,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
             }).catch(() => {})
         }
         sendHeartbeat()
-        const interval = setInterval(sendHeartbeat, 30 * 1000) // 30s heartbeat
+        const interval = setInterval(sendHeartbeat, 90 * 1000) // stays inside the 3-minute active window
         const onVisibilityChange = () => {
             if (document.visibilityState === 'visible') sendHeartbeat()
         }

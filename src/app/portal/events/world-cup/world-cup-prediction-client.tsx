@@ -160,7 +160,7 @@ export function WorldCupPredictionClient({
             }
         }
         fetchActiveCount()
-        const interval = setInterval(fetchActiveCount, 15000)
+        const interval = setInterval(fetchActiveCount, 60_000)
         return () => clearInterval(interval)
     }, [])
 

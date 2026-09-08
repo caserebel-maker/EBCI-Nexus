@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { RefreshCw } from 'lucide-react'
 
-const REFRESH_SECONDS = 10
+const REFRESH_SECONDS = 60
 
 export function AutoRefresh() {
     const router = useRouter()

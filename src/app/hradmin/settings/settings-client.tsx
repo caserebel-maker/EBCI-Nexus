@@ -112,7 +112,7 @@ export function SettingsClient({ initialLocation, canManagePasswords }: { initia
 
     useEffect(() => {
         loadSystemHealth()
-        const timer = window.setInterval(loadSystemHealth, 30_000)
+        const timer = window.setInterval(loadSystemHealth, 60_000)
         return () => window.clearInterval(timer)
     }, [loadSystemHealth])
 

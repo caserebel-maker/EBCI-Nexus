@@ -68,7 +68,7 @@ export function CardScansView({ initialData }: Props) {
             if (document.visibilityState === 'visible') fetchScans(1)
         }
 
-        const timer = window.setInterval(refreshLatest, 2000)
+        const timer = window.setInterval(refreshLatest, 30_000)
         document.addEventListener('visibilitychange', refreshLatest)
 
         return () => {
