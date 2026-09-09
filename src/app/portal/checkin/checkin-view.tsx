@@ -280,12 +280,11 @@ export function CheckinView({
         if (!ok) return
 
         setLoading(true)
-        const submitType = type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE ? 'field' : type
         const submitNotes = type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
             ? OUTSIDE_HEAD_OFFICE_DEFAULT_NOTE
             : notes
         const result = await checkIn({
-            type: submitType,
+            type,
             latitude: gps?.lat ?? null,
             longitude: gps?.lng ?? null,
             accuracy: gps?.accuracy ?? null,
@@ -1403,7 +1402,7 @@ export function CheckinView({
                                 <div className="space-y-2">
                                     <button
                                         onClick={() => handleCheckin(OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE)}
-                                        disabled={loading || gpsState !== 'success'}
+                                        disabled={loading}
                                         className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all bg-cyan-600/80 hover:bg-cyan-600 text-white border border-cyan-400/40 disabled:opacity-60 disabled:cursor-not-allowed"
                                     >
                                         {loading ? <Loader2 className="animate-spin" size={18} /> : <MapPin size={18} />}
@@ -1411,6 +1410,7 @@ export function CheckinView({
                                     </button>
                                     <p className="text-xs text-cyan-100/80 text-center">
                                         สำหรับพนักงานประจำพื้นที่นอกสำนักงานใหญ่ ไม่ต้องขอ WFH หรือเลือกภาคสนาม
+                                        {gpsState !== 'success' && ' · เช็คอินได้แม้ GPS ชั่วคราวใช้งานไม่ได้'}
                                     </p>
                                 </div>
                             ) : (

@@ -383,10 +383,16 @@ export async function checkIn(payload: CheckInPayload) {
     if (payload.type === 'field' && !hasGps) {
         return { error: 'ต้องมีสัญญาณ GPS สำหรับเช็คอินภาคสนาม — เปิด location services แล้วลองใหม่' }
     }
-    if (payload.type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE && !hasGps) {
-        return { error: 'ต้องมีสัญญาณ GPS สำหรับเช็คอินนอก Head Office — เปิด location services แล้วลองใหม่' }
-    }
-    if (hasGps && payload.accuracy !== null && payload.accuracy > 100) {
+    // Staff assigned outside Head Office are permitted to record their
+    // attendance when a phone temporarily cannot provide a location. Their
+    // designation and the standard audit trail remain on the check-in row;
+    // this exception does not apply to office or ordinary field check-ins.
+    if (
+        payload.type !== OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
+        && hasGps
+        && payload.accuracy !== null
+        && payload.accuracy > 100
+    ) {
         return { error: `สัญญาณ GPS ไม่แม่นยำพอ (${Math.round(payload.accuracy)} ม.) กรุณาไปยังที่โล่งแจ้งและลองใหม่` }
     }
 
