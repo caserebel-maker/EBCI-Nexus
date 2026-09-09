@@ -66,13 +66,13 @@ export const HALF_DAY_POLICY_RULES: LeavePolicyRule[] = [
     {
         id: 'half-morning',
         title: 'ลาครึ่งวันเช้า',
-        description: `ลาตั้งแต่ ${WORK_SCHEDULE.morningStart} - ${WORK_SCHEDULE.morningEnd} น. · ไม่ต้องเช็คอินตอนเช้า · ต้องเช็คอินตอนบ่ายก่อน ${HALF_DAY_RULES.afternoonCheckinDeadline} น.`,
+        description: `ลาตั้งแต่ ${WORK_SCHEDULE.morningStart} - ${WORK_SCHEDULE.morningEnd} น. · ไม่ต้องเช็คอินตอนเช้า · เช็คอินตอนบ่ายได้ตั้งแต่ ${WORK_SCHEDULE.afternoonStart} น.`,
         icon: '🌅',
     },
     {
         id: 'half-afternoon',
         title: 'ลาครึ่งวันบ่าย',
-        description: `ลาตั้งแต่ ${WORK_SCHEDULE.afternoonStart} - ${WORK_SCHEDULE.afternoonEnd} น. · เช็คอินตอนเช้าตามปกติ (ก่อน ${HALF_DAY_RULES.morningCheckinDeadline} น.) · ไม่ต้องเช็คอินตอนบ่าย`,
+        description: `ลาตั้งแต่ ${WORK_SCHEDULE.afternoonStart} - ${WORK_SCHEDULE.afternoonEnd} น. · เช็คอินตอนเช้าตามปกติ · ไม่ต้องเช็คอินตอนบ่าย`,
         icon: '🌇',
     },
     {

@@ -13,7 +13,7 @@ import { formatBangkokTime, formatBangkokDateTime } from '@/lib/datetime'
 import type { LeaveTodayInfo } from '@/lib/leave-today'
 import { formatScanClock, type CardScanTodayInfo } from '@/lib/card-scan-shared'
 import type { WfhEligibility } from '@/lib/wfh-eligibility-shared'
-import { WORK_SCHEDULE, HALF_DAY_RULES } from '@/lib/leave-constants'
+import { WORK_SCHEDULE } from '@/lib/leave-constants'
 import Link from 'next/link'
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog'
 import {
@@ -1130,11 +1130,28 @@ export function CheckinView({
                                 <p className="text-xs text-white/65 mt-0.5">
                                     {leaveToday.is_half_day
                                         ? leaveToday.half_day_period === 'morning'
-                                            ? `เช็คอินตอนบ่ายได้ตั้งแต่ ${WORK_SCHEDULE.afternoonStart} น. (ก่อน ${HALF_DAY_RULES.afternoonCheckinDeadline} น.)`
-                                            : `เช็คอินตอนเช้าตามปกติ ก่อน ${HALF_DAY_RULES.morningCheckinDeadline} น. · ลาได้ตั้งแต่ ${WORK_SCHEDULE.afternoonStart} น.`
+                                            ? `เช็คอินตอนบ่ายได้ตั้งแต่ ${WORK_SCHEDULE.afternoonStart} น.`
+                                            : `เช็คอินตอนเช้าตามปกติ · ลาได้ตั้งแต่ ${WORK_SCHEDULE.afternoonStart} น.`
                                         : 'ถ้าใบลาได้รับอนุมัติก่อนสิ้นวัน ระบบจะไม่นับว่าขาดงาน'}
                                 </p>
                             </div>
+                        </div>
+                    )}
+
+                    {outsideHeadOfficeEligible && (
+                        <div className="space-y-2">
+                            <button
+                                onClick={() => handleCheckin(OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE)}
+                                disabled={loading}
+                                className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all bg-cyan-600/80 hover:bg-cyan-600 text-white border border-cyan-400/40 disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                {loading ? <Loader2 className="animate-spin" size={18} /> : <MapPin size={18} />}
+                                เช็คอินนอก Head Office
+                            </button>
+                            <p className="text-xs text-cyan-100/80 text-center">
+                                สำหรับพนักงานประจำพื้นที่นอกสำนักงานใหญ่ ไม่ต้องขอ WFH หรือเลือกภาคสนาม
+                                {gpsState !== 'success' && ' · เช็คอินได้แม้ GPS ชั่วคราวใช้งานไม่ได้'}
+                            </p>
                         </div>
                     )}
 
@@ -1398,22 +1415,7 @@ export function CheckinView({
                                 </div>
                             )}
 
-                            {outsideHeadOfficeEligible ? (
-                                <div className="space-y-2">
-                                    <button
-                                        onClick={() => handleCheckin(OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE)}
-                                        disabled={loading}
-                                        className="w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all bg-cyan-600/80 hover:bg-cyan-600 text-white border border-cyan-400/40 disabled:opacity-60 disabled:cursor-not-allowed"
-                                    >
-                                        {loading ? <Loader2 className="animate-spin" size={18} /> : <MapPin size={18} />}
-                                        เช็คอินนอก Head Office
-                                    </button>
-                                    <p className="text-xs text-cyan-100/80 text-center">
-                                        สำหรับพนักงานประจำพื้นที่นอกสำนักงานใหญ่ ไม่ต้องขอ WFH หรือเลือกภาคสนาม
-                                        {gpsState !== 'success' && ' · เช็คอินได้แม้ GPS ชั่วคราวใช้งานไม่ได้'}
-                                    </p>
-                                </div>
-                            ) : (
+                            {!outsideHeadOfficeEligible && (
                                 <>
                                     {/* Office checkin button */}
                                     <button

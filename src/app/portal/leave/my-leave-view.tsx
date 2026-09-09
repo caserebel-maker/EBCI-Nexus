@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ValidationToast } from '@/components/ui/validation-toast'
-import { WORK_SCHEDULE, HALF_DAY_RULES } from '@/lib/leave-constants'
+import { WORK_SCHEDULE } from '@/lib/leave-constants'
 import { calculateWorkingLeaveDays, isWorkingDate, toEpochDay } from '@/lib/leave-days'
 
 // ── Validation field IDs + Thai labels ────────────────────────────────────────
@@ -2039,8 +2039,8 @@ function Step2Dates({
                             <Info size={12} className="mt-0.5 shrink-0 text-orange-200" />
                             <span>
                                 {halfDayPeriod === 'morning'
-                                    ? `ลาเช้า (${WORK_SCHEDULE.morningStart}-${WORK_SCHEDULE.morningEnd}) — ไม่ต้องเช็คอินตอนเช้า แต่ต้องเช็คอินตอนบ่ายก่อน ${HALF_DAY_RULES.afternoonCheckinDeadline} น.`
-                                    : `ลาบ่าย (${WORK_SCHEDULE.afternoonStart}-${WORK_SCHEDULE.afternoonEnd}) — เช็คอินตอนเช้าก่อน ${HALF_DAY_RULES.morningCheckinDeadline} น. ไม่ต้องเช็คอินตอนบ่าย`
+                                    ? `ลาเช้า (${WORK_SCHEDULE.morningStart}-${WORK_SCHEDULE.morningEnd}) — ไม่ต้องเช็คอินตอนเช้า เช็คอินตอนบ่ายได้ตั้งแต่ ${WORK_SCHEDULE.afternoonStart} น.`
+                                    : `ลาบ่าย (${WORK_SCHEDULE.afternoonStart}-${WORK_SCHEDULE.afternoonEnd}) — เช็คอินตอนเช้าตามปกติ ไม่ต้องเช็คอินตอนบ่าย`
                                 }
                             </span>
                         </div>
