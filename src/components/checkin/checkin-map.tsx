@@ -82,9 +82,16 @@ export function CheckinMap({
         localStorage.setItem('ebci_map_theme', next)
     }
 
-    const tileUrl = mapTheme === 'dark'
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+    const cartoKey = process.env.NEXT_PUBLIC_CARTO_API_KEY
+    const tileUrl = cartoKey
+        ? (mapTheme === 'dark'
+            ? `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${cartoKey}`
+            : `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${cartoKey}`)
+        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+
+    const attribution = cartoKey
+        ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 
     const circleColor = mapTheme === 'dark' ? '#fbbf24' : '#561e23'
 
@@ -105,11 +112,12 @@ export function CheckinMap({
                     zoom={17}
                     style={{ height: '100%', width: '100%' }}
                     scrollWheelZoom={false}
+                    className={mapTheme === 'dark' && !cartoKey ? 'dark-map-tiles' : ''}
                 >
                     <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                        attribution={attribution}
                         url={tileUrl}
-                        subdomains="abcd"
+                        subdomains={cartoKey ? 'abcd' : 'abc'}
                     />
                     <Circle
                         center={[officeLat, officeLng]}

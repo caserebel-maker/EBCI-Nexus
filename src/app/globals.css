@@ -432,4 +432,9 @@ body {
     background-color: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
   }
+
+  /* Leaflet dark mode tile filter (no API key required) */
+  .dark-map-tiles .leaflet-tile {
+    filter: brightness(0.7) invert(1) contrast(2.2) hue-rotate(190deg) saturate(0.4);
+  }
 }
