@@ -24,6 +24,8 @@ import { EmployeeExpensesCard } from "@/components/hradmin/employees/EmployeeExp
 import { AdjustBalanceModal } from "@/components/hradmin/leave/AdjustBalanceModal"
 import type { BalanceCell, LeaveTypeLite, EmployeeRowLite } from "@/components/hradmin/leave/types"
 import type { EmployeeAttendanceSummary } from "@/lib/attendance-summary"
+import type { EmployeeCardAttendanceMonth } from "@/lib/employee-card-attendance"
+import { CardAttendanceHistoryCard } from "@/components/hradmin/employees/CardAttendanceHistoryCard"
 import type { EmployeeExpenseBenefit } from "@/lib/employee-expense-shared"
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList
@@ -254,6 +256,7 @@ interface Props {
     balanceYear: number
     recentLeaves: LeaveRequest[]
     attendanceSummary: EmployeeAttendanceSummary
+    cardAttendanceHistory: EmployeeCardAttendanceMonth[]
     wfhStats: WfhStats
     wfhMonthly: WfhMonth[]
     allEmployees: EmployeeOption[]
@@ -535,7 +538,7 @@ function LeaveHistory({ leaves }: { leaves: LeaveRequest[] }) {
 export function EmployeeProfileView({
     employee, photoUrl, displayName, supervisorName, tenure,
     leaveBalances, balanceCells, leaveTypes, balanceYear,
-    recentLeaves, attendanceSummary, wfhStats, wfhMonthly, allEmployees, id, isHrAdmin,
+    recentLeaves, attendanceSummary, cardAttendanceHistory, wfhStats, wfhMonthly, allEmployees, id, isHrAdmin,
     contracts, canViewPayroll, salarySlips, expenseBenefits, streak,
 }: Props) {
     const router = useRouter()
@@ -1834,6 +1837,8 @@ export function EmployeeProfileView({
                     )}
                 </div>
             </div>
+
+            {isHrAdmin && <CardAttendanceHistoryCard months={cardAttendanceHistory} />}
 
             {/* ── 4b. Leave + WFH Statistics ──────────────────────────────── */}
             <div style={glass} className="p-4 shadow-xl print:hidden">

@@ -4,6 +4,7 @@ import { EmployeeProfileView } from "./employee-profile-view"
 import { getCurrentPermissions } from "@/lib/permissions-server"
 import { getSession } from "@/lib/auth"
 import { getEmployeeAttendanceSummary } from "@/lib/attendance-summary"
+import { getEmployeeCardAttendanceHistory } from "@/lib/employee-card-attendance"
 import type { BalanceCell } from "@/components/hradmin/leave/types"
 import { getStreakInfo } from "@/lib/streak"
 import { fetchEmployeeExpenses } from "@/lib/employee-expenses"
@@ -70,6 +71,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
         recentLeavesRes,
         wfhRowsRes,
         attendanceSummary,
+        cardAttendanceHistory,
         streak,
         expenseBenefits,
     ] = await Promise.all([
@@ -109,6 +111,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             .lte('start_date', yearEnd)
             .gte('end_date', yearStart),
         getEmployeeAttendanceSummary(employee.id),
+        isHrAdmin ? getEmployeeCardAttendanceHistory(employee.id) : Promise.resolve([]),
         getStreakInfo(employee.id),
         fetchEmployeeExpenses(employee.id),
     ])
@@ -355,6 +358,7 @@ export default async function EmployeeDetailPage({ params }: PageProps) {
             balanceYear={currentYear}
             recentLeaves={recentLeaves}
             attendanceSummary={attendanceSummary}
+            cardAttendanceHistory={cardAttendanceHistory}
             wfhStats={wfhStats}
             wfhMonthly={Object.values(wfhMonthly)}
             allEmployees={allEmployees}
