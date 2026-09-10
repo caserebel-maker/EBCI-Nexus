@@ -386,7 +386,7 @@ function LoginForm() {
                             </div>
                         </div>
 
-                        {/* Remember-me — extends signed cookie from 7 → 30
+                        {/* Remember-me — extends signed cookie from 7 → 90
                             days. Default checked because the user base is
                             primarily older office staff on personal/work
                             devices that don't change hands often; logging
@@ -400,7 +400,7 @@ function LoginForm() {
                                 onChange={e => setRememberMe(e.target.checked)}
                                 className="h-4 w-4 rounded border-white/30 bg-white/10 accent-[#882136]"
                             />
-                            <span>จำฉันไว้ในเครื่องนี้ (30 วัน)</span>
+                            <span>จำฉันไว้ในเครื่องนี้ (90 วัน)</span>
                         </label>
 
                         <div className="pt-4">

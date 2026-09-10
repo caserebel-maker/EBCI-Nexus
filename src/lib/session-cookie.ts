@@ -3,14 +3,13 @@ import type { SessionUser } from './auth-types'
 export const SESSION_COOKIE_NAME = 'nexus_session'
 export const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7
 /**
- * Extended lifetime when the user ticks "จำฉันไว้" at login. 30 days
- * is a balance: long enough that older staff don't get logged out
- * weekly, short enough that a forgotten device on a shared computer
- * still expires within a typical leave/quarter cycle. Same signed +
- * HMAC-verified cookie underneath; the difference is purely the `exp`
- * field on the payload + the cookie's max-age.
+ * Extended lifetime when the user ticks "จำฉันไว้" at login. The session
+ * is renewed while the person remains active, but expires after 90 days of
+ * inactivity. This avoids routine re-logins without leaving a forgotten
+ * device authorized indefinitely.
  */
-export const SESSION_COOKIE_REMEMBER_AGE_SECONDS = 60 * 60 * 24 * 30
+export const SESSION_COOKIE_REMEMBER_AGE_SECONDS = 60 * 60 * 24 * 90
+export const SESSION_COOKIE_REMEMBER_REFRESH_THRESHOLD_SECONDS = 60 * 60 * 24 * 60
 
 const SESSION_COOKIE_VERSION = 'v1'
 const HMAC_ALGORITHM = { name: 'HMAC', hash: 'SHA-256' }
@@ -83,6 +82,8 @@ function isSessionUser(value: unknown): value is SessionUser {
             candidate.sessionVersion === undefined
             || (Number.isInteger(candidate.sessionVersion) && candidate.sessionVersion >= 1)
         )
+        && (candidate.rememberMe === undefined || typeof candidate.rememberMe === 'boolean')
+        && (candidate.sessionExpiresAt === undefined || Number.isFinite(candidate.sessionExpiresAt))
 }
 
 export async function createSessionCookie(
@@ -141,6 +142,8 @@ export async function verifySessionCookie(cookieValue: string | undefined | null
             ...(payload.email ? { email: payload.email } : {}),
             ...(payload.employeeId ? { employeeId: payload.employeeId } : {}),
             ...(payload.sessionVersion ? { sessionVersion: payload.sessionVersion } : {}),
+            ...(payload.rememberMe ? { rememberMe: true } : {}),
+            sessionExpiresAt: payload.exp,
         }
     } catch {
         return null

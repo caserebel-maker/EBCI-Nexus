@@ -223,7 +223,7 @@ export async function POST(request: Request) {
             password,
             redirectTo: requestedRedirect,
             // "จำฉันไว้" checkbox — extends the cookie max-age + the
-            // signed payload's `exp` from 7 days to 30 days. Same
+            // signed payload's `exp` from 7 days to 90 days. Same
             // hardening (httpOnly, secure, sameSite=lax, HMAC sig);
             // only the lifetime changes.
             rememberMe,
@@ -363,6 +363,7 @@ export async function POST(request: Request) {
                 email: data.user.email ?? emailLower,
                 employeeId,
                 sessionVersion,
+                rememberMe: wantsRemember,
             },
             { expiresInSeconds: sessionLifetime },
         )

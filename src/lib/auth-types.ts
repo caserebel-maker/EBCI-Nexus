@@ -8,4 +8,6 @@ export interface SessionUser {
     email?: string
     employeeId?: string // linked employee record id
     sessionVersion?: number
+    rememberMe?: boolean
+    sessionExpiresAt?: number
 }
