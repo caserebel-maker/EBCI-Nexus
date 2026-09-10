@@ -762,6 +762,7 @@ export async function GET(req: NextRequest) {
                 const primaryLeave = dayLeaves[0] ?? null
                 const primaryWfh = dayWfh[0] ?? null
                 const approver = primaryLeave?.approver_id ? employeeById.get(primaryLeave.approver_id) : null
+                const currentApprover = primaryLeave?.current_approver_id ? employeeById.get(primaryLeave.current_approver_id) : approver
                 const wfhApprover = primaryWfh?.approver_id ? employeeById.get(primaryWfh.approver_id) : null
 
                 const row = [
