@@ -345,7 +345,7 @@ export function AttendanceView({ initialDate, initialData, employees }: Props) {
                 ))}
             </div>
 
-            <ExportAttendanceModal open={isExportOpen} onClose={() => setIsExportOpen(false)} employees={employees} />
+            <ExportAttendanceModal open={isExportOpen} onClose={() => setIsExportOpen(false)} employees={employees} currentDate={date} />
             <HrNoteModal
                 key={noteTarget?.employeeId ?? 'hr-note-empty'}
                 date={date}
