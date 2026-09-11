@@ -119,15 +119,24 @@ function mapEmployeeCode(code: string): string {
     if (['010466', '010464', '10466', '10464', '0466', '0464', '466', '464'].includes(compact)) {
         return '466-64'
     }
+    // Map Khanittha (Cream) Sarasureeporn's physical card codes to her DB employee_code '436-62'
+    if (['748867', '48867', '048867', '488'].includes(compact) || compact === '48867' || trimmed === '488-67') {
+        return '436-62'
+    }
     // Pattern: 751369 -> 513-69 (remove leading 7, then format XXX-YY)
     if (compact.length === 6 && compact.startsWith('7')) {
         const slice = compact.slice(1)
-        return `${slice.slice(0, 3)}-${slice.slice(3)}`
+        const mapped = `${slice.slice(0, 3)}-${slice.slice(3)}`
+        if (mapped === '488-67') return '436-62'
+        return mapped
     }
     // Pattern: 51369 -> 513-69 (format XXX-YY directly)
     if (compact.length === 5 && /^\d{5}$/.test(compact)) {
-        return `${compact.slice(0, 3)}-${compact.slice(3)}`
+        const mapped = `${compact.slice(0, 3)}-${compact.slice(3)}`
+        if (mapped === '488-67') return '436-62'
+        return mapped
     }
+    if (trimmed === '488-67') return '436-62'
     return trimmed
 }
 

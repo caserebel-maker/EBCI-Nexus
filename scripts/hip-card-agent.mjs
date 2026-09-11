@@ -226,6 +226,10 @@ function mapSpecialHipCode(raw) {
     if (['010466', '010464', '10466', '10464', '0466', '0464', '466', '464'].includes(compact)) {
         return '466-64'
     }
+    // Khanittha "Cream" Sarasureeporn's physical card IDs (48867 / 748867 / 488-67) -> DB employee_code '436-62'
+    if (['748867', '48867', '048867', '488', '488-67'].includes(compact) || compact === '48867' || value === '488-67') {
+        return '436-62'
+    }
     return null
 }
 

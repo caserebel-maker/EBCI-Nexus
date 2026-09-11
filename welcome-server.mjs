@@ -132,11 +132,17 @@ async function pollForNewScans() {
 
         // Derive employee code
         let empCode = String(enrollnumber || '').trim()
-        if (/^7\d{5}$/.test(empCode)) {
+        if (['010466', '010464', '10466', '10464', '0466', '0464', '466', '464', '466-64'].includes(empCode.replace(/[\s-]/g, ''))) {
+            empCode = '466-64'
+        } else if (['748867', '48867', '048867', '488', '488-67'].includes(empCode.replace(/[\s-]/g, '')) || empCode === '488-67') {
+            empCode = '436-62'
+        } else if (/^7\d{5}$/.test(empCode)) {
             const code = empCode.slice(1)
             empCode = `${code.slice(0, 3)}-${code.slice(3)}`
+            if (empCode === '488-67') empCode = '436-62'
         } else if (/^\d{5}$/.test(empCode)) {
             empCode = `${empCode.slice(0, 3)}-${empCode.slice(3)}`
+            if (empCode === '488-67') empCode = '436-62'
         }
 
         // Try direct Supabase lookup first
