@@ -503,36 +503,54 @@ async function runWatch() {
 
 async function runSqlSync() {
     const codeMap = loadCodeMap()
-    const state = loadState()
-    const lastSqlId = Number(state.last_sql_transcantime_id ?? 0)
-    const rows = await queryHipSql(lastSqlId)
-    const scans = rows
-        .map(row => normalizeSqlScan(row, codeMap))
-        .filter(Boolean)
+    let state = loadState()
+    let lastSqlId = args.resync !== undefined
+        ? 0
+        : Number(args.fromId ?? args['from-id'] ?? state.last_sql_transcantime_id ?? 0)
 
-    console.log(`[hip-sql-sync] fetched=${rows.length} scans=${scans.length} last_id=${lastSqlId}`)
-    const result = await postScans(scans)
-    if (result?.summary) {
-        console.log('[hip-sql-sync] webhook summary:', result.summary)
-        if (config.verbose && result.outcomes) {
-            console.log('[hip-sql-sync] webhook outcomes:', result.outcomes)
+    const isDrainMode = args.resync !== undefined || args.drain !== undefined
+    let totalFetched = 0
+    let totalInserted = 0
+
+    do {
+        const rows = await queryHipSql(lastSqlId)
+        if (rows.length === 0) break
+
+        const scans = rows
+            .map(row => normalizeSqlScan(row, codeMap))
+            .filter(Boolean)
+
+        console.log(`[hip-sql-sync] fetched=${rows.length} scans=${scans.length} last_id=${lastSqlId}`)
+        const result = await postScans(scans)
+        if (result?.summary) {
+            console.log('[hip-sql-sync] webhook summary:', result.summary)
+            totalInserted += (result.summary.inserted ?? 0)
+            if (config.verbose && result.outcomes) {
+                console.log('[hip-sql-sync] webhook outcomes:', result.outcomes)
+            }
+        } else {
+            console.log('[hip-sql-sync] webhook result:', result)
         }
-    } else {
-        console.log('[hip-sql-sync] webhook result:', result)
-    }
 
-    const maxId = rows.reduce((max, row) => Math.max(max, Number(row.id) || 0), lastSqlId)
-    if (!config.dryRun && maxId > lastSqlId) {
-        saveState({
-            ...state,
-            last_sql_transcantime_id: maxId,
-            updated_at: new Date().toISOString(),
-        })
-    }
+        const maxId = rows.reduce((max, row) => Math.max(max, Number(row.id) || 0), lastSqlId)
+        if (!config.dryRun && maxId > lastSqlId) {
+            state = {
+                ...state,
+                last_sql_transcantime_id: maxId,
+                updated_at: new Date().toISOString(),
+            }
+            saveState(state)
+        }
 
-    if (!config.once) {
-        console.log('[hip-sql-sync] done. Run again, or schedule this command every 1-5 minutes.')
-    }
+        if (maxId <= lastSqlId) break
+        lastSqlId = maxId
+        totalFetched += rows.length
+
+        // If not in drain/resync mode and once is requested, stop after one batch
+        if (config.once && !isDrainMode) break
+    } while (isDrainMode)
+
+    console.log(`[hip-sql-sync] sync finished. Total fetched=${totalFetched}, newly inserted=${totalInserted}`)
 }
 
 async function runCapture() {
