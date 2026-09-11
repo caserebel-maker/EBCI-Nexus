@@ -8,10 +8,8 @@ Write-Host "==========================================================" -Foregro
 Write-Host "  EBCI Nexus - HIP Card Scan Resync (ดึงข้อมูลย้อนหลัง)" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
-# Remove lock if exists
-if (Test-Path $LockFile) {
-    Remove-Item -LiteralPath $LockFile -Force -ErrorAction SilentlyContinue
-}
+# Set lock file so background loop skips during resync
+New-Item -Path $LockFile -ItemType File -Force | Out-Null
 
 Push-Location -LiteralPath $RepoRoot
 try {
