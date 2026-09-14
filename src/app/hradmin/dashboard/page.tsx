@@ -88,7 +88,7 @@ export default async function AdminDashboard() {
 
         // Pending leave actions (latest)
         supabaseAdmin.from('leave_requests')
-            .select('id, employee_id, leave_type:leave_type_id, start_date, end_date, total_days, reason, status, submitted_at, created_at, cancellation_reason, cancellation_requested_at')
+            .select('id, employee_id, leave_type:leave_type_id, start_date, end_date, total_days, reason, status, submitted_at, created_at, cancellation_reason, cancellation_requested_at, employee:employees!leave_requests_employee_id_fkey(id, employee_code, first_name_th, last_name_th, nickname)')
             .in('status', ['pending', 'cancellation_requested'])
             .gte('start_date', yearStart)
             .lt('start_date', nextYearStart)
@@ -97,7 +97,7 @@ export default async function AdminDashboard() {
 
         // Pending WFH actions (latest)
         supabaseAdmin.from('wfh_requests')
-            .select('id, reference_code, employee_id, start_date, end_date, total_days, reason, status, submitted_at, created_at', { count: 'exact' })
+            .select('id, reference_code, employee_id, start_date, end_date, total_days, reason, status, submitted_at, created_at, employee:employees!wfh_requests_employee_id_fkey(id, employee_code, first_name_th, last_name_th, nickname)', { count: 'exact' })
             .eq('status', 'pending')
             .gte('start_date', yearStart)
             .lt('start_date', nextYearStart)
@@ -116,9 +116,9 @@ export default async function AdminDashboard() {
 
         // Pending password change requests (for Super Admin)
         supabaseAdmin.from('password_change_requests')
-            .select('id, user_id, email, source, created_at, status')
+            .select('id, user_id, email, source, requested_at, status')
             .eq('status', 'pending')
-            .order('created_at', { ascending: false })
+            .order('requested_at', { ascending: false })
             .limit(10),
     ])
 
@@ -265,15 +265,15 @@ export default async function AdminDashboard() {
     const pendingLeaveRequestCount = pendingLeaveRows.filter(lr => lr.status === 'pending').length
     const pendingLeaveCancellationCount = pendingLeaveRows.filter(lr => lr.status === 'cancellation_requested').length
     const pendingWfhCount = pendingWfhTotal ?? (pendingWfhRequests ?? []).length
-    const pendingLeaveEnriched = (pendingLeaves ?? []).map(lr => ({
+    const pendingLeaveEnriched = (pendingLeaves ?? []).map((lr: any) => ({
         ...lr,
         kind: 'leave' as const,
-        employee: empMap[lr.employee_id] ?? null,
+        employee: lr.employee ?? empMap[lr.employee_id] ?? null,
     }))
-    const pendingWfhEnriched = (pendingWfhRequests ?? []).map(wfh => ({
+    const pendingWfhEnriched = (pendingWfhRequests ?? []).map((wfh: any) => ({
         ...wfh,
         kind: 'wfh' as const,
-        employee: empMap[wfh.employee_id] ?? null,
+        employee: wfh.employee ?? empMap[wfh.employee_id] ?? null,
     }))
     const pendingPasswordEnriched = (pendingPasswordRequests ?? []).map(pr => {
         const empByUserId = (employees ?? []).find(e => e.id === pr.user_id)

@@ -636,8 +636,9 @@ function PendingRow({ item, onDone, onShowToast }: { item: any, onDone: (item: a
     const isPasswordReq = item.kind === 'password_request'
     const isWfh = item.kind === 'wfh'
     const isCancellation = !isWfh && !isPasswordReq && item.status === 'cancellation_requested'
-    const empName = item.employee
-        ? `${item.employee.first_name_th} ${item.employee.last_name_th}${item.employee.nickname ? ` (${item.employee.nickname})` : ''}`
+    const emp = item.employee
+    const empName = emp
+        ? (`${emp.first_name_th ?? ''} ${emp.last_name_th ?? ''}`.trim() + (emp.nickname ? ` (${emp.nickname})` : '')).trim() || (item.email ?? 'ไม่ทราบชื่อ')
         : (item.email ?? 'ไม่ทราบชื่อ')
     const leaveTypeLabel = getLeaveTypeLabel(item.leave_type)
     const dateLabel = isWfh
