@@ -28,6 +28,20 @@ function priorityLabelTh(priority: string): string {
     }
 }
 
+function parseExpiresAt(input: string | null): string | null {
+    if (!input) return null
+    let normalized = input.trim()
+    const match = normalized.match(/^(\d{4})-(.+)$/)
+    if (match) {
+        const year = parseInt(match[1], 10)
+        if (year > 2400) {
+            normalized = `${year - 543}-${match[2]}`
+        }
+    }
+    const d = new Date(normalized + 'T23:59:59')
+    return isNaN(d.getTime()) ? null : d.toISOString()
+}
+
 export async function publishAnnouncement(formData: FormData) {
     const session = await getSession()
     if (!session || session.role !== 'hr_admin') {
@@ -41,7 +55,7 @@ export async function publishAnnouncement(formData: FormData) {
     const expiresInput = formData.get('expires_at') as string | null
 
     if (!headline || !content || !priority) {
-        return { error: 'Missing required fields' }
+        return { error: 'กรุณากรอกข้อมูลให้ครบถ้วน' }
     }
 
     // Prefer employee id (natural join with employees.id); fall back to
@@ -51,7 +65,7 @@ export async function publishAnnouncement(formData: FormData) {
     // Default: emergency/urgent → 7 days, others → null (no auto-expire)
     let expiresAt: string | null = null
     if (expiresInput) {
-        expiresAt = new Date(expiresInput + 'T23:59:59').toISOString()
+        expiresAt = parseExpiresAt(expiresInput)
     } else if (priority === 'emergency' || priority === 'urgent') {
         const d = new Date()
         d.setDate(d.getDate() + 7)
@@ -250,7 +264,7 @@ export async function updateAnnouncement(id: string, formData: FormData) {
 
     let expiresAt: string | null = null
     if (expiresInput) {
-        expiresAt = new Date(expiresInput + 'T23:59:59').toISOString()
+        expiresAt = parseExpiresAt(expiresInput)
     } else if (priority === 'emergency' || priority === 'urgent') {
         const d = new Date()
         d.setDate(d.getDate() + 7)

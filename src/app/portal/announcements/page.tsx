@@ -54,8 +54,17 @@ export default async function AnnouncementsListPage({
         .order('publish_date', { ascending: false })
         .limit(50)
 
-    const activeCreatorMap = await resolveCreators((activeRows ?? []).map(a => a.created_by as string | null))
-    const active = (activeRows ?? []).map(a => toViewItem(a, activeCreatorMap))
+    const filteredActiveRows = (activeRows ?? []).filter(a => {
+        if (!a.expires_at) return true
+        let exp = String(a.expires_at)
+        const match = exp.match(/^(\d{4})-(.+)$/)
+        if (match && parseInt(match[1], 10) > 2400) {
+            exp = `${parseInt(match[1], 10) - 543}-${match[2]}`
+        }
+        return new Date(exp).getTime() > Date.now()
+    })
+    const activeCreatorMap = await resolveCreators(filteredActiveRows.map(a => a.created_by as string | null))
+    const active = filteredActiveRows.map(a => toViewItem(a, activeCreatorMap))
 
     // Archive = published + expired (expires_at <= NOW) — paginated
     const from = (requestedPage - 1) * ARCHIVE_PAGE_SIZE

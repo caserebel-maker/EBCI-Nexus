@@ -205,7 +205,16 @@ export default async function PortalDashboardPage() {
         const PRIORITY_WEIGHT: Record<string, number> = {
             promote: 0, internal: 1,
         }
-        const sorted = (rows ?? []).slice().sort((a, b) => {
+        const validRows = (rows ?? []).filter(ann => {
+            if (!ann.expires_at) return true
+            let exp = String(ann.expires_at)
+            const match = exp.match(/^(\d{4})-(.+)$/)
+            if (match && parseInt(match[1], 10) > 2400) {
+                exp = `${parseInt(match[1], 10) - 543}-${match[2]}`
+            }
+            return new Date(exp).getTime() > Date.now()
+        })
+        const sorted = validRows.sort((a, b) => {
             const wa = PRIORITY_WEIGHT[a.priority as string] ?? 9
             const wb = PRIORITY_WEIGHT[b.priority as string] ?? 9
             if (wa !== wb) return wa - wb
