@@ -40,9 +40,21 @@ export async function middleware(request: NextRequest) {
         return response
     }
 
-    // ── 3. Already logged in, trying to visit /login → go home ───────────────
+    // ── 3. Visiting /login ───────────────────────────────────────────────────
     if (pathname === '/login') {
-        return NextResponse.redirect(new URL(ROLE_CONFIG[role].homePath, request.url))
+        // Never bounce /login to homePath. If a session was invalidated in the DB
+        // (e.g. password reset / admin session revoke), server components redirect
+        // to /login. Bouncing back to homePath creates an infinite redirect loop (ERR_TOO_MANY_REDIRECTS).
+        // Instead, clear the stale session cookie and allow the user to view /login cleanly.
+        const response = NextResponse.next()
+        response.cookies.delete(SESSION_COOKIE_NAME)
+        response.cookies.set(SESSION_COOKIE_NAME, '', {
+            path: '/',
+            maxAge: 0,
+            httpOnly: true,
+            sameSite: 'lax',
+        })
+        return response
     }
 
     // ── 4. Role-based access control ─────────────────────────────────────────
