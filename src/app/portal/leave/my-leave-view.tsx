@@ -2080,7 +2080,7 @@ function Step2Dates({
                         <AlertCircle size={16} className="mt-0.5 shrink-0" />
                         <div className="min-w-0 flex-1">
                             <p className="text-sm font-black leading-snug">
-                                ลาพักร้อนควรยื่นล่วงหน้าอย่างน้อย {type.advance_notice_days ?? 3} วัน
+                                ลาพักร้อนควรยื่นล่วงหน้าอย่างน้อย {type.advance_notice_days ?? 1} วัน
                             </p>
                             <p className="mt-0.5 text-xs font-semibold leading-snug text-black/75">
                                 กรณีนี้สามารถส่งคำขอได้ แต่ต้องระบุเหตุผลประกอบเพื่อให้ผู้อนุมัติพิจารณาเป็นกรณีพิเศษ
