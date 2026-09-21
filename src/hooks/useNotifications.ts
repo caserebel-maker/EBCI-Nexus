@@ -29,13 +29,13 @@ export interface NotificationRow {
 // Keep the bell useful without burning Vercel free-tier function CPU from
 // always-open admin/portal tabs. The dropdown still refreshes immediately
 // when opened, so a slower badge poll is acceptable.
-const POLL_INTERVAL_MS = 5 * 60_000
+const POLL_INTERVAL_MS = 10 * 60_000
 
 /**
  * Notification center state + actions.
  *
  * Invariants:
- *   - `count` is kept fresh for the badge (polled every 5 minutes
+ *   - `count` is kept fresh for the badge (polled every 10 minutes
  *     when the tab is visible; paused when hidden).
  *   - `items` is loaded lazily the first time the dropdown opens.
  *     Call `refetch()` any time it needs to re-load (e.g. after the

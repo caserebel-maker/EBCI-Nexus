@@ -78,11 +78,19 @@ function LivePresenceBadge() {
             }
         }
 
-        load()
-        const interval = window.setInterval(load, 60 * 1000)
+        // Presence is an operational hint, not a live trading screen. Keep
+        // it fresh while HR is looking at it without polling every minute.
+        const refreshWhenVisible = () => {
+            if (document.visibilityState === 'visible') void load()
+        }
+
+        refreshWhenVisible()
+        const interval = window.setInterval(refreshWhenVisible, 5 * 60_000)
+        document.addEventListener('visibilitychange', refreshWhenVisible)
         return () => {
             cancelled = true
             window.clearInterval(interval)
+            document.removeEventListener('visibilitychange', refreshWhenVisible)
         }
     }, [])
 
@@ -112,24 +120,40 @@ function LivePresenceBadge() {
 export function DashboardShell({ children, role, userName, showBottomNav = false, profile, emergencyBanner, permissions }: DashboardShellProps) {
     const pathname = usePathname()
     const { t } = useTranslation()
+    const lastHeartbeatAt = React.useRef(0)
 
     React.useEffect(() => {
-        const sendHeartbeat = () => {
+        const sendHeartbeat = (force = false) => {
             if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+
+            const now = Date.now()
+            // A tab left open without interaction is not an actively used
+            // session. Activity can refresh presence at most once per five
+            // minutes, while route changes still register immediately.
+            if (!force && now - lastHeartbeatAt.current < 5 * 60_000) return
+            lastHeartbeatAt.current = now
+
             fetch('/api/portal/heartbeat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ path: window.location.pathname })
             }).catch(() => {})
         }
-        sendHeartbeat()
-        const interval = setInterval(sendHeartbeat, 90 * 1000) // stays inside the 3-minute active window
+
+        sendHeartbeat(true)
+        const onActivity = () => sendHeartbeat()
         const onVisibilityChange = () => {
             if (document.visibilityState === 'visible') sendHeartbeat()
         }
+
+        window.addEventListener('pointerdown', onActivity, { passive: true })
+        window.addEventListener('keydown', onActivity)
+        window.addEventListener('touchstart', onActivity, { passive: true })
         document.addEventListener('visibilitychange', onVisibilityChange)
         return () => {
-            clearInterval(interval)
+            window.removeEventListener('pointerdown', onActivity)
+            window.removeEventListener('keydown', onActivity)
+            window.removeEventListener('touchstart', onActivity)
             document.removeEventListener('visibilitychange', onVisibilityChange)
         }
     }, [pathname])

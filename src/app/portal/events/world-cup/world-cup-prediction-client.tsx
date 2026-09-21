@@ -159,9 +159,17 @@ export function WorldCupPredictionClient({
                 console.error('Error fetching active count:', e)
             }
         }
-        fetchActiveCount()
-        const interval = setInterval(fetchActiveCount, 60_000)
-        return () => clearInterval(interval)
+        const refreshWhenVisible = () => {
+            if (document.visibilityState === 'visible') void fetchActiveCount()
+        }
+
+        refreshWhenVisible()
+        const interval = setInterval(refreshWhenVisible, 5 * 60_000)
+        document.addEventListener('visibilitychange', refreshWhenVisible)
+        return () => {
+            clearInterval(interval)
+            document.removeEventListener('visibilitychange', refreshWhenVisible)
+        }
     }, [])
 
     useEffect(() => {

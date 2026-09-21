@@ -8,8 +8,10 @@ export async function GET(req: NextRequest) {
         const path = req.nextUrl.searchParams.get('path')
         const scope = req.nextUrl.searchParams.get('scope')
 
-        // Active threshold: past 3 minutes (180 seconds)
-        const threshold = new Date(Date.now() - 3 * 60 * 1000).toISOString()
+        // Presence updates are activity-driven and throttled to five minutes.
+        // A wider window keeps the HR indicator useful without requiring a
+        // continuous background timer from every open tab.
+        const threshold = new Date(Date.now() - 15 * 60 * 1000).toISOString()
 
         let query = supabaseAdmin
             .from('employees')

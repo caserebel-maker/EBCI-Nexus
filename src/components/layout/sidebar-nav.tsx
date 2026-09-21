@@ -11,7 +11,7 @@ import { useTranslation } from '@/contexts/language-context'
 const STORAGE_KEY = 'nexus:sidebar:expanded'
 // Pending approvals are soft state; refresh on navigation/open plus a light
 // background poll so open tabs do not drain Vercel Fluid Active CPU.
-const PENDING_POLL_MS = 5 * 60_000
+const PENDING_POLL_MS = 10 * 60_000
 
 /**
  * Poll `/api/leave/pending-count` for the approver badge. Pauses when

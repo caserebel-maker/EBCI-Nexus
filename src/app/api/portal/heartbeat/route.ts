@@ -21,27 +21,18 @@ export async function POST(req: NextRequest) {
         const body = await req.json().catch(() => null)
         const path = typeof body?.path === 'string' ? body.path : null
 
-        // Throttled update: only update DB if last_active_at was > 15 seconds ago
-        // or if the current active path has changed.
-        const { data: emp } = await supabaseAdmin
+        // Client activity is throttled to five minutes. Keep this endpoint to
+        // one database operation so a normal presence update is inexpensive.
+        const { error: updateError } = await supabaseAdmin
             .from('employees')
-            .select('last_active_at, last_active_path')
+            .update({
+                last_active_at: now.toISOString(),
+                last_active_path: path,
+            })
             .eq('id', employeeId)
-            .single()
 
-        if (emp) {
-            const lastActive = emp.last_active_at ? new Date(emp.last_active_at) : null
-            const hasPathChanged = emp.last_active_path !== path
-
-            if (!lastActive || hasPathChanged || (now.getTime() - lastActive.getTime() > 15 * 1000)) {
-                await supabaseAdmin
-                    .from('employees')
-                    .update({ 
-                        last_active_at: now.toISOString(),
-                        last_active_path: path
-                    })
-                    .eq('id', employeeId)
-            }
+        if (updateError) {
+            console.error('[heartbeat] employee update error:', updateError)
         }
 
         const response = NextResponse.json({ success: true })

@@ -213,7 +213,7 @@ function bucketIntoGroups(items: MoreItem[]): MoreGroup[] {
     return groups
 }
 
-const PENDING_POLL_MS = 5 * 60_000
+const PENDING_POLL_MS = 10 * 60_000
 
 function usePendingApprovalCount(): number {
     const [count, setCount] = useState(0)
