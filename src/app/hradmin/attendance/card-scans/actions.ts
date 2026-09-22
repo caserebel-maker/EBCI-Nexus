@@ -11,6 +11,9 @@ export interface CardScanWithEmployee {
     device_id: string | null
     raw_data: any
     created_at: string
+    imported_at?: string | null
+    imported_by?: string | null
+    source_file?: string | null
     employee: {
         first_name_th: string
         last_name_th: string
@@ -100,9 +103,9 @@ export async function getCardScans(params: {
         const totalPages = Math.ceil(totalCount / limit)
 
         const formattedScans: CardScanWithEmployee[] = (data ?? []).map((s: any) => {
-            const timePart = (s.scan_time?.split('T')[1] || '').trim()
-            const isAfter1630 = timePart >= '16:30:00'
-            const effectiveType = (s.scan_type === 'out' || isAfter1630) ? 'out' : (s.scan_type === 'in' ? 'in' : (isAfter1630 ? 'out' : 'in'))
+            const timePart = (s.scan_time?.split(/[T ]/)[1] || '').trim()
+            const isAfter1530 = timePart >= '15:30:00'
+            const effectiveType = (s.scan_type === 'out' || isAfter1530) ? 'out' : (s.scan_type === 'in' ? 'in' : (isAfter1530 ? 'out' : 'in'))
             return {
                 ...s,
                 scan_type: effectiveType,

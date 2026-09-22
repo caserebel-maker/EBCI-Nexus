@@ -38,7 +38,7 @@ function normalizeAction(raw?: string, time?: string): 'in' | 'out' | null {
     if (['out', 'check-out', 'checkout', 'ออก', 'ออกงาน', '0'].includes(s)) return 'out'
     if (time) {
         const trimmedTime = time.trim()
-        if (trimmedTime >= '16:20') return 'out'
+        if (trimmedTime >= '15:30') return 'out'
         if (trimmedTime < '12:00') return 'in'
     }
     return null

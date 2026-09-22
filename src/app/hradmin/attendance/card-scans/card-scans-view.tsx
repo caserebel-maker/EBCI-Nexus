@@ -111,9 +111,11 @@ export function CardScansView({ initialData }: Props) {
             const empName = s.employee ? `${s.employee.first_name_th} ${s.employee.last_name_th}` : '—'
             const nickname = s.employee?.nickname ? `(${s.employee.nickname})` : ''
             const dept = s.employee?.department ?? '—'
-            const timePart = (s.scan_time?.split('T')[1] || '').trim()
-            const isAfter1630 = timePart >= '16:30:00'
-            const isOut = s.scan_type === 'out' || isAfter1630
+            const pos = s.employee?.position ?? '—'
+            const sqlId = s.id ?? '—'
+            const timePart = (s.scan_time?.split(/[T ]/)[1] || '').trim()
+            const isAfter1530 = timePart >= '15:30:00'
+            const isOut = s.scan_type === 'out' || isAfter1530
             const type = isOut ? 'ออก (OUT)' : 'เข้า (IN)'
             
             return [
@@ -316,13 +318,13 @@ export function CardScansView({ initialData }: Props) {
                                             </td>
                                             <td className="px-4 py-3 whitespace-nowrap">
                                                 {(() => {
-                                                    const timePart = (scan.scan_time?.split('T')[1] || '').trim()
-                                                    const isAfter1630 = timePart >= '16:30:00'
-                                                    const isOut = scan.scan_type === 'out' || isAfter1630
+                                                    const timePart = (scan.scan_time?.split(/[T ]/)[1] || '').trim()
+                                                    const isAfter1530 = timePart >= '15:30:00'
+                                                    const isOut = scan.scan_type === 'out' || isAfter1530
                                                     if (isOut) {
                                                         return (
                                                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 border border-amber-500/25 text-amber-300">
-                                                                ออก (OUT{isAfter1630 ? ' · ออโต้' : ''})
+                                                                ออก (OUT{isAfter1530 ? ' · ออโต้' : ''})
                                                             </span>
                                                         )
                                                     }
@@ -349,9 +351,9 @@ export function CardScansView({ initialData }: Props) {
                                                         <p className="font-bold border-b border-white/10 pb-1 mb-1 text-sky-400">Raw Data (JSON):</p>
                                                         {JSON.stringify(scan.raw_data, null, 2)}
                                                         <p className="font-bold border-t border-white/10 pt-1 mt-2 mb-1 text-amber-400">Meta:</p>
-                                                        <div>Imported: {new Date(scan.imported_at).toLocaleString('th-TH')}</div>
-                                                        <div>By: {scan.imported_by}</div>
-                                                        <div>Source: {scan.source_file}</div>
+                                                        {scan.imported_at && <div>Imported: {new Date(scan.imported_at).toLocaleString('th-TH')}</div>}
+                                                        {scan.imported_by && <div>By: {scan.imported_by}</div>}
+                                                        {scan.source_file && <div>Source: {scan.source_file}</div>}
                                                     </div>
                                                 )}
                                             </td>

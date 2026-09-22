@@ -147,7 +147,7 @@ export function CheckinView({
     const isCardCheckedOut = !!cardScanToday && (
         Boolean(cardScanToday.hasCheckedOut) ||
         cardScanToday.latestScanType === 'out' ||
-        (cardScanToday.scanCount > 0 && formatScanClock(cardScanToday.latestScanTime) >= '16:30') ||
+        (cardScanToday.scanCount > 0 && formatScanClock(cardScanToday.latestScanTime) >= '15:30') ||
         (!!cardScanToday.scans && cardScanToday.scans.length > 0 && cardScanToday.scans[cardScanToday.scans.length - 1].scanType === 'out')
     )
     const isCheckedOut = isFullyCheckedOut || isCardCheckedOut

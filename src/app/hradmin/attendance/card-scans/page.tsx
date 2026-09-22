@@ -14,7 +14,7 @@ export default async function CardScansPage() {
 
     return (
         <CardScansView
-            initialData={initial.success ? initial : null}
+            initialData={initial.success && initial.scans ? initial : null}
         />
     )
 }

@@ -248,11 +248,11 @@ export async function POST(req: NextRequest) {
                 debounce: true,
                 note: `Tapped within 5 minutes of previous scan at ${recentScanWithin5Min.scan_time}`,
             }
-        } else if (timePart >= '16:20:00') {
-            // Card scan at or after 16:20:00 -> Count as Check-out (OUT)
+        } else if (timePart >= '15:30:00') {
+            // Card scan at or after 15:30:00 -> Count as Check-out (OUT)
             normalizedScanType = 'out'
         } else if (!prevScans || prevScans.length === 0) {
-            // First tap of the day (before 16:20) -> Check-in (IN)
+            // First tap of the day (before 15:30) -> Check-in (IN)
             normalizedScanType = 'in'
         } else {
             // Subsequent tap (>= 5 minutes after first tap) -> Check-out (OUT)

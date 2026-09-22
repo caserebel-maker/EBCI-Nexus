@@ -599,20 +599,15 @@ export async function GET(req: NextRequest) {
                 if (dayScans.length > 0) {
                     const earliestScan = dayScans[0]
                     const earliestTimePart = earliestScan.scan_time.replace(' ', 'T').split('T')[1] || ''
-                    const hasMobileBefore1620 = firstMobile ? (() => {
-                        const d = new Date(firstMobile.checked_in_at)
-                        const bkkHour = (d.getUTCHours() + 7) % 24
-                        const bkkMin = d.getUTCMinutes()
-                        return (bkkHour * 60 + bkkMin) < (16 * 60 + 20)
-                    })() : false
+                    const isEarliestAfter1530 = earliestTimePart >= '15:30:00'
 
-                    if (earliestTimePart >= '16:20:00' && hasMobileBefore1620) {
+                    if (isEarliestAfter1530) {
                         latestCard = dayScans[dayScans.length - 1]
                     } else {
                         firstCard = earliestScan
                         const checkoutCandidates = dayScans.slice(1).filter(s => {
                             const timePart = s.scan_time.replace(' ', 'T').split('T')[1] || ''
-                            return timePart >= '16:20:00'
+                            return timePart >= '15:30:00'
                         })
                         if (checkoutCandidates.length > 0) {
                             latestCard = checkoutCandidates[checkoutCandidates.length - 1]

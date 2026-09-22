@@ -59,24 +59,27 @@ export async function getCardScanTodayInfo(
 
     const scans = data as Array<{ scan_time: string; scan_type: string | null }>
     const latestScan = scans[scans.length - 1]
-    const latestTimePart = (latestScan.scan_time.split('T')[1] || '').trim()
-    const isLatestAfter1630 = latestTimePart >= '16:30:00'
-    const latestScanType = (latestScan.scan_type as 'in' | 'out' | null) ?? (isLatestAfter1630 ? 'out' : null)
-    const hasCheckedOut = isLatestAfter1630 || scans.some(s => {
-        const t = (s.scan_time.split('T')[1] || '').trim()
-        return t >= '16:30:00' || s.scan_type === 'out'
+    const latestTimePart = (latestScan.scan_time.split(/[T ]/)[1] || '').trim()
+    const isLatestAfter1530 = latestTimePart >= '15:30:00'
+    const latestScanType = (latestScan.scan_type as 'in' | 'out' | null) ?? (isLatestAfter1530 ? 'out' : null)
+    const hasCheckedOut = isLatestAfter1530 || scans.some(s => {
+        const t = (s.scan_time.split(/[T ]/)[1] || '').trim()
+        return t >= '15:30:00' || s.scan_type === 'out'
     })
+
+    const earliestTimePart = (scans[0].scan_time.split(/[T ]/)[1] || '').trim()
+    const earliestScanType = (scans[0].scan_type as 'in' | 'out' | null) ?? (earliestTimePart >= '15:30:00' ? 'out' : 'in')
 
     return {
         earliestScanTime: scans[0].scan_time,
         latestScanTime:   scans[scans.length - 1].scan_time,
         scanCount:        scans.length,
-        earliestScanType: (scans[0].scan_type as 'in' | 'out' | null) ?? 'in',
+        earliestScanType,
         latestScanType,
         hasCheckedOut,
         scans: scans.map(s => {
-            const t = (s.scan_time.split('T')[1] || '').trim()
-            const sType = (s.scan_type as 'in' | 'out' | null) ?? (t >= '16:30:00' ? 'out' : 'in')
+            const t = (s.scan_time.split(/[T ]/)[1] || '').trim()
+            const sType = (s.scan_type as 'in' | 'out' | null) ?? (t >= '15:30:00' ? 'out' : 'in')
             return {
                 scanTime: s.scan_time,
                 scanType: sType,

@@ -219,18 +219,20 @@ export default function WelcomeTvDashboard() {
                         // Select greeting message based on scan type & time of day
                         const scanTimeObj = new Date(newScan.scan_time)
                         const hour = scanTimeObj.getHours()
-                        const type = newScan.scan_type
+                        const minute = scanTimeObj.getMinutes()
+                        const isAfter1530 = (hour > 15) || (hour === 15 && minute >= 30)
+                        const isOut = newScan.scan_type === 'out' || (!newScan.scan_type && isAfter1530)
 
                         let msg = 'บันทึกการแตะบัตรสำเร็จ'
-                        if (type === 'in') {
-                            msg = 'ยินดีต้อนรับเข้าทำงาน! สวัสดีครับ/ค่ะ'
-                        } else if (type === 'out') {
+                        if (isOut) {
                             msg = 'เดินทางกลับบ้านปลอดภัยครับ/ค่ะ!'
+                        } else if (newScan.scan_type === 'in') {
+                            msg = 'ยินดีต้อนรับเข้าทำงาน! สวัสดีครับ/ค่ะ'
                         } else {
                             // Fallback if device does not specify in/out
-                            msg = hour < 12 
-                                ? 'สวัสดีตอนเช้า ยินดีต้อนรับเข้าทำงาน!' 
-                                : 'เลิกงานแล้ว เดินทางกลับบ้านปลอดภัยครับ/ค่ะ!'
+                            msg = isAfter1530 
+                                ? 'เลิกงานแล้ว เดินทางกลับบ้านปลอดภัยครับ/ค่ะ!' 
+                                : 'สวัสดีตอนเช้า ยินดีต้อนรับเข้าทำงาน!'
                         }
                         
                         setGreeting(msg)
@@ -459,23 +461,32 @@ export default function WelcomeTvDashboard() {
                             </div>
                         </div>
 
-                        <div className="absolute left-[8%] right-[8%] top-[15.5%] z-30 text-center">
-                            <h2 className="text-[clamp(1.8rem,3.8vh,3rem)] font-bold leading-tight text-white drop-shadow-[0_0_18px_rgba(255,190,190,0.72)]">
-                                {currentScan.scan_type === 'out' ? 'ขอบคุณสำหรับวันนี้' : 'ยินดีต้อนรับกลับมา'}
-                            </h2>
-                            <div className="mt-3 text-[clamp(1.25rem,2.8vh,2.2rem)] font-semibold text-rose-100/90">
-                                คุณ{employee.nickname || employee.first_name_th}
-                            </div>
-                        </div>
+                        {(() => {
+                            const d = new Date(currentScan.scan_time)
+                            const isAfter1530 = (d.getHours() > 15) || (d.getHours() === 15 && d.getMinutes() >= 30)
+                            const isOut = currentScan.scan_type === 'out' || (!currentScan.scan_type && isAfter1530)
+                            return (
+                                <>
+                                    <div className="absolute left-[8%] right-[8%] top-[15.5%] z-30 text-center">
+                                        <h2 className="text-[clamp(1.8rem,3.8vh,3rem)] font-bold leading-tight text-white drop-shadow-[0_0_18px_rgba(255,190,190,0.72)]">
+                                            {isOut ? 'ขอบคุณสำหรับวันนี้' : 'ยินดีต้อนรับกลับมา'}
+                                        </h2>
+                                        <div className="mt-3 text-[clamp(1.25rem,2.8vh,2.2rem)] font-semibold text-rose-100/90">
+                                            คุณ{employee.nickname || employee.first_name_th}
+                                        </div>
+                                    </div>
 
-                        <div className="absolute left-[32%] right-[11%] top-[75.4%] z-30 text-left">
-                            <div className="text-[clamp(0.95rem,1.72vh,1.32rem)] font-bold leading-tight text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.36)]">
-                                {currentScan.scan_type === 'out' ? 'บันทึกเวลาออกงานเรียบร้อยแล้ว' : 'บันทึกเวลาเข้างานเรียบร้อยแล้ว'}
-                            </div>
-                            <div className="mt-1 text-[clamp(0.72rem,1.25vh,0.92rem)] text-rose-100/78">
-                                {currentScan.scan_type === 'out' ? 'Check-out successful' : 'Check-in successful'}
-                            </div>
-                        </div>
+                                    <div className="absolute left-[32%] right-[11%] top-[75.4%] z-30 text-left">
+                                        <div className="text-[clamp(0.95rem,1.72vh,1.32rem)] font-bold leading-tight text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.36)]">
+                                            {isOut ? 'บันทึกเวลาออกงานเรียบร้อยแล้ว' : 'บันทึกเวลาเข้างานเรียบร้อยแล้ว'}
+                                        </div>
+                                        <div className="mt-1 text-[clamp(0.72rem,1.25vh,0.92rem)] text-rose-100/78">
+                                            {isOut ? 'Check-out successful' : 'Check-in successful'}
+                                        </div>
+                                    </div>
+                                </>
+                            )
+                        })()}
 
                         <div className="absolute bottom-[6.8%] left-[10%] right-[10%] z-30 text-center">
                             <p className="text-[clamp(0.75rem,1.4vh,1rem)] font-medium text-white/82">
