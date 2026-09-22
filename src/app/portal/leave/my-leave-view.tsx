@@ -1366,7 +1366,7 @@ function NewLeaveModal({
                     errorIds.add('startDate')
                     missing.push('ไม่สามารถยื่นลาย้อนหลังได้')
                 }
-                if (!sameDayAllowed && diffDays === 0) {
+                if (!sameDayAllowed && diffDays === 0 && !(selectedType.leave_type_id === 'annual' && advanceDays > 0)) {
                     errorIds.add('startDate')
                     missing.push('ประเภทนี้ไม่อนุญาตให้ยื่นลาในวันเดียวกัน')
                 }
@@ -1925,7 +1925,7 @@ function Step2Dates({
         const advanceDays = type.advance_notice_days ?? 0
 
         if (type.leave_type_id === 'annual') {
-            if (!sameDayAllowed) {
+            if (!sameDayAllowed && advanceDays <= 0) {
                 const tDate = new Date(today)
                 tDate.setDate(tDate.getDate() + 1)
                 minDate = tDate.toISOString().slice(0, 10)

@@ -161,7 +161,9 @@ export async function validateLeaveRequest(
             return { ok: false, field: 'date', error: 'ไม่สามารถยื่นลาย้อนหลังได้' }
         }
         // Rule 4 — same_day_allowed = false (non-sick) means can't start today
-        if (!sameDayAllowed && startEpoch === todayEpoch) {
+        // Annual leave inside the notice window uses the exception-reason
+        // check below, including requests for this afternoon.
+        if (!sameDayAllowed && startEpoch === todayEpoch && !(leaveType.id === 'annual' && advanceDays > 0)) {
             return {
                 ok: false,
                 field: 'date',
