@@ -294,15 +294,15 @@ export default async function PortalDashboardPage() {
         console.error('[dashboard] today calendar fetch failed:', e)
     }
 
-    // Live online active users within 2 minutes
+    // Live online active users within 15 minutes (in system)
     let onlineCount = 0
     try {
-        const twoMinutesAgoIso = new Date(Date.now() - 2 * 60 * 1000).toISOString()
+        const activeThresholdIso = new Date(Date.now() - 15 * 60 * 1000).toISOString()
         const { count } = await supabaseAdmin
             .from('employees')
             .select('id', { count: 'exact', head: true })
             .eq('status', 'active')
-            .gte('last_active_at', twoMinutesAgoIso)
+            .gte('last_active_at', activeThresholdIso)
         onlineCount = count ?? 0
     } catch (e) {
         console.error('[dashboard] onlineCount query failed:', e)
