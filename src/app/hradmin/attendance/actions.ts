@@ -44,6 +44,8 @@ export interface AttendanceRecord {
         distance_from_office: number | null
         checked_in_at: string
         checked_out_at: string | null
+        late_minutes?: number | null
+        late_reason?: string | null
         notes?: string | null
     } | null
 }

@@ -325,12 +325,16 @@ export async function checkIn(payload: CheckInPayload) {
     // covering today, OR (c) this employee has already submitted a same-day
     // WFH request that is still pending. Case (c) is provisional: it
     // records their working check-in while the approver catches up.
+    let isEmergencyFloodWfh = false
     if (payload.type === 'wfh') {
         const eligibility = await checkWfhEligibility(employeeId, bangkokTodayIso())
         if (!eligibility.allowed) {
             return {
                 error: 'วันนี้ยังไม่มีคำขอหรือสิทธิ์ WFH — กรุณาส่งคำขอ WFH ผ่าน /portal/wfh ก่อน',
             }
+        }
+        if (eligibility.source === 'company' && (eligibility.label?.includes('อุทกภัย') || eligibility.label?.includes('น้ำท่วม'))) {
+            isEmergencyFloodWfh = true
         }
     }
 
@@ -364,13 +368,16 @@ export async function checkIn(payload: CheckInPayload) {
     }
     // Compute lateness for record-keeping (NULL when on time).
     const lateMinutesRaw = minutesOfDay - OFFICIAL_START_MIN
-    const lateMinutes = lateMinutesRaw > 0 ? lateMinutesRaw : null
+    // During flood emergency, waive lateness completely for WFH (lateMinutes = 0)
+    const lateMinutes = isEmergencyFloodWfh ? 0 : (lateMinutesRaw > 0 ? lateMinutesRaw : null)
 
     // Validate late-reason input. Tier 1 (1-30 min): optional.
     // Tier 2/3: still optional in the API (UI prompts but doesn't block —
     // forcing a reason just teaches employees to type "...") but if
     // provided, sanitize to fit the column.
-    const trimmedLateReason = (payload.lateReason ?? '').trim().slice(0, 500) || null
+    const trimmedLateReason = isEmergencyFloodWfh && lateMinutesRaw > 0
+        ? ((payload.lateReason ?? '').trim().slice(0, 500) || 'ช่วงนี้มีมหาอุทกภัยหนัก (ยกยอดให้ตามนโยบายบริษัท)')
+        : ((payload.lateReason ?? '').trim().slice(0, 500) || null)
 
     // Office check-in requires accurate GPS — WFH skips the check entirely.
     // Field check-in requires GPS too (the whole point is to capture where
@@ -471,9 +478,11 @@ export async function checkIn(payload: CheckInPayload) {
             longitude: payload.longitude,
             accuracy_meters: payload.accuracy,
             distance_from_office: distance,
-            notes: payload.type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
-                ? OUTSIDE_HEAD_OFFICE_DEFAULT_NOTE
-                : (trimmedNote || null),
+            notes: isEmergencyFloodWfh
+                ? (trimmedNote ? `${trimmedNote} · [มหาอุทกภัย] ช่วงนี้มีมหาอุทกภัยหนัก — WFH ตามนโยบายบริษัท` : '[มหาอุทกภัย] ช่วงนี้มีมหาอุทกภัยหนัก — WFH ตามนโยบายบริษัท')
+                : (payload.type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
+                    ? OUTSIDE_HEAD_OFFICE_DEFAULT_NOTE
+                    : (trimmedNote || null)),
             ip_address: ipAddress,
             source: 'web',
             late_minutes: lateMinutes,
@@ -496,7 +505,8 @@ export async function checkIn(payload: CheckInPayload) {
     // Best-effort fan-out — failure to notify must NOT roll back the
     // check-in. The check-in itself is the source of truth; the
     // notification is just a heads-up.
-    if (lateMinutes !== null && lateMinutes > LATE_TIER3_MIN) {
+    // Suppressed during flood emergency.
+    if (!isEmergencyFloodWfh && lateMinutes !== null && lateMinutes > LATE_TIER3_MIN) {
         try {
             const approver = await resolveLeaveApprover(employeeId)
             const approverUserId = approver

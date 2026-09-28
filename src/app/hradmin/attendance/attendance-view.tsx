@@ -14,6 +14,10 @@ type FilterTab = 'all' | 'office' | 'wfh' | 'outside-head-office' | 'late' | 'gp
 
 function isRecordLate(c: AttendanceRecord['checkin']): boolean {
     if (!c) return false
+    // If lateness is waived due to emergency / flood or marked 0
+    if (c.late_minutes === 0 || c.notes?.includes('อุทกภัย') || c.late_reason?.includes('อุทกภัย')) {
+        return false
+    }
     if (c.late_minutes !== undefined && c.late_minutes !== null && c.late_minutes > 0) {
         return true
     }
@@ -581,6 +585,11 @@ function EmployeeRow({ record, onEditNote }: { record: AttendanceRecord; onEditN
                                     <MapPin size={10} />
                                     ดูตำแหน่ง
                                 </a>
+                            </div>
+                        )}
+                        {c.notes && (
+                            <div className="text-[10px] text-blue-200/90 mt-0.5 max-w-[200px] sm:max-w-xs truncate text-right ml-auto" title={c.notes}>
+                                {c.notes.includes('อุทกภัย') ? '🌧️ ' + c.notes : c.notes}
                             </div>
                         )}
                     </>

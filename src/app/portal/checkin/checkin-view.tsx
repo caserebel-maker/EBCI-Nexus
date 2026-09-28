@@ -1349,7 +1349,17 @@ export function CheckinView({
                                                  that the manager will be notified.
                                 Server still stores the late_minutes regardless of
                                 whether the reason is filled in. */}
-                            {lateTier > 0 && (
+                            {/* Flood emergency notice or regular late banner */}
+                            {(wfhEligibility.label?.includes('อุทกภัย') || wfhEligibility.label?.includes('น้ำท่วม')) ? (
+                                <div className="rounded-xl border border-blue-500/40 bg-blue-500/10 p-3.5 space-y-1 text-blue-100 shadow-sm">
+                                    <div className="flex items-center gap-2 text-sm font-bold text-white">
+                                        <span>🌧️ ช่วงนี้มีมหาอุทกภัยหนัก — ยกยอดการนับสายให้เป็นกรณีพิเศษ</span>
+                                    </div>
+                                    <p className="text-xs text-blue-200/80 leading-relaxed">
+                                        บริษัทเปิดสิทธิ์ WFH และยกยอดการนับเวลาสายให้สำหรับทุกคน ขอให้พนักงานทุกคนดูแลความปลอดภัยและสุขภาพ สามารถเช็คอินเวลาใดก็ได้ตามสะดวกครับ
+                                    </p>
+                                </div>
+                            ) : lateTier > 0 ? (
                                 <div className={cn(
                                     'rounded-xl border p-3 space-y-2',
                                     lateTier === 3
@@ -1386,7 +1396,7 @@ export function CheckinView({
                                         </div>
                                     )}
                                 </div>
-                            )}
+                            ) : null}
 
                             {minutesOfDayBkk >= 15 * 60 && (
                                 <div className="rounded-2xl border border-amber-400/40 bg-amber-500/15 p-4 space-y-2.5">
