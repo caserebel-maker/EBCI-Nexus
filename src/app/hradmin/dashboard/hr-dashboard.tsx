@@ -145,10 +145,10 @@ function MetricCard({ title, value, sub, icon: Icon, accent, href, highlight = f
             onClick={() => router.push(href)}
         >
             <div className={cn('w-1.5 shrink-0', accent)} />
-            <div className="flex-1 flex flex-col items-center justify-center px-3 py-4 text-center gap-1.5">
-                <p className="text-xs font-semibold text-white/70 leading-tight text-center line-clamp-2">{title}</p>
-                <p className="text-3xl font-black text-white leading-none">{value}</p>
-                {sub && <p className="text-xs text-white/50 leading-tight text-center line-clamp-2">{sub}</p>}
+            <div className="min-w-0 flex-1 flex flex-col items-center justify-center px-3 py-4 text-center gap-1.5">
+                <p className="text-[14px] font-semibold text-white/70 leading-snug break-words">{title}</p>
+                <p className="text-[32px] font-black tabular-nums text-white leading-none">{value}</p>
+                {sub && <p className="text-[14px] text-white/60 leading-snug break-words">{sub}</p>}
             </div>
         </div>
     )
@@ -314,13 +314,13 @@ function DeptDonut({ data, total }: { data: DeptDatum[]; total: number }) {
                 </ResponsiveContainer>
                 {/* Center label — absolute overlay */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-3xl font-black text-white">{total}</span>
-                    <span className="text-xs text-white/45 font-bold mt-0.5 text-center leading-tight">พนักงาน<br />ทั้งหมด</span>
+                    <span className="text-[32px] font-black text-white">{total}</span>
+                    <span className="text-[14px] text-white/60 font-bold mt-0.5 text-center leading-tight">พนักงาน<br />ทั้งหมด</span>
                 </div>
             </div>
 
             {/* Legend */}
-            <div className="flex-1 min-w-0 space-y-1.5 overflow-hidden">
+            <div className="w-full min-w-0 space-y-1.5 overflow-hidden">
                 {data.map((d, i) => {
                     const pct = total > 0 ? Math.round(d.value / total * 100) : 0
                     return (
@@ -335,9 +335,9 @@ function DeptDonut({ data, total }: { data: DeptDatum[]; total: number }) {
                             aria-label={`ดูรายชื่อ${d.name}`}
                         >
                             <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: DEPT_COLORS[i % DEPT_COLORS.length] }} />
-                            <span className="text-sm text-white/70 truncate flex-1">{d.name}</span>
-                            <span className="text-sm font-bold text-white shrink-0">{d.value}</span>
-                            <span className="text-xs text-white/40 shrink-0 w-8 text-right">{pct}%</span>
+                            <span className="min-w-0 text-[14px] leading-snug text-white/70 break-words flex-1">{d.name}</span>
+                            <span className="text-[14px] font-bold text-white shrink-0">{d.value}</span>
+                            <span className="text-[14px] text-white/60 shrink-0 w-[40px] text-right">{pct}%</span>
                         </button>
                     )
                 })}
@@ -357,11 +357,11 @@ function DeptDonut({ data, total }: { data: DeptDatum[]; total: number }) {
 // ─── Section Header ───────────────────────────────────────────────────────────
 function SectionHeader({ title, icon: Icon, warn, className }: { title: string; icon: any; warn?: boolean; className?: string }) {
     return (
-        <div className={cn('flex items-center gap-2 mb-4', className)}>
-            <div className={warn ? 'h-7 w-7 rounded-lg bg-amber-500/20 ring-1 ring-amber-400/40 flex items-center justify-center' : 'h-7 w-7 rounded-lg bg-white/15 ring-1 ring-white/25 flex items-center justify-center'}>
+        <div className={cn('flex min-w-0 items-center gap-2 mb-4', className)}>
+            <div className={warn ? 'h-7 w-7 shrink-0 rounded-lg bg-amber-500/20 ring-1 ring-amber-400/40 flex items-center justify-center' : 'h-7 w-7 shrink-0 rounded-lg bg-white/15 ring-1 ring-white/25 flex items-center justify-center'}>
                 <Icon size={14} className={warn ? 'text-amber-300' : 'text-amber-300'} />
             </div>
-            <h2 className="text-xs 2xl:text-sm lg:text-base font-semibold text-white/80 tracking-wide">{title}</h2>
+            <h2 className="min-w-0 text-[16px] leading-snug font-semibold text-white/80 break-words">{title}</h2>
         </div>
     )
 }
@@ -579,7 +579,7 @@ function WeekCalendar({ weekDays, leavesToday, onDayClick }: {
     const DAY_NAMES = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา']
     const today = new Date(); today.setHours(0, 0, 0, 0)
     return (
-        <div className="grid grid-cols-7 gap-1.5">
+        <div className="grid grid-cols-7 gap-1">
             {weekDays.map((iso, i) => {
                 const d = new Date(iso)
                 const isToday = d.toDateString() === today.toDateString()
@@ -588,18 +588,18 @@ function WeekCalendar({ weekDays, leavesToday, onDayClick }: {
                         key={i}
                         onClick={() => onDayClick(d)}
                         className={cn(
-                            'flex flex-col items-center py-2.5 px-1 rounded-xl text-center transition-colors cursor-pointer',
+                            'min-w-0 flex flex-col items-center py-2.5 rounded-xl text-center transition-colors cursor-pointer',
                             'hover:bg-white/10 active:scale-95',
                             isToday ? 'bg-[#882136]/70 ring-1 ring-[#ad5f6c]' : 'bg-white/5',
                             i >= 5 && 'opacity-40',
                         )}
                     >
-                        <span className="text-xs font-bold text-white/40">{DAY_NAMES[i]}</span>
-                        <span className={cn('text-lg font-black mt-0.5', isToday ? 'text-white' : 'text-white/70')}>
+                        <span className="text-[12px] leading-snug font-bold text-white/60">{DAY_NAMES[i]}</span>
+                        <span className={cn('text-[18px] leading-snug font-black tabular-nums mt-0.5', isToday ? 'text-white' : 'text-white/70')}>
                             {d.getDate()}
                         </span>
                         {isToday && leavesToday.length > 0 && (
-                            <span className="mt-1 text-xs font-bold bg-[#ad5f6c] text-white rounded-full px-1.5 py-0.5 leading-none">
+                            <span className="mt-1 text-[12px] font-bold bg-[#ad5f6c] text-white rounded-full px-1 py-0.5 leading-none">
                                 {leavesToday.length}
                             </span>
                         )}
@@ -684,15 +684,15 @@ function PendingRow({ item, onDone, onShowToast }: { item: any, onDone: (item: a
 
     return (
         <div className="py-3 border-b border-white/10 last:border-0">
-            <div className="flex items-start gap-3">
+            <div className="flex flex-wrap items-start gap-3">
                 <div className={cn(
                     'h-2.5 w-2.5 rounded-full mt-2 shrink-0',
                     isPasswordReq ? 'bg-amber-400 ring-2 ring-amber-400/40' : isWfh ? 'bg-blue-300' : isCancellation ? 'bg-orange-300' : 'bg-yellow-300'
                 )} />
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-[180px]">
                     <Link href={detailHref} className="block group">
                         <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-bold text-white truncate group-hover:text-yellow-200">{empName}</p>
+                            <p className="min-w-0 text-[14px] leading-snug font-bold text-white break-words group-hover:text-yellow-200">{empName}</p>
                             <span className={cn(
                                 "rounded-full px-2 py-0.5 text-[11px] font-bold",
                                 isPasswordReq ? "bg-amber-500/25 text-amber-200 border border-amber-400/30" : "bg-yellow-400/15 text-yellow-200"
@@ -700,19 +700,19 @@ function PendingRow({ item, onDone, onShowToast }: { item: any, onDone: (item: a
                                 {typeBadge}
                             </span>
                         </div>
-                        <p className="mt-1 text-sm text-white/65">{meta}</p>
-                        <p className="mt-2 text-xs text-yellow-200/90">ดูรายละเอียด →</p>
+                        <p className="mt-1 text-[14px] leading-relaxed break-words text-white/65">{meta}</p>
+                        <p className="mt-2 text-[14px] text-yellow-200/90">ดูรายละเอียด →</p>
                     </Link>
                 </div>
                 {isPasswordReq ? (
                     <Link
                         href="/hradmin/settings/password-requests"
-                        className="shrink-0 rounded-lg bg-amber-500/25 border border-amber-400/40 text-amber-200 hover:bg-amber-500/35 px-3 py-2 text-sm font-bold transition-colors"
+                        className="ml-auto shrink-0 rounded-lg bg-amber-500/25 border border-amber-400/40 text-amber-200 hover:bg-amber-500/35 px-3 py-2 text-[14px] font-bold transition-colors"
                     >
                         ตรวจคำขอ
                     </Link>
                 ) : !isWfh && !isCancellation ? (
-                    <div className="flex gap-2 shrink-0">
+                    <div className="ml-auto flex gap-2 shrink-0">
                         <button
                             disabled={isPending}
                             onClick={() => handleLeaveAction('approve')}
@@ -780,7 +780,7 @@ export function HRDashboard({
     }, [pendingApprovals, pendingLeaves])
 
     return (
-        <div className="space-y-6 relative">
+        <div className="@container/dashboard min-w-0 space-y-6 relative">
             {toast && (
                 <div className={cn(
                     "fixed top-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-2xl text-sm font-semibold border backdrop-blur-md transition-all animate-in fade-in slide-in-from-top-2",
@@ -859,14 +859,14 @@ export function HRDashboard({
             <UrgentBanners banners={urgentBanners} />
 
             {/* ── 2-column layout: left 2/3, right 1/3 ── */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="grid min-w-0 grid-cols-1 @min-[1100px]/dashboard:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] gap-6">
 
                 {/* ══ LEFT COL (2/3) ══ */}
-                <div className="xl:col-span-2 space-y-6">
+                <div className="@container/dashboard-main min-w-0 space-y-6">
 
 
                     {/* Metric Cards */}
-                    <div className="grid grid-cols-2 2xl:grid-cols-4 gap-3 lg:gap-4">
+                    <div className="grid grid-cols-2 @min-[760px]/dashboard-main:grid-cols-4 gap-3 lg:gap-4">
                         {/* Headline = active count (the actionable number — HR
                             decisions are about people who are still here).
                             Inactive count goes to the subtitle so the data
@@ -900,23 +900,23 @@ export function HRDashboard({
                         <button
                             type="button"
                             onClick={() => router.push('/hradmin/attendance/insights')}
-                            className="w-full rounded-2xl border border-amber-300/20 bg-amber-300/10 hover:bg-amber-300/14 px-4 py-3 text-left transition-colors flex items-center justify-between gap-4"
+                            className="w-full rounded-2xl border border-amber-300/20 bg-amber-300/10 hover:bg-amber-300/14 px-4 py-3 text-left transition-colors flex flex-wrap items-center justify-between gap-4"
                         >
                             <span className="flex items-center gap-3 min-w-0">
                                 <span className="h-10 w-10 rounded-xl bg-amber-300/14 border border-amber-300/22 flex items-center justify-center shrink-0">
                                     <AlertTriangle size={19} className="text-amber-200" />
                                 </span>
                                 <span className="min-w-0">
-                                    <span className="block text-sm font-bold text-white">สถิติขาด ลา มาสาย</span>
-                                    <span className="block text-xs text-white/48 mt-0.5 truncate">ดูรายชื่อพนักงานที่ควรติดตามและตักเตือน</span>
+                                    <span className="block text-[16px] leading-snug font-bold text-white">สถิติขาด ลา มาสาย</span>
+                                    <span className="block text-[14px] leading-snug text-white/60 mt-0.5 break-words">ดูรายชื่อพนักงานที่ควรติดตามและตักเตือน</span>
                                 </span>
                             </span>
-                            <span className="text-sm font-bold text-amber-200 shrink-0">เปิดดู →</span>
+                            <span className="ml-auto text-[14px] font-bold text-amber-200 shrink-0">เปิดดู →</span>
                         </button>
                     )}
 
                     {/* Bar chart – monthly leave */}
-                    <div style={glassStyle} className="p-6">
+                    <div style={glassStyle} className="min-w-0 p-4 sm:p-6">
                         <SectionHeader title="สถิติการลารายเดือน (12 เดือนย้อนหลัง)" icon={TrendingUp} />
                         <ResponsiveContainer width="100%" height={240}>
                             <BarChart data={leaveChartData} barSize={9} barGap={2}>
@@ -938,16 +938,16 @@ export function HRDashboard({
                     </div>
 
                     {/* Donut + Line side by side */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid min-w-0 grid-cols-1 @min-[760px]/dashboard-main:grid-cols-2 gap-6 [&>div]:min-w-0">
 
                         {/* Donut – dept distribution */}
-                        <div style={glassStyle} className="p-6">
+                        <div style={glassStyle} className="min-w-0 p-4 sm:p-6">
                             <SectionHeader title="สัดส่วนพนักงานแยกฝ่าย" icon={Building2} />
                             <DeptDonut data={deptData} total={metrics.activeEmployees} />
                         </div>
 
                         {/* Line chart – weekly attendance */}
-                        <div style={glassStyle} className="p-6">
+                        <div style={glassStyle} className="min-w-0 p-4 sm:p-6">
                             <SectionHeader title="อัตราการมาทำงาน (30 วัน)" icon={TrendingUp} />
                             <ResponsiveContainer width="100%" height={210}>
                                 <LineChart data={attendanceData}>
@@ -969,14 +969,14 @@ export function HRDashboard({
                 </div>
 
                 {/* ══ RIGHT COL (1/3) ══ */}
-                <div className="space-y-5">
+                <div className="min-w-0 space-y-5">
 
                     {/* ── ประกาศข่าวสาร ── */}
                     <div style={glassStyle} className="p-5">
                         <div className="flex flex-col gap-2 mb-3">
                             <div className="flex items-center gap-2">
-                                <Megaphone size={16} className="text-[#ad5f6c]" />
-                                <h2 className="text-xs 2xl:text-sm lg:text-base font-semibold text-white/80 tracking-wide whitespace-nowrap">ประกาศข่าวสาร</h2>
+                                <Megaphone size={16} className="shrink-0 text-[#ad5f6c]" />
+                                <h2 className="text-[16px] leading-snug font-semibold text-white/80">ประกาศข่าวสาร</h2>
                             </div>
                             <button
                                 onClick={() => router.push('/hradmin/hr/announcements')}
@@ -997,8 +997,8 @@ export function HRDashboard({
                                         )}>
                                             {PRIORITY_LABEL[a.priority] ?? a.priority}
                                         </span>
-                                        <p className="text-xs 2xl:text-sm font-bold text-white/85 group-hover:text-white leading-snug transition-colors">{a.headline}</p>
-                                        <p className="text-xs 2xl:text-sm font-semibold text-white mt-1">
+                                        <p className="text-[14px] break-words font-bold text-white/85 group-hover:text-white leading-relaxed transition-colors">{a.headline}</p>
+                                        <p className="text-[14px] leading-snug font-semibold text-white/70 mt-1">
                                             {new Date(a.publish_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
                                         </p>
                                     </div>
@@ -1009,7 +1009,7 @@ export function HRDashboard({
 
                     {/* Week calendar */}
                     <div style={glassStyle} className="p-5">
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                             <SectionHeader title={`ปฏิทินสัปดาห์นี้ · ลาวันนี้ ${leavesToday.length} คน`} icon={CalendarDays} className="mb-0" />
                             <button
                                 type="button"
@@ -1092,7 +1092,7 @@ export function HRDashboard({
                         style={glassStyle}
                         className={cn('p-5', hasPendingApprovals && 'pending-leave-glow')}
                     >
-                        <div className="flex items-center justify-between gap-3 mb-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                             <SectionHeader title={`งานรออนุมัติ (${pendingApprovalTotal})`} icon={Clock} className="mb-0" />
                             <button
                                 type="button"
@@ -1124,14 +1124,14 @@ export function HRDashboard({
                                             {e.first_name_th?.charAt(0)}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-xs 2xl:text-sm font-bold text-white leading-tight">
+                                            <p className="text-[14px] break-words font-bold text-white leading-snug">
                                                 <Link href={`/hradmin/employees/${e.id}`} className="hover:underline hover:text-amber-200 transition-colors">
                                                     {fullName(e.first_name_th, e.last_name_th, e.nickname)}
                                                 </Link>
                                             </p>
-                                            <p className="text-xs 2xl:text-sm font-semibold text-white mt-1">{e.department}</p>
+                                            <p className="text-[14px] break-words leading-snug text-white/70 mt-1">{e.department}</p>
                                         </div>
-                                        <span className="text-xs 2xl:text-sm font-black text-amber-300 shrink-0">{e.years} ปี</span>
+                                        <span className="text-[14px] font-black text-amber-300 shrink-0">{e.years} ปี</span>
                                     </div>
                                 ))}
                             </div>
@@ -1165,7 +1165,7 @@ export function HRDashboard({
                     {/* ── วันเกิดเดือนนี้ ── */}
                     {birthdays.length > 0 && (
                         <div style={glassStyle} className="p-5">
-                            <div className="flex items-center gap-2 mb-4"><div className="h-7 w-7 rounded-lg bg-white/15 ring-1 ring-white/25 flex items-center justify-center"><Gift size={14} className="text-amber-300" /></div><h2 className="text-xs 2xl:text-sm lg:text-base font-semibold text-white/80 tracking-wide">วันเกิดเดือนนี้ ({birthdays.length} คน)</h2></div>
+                            <SectionHeader title={`วันเกิดเดือนนี้ (${birthdays.length} คน)`} icon={Gift} />
                             <div className="space-y-2">
                                 {birthdays.slice(0, 6).map(e => (
                                     <div key={e.id} className="flex items-center gap-2 py-1.5 px-2 rounded-xl hover:bg-white/5 transition-colors">
@@ -1173,14 +1173,14 @@ export function HRDashboard({
                                             {e.first_name_th?.charAt(0)}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-xs 2xl:text-sm font-bold text-white leading-tight">
+                                            <p className="text-[14px] break-words font-bold text-white leading-snug">
                                                 <Link href={`/hradmin/employees/${e.id}`} className="hover:underline hover:text-amber-200 transition-colors">
                                                     {fullName(e.first_name_th, e.last_name_th, e.nickname)}
                                                 </Link>
                                             </p>
-                                            <p className="text-xs 2xl:text-sm font-semibold text-white mt-1">{e.dobDay} {MONTHS_TH[e.dobMonth]}</p>
+                                            <p className="text-[14px] leading-snug text-white/70 mt-1">{e.dobDay} {MONTHS_TH[e.dobMonth]}</p>
                                         </div>
-                                        <span className="text-xs 2xl:text-sm font-black text-white/90 shrink-0">{e.age} ปี</span>
+                                        <span className="text-[14px] font-black text-white/90 shrink-0">{e.age} ปี</span>
                                     </div>
                                 ))}
                             </div>
