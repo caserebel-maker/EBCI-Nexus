@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
+import Link from 'next/link'
 import {
     Home, Plus, X, Loader2, AlertCircle, CheckCircle2, Info, Trash2,
     Calendar,
@@ -100,6 +101,20 @@ export function WfhView() {
                 <div>
                     <h1 className="text-xl font-bold text-white">ขอ WFH</h1>
                     <p className="text-sm text-white/50">ขอทำงานที่บ้าน — ส่งให้ผู้บังคับบัญชาอนุมัติ · ไม่ตัดยอดวันลา</p>
+                </div>
+            </div>
+
+            {/* Flood Emergency Banner */}
+            <div className="rounded-2xl p-4 border border-blue-400/40 bg-blue-500/15 text-blue-100 flex items-start gap-3 shadow-lg">
+                <Info className="text-blue-300 shrink-0 mt-0.5" size={20} />
+                <div className="text-xs leading-relaxed space-y-1">
+                    <p className="font-bold text-sm text-white flex items-center gap-1.5">
+                        <span>📢</span>
+                        <span>กรณีพิเศษเหตุน้ำท่วม (28 ก.ย. – 4 ต.ค. 2569)</span>
+                    </p>
+                    <p className="text-blue-100/90">
+                        สำหรับพนักงานที่เดินทางมาทำงานไม่ได้เนื่องจากน้ำท่วม สามารถกด <Link href="/portal/checkin" className="font-semibold text-white underline hover:text-blue-200">&ldquo;เช็คอิน Work From Home&rdquo;</Link> ที่หน้าเช็คอินได้ทันทีตลอดสัปดาห์นี้ โดย<span className="font-bold text-emerald-300">ไม่ต้องยื่นคำขอนี้และไม่ต้องรอหัวหน้างานอนุมัติ</span>
+                    </p>
                 </div>
             </div>
 
@@ -242,6 +257,7 @@ function NewWfhModal({
     onSuccess: (msg: string) => void
 }) {
     const today = todayBangkokIso()
+    const floodWeekMin = (today >= '2026-09-28' && today <= '2026-10-04') ? '2026-09-28' : today
     const [startDate, setStartDate] = useState(today)
     const [endDate, setEndDate] = useState(today)
     const [reason, setReason] = useState('')
@@ -346,7 +362,7 @@ function NewWfhModal({
                             <input
                                 type="date"
                                 value={startDate}
-                                min={today}
+                                min={floodWeekMin}
                                 onChange={(e) => {
                                     setStartDate(e.target.value)
                                     if (e.target.value > endDate) setEndDate(e.target.value)

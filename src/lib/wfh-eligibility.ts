@@ -49,6 +49,16 @@ export async function checkWfhEligibility(
         }
     }
 
+    // Special flood emergency week (28 Sep - 4 Oct 2026):
+    // Company-wide WFH allowance due to severe widespread flooding (no approval needed)
+    if (dateIso >= '2026-09-28' && dateIso <= '2026-10-04') {
+        return {
+            allowed: true,
+            source: 'company',
+            label: 'WFH พิเศษ — น้ำท่วม กทม. และปริมณฑล',
+        }
+    }
+
     // Layer 1: company-wide WFH? Cheap query — only one row max for the
     // date because we don't dedupe by type, and HR rarely creates two
     // entries for the same day.

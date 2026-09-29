@@ -114,10 +114,11 @@ export async function submitWfhRequest(
     const reason = input.reason?.trim()
     if (!reason) return { error: 'กรุณาระบุเหตุผล', field: 'reason' }
 
-    // Backstop: don't let employees backdate WFH requests. Lets HR insert
-    // historical records via the admin tool if they ever need to.
+    // Backstop: don't let employees backdate WFH requests, except during
+    // the flood emergency week (28 Sep - 4 Oct 2026) for retroactive records.
     const today = bangkokTodayIso()
-    if (input.startDate < today) return { error: 'วันที่เริ่มต้องไม่ย้อนหลัง', field: 'startDate' }
+    const isFloodWeek = input.startDate >= '2026-09-28' && input.endDate <= '2026-10-04'
+    if (input.startDate < today && !isFloodWeek) return { error: 'วันที่เริ่มต้องไม่ย้อนหลัง', field: 'startDate' }
 
     const totalDays = daysInclusive(input.startDate, input.endDate)
     if (totalDays === 0) return { error: 'จำนวนวันต้องมากกว่า 0' }

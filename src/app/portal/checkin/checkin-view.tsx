@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 const CheckinMap = dynamic(() => import('@/components/checkin/checkin-map').then(m => m.CheckinMap), { ssr: false, loading: () => <div className="h-64 rounded-2xl bg-white/5 animate-pulse flex items-center justify-center text-white/40 text-sm">กำลังโหลดแผนที่...</div> })
 
 import { useCallback, useState, useEffect } from 'react'
-import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut, X, Briefcase, Palmtree, IdCard, Clock, MapPinOff, Send } from 'lucide-react'
+import { MapPin, CheckCircle2, AlertCircle, Loader2, Home, Building, LogOut, X, Briefcase, Palmtree, IdCard, Clock, MapPinOff, Send, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { checkIn, checkOut, checkOutWithMissedCheckin, startFieldTrip, endFieldTrip, requestAttendanceGpsReview } from './actions'
 import { haversineDistance } from '@/lib/geo'
@@ -261,7 +261,9 @@ export function CheckinView({
                 type === 'wfh'
                     ? wfhEligibility.source === 'pending_personal'
                         ? 'ระบบจะบันทึกเวลาเช็คอิน WFH ไว้ก่อน ขณะคำขอของคุณยังรอหัวหน้าอนุมัติ'
-                        : 'ใช้เฉพาะวันที่บริษัทประกาศ WFH หรือคำขอ WFH ของคุณได้รับอนุมัติแล้ว'
+                        : wfhEligibility.label?.includes('น้ำท่วม')
+                            ? 'กรณีพิเศษเหตุน้ำท่วม: สามารถเช็คอิน Work From Home ได้ทันทีโดยไม่ต้องรออนุมัติ'
+                            : 'ใช้เฉพาะวันที่บริษัทประกาศ WFH หรือคำขอ WFH ของคุณได้รับอนุมัติแล้ว'
                     : type === 'field'
                         ? 'ระบบจะบันทึกเวลา ตำแหน่ง GPS และปลายทาง/เหตุผลที่คุณระบุ'
                         : type === OUTSIDE_HEAD_OFFICE_CHECKIN_TYPE
@@ -1133,6 +1135,22 @@ export function CheckinView({
                                             ? `เช็คอินตอนบ่ายได้ตั้งแต่ ${WORK_SCHEDULE.afternoonStart} น.`
                                             : `เช็คอินตอนเช้าตามปกติ · ลาได้ตั้งแต่ ${WORK_SCHEDULE.afternoonStart} น.`
                                         : 'ถ้าใบลาได้รับอนุมัติก่อนสิ้นวัน ระบบจะไม่นับว่าขาดงาน'}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Flood Emergency Banner */}
+                    {wfhEligibility.allowed && wfhEligibility.source === 'company' && wfhEligibility.label?.includes('น้ำท่วม') && (
+                        <div className="rounded-2xl p-4 border border-blue-400/40 bg-blue-500/15 text-blue-100 flex items-start gap-3 shadow-lg">
+                            <Info className="text-blue-300 shrink-0 mt-0.5" size={20} />
+                            <div className="text-xs leading-relaxed space-y-1">
+                                <p className="font-bold text-sm text-white flex items-center gap-1.5">
+                                    <span>📢</span>
+                                    <span>ประกาศกรณีพิเศษเหตุน้ำท่วม</span>
+                                </p>
+                                <p className="text-blue-100/90">
+                                    พนักงานที่เดินทางมาทำงานไม่ได้เนื่องจากน้ำท่วม สามารถกดปุ่ม <span className="font-semibold text-white">"เช็คอิน Work From Home"</span> ด้านล่างได้ทันที โดยไม่ต้องยื่นคำขอและไม่ต้องรอหัวหน้างานอนุมัติ
                                 </p>
                             </div>
                         </div>
