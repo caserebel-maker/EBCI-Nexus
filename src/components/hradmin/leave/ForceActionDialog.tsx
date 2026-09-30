@@ -49,13 +49,16 @@ export function ForceActionDialog({ item, action, onClose, onConfirmed }: Props)
 
     useEffect(() => {
         if (!action) return
-        setReason('')
+        const defaultReason = item?.status === 'cancellation_requested' && action === 'cancel'
+            ? (item.cancellation_reason || 'อนุมัติตามคำขอยกเลิกของพนักงาน')
+            : ''
+        setReason(defaultReason)
         setError(null)
         setLoading(false)
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !loading) onClose() }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-    }, [action, loading, onClose])
+    }, [action, item, loading, onClose])
 
     if (!item || !action) return null
     const meta = META[action]
@@ -72,11 +75,12 @@ export function ForceActionDialog({ item, action, onClose, onConfirmed }: Props)
         ? (action === 'cancel' ? '#6ee7b7' : '#cbd5e1') // green or gray
         : meta.accent
     const displayNeedsReason = isCancelReq
-        ? (action === 'cancel') // cancellation approval needs a reason, rejection doesn't
+        ? false
         : meta.needsReason
 
     const submit = async () => {
-        if (displayNeedsReason && reason.trim().length < 5) {
+        const effectiveReason = reason.trim() || (isCancelReq ? (item.cancellation_reason || 'อนุมัติตามคำขอยกเลิกของพนักงาน') : '')
+        if (displayNeedsReason && effectiveReason.length < 5) {
             setError('กรุณาระบุเหตุผล (อย่างน้อย 5 ตัวอักษร)')
             return
         }
@@ -89,7 +93,7 @@ export function ForceActionDialog({ item, action, onClose, onConfirmed }: Props)
                 body: JSON.stringify({
                     id: item.id,
                     action,
-                    reason: displayNeedsReason ? reason.trim() : undefined,
+                    reason: effectiveReason || undefined,
                 }),
             })
             if (!res.ok) {

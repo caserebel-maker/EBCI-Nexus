@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useState, useTransition, useRef } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -61,14 +61,19 @@ export function RequestsView({
     const [createOpen, setCreateOpen] = useState(false)
     const [toast, setToast] = useState<string | null>(null)
     const requestId = searchParams?.get('request') ?? null
+    const dismissedRequestIdRef = useRef<string | null>(null)
 
     useEffect(() => {
-        if (!requestId) return
+        if (!requestId) {
+            setDrawerItem(null)
+            return
+        }
+        if (dismissedRequestIdRef.current === requestId) return
         const match = items.find(item => item.id === requestId)
-        if (!match || drawerItem?.id === match.id) return
-        const timer = window.setTimeout(() => setDrawerItem(match), 0)
-        return () => window.clearTimeout(timer)
-    }, [drawerItem?.id, items, requestId])
+        if (match) {
+            setDrawerItem(match)
+        }
+    }, [requestId, items])
 
     const refreshList = () => {
         startTransition(() => {
@@ -93,6 +98,7 @@ export function RequestsView({
     }
 
     const openDrawer = (item: LeaveRequestItem) => {
+        dismissedRequestIdRef.current = null
         setDrawerItem(item)
         const sp = new URLSearchParams(searchParams?.toString() ?? '')
         sp.set('tab', 'requests')
@@ -103,12 +109,19 @@ export function RequestsView({
     }
 
     const closeDrawer = () => {
+        if (requestId) {
+            dismissedRequestIdRef.current = requestId
+        }
         setDrawerItem(null)
         const sp = new URLSearchParams(searchParams?.toString() ?? '')
         sp.delete('request')
         const query = sp.toString()
+        const targetUrl = query ? `${pathname}?${query}` : pathname
+        if (typeof window !== 'undefined') {
+            window.history.replaceState(null, '', targetUrl)
+        }
         startTransition(() => {
-            router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
+            router.replace(targetUrl, { scroll: false })
         })
     }
 
@@ -285,7 +298,7 @@ export function RequestsView({
                     const verb = forceTarget?.action === 'approve' ? 'อนุมัติ'
                         : forceTarget?.action === 'reject' ? 'ปฏิเสธ' : 'ยกเลิก'
                     setForceTarget(null)
-                    setDrawerItem(null)
+                    closeDrawer()
                     showToast(`${verb}ใบลาสำเร็จ`)
                     refreshList()
                 }}

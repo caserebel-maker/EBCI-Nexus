@@ -52,9 +52,6 @@ export async function POST(req: NextRequest) {
     if (!['approve', 'reject', 'cancel', 'delete'].includes(action)) {
         return NextResponse.json({ error: 'invalid action' }, { status: 400 })
     }
-    if ((action === 'reject' || action === 'cancel') && reason.length < 5) {
-        return NextResponse.json({ error: 'กรุณาระบุเหตุผล (≥ 5 ตัวอักษร)' }, { status: 400 })
-    }
 
     // Read current row
     const { data: row, error: readErr } = await supabaseAdmin
@@ -62,7 +59,7 @@ export async function POST(req: NextRequest) {
         .select(`
             id, reference_code, status, employee_id, approver_id,
             leave_type_id, start_date, end_date, total_days, reason,
-            approval_notes, rejection_reason
+            approval_notes, rejection_reason, cancellation_reason
         `)
         .eq('id', id)
         .maybeSingle()
@@ -79,6 +76,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: `ใบลาอยู่ในสถานะ ${newStatus} อยู่แล้ว` }, { status: 409 })
     }
 
+    let finalReason = reason
+    if (oldStatus === 'cancellation_requested' && action === 'cancel' && !finalReason) {
+        finalReason = (row.cancellation_reason as string) || 'อนุมัติตามคำขอยกเลิกของพนักงาน'
+    } else if (oldStatus === 'cancellation_requested' && action === 'approve' && !finalReason) {
+        finalReason = 'ปฏิเสธคำขอยกเลิก (คงสถานะอนุมัติเดิม)'
+    }
+
+    if ((action === 'reject' || action === 'cancel') && oldStatus !== 'cancellation_requested' && finalReason.length < 5) {
+        return NextResponse.json({ error: 'กรุณาระบุเหตุผล (≥ 5 ตัวอักษร)' }, { status: 400 })
+    }
+
     const totalDays = Number(row.total_days ?? 0)
     const employeeId = row.employee_id as string
     const leaveTypeId = row.leave_type_id as string
@@ -87,9 +95,11 @@ export async function POST(req: NextRequest) {
     // Compute balance adjustment — delta on each "bucket" to move consumption
     // from old status to new status. Sums to zero when the transition is
     // balance-neutral (e.g. rejected → cancelled).
+    // Note: 'cancellation_requested' leaves were already 'approved', so they still consumed 'used'
+    // until cancellation is confirmed.
     const consumedBy = (status: string): 'pending' | 'used' | null => {
         if (status === 'pending') return 'pending'
-        if (status === 'approved') return 'used'
+        if (status === 'approved' || status === 'cancellation_requested') return 'used'
         return null
     }
     const oldBucket = consumedBy(oldStatus)
@@ -186,7 +196,7 @@ export async function POST(req: NextRequest) {
     // too — it's separately displayed in the drawer).
     const actorLabel = await describeActor(actorEmployeeId, session.name)
     const stamp = new Date().toISOString()
-    const auditLine = `[${stamp}] HR override by ${actorLabel}: ${oldStatus} → ${newStatus}${reason ? ` — ${reason}` : ''}`
+    const auditLine = `[${stamp}] HR override by ${actorLabel}: ${oldStatus} → ${newStatus}${finalReason ? ` — ${finalReason}` : ''}`
     const nextNotes = [row.approval_notes, auditLine].filter(Boolean).join('\n')
 
     const nowIso = new Date().toISOString()
@@ -201,10 +211,10 @@ export async function POST(req: NextRequest) {
     }
     if (newStatus === 'rejected') {
         updatePayload.approved_at = nowIso
-        updatePayload.rejection_reason = reason
+        updatePayload.rejection_reason = finalReason
     }
     if (newStatus === 'cancelled') {
-        updatePayload.rejection_reason = reason
+        updatePayload.rejection_reason = finalReason
     }
     const { error: updErr } = await supabaseAdmin
         .from('leave_requests')
@@ -221,7 +231,7 @@ export async function POST(req: NextRequest) {
         action,
         newStatus,
         row,
-        reason,
+        reason: finalReason,
         actorEmployeeId,
         actorLabel,
     })
@@ -313,6 +323,14 @@ async function fireNotifications(args: NotificationArgs) {
                 rejected: 'ใบลาของคุณถูกปฏิเสธ (โดย HR)',
                 cancelled: 'ใบลาของคุณถูกยกเลิก (โดย HR)',
             }
+            let title = titleMap[newStatus] ?? 'สถานะใบลาเปลี่ยน'
+            if (row.status === 'cancellation_requested') {
+                if (action === 'cancel') {
+                    title = 'คำขอยกเลิกใบลาได้รับการอนุมัติ (โดย HR)'
+                } else if (action === 'approve') {
+                    title = 'คำขอยกเลิกใบลาถูกปฏิเสธ (คงสถานะอนุมัติเดิม)'
+                }
+            }
             const iconMap: Record<string, string> = {
                 approved: 'CheckCircle',
                 rejected: 'XCircle',
@@ -326,7 +344,7 @@ async function fireNotifications(args: NotificationArgs) {
             await createNotification({
                 recipient_user_id: employeeUserId,
                 type: action === 'approve' ? 'leave_approved' : 'leave_rejected',
-                title: titleMap[newStatus] ?? 'สถานะใบลาเปลี่ยน',
+                title,
                 body: `${leaveTypeTh} ${row.start_date} → ${row.end_date} (${Number(row.total_days ?? 0)} วัน)${reason ? ` — ${reason}` : ''}`,
                 action_url: '/portal/leave',
                 action_label: 'ดูใบลา',
