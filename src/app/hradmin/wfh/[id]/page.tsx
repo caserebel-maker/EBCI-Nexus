@@ -64,20 +64,23 @@ const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.�
 function formatThaiDate(iso: string | null | undefined): string {
     if (!iso) return '—'
     const dateOnly = iso.slice(0, 10)
-    const d = new Date(`${dateOnly}T00:00:00+07:00`)
-    if (Number.isNaN(d.getTime())) return iso
-    return `${d.getDate()} ${TH_MONTHS[d.getMonth()]} ${d.getFullYear() + 543}`
+    const [y, m, d] = dateOnly.split('-').map(Number)
+    if (!y || !m || !d) return iso
+    return `${d} ${TH_MONTHS[m - 1]} ${y + 543}`
 }
 
 function formatThaiDateTime(iso: string | null | undefined): string {
     if (!iso) return '—'
     const d = new Date(iso)
     if (Number.isNaN(d.getTime())) return iso
-    return `${formatThaiDate(d.toISOString())} ${d.toLocaleTimeString('th-TH', {
+    const bkkStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+    const [y, m, day] = bkkStr.split('-').map(Number)
+    const timeStr = d.toLocaleTimeString('th-TH', {
         hour: '2-digit',
         minute: '2-digit',
         timeZone: 'Asia/Bangkok',
-    })} น.`
+    })
+    return `${day} ${TH_MONTHS[m - 1]} ${y + 543} ${timeStr} น.`
 }
 
 function formatRange(start: string, end: string): string {
