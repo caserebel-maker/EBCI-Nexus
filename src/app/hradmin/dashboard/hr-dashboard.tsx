@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
     Users, CalendarDays, Clock, AlertTriangle, TrendingUp,
-    Cake, Building2, Loader2, Gift, X, UserX, CheckCircle2, AlertCircle
+    Cake, Building2, Loader2, Gift, X, UserX, CheckCircle2, AlertCircle, Megaphone
 } from 'lucide-react'
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -103,6 +103,7 @@ interface Props {
     leavesToday: any[]
     whoIsOutToday?: WhoIsOutEntryItem[]
     urgentBanners: any[]
+    newsAnnouncements: any[]
     birthdays: any[]
     canViewAttendanceInsights?: boolean
 }
@@ -752,7 +753,7 @@ const MONTHS_TH = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', '�
 export function HRDashboard({
     metrics, attendanceStats, leaveChartData, deptData, attendanceData,
     pendingLeaves, pendingApprovals, contractsExpiring, anniversaries,
-    weekDays, leavesToday, whoIsOutToday = [], urgentBanners, birthdays,
+    weekDays, leavesToday, whoIsOutToday = [], urgentBanners, newsAnnouncements, birthdays,
     canViewAttendanceInsights = false,
 }: Props) {
     const router = useRouter()
@@ -760,6 +761,7 @@ export function HRDashboard({
     const [pending, setPending] = useState(initialPendingApprovals)
     const removePending = (item: any) => setPending(prev => prev.filter(r => pendingItemKey(r) !== pendingItemKey(item)))
     const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+    const [selectedNews, setSelectedNews] = useState<any>(null)
     const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
 
     const showToast = (type: 'success' | 'error', msg: string) => {
@@ -851,6 +853,7 @@ export function HRDashboard({
                 }
             `}</style>
             {selectedDay && <DayLeaveModal date={selectedDay} onClose={() => setSelectedDay(null)} />}
+            {selectedNews && <NewsModal news={selectedNews} onClose={() => setSelectedNews(null)} />}
 
             {/* Urgent Banners */}
             <UrgentBanners banners={urgentBanners} />
@@ -1149,6 +1152,49 @@ export function HRDashboard({
                             </div>
                         </div>
                     )}
+
+                    <div style={glassStyle} className="p-5">
+                        <div className="flex flex-col gap-2 mb-3">
+                            <div className="flex items-center gap-2">
+                                <Megaphone size={16} className="shrink-0 text-[#ad5f6c]" />
+                                <h2 className="text-[16px] leading-snug font-semibold text-white/80">ประกาศข่าวสาร</h2>
+                            </div>
+                            <button
+                                onClick={() => router.push('/hradmin/hr/announcements')}
+                                className="text-xs font-bold text-white/40 hover:text-white/80 transition-colors self-end -order-1"
+                            >
+                                ดูทั้งหมด →
+                            </button>
+                        </div>
+                        {newsAnnouncements.length === 0 ? (
+                            <p className="text-sm text-white/30 italic text-center py-4">ยังไม่มีประกาศ</p>
+                        ) : (
+                            <div className="divide-y divide-white/10">
+                                {newsAnnouncements.map((announcement) => (
+                                    <div
+                                        key={announcement.id}
+                                        className="py-1 first:pt-0 last:pb-0 cursor-pointer group"
+                                        onClick={() => setSelectedNews(announcement)}
+                                    >
+                                        <span className={cn(
+                                            'inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full border mb-1',
+                                            PRIORITY_COLOR[announcement.priority] ?? 'bg-white/10 text-white/50 border-white/10'
+                                        )}>
+                                            {PRIORITY_LABEL[announcement.priority] ?? announcement.priority}
+                                        </span>
+                                        <p className="text-[14px] break-words font-bold text-white/85 group-hover:text-white leading-relaxed transition-colors">
+                                            {announcement.headline}
+                                        </p>
+                                        <p className="text-[14px] leading-snug font-semibold text-white/70 mt-1">
+                                            {new Date(announcement.publish_date).toLocaleDateString('th-TH', {
+                                                day: 'numeric', month: 'short', year: '2-digit'
+                                            })}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

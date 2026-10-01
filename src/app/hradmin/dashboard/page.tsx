@@ -11,6 +11,11 @@ type PendingApprovalItem = {
     created_at?: string | null
 }
 
+type AnnouncementWithImage = {
+    image_path?: string | null
+    [key: string]: unknown
+}
+
 export default async function AdminDashboard() {
     const now = new Date()
     const nowMs = now.getTime()
@@ -46,6 +51,7 @@ export default async function AdminDashboard() {
         { data: pendingLeaves },
         { data: pendingWfhRequests, count: pendingWfhTotal },
         { data: announcements },
+        { data: newsAnnouncements },
         { data: pendingPasswordRequests },
     ] = await Promise.all([
         getCurrentPermissions(),
@@ -103,6 +109,11 @@ export default async function AdminDashboard() {
             .in('priority', ['urgent', 'emergency']).eq('publishStatus', 'published')
             .order('publish_date', { ascending: false }).limit(10),
 
+        supabaseAdmin.from('announcements')
+            .select('id, headline, publish_date, priority, content, image_path')
+            .eq('publishStatus', 'published')
+            .order('publish_date', { ascending: false }).limit(5),
+
         // Pending password change requests (for Super Admin)
         supabaseAdmin.from('password_change_requests')
             .select('id, user_id, email, source, requested_at, status')
@@ -110,6 +121,18 @@ export default async function AdminDashboard() {
             .order('requested_at', { ascending: false })
             .limit(10),
     ])
+
+    const newsWithImages = await Promise.all(
+        ((newsAnnouncements ?? []) as AnnouncementWithImage[]).map(async (announcement) => {
+            if (!announcement.image_path) return announcement
+
+            const { data } = await supabaseAdmin.storage
+                .from('announcement-images')
+                .createSignedUrl(announcement.image_path, 3600)
+
+            return { ...announcement, image_url: data?.signedUrl ?? null }
+        })
+    )
 
     // ─── Build dept distribution for donut chart ───
     // Active employees only — the donut answers "ตอนนี้ใครอยู่แผนกไหน",
@@ -371,6 +394,7 @@ export default async function AdminDashboard() {
             leavesToday={leavesTodayEnriched}
             whoIsOutToday={whoIsOutToday}
             urgentBanners={announcements ?? []}
+            newsAnnouncements={newsWithImages}
             birthdays={birthdays}
             canViewAttendanceInsights={permissions.can_view_attendance_insights}
         />
