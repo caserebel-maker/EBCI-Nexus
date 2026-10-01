@@ -5,11 +5,6 @@ import { fetchWhoIsOutToday } from '@/lib/who-is-out'
 
 export const dynamic = 'force-dynamic'
 
-type AnnouncementWithImage = {
-    image_path?: string | null
-    [key: string]: unknown
-}
-
 type PendingApprovalItem = {
     cancellation_requested_at?: string | null
     submitted_at?: string | null
@@ -51,7 +46,6 @@ export default async function AdminDashboard() {
         { data: pendingLeaves },
         { data: pendingWfhRequests, count: pendingWfhTotal },
         { data: announcements },
-        { data: newsAnnouncements },
         { data: pendingPasswordRequests },
     ] = await Promise.all([
         getCurrentPermissions(),
@@ -109,11 +103,6 @@ export default async function AdminDashboard() {
             .in('priority', ['urgent', 'emergency']).eq('publishStatus', 'published')
             .order('publish_date', { ascending: false }).limit(10),
 
-        // Latest news announcements for right-column section
-        supabaseAdmin.from('announcements').select('id, headline, publish_date, priority, content, image_path')
-            .eq('publishStatus', 'published')
-            .order('publish_date', { ascending: false }).limit(5),
-
         // Pending password change requests (for Super Admin)
         supabaseAdmin.from('password_change_requests')
             .select('id, user_id, email, source, requested_at, status')
@@ -121,17 +110,6 @@ export default async function AdminDashboard() {
             .order('requested_at', { ascending: false })
             .limit(10),
     ])
-
-    // ─── Generate signed URLs for announcement images ───
-    const newsWithImages = await Promise.all(
-        ((newsAnnouncements ?? []) as AnnouncementWithImage[]).map(async (a) => {
-            if (!a.image_path) return a
-            const { data } = await supabaseAdmin.storage
-                .from('announcement-images')
-                .createSignedUrl(a.image_path, 3600)
-            return { ...a, image_url: data?.signedUrl ?? null }
-        })
-    )
 
     // ─── Build dept distribution for donut chart ───
     // Active employees only — the donut answers "ตอนนี้ใครอยู่แผนกไหน",
@@ -393,7 +371,6 @@ export default async function AdminDashboard() {
             leavesToday={leavesTodayEnriched}
             whoIsOutToday={whoIsOutToday}
             urgentBanners={announcements ?? []}
-            newsAnnouncements={newsWithImages}
             birthdays={birthdays}
             canViewAttendanceInsights={permissions.can_view_attendance_insights}
         />
