@@ -653,13 +653,10 @@ function PendingRow({ item, onDone, onShowToast }: { item: any, onDone: (item: a
             ? `/hradmin/wfh/${item.id}`
             : `/hradmin/leave?tab=requests&status=${isCancellation ? 'cancellation_requested' : 'pending'}&request=${item.id}`
     const typeBadge = isPasswordReq ? 'ขอเปลี่ยนรหัสผ่าน' : isWfh ? 'WFH' : isCancellation ? 'ยกเลิกลา' : leaveTypeLabel
-    const meta = isPasswordReq
-        ? `ส่งคำขอเมื่อ ${dateLabel || 'วันนี้'} · อีเมล: ${item.email}`
-        : isWfh
-            ? `ขอ WFH · ${dayCount} วัน${dateLabel ? ` · ${dateLabel}` : ''}`
-            : isCancellation
-                ? `ขอยกเลิก${leaveTypeLabel} · ${dayCount} วัน${dateLabel ? ` · ${dateLabel}` : ''}`
-                : `${leaveTypeLabel} · ${dayCount} วัน${dateLabel ? ` · ${dateLabel}` : ''}`
+
+    const dateSummary = isPasswordReq
+        ? `ส่งเมื่อ ${dateLabel || 'วันนี้'}`
+        : `${dayCount} วัน${dateLabel ? ` · ${dateLabel}` : ''}`
 
     const handleLeaveAction = async (action: 'approve' | 'reject') => {
         startTransition(async () => {
@@ -683,52 +680,74 @@ function PendingRow({ item, onDone, onShowToast }: { item: any, onDone: (item: a
     }
 
     return (
-        <div className="py-3 border-b border-white/10 last:border-0">
-            <div className="flex flex-wrap items-start gap-3">
-                <div className={cn(
-                    'h-2.5 w-2.5 rounded-full mt-2 shrink-0',
-                    isPasswordReq ? 'bg-amber-400 ring-2 ring-amber-400/40' : isWfh ? 'bg-blue-300' : isCancellation ? 'bg-orange-300' : 'bg-yellow-300'
+        <div className="rounded-xl bg-white/[0.04] border border-white/8 p-3 hover:bg-white/[0.06] transition-colors space-y-2">
+            {/* Row 1: Status dot + Employee name + Badge */}
+            <div className="flex items-center gap-2 min-w-0">
+                <span className={cn(
+                    'h-2 w-2 rounded-full shrink-0',
+                    isPasswordReq ? 'bg-amber-400' : isWfh ? 'bg-blue-400' : isCancellation ? 'bg-orange-400' : 'bg-yellow-400'
                 )} />
-                <div className="min-w-0 flex-1 basis-[180px]">
-                    <Link href={detailHref} className="block group">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <p className="min-w-0 text-[14px] leading-snug font-bold text-white break-words group-hover:text-yellow-200">{empName}</p>
-                            <span className={cn(
-                                "rounded-full px-2 py-0.5 text-[11px] font-bold",
-                                isPasswordReq ? "bg-amber-500/25 text-amber-200 border border-amber-400/30" : "bg-yellow-400/15 text-yellow-200"
-                            )}>
-                                {typeBadge}
-                            </span>
-                        </div>
-                        <p className="mt-1 text-[14px] leading-relaxed break-words text-white/65">{meta}</p>
-                        <p className="mt-2 text-[14px] text-yellow-200/90">ดูรายละเอียด →</p>
+                <Link href={detailHref} className="min-w-0 flex-1 truncate group">
+                    <span className="text-[13.5px] font-bold text-white group-hover:text-amber-200 transition-colors truncate">
+                        {empName}
+                    </span>
+                </Link>
+                <span className={cn(
+                    "rounded-full px-2 py-0.5 text-[11px] font-bold shrink-0",
+                    isPasswordReq
+                        ? "bg-amber-500/25 text-amber-200 border border-amber-400/30"
+                        : "bg-yellow-400/15 text-yellow-200 border border-yellow-400/25"
+                )}>
+                    {typeBadge}
+                </span>
+            </div>
+
+            {/* Row 2: Date + Link on left, Action buttons on right */}
+            <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-white/5">
+                <div className="flex items-center gap-1.5 text-xs text-white/60 min-w-0 truncate">
+                    <span className="shrink-0">{dateSummary}</span>
+                    <span className="text-white/30 shrink-0">·</span>
+                    <Link
+                        href={detailHref}
+                        className="text-amber-300/85 hover:text-amber-200 font-medium shrink-0 transition-colors"
+                    >
+                        ดูรายละเอียด →
                     </Link>
                 </div>
+
                 {isPasswordReq ? (
                     <Link
                         href="/hradmin/settings/password-requests"
-                        className="ml-auto shrink-0 rounded-lg bg-amber-500/25 border border-amber-400/40 text-amber-200 hover:bg-amber-500/35 px-3 py-2 text-[14px] font-bold transition-colors"
+                        className="rounded-lg bg-amber-500/20 border border-amber-400/30 text-amber-200 hover:bg-amber-500/30 px-2.5 py-1 text-xs font-bold transition-colors shrink-0"
                     >
                         ตรวจคำขอ
                     </Link>
                 ) : !isWfh && !isCancellation ? (
-                    <div className="ml-auto flex gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                         <button
-                            disabled={isPending}
-                            onClick={() => handleLeaveAction('approve')}
-                            className="px-3 py-2 rounded-lg bg-emerald-500/20 text-emerald-200 text-sm font-bold hover:bg-emerald-500/30 disabled:opacity-50"
-                        >อนุมัติ</button>
-                        <button
+                            type="button"
                             disabled={isPending}
                             onClick={() => handleLeaveAction('reject')}
-                            className="px-3 py-2 rounded-lg bg-rose-500/20 text-rose-200 text-sm font-bold hover:bg-rose-500/30 disabled:opacity-50"
-                        >ปฏิเสธ</button>
+                            className="px-2.5 py-1 rounded-md bg-rose-500/15 border border-rose-500/25 text-rose-300 text-xs font-bold hover:bg-rose-500/25 transition-colors disabled:opacity-50"
+                        >
+                            ปฏิเสธ
+                        </button>
+                        <button
+                            type="button"
+                            disabled={isPending}
+                            onClick={() => handleLeaveAction('approve')}
+                            className="px-3 py-1 rounded-md bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
+                        >
+                            อนุมัติ
+                        </button>
                     </div>
                 ) : (
                     <Link
                         href={detailHref}
-                        className="shrink-0 rounded-lg bg-white/10 px-3 py-2 text-sm font-bold text-white/80 hover:bg-white/15"
-                    >เปิดดู</Link>
+                        className="rounded-lg bg-white/10 px-2.5 py-1 text-xs font-bold text-white/80 hover:bg-white/15 transition-colors shrink-0"
+                    >
+                        เปิดดู
+                    </Link>
                 )}
             </div>
         </div>
@@ -975,24 +994,29 @@ export function HRDashboard({
                     <div
                         id="pending-approvals"
                         style={glassStyle}
-                        className={cn('p-5', hasPendingApprovals && 'pending-leave-glow')}
+                        className={cn('p-4 sm:p-5', hasPendingApprovals && 'pending-leave-glow')}
                     >
-                        <div className="flex flex-col gap-2 mb-3">
-                            <div className="flex items-center gap-2">
-                                <Clock size={16} className="shrink-0 text-amber-200" />
-                                <h2 className="text-[16px] leading-snug font-semibold text-white/80">งานรออนุมัติ ({pendingApprovalTotal})</h2>
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <div className="h-7 w-7 shrink-0 rounded-lg bg-amber-500/20 ring-1 ring-amber-400/40 flex items-center justify-center">
+                                    <Clock size={14} className="text-amber-300" />
+                                </div>
+                                <h2 className="text-[15px] font-bold text-white/90 truncate">
+                                    งานรออนุมัติ ({pendingApprovalTotal})
+                                </h2>
                             </div>
                             <button
+                                type="button"
                                 onClick={() => router.push('/hradmin/leave?tab=requests&status=pending')}
-                                className="text-xs font-bold text-amber-200/70 hover:text-amber-100 transition-colors self-end -order-1"
+                                className="text-xs font-bold text-amber-300/80 hover:text-amber-200 transition-colors shrink-0"
                             >
                                 ดูทั้งหมด →
                             </button>
                         </div>
                         {pending.length === 0 ? (
-                            <p className="text-sm text-white/30 italic text-center py-4">ไม่มีงานรออนุมัติ</p>
+                            <p className="text-sm text-white/30 italic text-center py-3">ไม่มีงานรออนุมัติ</p>
                         ) : (
-                            <div className="space-y-1">
+                            <div className="space-y-2">
                                 {pending.map(item => (
                                     <PendingRow key={pendingItemKey(item)} item={item} onDone={removePending} onShowToast={showToast} />
                                 ))}
