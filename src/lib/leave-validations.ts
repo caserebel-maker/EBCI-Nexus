@@ -9,6 +9,7 @@ export interface ValidateLeaveArgs {
     startDate: string // YYYY-MM-DD
     endDate: string // YYYY-MM-DD
     isHalfDay: boolean
+    halfDayPeriod?: 'morning' | 'afternoon' | null
     hasAttachment: boolean
     balance: LeaveBalanceRow | null
     employeeId: string
@@ -73,23 +74,41 @@ export async function hasOverlappingLeave(args: {
     employeeId: string
     startDate: string
     endDate: string
+    isHalfDay?: boolean
+    halfDayPeriod?: 'morning' | 'afternoon' | null
     ignoreRequestId?: string
 }): Promise<boolean> {
     let q = supabaseAdmin
         .from('leave_requests')
-        .select('id, start_date, end_date, status')
+        .select('id, start_date, end_date, is_half_day, half_day_period, status')
         .eq('employee_id', args.employeeId)
         .in('status', ['pending', 'approved'])
         // existing.start_date <= new.end_date AND existing.end_date >= new.start_date
         .lte('start_date', args.endDate)
         .gte('end_date', args.startDate)
     if (args.ignoreRequestId) q = q.neq('id', args.ignoreRequestId)
-    const { data, error } = await q.limit(1)
+    const { data, error } = await q.limit(10)
     if (error) {
         console.error('[leave-validations] overlap query failed:', error)
         return false // fail-open so a db hiccup doesn't block legitimate leaves
     }
-    return (data ?? []).length > 0
+    const rows = data ?? []
+    if (rows.length === 0) return false
+
+    const hasConflict = rows.some(existing => {
+        const isSameSingleDay = args.startDate === args.endDate
+            && existing.start_date === existing.end_date
+            && existing.start_date === args.startDate
+        const isCompatibleHalfDays = isSameSingleDay
+            && Boolean(args.isHalfDay)
+            && Boolean(existing.is_half_day)
+            && (
+                (args.halfDayPeriod === 'morning' && existing.half_day_period === 'afternoon') ||
+                (args.halfDayPeriod === 'afternoon' && existing.half_day_period === 'morning')
+            )
+        return !isCompatibleHalfDays
+    })
+    return hasConflict
 }
 
 async function hasCompletedOneYear(employeeId: string, asOfDate: string): Promise<boolean> {
@@ -278,7 +297,11 @@ export async function validateLeaveRequest(
 
     // Rule 7 — overlap
     const overlap = await hasOverlappingLeave({
-        employeeId, startDate, endDate,
+        employeeId,
+        startDate,
+        endDate,
+        isHalfDay,
+        halfDayPeriod: args.halfDayPeriod,
     })
     if (overlap) {
         return {

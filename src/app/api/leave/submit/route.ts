@@ -160,6 +160,7 @@ export async function POST(req: NextRequest) {
         startDate,
         endDate,
         isHalfDay,
+        halfDayPeriod: isHalfDay ? (halfDayPeriod as 'morning' | 'afternoon') : null,
         hasAttachment,
         balance,
         employeeId,
