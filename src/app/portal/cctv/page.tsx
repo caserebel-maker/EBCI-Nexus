@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getSession } from '@/lib/auth'
+import { getAuth, canViewCctv, isMd } from '@/lib/route-auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { CctvView } from './cctv-view'
 import type { CctvCamera } from '@/app/api/cctv/cameras/route'
@@ -7,8 +7,9 @@ import type { CctvCamera } from '@/app/api/cctv/cameras/route'
 export const dynamic = 'force-dynamic'
 
 export default async function CctvPage() {
-    const session = await getSession()
-    if (!session) redirect('/login')
+    const auth = await getAuth()
+    if (!auth) redirect('/login')
+    if (!canViewCctv(auth)) redirect('/portal/dashboard')
 
     const { data: rawCameras } = await supabaseAdmin
         .from('cctv_cameras')
@@ -76,13 +77,13 @@ export default async function CctvPage() {
             },
         ]
 
-    const canManage = session.role === 'hr_admin' || session.role === 'manager'
+    const canManage = auth.session.role === 'hr_admin' || auth.permissions.can_manage_system || isMd(auth)
 
     return (
         <CctvView
             initialCameras={cameras}
             canManage={canManage}
-            userRole={session.role}
+            userRole={auth.session.role}
         />
     )
 }

@@ -62,3 +62,8 @@ next-env.d.ts
 # *.db
 *.db-journal
 .env*.local
+
+# cctv binaries
+scripts/cctv/go2rtc
+scripts/cctv/*.zip
+scripts/cctv/*.tar.gz

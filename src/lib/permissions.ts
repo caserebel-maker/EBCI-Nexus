@@ -26,6 +26,11 @@ export type UserPermissions = {
      * sensitive and not every HR-capable user should see it.
      */
     can_view_attendance_insights: boolean
+    /**
+     * View live security cameras (CCTV) for authorized personnel (MD, HR, etc.).
+     * Default off for standard employees.
+     */
+    can_view_cctv: boolean
 }
 
 export const EMPTY_PERMISSIONS: UserPermissions = {
@@ -38,6 +43,7 @@ export const EMPTY_PERMISSIONS: UserPermissions = {
     can_manage_payroll: false,
     can_view_audit_log: false,
     can_view_attendance_insights: false,
+    can_view_cctv: false,
 }
 
 /**
@@ -60,6 +66,7 @@ export const PERMISSION_FLAGS: Array<{
     { key: 'can_manage_payroll',       label: 'จัดการเงินเดือน (สลิป)',    description: 'อัปโหลด/ดูสลิปเงินเดือนของพนักงานทุกคน' },
     { key: 'can_view_audit_log',       label: 'ดู audit log',              description: 'อ่านประวัติการแก้ไขข้อมูล + เปลี่ยนสิทธิ์' },
     { key: 'can_view_attendance_insights', label: 'ดูสถิติขาด ลา มาสาย', description: 'เห็นหน้าวิเคราะห์พนักงานที่ควรติดตามเรื่องขาดงาน ลา และมาสาย' },
+    { key: 'can_view_cctv',            label: 'ดูภาพกล้องวงจรปิด (CCTV)',  description: 'เข้าถึงหน้าจอและดูภาพสดกล้องวงจรปิดของบริษัท 4 ตัว' },
 ]
 
 export type ApprovalTier = 'small' | 'medium' | 'large' | 'unlimited'

@@ -20,6 +20,7 @@ const FLAG_KEYS: Array<keyof UserPermissions> = [
     'can_manage_payroll',
     'can_view_audit_log',
     'can_view_attendance_insights',
+    'can_view_cctv',
 ]
 
 interface UpdatePayload {
@@ -64,7 +65,7 @@ export async function updateUserPermissions(
     // Read current state for the audit before/after snapshot.
     const { data: before, error: readErr } = await supabaseAdmin
         .from('User')
-        .select('role, can_view_all_employees, can_edit_employees, can_view_approval_limits, can_edit_approval_limits, can_approve_leave, can_manage_system, can_manage_payroll, can_view_audit_log, can_view_attendance_insights')
+        .select('role, can_view_all_employees, can_edit_employees, can_view_approval_limits, can_edit_approval_limits, can_approve_leave, can_manage_system, can_manage_payroll, can_view_audit_log, can_view_attendance_insights, can_view_cctv')
         .eq('id', targetUserId)
         .maybeSingle()
     if (readErr) {
@@ -91,6 +92,7 @@ export async function updateUserPermissions(
         can_manage_payroll:       Boolean(before.can_manage_payroll),
         can_view_audit_log:       Boolean(before.can_view_audit_log),
         can_view_attendance_insights: Boolean(before.can_view_attendance_insights),
+        can_view_cctv:            Boolean(before.can_view_cctv),
     }
 
     // Role validation. Only accept the three known values; null/undefined

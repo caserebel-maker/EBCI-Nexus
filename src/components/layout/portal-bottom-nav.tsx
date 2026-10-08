@@ -264,6 +264,7 @@ export function PortalBottomNav({
     canManagePayroll = false,
     canViewAttendanceInsights = false,
     isApprover = false,
+    canViewCctv = false,
 }: {
     canManagePayroll?: boolean
     canViewAttendanceInsights?: boolean
@@ -272,6 +273,7 @@ export function PortalBottomNav({
      *  of the More panel so employee-role approvers can act on requests
      *  from mobile (matches the desktop sidebar injection in shell.tsx). */
     isApprover?: boolean
+    canViewCctv?: boolean
 }) {
     const role = useRole()
     const pathname = usePathname()
@@ -358,7 +360,7 @@ export function PortalBottomNav({
     // Only true HR admins get the admin mobile menu. Payroll-manager
     // employees like สุชาติ may visit /hradmin/payroll/bulk, but their
     // nav should remain a normal employee nav with one extra payroll item.
-    const moreItems = isHrAdminMode
+    const rawMoreItems = isHrAdminMode
         ? [
             MORE_CONFIG.hr_admin[0],
             MORE_CONFIG.hr_admin[1],
@@ -366,6 +368,8 @@ export function PortalBottomNav({
             ...MORE_CONFIG.hr_admin.slice(2),
         ]
         : [...payrollMoreItems, ...approverMoreItems, ...baseMoreItems]
+
+    const moreItems = rawMoreItems.filter(item => item.href !== '/portal/cctv' || canViewCctv)
 
     // Pre-compute group buckets for the collapsible renderer. Memoized so
     // we don't re-bucket on every keystroke into the route bar.

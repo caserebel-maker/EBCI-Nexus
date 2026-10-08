@@ -168,15 +168,27 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
     // just bolt one extra menu onto the employee that bridges them into a
     // single /hradmin admin page. No mode toggle needed.
     const perms = permissions ?? EMPTY_PERMISSIONS
+    const userEmail = (profile?.email || '').trim().toLowerCase()
+    const rawName = (userName || profile?.fullName || '').trim().toLowerCase()
+    const isMdUser = userEmail === 'sayan@ebcitrade.com' ||
+                     rawName.includes('สายัณห์') ||
+                     rawName.includes('sayan')
+    const canSeeCctv = role === 'hr_admin' || perms.can_manage_system || perms.can_view_cctv || isMdUser
+
     const navItems: NavItem[] = baseItems
         .map(item => ({
             ...item,
-            children: item.children?.filter(child =>
-                child.href !== '/hradmin/attendance/insights'
-                || perms.can_view_attendance_insights,
-            ),
+            children: item.children?.filter(child => {
+                if (child.href === '/hradmin/attendance/insights' && !perms.can_view_attendance_insights) {
+                    return false
+                }
+                if (child.href === '/portal/cctv' && !canSeeCctv) {
+                    return false
+                }
+                return true
+            }),
         }))
-        .filter(item => item.href || (item.children?.length ?? 0) > 0)
+        .filter(item => (item.href && (item.href !== '/portal/cctv' || canSeeCctv)) || (item.children?.length ?? 0) > 0)
     // Payroll bulk upload is an admin action — hide it when an HR admin is
     // previewing /portal so the employee-mode sidebar stays clean. The link
     // would jump them out to /hradmin anyway, which breaks the preview.
@@ -546,6 +558,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                         canManagePayroll={perms.can_manage_payroll && !inPortalPreview}
                         canViewAttendanceInsights={perms.can_view_attendance_insights && !inPortalPreview}
                         isApprover={!!profile?.isApprover}
+                        canViewCctv={canSeeCctv}
                     />
                 </div>
             )}

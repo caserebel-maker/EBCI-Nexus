@@ -45,6 +45,24 @@ export const canViewApprovalLimits: AuthCheck = ({ permissions }) => permissions
 export const canEditApprovalLimits: AuthCheck = ({ permissions }) => permissions.can_edit_approval_limits === true
 export const canViewAuditLog: AuthCheck = ({ permissions }) => permissions.can_view_audit_log === true
 export const canViewAttendanceInsights: AuthCheck = ({ permissions }) => permissions.can_view_attendance_insights === true
+export const canViewCctvPermission: AuthCheck = ({ permissions }) => permissions.can_view_cctv === true
+
+/**
+ * MD check: Managing Director Sunny (sayan@ebcitrade.com) has employee code 001-29
+ * and user id 'd3751894-c161-44db-840c-cd02650109f9'.
+ */
+export const isMd: AuthCheck = ({ session }) => {
+    if (!session) return false
+    const email = (session.email || '').trim().toLowerCase()
+    const name = (session.name || '').trim().toLowerCase()
+    return (
+        session.id === 'd3751894-c161-44db-840c-cd02650109f9' ||
+        session.employeeId === 'd3751894-c161-44db-840c-cd02650109f9' ||
+        email === 'sayan@ebcitrade.com' ||
+        name === 'sayan@ebcitrade.com' ||
+        name.includes('สายัณห์')
+    )
+}
 
 /**
  * Salary-slip access. Standalone allow-list flag — does NOT inherit
@@ -54,6 +72,17 @@ export const canViewAttendanceInsights: AuthCheck = ({ permissions }) => permiss
  * slips bypass this check via a separate code path in the portal API.
  */
 export const canManagePayroll: AuthCheck = ({ permissions }) => permissions.can_manage_payroll === true
+
+/**
+ * Access check for CCTV:
+ * Allowed: HR Admin, Super Admin, MD (Sunny), or anyone explicitly granted can_view_cctv.
+ * Regular employees / users without permission are blocked.
+ */
+export const canViewCctv: AuthCheck = (ctx) =>
+    isLegacyHrAdmin(ctx) ||
+    canManageSystem(ctx) ||
+    isMd(ctx) ||
+    canViewCctvPermission(ctx)
 
 // ── Composite checks (the most common ones) ──────────────────────────
 

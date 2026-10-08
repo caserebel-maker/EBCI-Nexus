@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { getSession } from '@/lib/auth'
+import { getAuth, canViewCctv, isMd } from '@/lib/route-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,9 +22,12 @@ export interface CctvCamera {
 }
 
 export async function GET() {
-    const session = await getSession()
-    if (!session) {
+    const auth = await getAuth()
+    if (!auth) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!canViewCctv(auth)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     try {
@@ -46,13 +49,13 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
-    const session = await getSession()
-    if (!session) {
+    const auth = await getAuth()
+    if (!auth) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Gated: HR Admin or Manager can modify CCTV configuration
-    const isAllowed = session.role === 'hr_admin' || session.role === 'manager'
+    // Gated: HR Admin, Super Admin, or MD can modify CCTV configuration
+    const isAllowed = auth.session.role === 'hr_admin' || auth.permissions.can_manage_system || isMd(auth)
     if (!isAllowed) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
