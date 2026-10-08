@@ -49,8 +49,8 @@ export default async function CctvPage() {
             },
             {
                 id: 'cam-3',
-                name: 'กล้อง 3 — ดาดฟ้า/หลังคา (Tapo 3)',
-                location: 'ดาดฟ้า/หลังคา (Roof / Tapo 3)',
+                name: 'กล้อง 3 — ประตูด้านหลัง',
+                location: 'ประตูด้านหลัง (Back Entrance)',
                 model: 'Tapo C545D',
                 stream_url: 'rtsp://Pondebci:0818331367@192.168.0.43:554/stream1',
                 sub_stream_url: 'rtsp://Pondebci:0818331367@192.168.0.43:554/stream2',
@@ -63,8 +63,8 @@ export default async function CctvPage() {
             },
             {
                 id: 'cam-4',
-                name: 'กล้อง 4 — ประตูหลังและคลังสินค้า',
-                location: 'ประตูหลังอาคาร / คลังจัดเก็บ (Back Entrance & Storage)',
+                name: 'กล้อง 4 — ประตูหน้าด้านใน',
+                location: 'ประตูหน้าด้านใน (Front Inner Entrance)',
                 model: 'Tapo C545D',
                 stream_url: 'rtsp://Pondebci:0818331367@192.168.0.104:554/stream1',
                 sub_stream_url: 'rtsp://Pondebci:0818331367@192.168.0.104:554/stream2',
@@ -73,7 +73,7 @@ export default async function CctvPage() {
                 snapshot_url: 'https://breeds-gmbh-conservative-warming.trycloudflare.com/api/frame.jpeg?src=cam4',
                 is_active: true,
                 sort_order: 4,
-                notes: 'ตรวจจับประตูหลังและโซนขนถ่ายสินค้า (รอเชื่อมต่อ)',
+                notes: 'ตรวจจับประตูหน้าด้านใน (รอเชื่อมต่อ)',
             },
         ]
 
