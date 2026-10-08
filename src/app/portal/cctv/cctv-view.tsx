@@ -526,14 +526,16 @@ function CameraCard({
 
     const HTTPS_TUNNEL = 'https://painted-princeton-basename-mall.trycloudflare.com'
 
-    // Helper to resolve URLs: if browsing via HTTPS, convert HTTP LAN URLs to HTTPS tunnel to avoid Mixed Content blocks
+    // Helper to resolve URLs: normalize any trycloudflare.com or http:// URLs to the active HTTPS tunnel
     const resolveStreamUrl = useCallback((rawUrl: string | null | undefined, fallbackPath: string): string => {
-        const base = rawUrl && rawUrl.trim().length > 0 ? rawUrl : `${HTTPS_TUNNEL}${fallbackPath}`
-        if (typeof window !== 'undefined' && window.location.protocol === 'https:' && base.startsWith('http://')) {
-            const pathAndQuery = base.replace(/^http:\/\/[^/]+/, '')
+        if (!rawUrl || rawUrl.trim().length === 0) {
+            return `${HTTPS_TUNNEL}${fallbackPath}`
+        }
+        if (rawUrl.includes('.trycloudflare.com') || (typeof window !== 'undefined' && window.location.protocol === 'https:' && rawUrl.startsWith('http://'))) {
+            const pathAndQuery = rawUrl.replace(/^https?:\/\/[^/]+/, '')
             return `${HTTPS_TUNNEL}${pathAndQuery}`
         }
-        return base
+        return rawUrl
     }, [HTTPS_TUNNEL])
 
     // Double-buffered snapshot loading: keeps the previous frame on screen without flickering
