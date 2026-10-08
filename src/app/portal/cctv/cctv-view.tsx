@@ -516,12 +516,30 @@ function CameraCard({
 }) {
     const videoRef = useRef<HTMLVideoElement>(null)
     const [snapshotCount, setSnapshotCount] = useState(0)
+    const [streamFailed, setStreamFailed] = useState(false)
+
+    // Auto-refresh snapshot when in snapshot mode
+    useEffect(() => {
+        if (streamMode !== 'snapshot') return
+        const timer = setInterval(() => {
+            setSnapshotCount(c => c + 1)
+        }, 3000)
+        return () => clearInterval(timer)
+    }, [streamMode])
 
     // Capture camera snapshot
     const handleSnapshot = () => {
         onShowToast(`📸 บันทึกภาพ ${camera.name} สำเร็จ`)
         setSnapshotCount(prev => prev + 1)
     }
+
+    const streamHtmlUrl = camera.webrtc_url
+        ? camera.webrtc_url.replace('/api/webrtc?src=', '/stream.html?src=')
+        : `http://192.168.0.198:1984/stream.html?src=cam${index + 1}`
+
+    const snapshotUrl = camera.snapshot_url
+        ? `${camera.snapshot_url}${camera.snapshot_url.includes('?') ? '&' : '?'}_t=${snapshotCount}`
+        : `http://192.168.0.198:1984/api/frame.jpeg?src=cam${index + 1}&_t=${snapshotCount}`
 
     return (
         <div className={cn(
@@ -533,27 +551,25 @@ function CameraCard({
                 {/* Simulated Feed Background with camera aesthetic grid */}
                 <div className="absolute inset-0 opacity-20 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
 
-                {/* Video / Stream placeholder */}
-                {streamMode === 'webrtc' && camera.webrtc_url ? (
-                    <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        muted={isMuted}
-                        className="w-full h-full object-cover"
+                {/* Live Stream / WebRTC Player */}
+                {streamMode === 'webrtc' && !streamFailed ? (
+                    <iframe
+                        src={streamHtmlUrl}
+                        title={camera.name}
+                        className="w-full h-full border-0 object-cover bg-black"
+                        allow="autoplay; fullscreen"
+                        onError={() => setStreamFailed(true)}
                     />
-                ) : streamMode === 'hls' && camera.hls_url ? (
-                    <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        muted={isMuted}
+                ) : streamMode === 'snapshot' && !streamFailed ? (
+                    <img
+                        src={snapshotUrl}
+                        alt={camera.name}
                         className="w-full h-full object-cover"
+                        onError={() => setStreamFailed(true)}
                     />
                 ) : (
-                    /* Default Visual Simulation for Tapo C545D Feed */
+                    /* Visual Feed Simulator / Offline State */
                     <div className="relative w-full h-full flex flex-col items-center justify-center p-6 text-center">
-                        {/* Realistic lens background tone based on location */}
                         <div className={cn(
                             "absolute inset-0 transition-opacity",
                             index === 0 ? "bg-gradient-to-br from-slate-900 via-blue-950/30 to-slate-950" :
@@ -572,8 +588,8 @@ function CameraCard({
                                 <p className="text-xs text-white/50">{camera.location}</p>
                             </div>
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/60 border border-white/10 text-[11px] text-white/70">
-                                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-                                <span>กำลังรอสัญญาณ RTSP ในแลน</span>
+                                <span className="h-2 w-2 rounded-full bg-amber-400 animate-ping" />
+                                <span>กำลังรอสัญญาณ RTSP (192.168.0.43)</span>
                             </div>
                         </div>
 
