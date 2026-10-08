@@ -524,7 +524,7 @@ function CameraCard({
         setStreamFailed(false)
     }, [streamMode, camera.id, camera.webrtc_url, camera.snapshot_url])
 
-    const HTTPS_TUNNEL = 'https://breeds-gmbh-conservative-warming.trycloudflare.com'
+    const HTTPS_TUNNEL = 'https://painted-princeton-basename-mall.trycloudflare.com'
 
     // Helper to resolve URLs: if browsing via HTTPS, convert HTTP LAN URLs to HTTPS tunnel to avoid Mixed Content blocks
     const resolveStreamUrl = useCallback((rawUrl: string | null | undefined, fallbackPath: string): string => {
