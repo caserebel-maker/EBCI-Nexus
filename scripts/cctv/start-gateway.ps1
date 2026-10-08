@@ -35,6 +35,12 @@ if ($wifiStatus -notmatch 'SSID\s*:\s*EBCI') {
     Start-Sleep -Seconds 2
 }
 
+# Start Camera 3 subnet relay if cam3-proxy.js exists
+if (Test-Path ".\cam3-proxy.js") {
+    Write-Host "Starting Camera 3 subnet relay..."
+    Start-Process -FilePath "node" -ArgumentList ".\cam3-proxy.js" -NoNewWindow
+}
+
 Write-Host "Starting go2rtc with config: $PSScriptRoot\go2rtc.yaml"
 $go2rtcProc = Start-Process -FilePath ".\go2rtc.exe" -ArgumentList "-config `".\go2rtc.yaml`"" -PassThru -NoNewWindow
 
