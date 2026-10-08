@@ -3,7 +3,7 @@ import {
     CalendarDays, ClipboardCheck, ShieldCheck, MapPin, Network, Palmtree,
     ScrollText, BarChart3, Clock, Calendar, Briefcase, User,
     Wallet, CheckCircle, Database, DoorOpen, GitBranch, CalendarHeart, Home,
-    MailWarning, AlertTriangle, UserCheck, MessageSquare, ReceiptText, Activity, type LucideIcon,
+    MailWarning, AlertTriangle, UserCheck, MessageSquare, ReceiptText, Activity, Cctv, type LucideIcon,
 } from 'lucide-react'
 import { ROLES, type UserRole } from './roles'
 
@@ -90,10 +90,11 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         {
             label: 'เนื้อหาและกิจกรรม',
             icon: Megaphone,
-            matchPrefix: ['/hradmin/announcements', '/hradmin/meeting-room'],
+            matchPrefix: ['/hradmin/announcements', '/hradmin/meeting-room', '/portal/cctv', '/hradmin/cctv'],
             children: [
                 { label: 'ประกาศข่าวสาร', href: '/hradmin/announcements', icon: Megaphone },
                 { label: 'จองห้องประชุม', href: '/hradmin/meeting-room',  icon: DoorOpen },
+                { label: 'กล้องวงจรปิด',   href: '/portal/cctv',          icon: Cctv },
             ],
         },
         {
@@ -149,11 +150,12 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         {
             label: 'บริษัท',
             icon: Network,
-            matchPrefix: ['/portal/announcements', '/portal/organization', '/portal/meeting-room', '/portal/feedback'],
+            matchPrefix: ['/portal/announcements', '/portal/organization', '/portal/meeting-room', '/portal/feedback', '/portal/cctv'],
             children: [
                 { label: 'ประกาศข่าวสาร',  href: '/portal/announcements',  icon: Megaphone },
                 { label: 'ผังองค์กร',      href: '/portal/organization',   icon: Network },
                 { label: 'จองห้องประชุม',  href: '/portal/meeting-room',   icon: DoorOpen },
+                { label: 'กล้องวงจรปิด',   href: '/portal/cctv',           icon: Cctv },
                 { label: 'เสนอแนะ',        href: '/portal/feedback',       icon: MessageSquare },
             ],
         },
@@ -196,11 +198,12 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
         {
             label: 'บริษัท',
             icon: Network,
-            matchPrefix: ['/portal/announcements', '/portal/organization', '/portal/meeting-room', '/portal/feedback'],
+            matchPrefix: ['/portal/announcements', '/portal/organization', '/portal/meeting-room', '/portal/feedback', '/portal/cctv'],
             children: [
                 { label: 'dashboard.announcements', href: '/portal/announcements', icon: Megaphone },
                 { label: 'ผังองค์กร',                href: '/portal/organization',  icon: Network },
                 { label: 'จองห้องประชุม',           href: '/portal/meeting-room',  icon: DoorOpen },
+                { label: 'กล้องวงจรปิด',            href: '/portal/cctv',          icon: Cctv },
                 { label: 'เสนอแนะ',                 href: '/portal/feedback',      icon: MessageSquare },
             ],
         },
