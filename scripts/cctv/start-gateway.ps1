@@ -19,6 +19,11 @@ if ($wifiStatus -notmatch 'SSID\s*:\s*EBCI') {
 Write-Host "Starting go2rtc with config: $PSScriptRoot\go2rtc.yaml"
 $go2rtcProc = Start-Process -FilePath ".\go2rtc.exe" -ArgumentList "-config `".\go2rtc.yaml`"" -PassThru -NoNewWindow
 
+if (-not (Test-Path ".\cloudflared.exe")) {
+    Write-Host "Downloading cloudflared for Windows x64..."
+    curl.exe -L -o "cloudflared.exe" "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
+}
+
 if (Test-Path ".\cloudflared.exe") {
     Write-Host "Starting Cloudflare HTTPS tunnel..."
     Start-Process -FilePath ".\cloudflared.exe" -ArgumentList "tunnel --url http://127.0.0.1:1984" -NoNewWindow
