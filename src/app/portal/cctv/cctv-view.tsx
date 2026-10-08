@@ -518,6 +518,11 @@ function CameraCard({
     const [snapshotCount, setSnapshotCount] = useState(0)
     const [streamFailed, setStreamFailed] = useState(false)
 
+    // Reset stream failure flag on mode or camera change
+    useEffect(() => {
+        setStreamFailed(false)
+    }, [streamMode, camera.id, camera.webrtc_url, camera.snapshot_url])
+
     // Auto-refresh snapshot when in snapshot mode
     useEffect(() => {
         if (streamMode !== 'snapshot') return
@@ -533,13 +538,27 @@ function CameraCard({
         setSnapshotCount(prev => prev + 1)
     }
 
-    const streamHtmlUrl = camera.webrtc_url
-        ? camera.webrtc_url.replace('/api/webrtc?src=', '/stream.html?src=')
-        : `http://192.168.1.62:1984/stream.html?src=cam${index + 1}`
+    const HTTPS_TUNNEL = 'https://breeds-gmbh-conservative-warming.trycloudflare.com'
 
-    const snapshotUrl = camera.snapshot_url
+    // Helper to resolve URLs: if browsing via HTTPS, convert HTTP LAN URLs to HTTPS tunnel to avoid Mixed Content blocks
+    const resolveStreamUrl = (rawUrl: string | null | undefined, fallbackPath: string): string => {
+        const base = rawUrl && rawUrl.trim().length > 0 ? rawUrl : `${HTTPS_TUNNEL}${fallbackPath}`
+        if (typeof window !== 'undefined' && window.location.protocol === 'https:' && base.startsWith('http://')) {
+            const pathAndQuery = base.replace(/^http:\/\/[^/]+/, '')
+            return `${HTTPS_TUNNEL}${pathAndQuery}`
+        }
+        return base
+    }
+
+    const rawStreamHtml = camera.webrtc_url
+        ? camera.webrtc_url.replace('/api/webrtc?src=', '/stream.html?src=')
+        : `/stream.html?src=cam${index + 1}`
+    const streamHtmlUrl = resolveStreamUrl(rawStreamHtml, `/stream.html?src=cam${index + 1}`)
+
+    const rawSnapshotUrl = camera.snapshot_url
         ? `${camera.snapshot_url}${camera.snapshot_url.includes('?') ? '&' : '?'}_t=${snapshotCount}`
-        : `http://192.168.1.62:1984/api/frame.jpeg?src=cam${index + 1}&_t=${snapshotCount}`
+        : `/api/frame.jpeg?src=cam${index + 1}&_t=${snapshotCount}`
+    const snapshotUrl = resolveStreamUrl(rawSnapshotUrl, `/api/frame.jpeg?src=cam${index + 1}&_t=${snapshotCount}`)
 
     return (
         <div className={cn(
@@ -589,8 +608,20 @@ function CameraCard({
                             </div>
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/60 border border-white/10 text-[11px] text-white/70">
                                 <span className="h-2 w-2 rounded-full bg-amber-400 animate-ping" />
-                                <span>กำลังรอสัญญาณ RTSP (192.168.0.43)</span>
+                                <span>กำลังรอสัญญาณภาพ...</span>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setStreamFailed(false)
+                                    setSnapshotCount(c => c + 1)
+                                    onShowToast('กำลังเชื่อมต่อสัญญาณภาพใหม่...')
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-600/80 hover:bg-blue-600 text-[11px] font-semibold text-white border border-blue-400/40 shadow-md transition-colors"
+                            >
+                                <RefreshCw size={12} />
+                                <span>ลองเชื่อมต่อใหม่ (Retry)</span>
+                            </button>
                         </div>
 
                         {/* Lens crosshair markers */}
