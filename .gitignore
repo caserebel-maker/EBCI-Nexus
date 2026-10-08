@@ -65,5 +65,8 @@ next-env.d.ts
 
 # cctv binaries
 scripts/cctv/go2rtc
+scripts/cctv/*.exe
 scripts/cctv/*.zip
 scripts/cctv/*.tar.gz
+cam1*.jpg
+Wi-Fi-EBCI.xml

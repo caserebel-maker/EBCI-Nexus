@@ -535,11 +535,11 @@ function CameraCard({
 
     const streamHtmlUrl = camera.webrtc_url
         ? camera.webrtc_url.replace('/api/webrtc?src=', '/stream.html?src=')
-        : `http://192.168.0.198:1984/stream.html?src=cam${index + 1}`
+        : `http://192.168.1.62:1984/stream.html?src=cam${index + 1}`
 
     const snapshotUrl = camera.snapshot_url
         ? `${camera.snapshot_url}${camera.snapshot_url.includes('?') ? '&' : '?'}_t=${snapshotCount}`
-        : `http://192.168.0.198:1984/api/frame.jpeg?src=cam${index + 1}&_t=${snapshotCount}`
+        : `http://192.168.1.62:1984/api/frame.jpeg?src=cam${index + 1}&_t=${snapshotCount}`
 
     return (
         <div className={cn(
