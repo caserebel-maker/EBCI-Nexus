@@ -20,7 +20,7 @@ type StreamMode = 'webrtc' | 'hls' | 'snapshot' | 'rtsp'
 export function CctvView({ initialCameras, canManage }: Props) {
     const [cameras, setCameras] = useState<CctvCamera[]>(initialCameras)
     const [focusedCamId, setFocusedCamId] = useState<string | null>(null)
-    const [streamMode, setStreamMode] = useState<StreamMode>('snapshot')
+    const [streamMode, setStreamMode] = useState<StreamMode>('webrtc')
     const [currentTime, setCurrentTime] = useState<string>('')
     const [showGuide, setShowGuide] = useState(false)
     const [editingCam, setEditingCam] = useState<CctvCamera | null>(null)
@@ -515,50 +515,78 @@ function CameraCard({
     onShowToast: (msg: string) => void
 }) {
     const videoRef = useRef<HTMLVideoElement>(null)
-    const [snapshotCount, setSnapshotCount] = useState(0)
     const [streamFailed, setStreamFailed] = useState(false)
+    const [displayedSnapshot, setDisplayedSnapshot] = useState<string>('')
+    const [retryTrigger, setRetryTrigger] = useState(0)
 
     // Reset stream failure flag on mode or camera change
     useEffect(() => {
         setStreamFailed(false)
     }, [streamMode, camera.id, camera.webrtc_url, camera.snapshot_url])
 
-    // Auto-refresh snapshot when in snapshot mode
-    useEffect(() => {
-        if (streamMode !== 'snapshot') return
-        const timer = setInterval(() => {
-            setSnapshotCount(c => c + 1)
-        }, 3000)
-        return () => clearInterval(timer)
-    }, [streamMode])
-
-    // Capture camera snapshot
-    const handleSnapshot = () => {
-        onShowToast(`📸 บันทึกภาพ ${camera.name} สำเร็จ`)
-        setSnapshotCount(prev => prev + 1)
-    }
-
     const HTTPS_TUNNEL = 'https://breeds-gmbh-conservative-warming.trycloudflare.com'
 
     // Helper to resolve URLs: if browsing via HTTPS, convert HTTP LAN URLs to HTTPS tunnel to avoid Mixed Content blocks
-    const resolveStreamUrl = (rawUrl: string | null | undefined, fallbackPath: string): string => {
+    const resolveStreamUrl = useCallback((rawUrl: string | null | undefined, fallbackPath: string): string => {
         const base = rawUrl && rawUrl.trim().length > 0 ? rawUrl : `${HTTPS_TUNNEL}${fallbackPath}`
         if (typeof window !== 'undefined' && window.location.protocol === 'https:' && base.startsWith('http://')) {
             const pathAndQuery = base.replace(/^http:\/\/[^/]+/, '')
             return `${HTTPS_TUNNEL}${pathAndQuery}`
         }
         return base
+    }, [HTTPS_TUNNEL])
+
+    // Double-buffered snapshot loading: keeps the previous frame on screen without flickering
+    useEffect(() => {
+        if (streamMode !== 'snapshot') return
+        let isCancelled = false
+        let timerId: ReturnType<typeof setTimeout>
+
+        const fetchNextSnapshot = () => {
+            if (isCancelled) return
+
+            const rawUrl = camera.snapshot_url || `/api/frame.jpeg?src=cam${index + 1}`
+            const fullUrl = resolveStreamUrl(rawUrl, `/api/frame.jpeg?src=cam${index + 1}`)
+            const urlWithTime = `${fullUrl}${fullUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`
+
+            const img = new Image()
+            img.onload = () => {
+                if (isCancelled) return
+                setDisplayedSnapshot(urlWithTime)
+                setStreamFailed(false)
+                // Schedule next snapshot 4 seconds AFTER current snapshot finishes downloading
+                timerId = setTimeout(fetchNextSnapshot, 4000)
+            }
+            img.onerror = () => {
+                if (isCancelled) return
+                // If we don't have any frame yet, mark as failed so placeholder displays
+                setDisplayedSnapshot(prev => {
+                    if (!prev) setStreamFailed(true)
+                    return prev
+                })
+                // Retry in 4 seconds
+                timerId = setTimeout(fetchNextSnapshot, 4000)
+            }
+            img.src = urlWithTime
+        }
+
+        fetchNextSnapshot()
+
+        return () => {
+            isCancelled = true
+            if (timerId) clearTimeout(timerId)
+        }
+    }, [streamMode, camera.id, camera.snapshot_url, index, resolveStreamUrl, retryTrigger])
+
+    // Capture camera snapshot
+    const handleSnapshot = () => {
+        onShowToast(`📸 บันทึกภาพ ${camera.name} สำเร็จ`)
     }
 
     const rawStreamHtml = camera.webrtc_url
         ? camera.webrtc_url.replace('/api/webrtc?src=', '/stream.html?src=')
         : `/stream.html?src=cam${index + 1}`
     const streamHtmlUrl = resolveStreamUrl(rawStreamHtml, `/stream.html?src=cam${index + 1}`)
-
-    const rawSnapshotUrl = camera.snapshot_url
-        ? `${camera.snapshot_url}${camera.snapshot_url.includes('?') ? '&' : '?'}_t=${snapshotCount}`
-        : `/api/frame.jpeg?src=cam${index + 1}&_t=${snapshotCount}`
-    const snapshotUrl = resolveStreamUrl(rawSnapshotUrl, `/api/frame.jpeg?src=cam${index + 1}&_t=${snapshotCount}`)
 
     return (
         <div className={cn(
@@ -579,12 +607,11 @@ function CameraCard({
                         allow="autoplay; fullscreen"
                         onError={() => setStreamFailed(true)}
                     />
-                ) : streamMode === 'snapshot' && !streamFailed ? (
+                ) : streamMode === 'snapshot' && displayedSnapshot ? (
                     <img
-                        src={snapshotUrl}
+                        src={displayedSnapshot}
                         alt={camera.name}
                         className="w-full h-full object-cover"
-                        onError={() => setStreamFailed(true)}
                     />
                 ) : (
                     /* Visual Feed Simulator / Offline State */
@@ -614,7 +641,7 @@ function CameraCard({
                                 type="button"
                                 onClick={() => {
                                     setStreamFailed(false)
-                                    setSnapshotCount(c => c + 1)
+                                    setRetryTrigger(c => c + 1)
                                     onShowToast('กำลังเชื่อมต่อสัญญาณภาพใหม่...')
                                 }}
                                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-600/80 hover:bg-blue-600 text-[11px] font-semibold text-white border border-blue-400/40 shadow-md transition-colors"
