@@ -42,17 +42,18 @@
 
 ---
 
-## 2. ข้อมูลกล้องตัวที่ 1 ที่บันทึกไว้ในระบบแล้ว (Camera 1 Config)
+## 2. ข้อมูลกล้องวงจรปิด Tapo C545D ทั้ง 3 ตัวในระบบ (Configured Cameras)
 
-* **ชื่อในแอป:** Tapo 3 (Location: Roof)
-* **โมเดล:** TP-Link Tapo C545D (Firmware 1.1.2)
-* **MAC Address:** `EC:B9:31:D0:A9:29`
-* **IP Address:** `192.168.0.43`
-* **Wi-Fi:** `EBCI` (Full Signal)
-* **Camera Account:** User: `Pondebci` | Pass: `0818331367`
-* **RTSP URLs:**
-  * Stream 1 (HD): `rtsp://Pondebci:0818331367@192.168.0.43:554/stream1`
-  * Stream 2 (Sub): `rtsp://Pondebci:0818331367@192.168.0.43:554/stream2`
+ข้อมูลล็อกอิน Camera Account: **User:** `Pondebci` | **Pass:** `0818331367` (พอร์ต RTSP: `554`)
+
+| ลำดับ | ชื่อในระบบ / ตำแหน่ง | IP Address | MAC Address | เฟิร์มแวร์ | RTSP Stream URL (Sub-stream / WebRTC) |
+| :---: | :--- | :---: | :---: | :---: | :--- |
+| **CAM 1** | **Front**<br>หน้าอาคาร / หลังคา | `192.168.0.28` | `EC-B9-31-8D-9D-1D` | 1.1.7 | `rtsp://Pondebci:0818331367@192.168.0.28:554/stream2` |
+| **CAM 2** | **Side**<br>ด้านข้างอาคาร / หลังคา | `192.168.0.89` | `EC-B9-31-8D-9E-0B` | 1.1.2 | `rtsp://Pondebci:0818331367@192.168.0.89:554/stream2` |
+| **CAM 3** | **Tapo 3**<br>ดาดฟ้า / หลังคา | `192.168.0.43` | `EC-B9-31-D0-A9-29` | 1.1.2 | `rtsp://Pondebci:0818331367@192.168.0.43:554/stream2` |
+| **CAM 4** | **Storage / Back**<br>ประตูหลัง / คลัง | *รอเชื่อมต่อ* | *รอเชื่อมต่อ* | - | `rtsp://Pondebci:0818331367@192.168.0.104:554/stream2` |
+
+> หมายเหตุ: ทุกตัวสตรีมแบบ **Sub-stream (`stream2`)** เพื่อความลื่นไหลระดับ 20-30 FPS บนเครือข่ายแลน และสามารถสลับเป็น **HD Main-stream (`stream1`)** ได้โดยเปลี่ยนเลขท้ายเป็น stream1
 
 ---
 
@@ -78,17 +79,26 @@
   * บน Windows: เปิด Command Prompt ➔ พิมพ์ `ipconfig`
   * บน Mac/Linux: พิมพ์ `ifconfig` หรือ `ip a`
 
-### ขั้นที่ 2: ทดสอบ Ping และ RTSP ไปหากล้อง
+### ขั้นที่ 2: ทดสอบ Ping และ RTSP ไปหากล้องทั้ง 3 ตัว
 * ทดสอบ Ping:
   ```bash
+  # กล้อง 1 (Front)
+  ping 192.168.0.28
+
+  # กล้อง 2 (Side)
+  ping 192.168.0.89
+
+  # กล้อง 3 (Tapo 3 / Roof)
   ping 192.168.0.43
   ```
 * ทดสอบดึงสตรีม RTSP (ถ้ามี `ffmpeg` / `ffprobe` หรือใช้โปรแกรม VLC Player):
-  * เปิด VLC Player ➔ Media ➔ Open Network Stream ➔ ใส่:
-    `rtsp://Pondebci:0818331367@192.168.0.43:554/stream2`
-  * หรือทดสอบผ่านคำสั่ง:
+  * เปิด VLC Player ➔ Media ➔ Open Network Stream ➔ ทดสอบใส่ทีละตัว:
+    1. `rtsp://Pondebci:0818331367@192.168.0.28:554/stream2`
+    2. `rtsp://Pondebci:0818331367@192.168.0.89:554/stream2`
+    3. `rtsp://Pondebci:0818331367@192.168.0.43:554/stream2`
+  * หรือทดสอบผ่านคำสั่ง ffprobe:
     ```bash
-    ffprobe -rtsp_transport tcp "rtsp://Pondebci:0818331367@192.168.0.43:554/stream2"
+    ffprobe -rtsp_transport tcp "rtsp://Pondebci:0818331367@192.168.0.28:554/stream2"
     ```
 
 ### ขั้นที่ 3: รัน Gateway (`go2rtc`) บนเครื่องข้างล่าง
@@ -103,18 +113,20 @@
     listen: ":8555"
 
   streams:
-    cam1: rtsp://Pondebci:0818331367@192.168.0.43:554/stream2
-    cam2: rtsp://admin:ebci1234@192.168.0.102:554/stream2
-    cam3: rtsp://admin:ebci1234@192.168.0.103:554/stream2
-    cam4: rtsp://admin:ebci1234@192.168.0.104:554/stream2
+    cam1: rtsp://Pondebci:0818331367@192.168.0.28:554/stream2
+    cam2: rtsp://Pondebci:0818331367@192.168.0.89:554/stream2
+    cam3: rtsp://Pondebci:0818331367@192.168.0.43:554/stream2
+    cam4: rtsp://Pondebci:0818331367@192.168.0.104:554/stream2
   ```
 * รันโปรแกรม `go2rtc`
-* เปิดเบราว์เซอร์ไปที่ `http://localhost:1984` จะเห็นหน้าแดชบอร์ดสตรีมกล้อง `cam1` ทันที!
+* เปิดเบราว์เซอร์ไปที่ `http://localhost:1984` จะเห็นหน้าแดชบอร์ดสตรีมกล้องทั้ง 3 ตัว (`cam1`, `cam2`, `cam3`) ขึ้นมาทันที!
 
 ### ขั้นที่ 4: เชื่อมโยงเข้า Nexus
-* ใน Nexus CCTV (`/portal/cctv`) กดปุ่ม ⚙️ ที่กล้อง 1 แล้วระบุ WebRTC URL เป็น:
-  `http://<IPเครื่องข้างล่าง>:1984/api/webrtc?src=cam1`
-  หรือสามารถอัปเดตตรงในตาราง `cctv_cameras` ใน Supabase ได้เลยครับ
+* เปิด Nexus CCTV (`/portal/cctv`) เพื่อดูสดแบบ 2x2 Grid ทั้ง 3 ตัว
+* หากเครื่องข้างล่างมี IP เฉพาะ (เช่น `192.168.0.xxx`) สามารถระบุ WebRTC URL ในฐานข้อมูล `cctv_cameras` หรือปุ่ม ⚙️ บนหน้าเว็บ เป็น:
+  - กล้อง 1: `http://<IPเครื่องเกตเวย์>:1984/api/webrtc?src=cam1`
+  - กล้อง 2: `http://<IPเครื่องเกตเวย์>:1984/api/webrtc?src=cam2`
+  - กล้อง 3: `http://<IPเครื่องเกตเวย์>:1984/api/webrtc?src=cam3`
 
 ---
 
@@ -124,7 +136,8 @@
 อ่าน docs/SESSION_HANDOFF_OCT08_CCTV_SETUP.md
 ดำเนินการต่อจากที่ค้างไว้:
 1. ตรวจสอบ IP และการเชื่อมต่อของเครื่องปัจจุบันว่าอยู่ในวงแลน 192.168.0.xxx เดียวกับกล้อง Tapo หรือไม่
-2. ทดสอบ ping 192.168.0.43 และทดสอบ RTSP stream (rtsp://Pondebci:0818331367@192.168.0.43:554/stream2)
-3. รัน go2rtc เพื่อรับสัญญาณกล้องและแปลงเป็น WebRTC
-4. อัปเดต IP ของเกตเวย์ในฐานข้อมูล cctv_cameras และทดสอบการเปิดดูผ่าน Nexus CCTV (/portal/cctv)
+2. ทดสอบ ping กล้องทั้ง 3 ตัว: 192.168.0.28, 192.168.0.89, 192.168.0.43
+3. ทดสอบ RTSP stream ด้วย VLC หรือ ffprobe (User: Pondebci, Pass: 0818331367)
+4. รัน go2rtc (scripts/cctv/go2rtc.yaml) เพื่อแปลงสัญญาณเป็น WebRTC พอร์ต 1984
+5. อัปเดต IP เกตเวย์ในฐานข้อมูล cctv_cameras และเปิดดูสดผ่านหน้าเว็บ Nexus CCTV (/portal/cctv)
 ```

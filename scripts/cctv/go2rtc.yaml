@@ -11,7 +11,7 @@ ffmpeg:
   bin: "scripts/cctv/ffmpeg.exe"
 
 streams:
-  cam1: rtsp://Pondebci:0818331367@192.168.0.43:554/stream2
-  cam2: rtsp://admin:ebci1234@192.168.0.102:554/stream2
-  cam3: rtsp://admin:ebci1234@192.168.0.103:554/stream2
-  cam4: rtsp://admin:ebci1234@192.168.0.104:554/stream2
+  cam1: rtsp://Pondebci:0818331367@192.168.0.28:554/stream2
+  cam2: rtsp://Pondebci:0818331367@192.168.0.89:554/stream2
+  cam3: rtsp://Pondebci:0818331367@192.168.0.43:554/stream2
+  cam4: rtsp://Pondebci:0818331367@192.168.0.104:554/stream2
