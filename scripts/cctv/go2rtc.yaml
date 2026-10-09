@@ -11,8 +11,9 @@ ffmpeg:
   bin: "c:/EBCI-Nexus/scripts/cctv/ffmpeg.exe"
 
 streams:
-  cam1: rtsp://Pondebci:0818331367@192.168.0.28:554/stream2
-  cam2: rtsp://Pondebci:0818331367@192.168.0.89:554/stream2
+  cam1:
+    - rtsp://Pondebci:0818331367@127.0.0.1:5541/stream2
+  cam2:
+    - rtsp://Pondebci:0818331367@127.0.0.1:5542/stream2
   cam3:
     - rtsp://Pondebci:0818331367@127.0.0.1:5543/stream2
-  cam4: rtsp://Pondebci:0818331367@192.168.0.104:554/stream2

@@ -26,9 +26,9 @@ export default async function CctvPage() {
                 model: 'Tapo C545D',
                 stream_url: 'rtsp://Pondebci:0818331367@192.168.0.28:554/stream1',
                 sub_stream_url: 'rtsp://Pondebci:0818331367@192.168.0.28:554/stream2',
-                webrtc_url: 'https://painted-princeton-basename-mall.trycloudflare.com/api/webrtc?src=cam1',
-                hls_url: 'https://painted-princeton-basename-mall.trycloudflare.com/api/hls?src=cam1',
-                snapshot_url: 'https://painted-princeton-basename-mall.trycloudflare.com/api/frame.jpeg?src=cam1',
+                webrtc_url: '/api/webrtc?src=cam1',
+                hls_url: '/api/hls?src=cam1',
+                snapshot_url: '/api/frame.jpeg?src=cam1',
                 is_active: true,
                 sort_order: 1,
                 notes: 'MAC: EC-B9-31-8D-9D-1D | Tapo C545D (FW 1.1.7)',
@@ -38,28 +38,28 @@ export default async function CctvPage() {
                 name: 'กล้อง 2 — ด้านข้างอาคาร (Side)',
                 location: 'หลังคาด้านข้าง (Roof / Side)',
                 model: 'Tapo C545D',
-                stream_url: 'rtsp://Pondebci:0818331367@192.168.0.89:554/stream1',
-                sub_stream_url: 'rtsp://Pondebci:0818331367@192.168.0.89:554/stream2',
-                webrtc_url: 'https://painted-princeton-basename-mall.trycloudflare.com/api/webrtc?src=cam2',
-                hls_url: 'https://painted-princeton-basename-mall.trycloudflare.com/api/hls?src=cam2',
-                snapshot_url: 'https://painted-princeton-basename-mall.trycloudflare.com/api/frame.jpeg?src=cam2',
+                stream_url: 'rtsp://Pondebci:0818331367@192.168.10.109:554/stream1',
+                sub_stream_url: 'rtsp://Pondebci:0818331367@192.168.10.109:554/stream2',
+                webrtc_url: '/api/webrtc?src=cam2',
+                hls_url: '/api/hls?src=cam2',
+                snapshot_url: '/api/frame.jpeg?src=cam2',
                 is_active: true,
                 sort_order: 2,
                 notes: 'MAC: EC-B9-31-8D-9E-0B | Tapo C545D (FW 1.1.2)',
             },
             {
                 id: 'cam-3',
-                name: 'กล้อง 3 — ประตูด้านหลัง',
-                location: 'ประตูด้านหลัง (Back Entrance)',
+                name: 'กล้อง 3 — ศาลพระภูมิ / ประตูด้านหลัง',
+                location: 'ศาลพระภูมิ / ลานจอดด้านใน (Courtyard)',
                 model: 'Tapo C545D',
-                stream_url: 'rtsp://Pondebci:0818331367@192.168.10.121:554/stream1',
-                sub_stream_url: 'rtsp://Pondebci:0818331367@192.168.10.121:554/stream2',
-                webrtc_url: 'https://painted-princeton-basename-mall.trycloudflare.com/api/webrtc?src=cam3',
-                hls_url: 'https://painted-princeton-basename-mall.trycloudflare.com/api/hls?src=cam3',
-                snapshot_url: 'https://painted-princeton-basename-mall.trycloudflare.com/api/frame.jpeg?src=cam3',
+                stream_url: 'rtsp://Pondebci:0818331367@192.168.10.108:554/stream1',
+                sub_stream_url: 'rtsp://Pondebci:0818331367@192.168.10.108:554/stream2',
+                webrtc_url: '/api/webrtc?src=cam3',
+                hls_url: '/api/hls?src=cam3',
+                snapshot_url: '/api/frame.jpeg?src=cam3',
                 is_active: true,
                 sort_order: 3,
-                notes: 'Tapo C545D (IP: 192.168.10.121)',
+                notes: 'Tapo C545D (IP: 192.168.10.108)',
             },
             {
                 id: 'cam-4',
@@ -68,20 +68,25 @@ export default async function CctvPage() {
                 model: 'Tapo C545D',
                 stream_url: 'rtsp://Pondebci:0818331367@192.168.0.104:554/stream1',
                 sub_stream_url: 'rtsp://Pondebci:0818331367@192.168.0.104:554/stream2',
-                webrtc_url: 'https://painted-princeton-basename-mall.trycloudflare.com/api/webrtc?src=cam4',
-                hls_url: 'https://painted-princeton-basename-mall.trycloudflare.com/api/hls?src=cam4',
-                snapshot_url: 'https://painted-princeton-basename-mall.trycloudflare.com/api/frame.jpeg?src=cam4',
+                webrtc_url: '/api/webrtc?src=cam4',
+                hls_url: '/api/hls?src=cam4',
+                snapshot_url: '/api/frame.jpeg?src=cam4',
                 is_active: true,
                 sort_order: 4,
                 notes: 'ตรวจจับประตูหน้าด้านใน (รอเชื่อมต่อ)',
             },
         ]
 
+    const initialTunnelUrl = cameras[0]?.webrtc_url
+        ? (cameras[0].webrtc_url.match(/^(https:\/\/[^/]+)/)?.[1] || '')
+        : ''
+
     const canManage = auth.session.role === 'hr_admin' || auth.permissions.can_manage_system || isMd(auth)
 
     return (
         <CctvView
             initialCameras={cameras}
+            initialTunnelUrl={initialTunnelUrl}
             canManage={canManage}
             userRole={auth.session.role}
         />

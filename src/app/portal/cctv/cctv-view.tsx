@@ -13,12 +13,14 @@ interface Props {
     initialCameras: CctvCamera[]
     canManage: boolean
     userRole: string
+    initialTunnelUrl?: string
 }
 
 type StreamMode = 'webrtc' | 'hls' | 'snapshot' | 'rtsp'
 
-export function CctvView({ initialCameras, canManage }: Props) {
+export function CctvView({ initialCameras, canManage, initialTunnelUrl }: Props) {
     const [cameras, setCameras] = useState<CctvCamera[]>(initialCameras)
+    const [tunnelUrl, setTunnelUrl] = useState<string>(initialTunnelUrl || '')
     const [focusedCamId, setFocusedCamId] = useState<string | null>(null)
     const [streamMode, setStreamMode] = useState<StreamMode>('webrtc')
     const [currentTime, setCurrentTime] = useState<string>('')
@@ -33,6 +35,29 @@ export function CctvView({ initialCameras, canManage }: Props) {
         'cam-3': true,
         'cam-4': true,
     })
+
+    // Automatically synchronize active Cloudflare Tunnel URL from gateway registry
+    useEffect(() => {
+        let isMounted = true
+        const checkTunnel = async () => {
+            try {
+                const res = await fetch('/api/cctv/tunnel')
+                if (!res.ok) return
+                const data = await res.json()
+                if (data.tunnel_url && isMounted) {
+                    setTunnelUrl(prev => (prev !== data.tunnel_url ? data.tunnel_url : prev))
+                }
+            } catch (err) {
+                // Ignore transient network errors
+            }
+        }
+        checkTunnel()
+        const interval = setInterval(checkTunnel, 15_000)
+        return () => {
+            isMounted = false
+            clearInterval(interval)
+        }
+    }, [])
 
     // Real-time clock for CCTV On-Screen Display (OSD)
     useEffect(() => {
@@ -244,6 +269,7 @@ export function CctvView({ initialCameras, canManage }: Props) {
                         isFocused={focusedCamId === cam.id}
                         isMuted={mutedStates[cam.id] ?? true}
                         canManage={canManage}
+                        tunnelUrl={tunnelUrl}
                         onToggleFocus={() => setFocusedCamId(focusedCamId === cam.id ? null : cam.id)}
                         onToggleMute={() => toggleMute(cam.id)}
                         onEdit={() => setEditingCam(cam)}
@@ -497,6 +523,7 @@ function CameraCard({
     isFocused,
     isMuted,
     canManage,
+    tunnelUrl,
     onToggleFocus,
     onToggleMute,
     onEdit,
@@ -509,6 +536,7 @@ function CameraCard({
     isFocused: boolean
     isMuted: boolean
     canManage: boolean
+    tunnelUrl?: string
     onToggleFocus: () => void
     onToggleMute: () => void
     onEdit: () => void
@@ -519,24 +547,23 @@ function CameraCard({
     const [displayedSnapshot, setDisplayedSnapshot] = useState<string>('')
     const [retryTrigger, setRetryTrigger] = useState(0)
 
-    // Reset stream failure flag on mode or camera change
+    // Reset stream failure flag on mode, camera, or tunnel change
     useEffect(() => {
         setStreamFailed(false)
-    }, [streamMode, camera.id, camera.webrtc_url, camera.snapshot_url])
-
-    const HTTPS_TUNNEL = 'https://painted-princeton-basename-mall.trycloudflare.com'
+    }, [streamMode, camera.id, camera.webrtc_url, camera.snapshot_url, tunnelUrl])
 
     // Helper to resolve URLs: normalize any trycloudflare.com or http:// URLs to the active HTTPS tunnel
     const resolveStreamUrl = useCallback((rawUrl: string | null | undefined, fallbackPath: string): string => {
+        const base = tunnelUrl || ''
         if (!rawUrl || rawUrl.trim().length === 0) {
-            return `${HTTPS_TUNNEL}${fallbackPath}`
+            return base ? `${base}${fallbackPath}` : fallbackPath
         }
         if (rawUrl.includes('.trycloudflare.com') || (typeof window !== 'undefined' && window.location.protocol === 'https:' && rawUrl.startsWith('http://'))) {
             const pathAndQuery = rawUrl.replace(/^https?:\/\/[^/]+/, '')
-            return `${HTTPS_TUNNEL}${pathAndQuery}`
+            return base ? `${base}${pathAndQuery}` : rawUrl
         }
         return rawUrl
-    }, [HTTPS_TUNNEL])
+    }, [tunnelUrl])
 
     // Double-buffered snapshot loading: keeps the previous frame on screen without flickering
     useEffect(() => {
