@@ -31,7 +31,7 @@ function log(msg) {
     console.log(`[${timestamp}] ${msg}`);
 }
 
-// 1. Dynamic Local Wi-Fi IP Detection
+// 1. Dynamic Local Wi-Fi IP Detection & Auto-Reconnect
 function getWifiLocalIp() {
     const ifaces = os.networkInterfaces();
     for (const name in ifaces) {
@@ -42,6 +42,28 @@ function getWifiLocalIp() {
         }
     }
     return null;
+}
+
+let isReconnectingWifi = false;
+function ensureWifiConnected() {
+    const currentIp = getWifiLocalIp();
+    if (currentIp) return currentIp;
+
+    if (isReconnectingWifi) return null;
+    isReconnectingWifi = true;
+    try {
+        log('[Wi-Fi Guard] Wi-Fi disconnected or not on 192.168.0.x. Checking WLAN interface...');
+        const out = cp.execSync('netsh wlan show interfaces', { encoding: 'utf8', timeout: 5000 });
+        if (out.includes('disconnected') || !out.includes('SSID                   : EBCI')) {
+            log('[Wi-Fi Guard] Reconnecting to SSID "EBCI"...');
+            cp.execSync('netsh wlan connect name="EBCI"', { timeout: 8000 });
+        }
+    } catch (e) {
+        log(`[Wi-Fi Guard Error] ${e.message}`);
+    } finally {
+        setTimeout(() => { isReconnectingWifi = false; }, 5000);
+    }
+    return getWifiLocalIp();
 }
 
 // Probe port helper
@@ -73,7 +95,6 @@ function probeTapoRtsp(ip, localIp) {
         socket.on('data', (d) => {
             resp += d.toString();
             socket.destroy();
-            // Tapo cameras respond with 200 OK and Public: OPTIONS, DESCRIBE...
             const isTapo = resp.includes('RTSP/1.0 200 OK') && resp.includes('DESCRIBE');
             resolve(isTapo);
         });
@@ -89,7 +110,11 @@ async function healCameras() {
     if (isHealing) return;
     isHealing = true;
     try {
-        const wifiIp = getWifiLocalIp();
+        const wifiIp = ensureWifiConnected();
+        if (!wifiIp) {
+            log('[Auto-Heal] Skipped: Wi-Fi interface not ready yet.');
+            return;
+        }
 
         // Check if any camera is down
         const c1Ok = await probePort(cameras.cam1.host, wifiIp);
@@ -97,7 +122,6 @@ async function healCameras() {
         const c3Ok = await probePort(cameras.cam3.host, wifiIp);
 
         if (c1Ok && c2Ok && c3Ok) {
-            isHealing = false;
             return; // All cameras healthy!
         }
 
@@ -164,7 +188,6 @@ async function healCameras() {
             for (const ip of active10) {
                 const isTapo = await probeTapoRtsp(ip, wifiIp);
                 if (isTapo) {
-                    // If Cam 3 is not healthy and not assigned to this IP
                     if (!recheck3 && cameras.cam3.host !== ip && cameras.cam2.host !== ip) {
                         cameras.cam3.host = ip;
                         log(`[Auto-Healed] Cam 3 assigned Tapo RTSP stream at ${ip}`);
@@ -186,7 +209,7 @@ async function healCameras() {
 function startCameraRelays() {
     for (const [camKey, config] of Object.entries(cameras)) {
         const server = net.createServer((inbound) => {
-            const wifiIp = getWifiLocalIp();
+            const wifiIp = ensureWifiConnected();
             const connectOpts = {
                 host: config.host,
                 port: config.port,
@@ -202,7 +225,6 @@ function startCameraRelays() {
 
             inbound.on('error', () => {});
             outbound.on('error', (err) => {
-                // If outbound connection fails, trigger healing
                 healCameras();
             });
         });
@@ -249,18 +271,56 @@ async function registerTunnelUrl(url) {
     }
 }
 
-// 4. Cloudflared Subprocess Management
+// 4. Cloudflared Subprocess Management & Auto-Recovery
 let cloudflaredProc = null;
+let isRestartingCloudflared = false;
+
+function restartCloudflared(reason) {
+    if (isRestartingCloudflared) return;
+    isRestartingCloudflared = true;
+    log(`[Cloudflared Recovery] Restarting cloudflared due to: ${reason}`);
+
+    try {
+        if (cloudflaredProc) {
+            cloudflaredProc.removeAllListeners();
+            cloudflaredProc.kill();
+        }
+        cp.execSync('Stop-Process -Name cloudflared -Force -ErrorAction SilentlyContinue', { shell: 'powershell', timeout: 5000 });
+    } catch (e) {}
+
+    cloudflaredProc = null;
+    currentTunnelUrl = '';
+
+    try {
+        if (fs.existsSync(CLOUDFLARE_LOG)) fs.unlinkSync(CLOUDFLARE_LOG);
+    } catch (e) {}
+
+    setTimeout(() => {
+        startCloudflared();
+        isRestartingCloudflared = false;
+    }, 2000);
+}
 
 function checkCloudflareLog() {
     if (!fs.existsSync(CLOUDFLARE_LOG)) return;
     try {
         const content = fs.readFileSync(CLOUDFLARE_LOG, 'utf8');
-        const match = content.match(/https:\/\/[a-zA-Z0-9\-]+\.trycloudflare\.com/);
-        if (match && match[0] !== currentTunnelUrl) {
-            currentTunnelUrl = match[0];
-            log(`>>> NEW CLOUDFLARE TUNNEL DETECTED: ${currentTunnelUrl}`);
-            registerTunnelUrl(currentTunnelUrl);
+
+        // Check if tunnel expired on Cloudflare side
+        if (content.includes('Unauthorized: Tunnel not found') || content.includes('Register tunnel error from server side')) {
+            restartCloudflared('Unauthorized / Expired quick tunnel detected in cloudflare.log');
+            return;
+        }
+
+        // Extract latest trycloudflare URL from log
+        const matches = [...content.matchAll(/https:\/\/[a-zA-Z0-9\-]+\.trycloudflare\.com/g)];
+        if (matches.length > 0) {
+            const latestUrl = matches[matches.length - 1][0];
+            if (latestUrl !== currentTunnelUrl) {
+                currentTunnelUrl = latestUrl;
+                log(`>>> NEW CLOUDFLARE TUNNEL DETECTED: ${currentTunnelUrl}`);
+                registerTunnelUrl(currentTunnelUrl);
+            }
         }
     } catch (e) {}
 }
@@ -285,18 +345,47 @@ function startCloudflared() {
     cloudflaredProc.on('exit', (code) => {
         log(`Cloudflared exited (code ${code}). Restarting in 5s...`);
         cloudflaredProc = null;
-        setTimeout(startCloudflared, 5000);
+        if (!isRestartingCloudflared) {
+            setTimeout(startCloudflared, 5000);
+        }
     });
 
+    let attempts = 0;
     const checkInterval = setInterval(() => {
         checkCloudflareLog();
-        if (currentTunnelUrl) {
+        attempts++;
+        if (currentTunnelUrl || attempts > 20) {
             clearInterval(checkInterval);
         }
     }, 1000);
 }
 
-// 5. Go2rtc Subprocess Management
+// Active verification of tunnel reachability
+let tunnelFailCount = 0;
+async function verifyTunnelReachable() {
+    if (!currentTunnelUrl || isRestartingCloudflared) return;
+
+    try {
+        const res = await fetch(`${currentTunnelUrl}/api/streams`, {
+            signal: AbortSignal.timeout(6000),
+        });
+        if (res.ok) {
+            tunnelFailCount = 0;
+            return;
+        }
+        tunnelFailCount++;
+    } catch (err) {
+        tunnelFailCount++;
+        log(`[Tunnel Health Check] Public ping failed (${tunnelFailCount}/3): ${err.message}`);
+    }
+
+    if (tunnelFailCount >= 3) {
+        tunnelFailCount = 0;
+        restartCloudflared('Tunnel URL failed public reachability check 3 times');
+    }
+}
+
+// 5. Go2rtc Subprocess Management & Health Check
 let go2rtcProc = null;
 
 function startGo2rtc() {
@@ -313,29 +402,53 @@ function startGo2rtc() {
     });
 }
 
+async function verifyGo2rtcReachable() {
+    try {
+        const res = await fetch('http://127.0.0.1:1984/api/streams', {
+            signal: AbortSignal.timeout(3000),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch (e) {
+        log(`[go2rtc Health Warning] Local API not responding: ${e.message}`);
+        if (!go2rtcProc) {
+            startGo2rtc();
+        }
+    }
+}
+
 // Main Supervisor Bootstrap
 log('=== EBCI NEXUS CCTV GATEWAY SUPERVISOR STARTING ===');
-const wifiIp = getWifiLocalIp();
+const wifiIp = ensureWifiConnected();
 log(`Detected Wi-Fi Adapter IP: ${wifiIp || 'None (will check on demand)'}`);
 
 startCameraRelays();
 startGo2rtc();
 startCloudflared();
 
-// Periodic Cloudflare log check
+// Watchdogs & Timers:
+// 1. Wi-Fi connection check every 15 seconds
+setInterval(ensureWifiConnected, 15000);
+
+// 2. Periodic Cloudflare log check every 10 seconds
 setInterval(checkCloudflareLog, 10000);
 
-// Heartbeat ping every 30 seconds
+// 3. Heartbeat ping to Nexus every 30 seconds
 setInterval(() => {
     if (currentTunnelUrl) {
         registerTunnelUrl(currentTunnelUrl);
     }
 }, 30000);
 
-// Auto-Heal camera check every 60 seconds
+// 4. Verify public reachability of tunnel every 30 seconds
+setInterval(verifyTunnelReachable, 30000);
+
+// 5. Auto-Heal camera IPs every 60 seconds
 setInterval(healCameras, 60000);
 
-// Keep alive
+// 6. Verify local go2rtc every 60 seconds
+setInterval(verifyGo2rtcReachable, 60000);
+
+// Graceful shutdown
 process.on('SIGINT', () => {
     log('Shutting down supervisor...');
     if (go2rtcProc) go2rtcProc.kill();
