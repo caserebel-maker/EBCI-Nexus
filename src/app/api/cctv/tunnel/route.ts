@@ -13,12 +13,13 @@ export async function GET() {
     try {
         let tunnelUrl = cachedTunnelUrl
 
-        // If not in memory, fetch from Supabase cctv_cameras cam-1
+        // If not in memory, fetch from Supabase cctv_cameras (sort_order = 1)
         if (!tunnelUrl) {
             const { data } = await supabaseAdmin
                 .from('cctv_cameras')
                 .select('webrtc_url, updated_at')
-                .eq('id', 'cam-1')
+                .order('sort_order', { ascending: true })
+                .limit(1)
                 .maybeSingle()
 
             if (data?.webrtc_url) {
@@ -83,7 +84,8 @@ export async function POST(req: NextRequest) {
             const { data: cam1 } = await supabaseAdmin
                 .from('cctv_cameras')
                 .select('webrtc_url')
-                .eq('id', 'cam-1')
+                .order('sort_order', { ascending: true })
+                .limit(1)
                 .maybeSingle()
 
             if (cam1?.webrtc_url?.startsWith(cleanUrl) && !body?.force) {
@@ -102,7 +104,7 @@ export async function POST(req: NextRequest) {
         // Synchronize all cameras in Supabase with the active tunnel URL
         const updates = [
             {
-                id: 'cam-1',
+                sort_order: 1,
                 webrtc_url: `${cleanUrl}/api/webrtc?src=cam1`,
                 hls_url: `${cleanUrl}/api/hls?src=cam1`,
                 snapshot_url: `${cleanUrl}/api/frame.jpeg?src=cam1`,
@@ -111,7 +113,7 @@ export async function POST(req: NextRequest) {
                 updated_at: now,
             },
             {
-                id: 'cam-2',
+                sort_order: 2,
                 webrtc_url: `${cleanUrl}/api/webrtc?src=cam2`,
                 hls_url: `${cleanUrl}/api/hls?src=cam2`,
                 snapshot_url: `${cleanUrl}/api/frame.jpeg?src=cam2`,
@@ -120,7 +122,7 @@ export async function POST(req: NextRequest) {
                 updated_at: now,
             },
             {
-                id: 'cam-3',
+                sort_order: 3,
                 webrtc_url: `${cleanUrl}/api/webrtc?src=cam3`,
                 hls_url: `${cleanUrl}/api/hls?src=cam3`,
                 snapshot_url: `${cleanUrl}/api/frame.jpeg?src=cam3`,
@@ -142,7 +144,7 @@ export async function POST(req: NextRequest) {
                         sub_stream_url: u.sub_stream_url,
                         updated_at: u.updated_at,
                     })
-                    .eq('id', u.id)
+                    .eq('sort_order', u.sort_order)
             )
         )
 
