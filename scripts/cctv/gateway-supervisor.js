@@ -432,12 +432,13 @@ setInterval(ensureWifiConnected, 15000);
 // 2. Periodic Cloudflare log check every 10 seconds
 setInterval(checkCloudflareLog, 10000);
 
-// 3. Heartbeat ping to Nexus every 30 seconds
+// 3. Heartbeat ping to Nexus every 5 minutes (reduced from 30s to stay well within free tier limits)
+// Note: When a new tunnel is detected, registerTunnelUrl is already called immediately on detection.
 setInterval(() => {
     if (currentTunnelUrl) {
         registerTunnelUrl(currentTunnelUrl);
     }
-}, 30000);
+}, 300000);
 
 // 4. Verify public reachability of tunnel every 30 seconds
 setInterval(verifyTunnelReachable, 30000);

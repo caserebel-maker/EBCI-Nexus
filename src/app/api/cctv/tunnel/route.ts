@@ -28,14 +28,22 @@ export async function GET() {
                     cachedTunnelUrl = tunnelUrl
                 }
             }
+            if (data?.updated_at && !lastHeartbeat) {
+                lastHeartbeat = new Date(data.updated_at).getTime()
+            }
         }
 
-        const isOnline = Date.now() - lastHeartbeat < 120_000 // online if seen within 2 minutes
+        const isOnline = Date.now() - lastHeartbeat < 600_000 // online if seen within 10 minutes (heartbeat interval is 5 mins)
 
         return NextResponse.json({
             tunnel_url: tunnelUrl || null,
             is_online: isOnline,
             last_seen: lastHeartbeat ? new Date(lastHeartbeat).toISOString() : null,
+        }, {
+            headers: {
+                // Cache at Vercel Edge CDN for 60 seconds to absorb multiple users/tabs without triggering serverless invocations
+                'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+            }
         })
     } catch (err: unknown) {
         return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
@@ -57,11 +65,41 @@ export async function POST(req: NextRequest) {
         }
 
         const cleanUrl = rawUrl.trim().replace(/\/+$/, '')
-        cachedTunnelUrl = cleanUrl
+        const now = new Date().toISOString()
         lastHeartbeat = Date.now()
 
+        // Short-circuit if URL hasn't changed to avoid unnecessary database writes
+        if (cachedTunnelUrl === cleanUrl && !body?.force) {
+            return NextResponse.json({
+                success: true,
+                tunnel_url: cleanUrl,
+                status: 'unchanged_heartbeat',
+                updated_at: now,
+            })
+        }
+
+        // Check if database already has this URL (e.g. serverless instance cold start)
+        if (!cachedTunnelUrl) {
+            const { data: cam1 } = await supabaseAdmin
+                .from('cctv_cameras')
+                .select('webrtc_url')
+                .eq('id', 'cam-1')
+                .maybeSingle()
+
+            if (cam1?.webrtc_url?.startsWith(cleanUrl) && !body?.force) {
+                cachedTunnelUrl = cleanUrl
+                return NextResponse.json({
+                    success: true,
+                    tunnel_url: cleanUrl,
+                    status: 'already_up_to_date',
+                    updated_at: now,
+                })
+            }
+        }
+
+        cachedTunnelUrl = cleanUrl
+
         // Synchronize all cameras in Supabase with the active tunnel URL
-        const now = new Date().toISOString()
         const updates = [
             {
                 id: 'cam-1',
@@ -111,6 +149,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
             success: true,
             tunnel_url: cleanUrl,
+            status: 'synced_to_db',
             updated_at: now,
         })
     } catch (err: unknown) {

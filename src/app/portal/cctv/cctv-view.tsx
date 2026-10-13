@@ -37,27 +37,44 @@ export function CctvView({ initialCameras, canManage, initialTunnelUrl }: Props)
     })
 
     // Automatically synchronize active Cloudflare Tunnel URL from gateway registry
-    useEffect(() => {
-        let isMounted = true
-        const checkTunnel = async () => {
-            try {
-                const res = await fetch('/api/cctv/tunnel')
-                if (!res.ok) return
-                const data = await res.json()
-                if (data.tunnel_url && isMounted) {
-                    setTunnelUrl(prev => (prev !== data.tunnel_url ? data.tunnel_url : prev))
-                }
-            } catch (err) {
-                // Ignore transient network errors
+    // Optimized for Vercel Free Tier:
+    // 1. Skip redundant initial fetch if initialTunnelUrl is already provided by SSR
+    // 2. Poll every 3 minutes (180s) instead of 15 seconds (reduces invocations by >90%)
+    // 3. Pause polling when tab is hidden / minimized in background
+    // 4. Resume immediately when tab becomes visible again
+    const fetchTunnelUrl = useCallback(async () => {
+        if (typeof document !== 'undefined' && document.hidden) return
+        try {
+            const res = await fetch('/api/cctv/tunnel')
+            if (!res.ok) return
+            const data = await res.json()
+            if (data.tunnel_url) {
+                setTunnelUrl(prev => (prev !== data.tunnel_url ? data.tunnel_url : prev))
             }
-        }
-        checkTunnel()
-        const interval = setInterval(checkTunnel, 15_000)
-        return () => {
-            isMounted = false
-            clearInterval(interval)
+        } catch (err) {
+            // Ignore transient network errors
         }
     }, [])
+
+    useEffect(() => {
+        if (!initialTunnelUrl) {
+            fetchTunnelUrl()
+        }
+
+        const interval = setInterval(fetchTunnelUrl, 180_000)
+
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                fetchTunnelUrl()
+            }
+        }
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+
+        return () => {
+            clearInterval(interval)
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+        }
+    }, [initialTunnelUrl, fetchTunnelUrl])
 
     // Real-time clock for CCTV On-Screen Display (OSD)
     useEffect(() => {
@@ -274,6 +291,7 @@ export function CctvView({ initialCameras, canManage, initialTunnelUrl }: Props)
                         onToggleMute={() => toggleMute(cam.id)}
                         onEdit={() => setEditingCam(cam)}
                         onShowToast={showToast}
+                        onRefreshTunnel={fetchTunnelUrl}
                     />
                 ))}
             </div>
@@ -528,6 +546,7 @@ function CameraCard({
     onToggleMute,
     onEdit,
     onShowToast,
+    onRefreshTunnel,
 }: {
     camera: CctvCamera
     index: number
@@ -541,6 +560,7 @@ function CameraCard({
     onToggleMute: () => void
     onEdit: () => void
     onShowToast: (msg: string) => void
+    onRefreshTunnel?: () => void
 }) {
     const videoRef = useRef<HTMLVideoElement>(null)
     const [streamFailed, setStreamFailed] = useState(false)
@@ -671,6 +691,7 @@ function CameraCard({
                                 onClick={() => {
                                     setStreamFailed(false)
                                     setRetryTrigger(c => c + 1)
+                                    onRefreshTunnel?.()
                                     onShowToast('กำลังเชื่อมต่อสัญญาณภาพใหม่...')
                                 }}
                                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-600/80 hover:bg-blue-600 text-[11px] font-semibold text-white border border-blue-400/40 shadow-md transition-colors"

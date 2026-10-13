@@ -70,3 +70,7 @@ scripts/cctv/*.zip
 scripts/cctv/*.tar.gz
 cam1*.jpg
 Wi-Fi-EBCI.xml
+
+# standalone rainpulse app
+/rainpulse
+

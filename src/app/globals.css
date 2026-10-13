@@ -437,4 +437,25 @@ body {
   .dark-map-tiles .leaflet-tile {
     filter: brightness(0.7) invert(1) contrast(2.2) hue-rotate(190deg) saturate(0.4);
   }
+
+  /* Rain Pulse Radar Animations & Markers */
+  .custom-pulse-marker,
+  .selected-pin-marker,
+  .tmd-station-marker {
+    background: transparent !important;
+    border: none !important;
+  }
+
+  .leaflet-popup-content-wrapper {
+    background: #08141E !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(0, 240, 255, 0.3) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6) !important;
+  }
+
+  .leaflet-popup-tip {
+    background: #08141E !important;
+  }
 }
+
