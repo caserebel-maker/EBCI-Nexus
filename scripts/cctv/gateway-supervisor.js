@@ -53,10 +53,10 @@ function ensureWifiConnected() {
     isReconnectingWifi = true;
     try {
         log('[Wi-Fi Guard] Wi-Fi disconnected or not on 192.168.0.x. Checking WLAN interface...');
-        const out = cp.execSync('netsh wlan show interfaces', { encoding: 'utf8', timeout: 5000 });
+        const out = cp.execSync('netsh wlan show interfaces', { encoding: 'utf8', timeout: 5000, windowsHide: true });
         if (out.includes('disconnected') || !out.includes('SSID                   : EBCI')) {
             log('[Wi-Fi Guard] Reconnecting to SSID "EBCI"...');
-            cp.execSync('netsh wlan connect name="EBCI"', { timeout: 8000 });
+            cp.execSync('netsh wlan connect name="EBCI"', { timeout: 8000, windowsHide: true });
         }
     } catch (e) {
         log(`[Wi-Fi Guard Error] ${e.message}`);
@@ -143,7 +143,7 @@ async function healCameras() {
         await Promise.all(pingPromises);
 
         const arpOutput = await new Promise(r => {
-            cp.exec('arp -a', (err, stdout) => r(stdout || ''));
+            cp.exec('arp -a', { windowsHide: true }, (err, stdout) => r(stdout || ''));
         });
 
         // Match MAC addresses on 192.168.0.x
@@ -285,7 +285,7 @@ function restartCloudflared(reason) {
             cloudflaredProc.removeAllListeners();
             cloudflaredProc.kill();
         }
-        cp.execSync('Stop-Process -Name cloudflared -Force -ErrorAction SilentlyContinue', { shell: 'powershell', timeout: 5000 });
+        cp.execSync('Stop-Process -Name cloudflared -Force -ErrorAction SilentlyContinue', { shell: 'powershell', timeout: 5000, windowsHide: true });
     } catch (e) {}
 
     cloudflaredProc = null;
@@ -340,6 +340,7 @@ function startCloudflared() {
     ], {
         cwd: DIR,
         stdio: 'ignore',
+        windowsHide: true,
     });
 
     cloudflaredProc.on('exit', (code) => {
@@ -393,6 +394,7 @@ function startGo2rtc() {
     go2rtcProc = spawn(GO2RTC_BIN, ['-config', GO2RTC_CFG], {
         cwd: DIR,
         stdio: 'ignore',
+        windowsHide: true,
     });
 
     go2rtcProc.on('exit', (code) => {
