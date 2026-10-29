@@ -69,8 +69,9 @@ export async function POST(req: NextRequest) {
         const now = new Date().toISOString()
         lastHeartbeat = Date.now()
 
-        // Short-circuit if URL hasn't changed to avoid unnecessary database writes
+        // Short-circuit full camera re-sync if URL hasn't changed, but ALWAYS update updated_at in Supabase so any serverless instance knows the gateway is online
         if (cachedTunnelUrl === cleanUrl && !body?.force) {
+            await supabaseAdmin.from('cctv_cameras').update({ updated_at: now }).eq('sort_order', 1);
             return NextResponse.json({
                 success: true,
                 tunnel_url: cleanUrl,
@@ -90,6 +91,7 @@ export async function POST(req: NextRequest) {
 
             if (cam1?.webrtc_url?.startsWith(cleanUrl) && !body?.force) {
                 cachedTunnelUrl = cleanUrl
+                await supabaseAdmin.from('cctv_cameras').update({ updated_at: now }).eq('sort_order', 1);
                 return NextResponse.json({
                     success: true,
                     tunnel_url: cleanUrl,

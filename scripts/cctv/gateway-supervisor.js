@@ -23,7 +23,7 @@ const MAC_CAM3 = 'ec-b9-31-d0-a9-29'; // Spirit house / Courtyard (ศาลพ�
 const cameras = {
     cam1: { listenPort: 5541, host: '192.168.0.28', port: 554, mac: MAC_CAM1, name: 'Cam 1 (Front)' },
     cam2: { listenPort: 5542, host: '192.168.0.90', port: 554, mac: MAC_CAM2, name: 'Cam 2 (Side)' },
-    cam3: { listenPort: 5543, host: '192.168.10.113', port: 554, mac: MAC_CAM3, name: 'Cam 3 (Courtyard)' },
+    cam3: { listenPort: 5543, host: '192.168.10.101', port: 554, mac: MAC_CAM3, name: 'Cam 3 (Courtyard)' },
 };
 
 function log(msg) {
@@ -95,7 +95,7 @@ function probeTapoRtsp(ip, localIp) {
         socket.on('data', (d) => {
             resp += d.toString();
             socket.destroy();
-            const isTapo = resp.includes('RTSP/1.0 200 OK') && resp.includes('DESCRIBE');
+            const isTapo = (resp.includes('RTSP/1.0 200 OK') && resp.includes('DESCRIBE')) || resp.includes('401 Unauthorized') || resp.includes('WWW-Authenticate') || resp.includes('realm=');
             resolve(isTapo);
         });
         socket.on('timeout', () => { socket.destroy(); resolve(false); });
@@ -438,7 +438,7 @@ setInterval(() => {
     if (currentTunnelUrl) {
         registerTunnelUrl(currentTunnelUrl);
     }
-}, 300000);
+}, 60000);
 
 // 4. Verify public reachability of tunnel every 30 seconds
 setInterval(verifyTunnelReachable, 30000);
