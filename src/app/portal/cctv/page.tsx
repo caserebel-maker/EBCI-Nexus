@@ -81,12 +81,18 @@ export default async function CctvPage() {
         ? (cameras[0].webrtc_url.match(/^(https:\/\/[^/]+)/)?.[1] || '')
         : ''
 
+    const lastUpdatedAt = cameras[0]?.updated_at ? new Date(cameras[0].updated_at).getTime() : 0
+    const initialIsOnline = Date.now() - lastUpdatedAt < 600_000 // within 10 mins
+    const initialLastSeen = cameras[0]?.updated_at || null
+
     const canManage = auth.session.role === 'hr_admin' || auth.permissions.can_manage_system || isMd(auth)
 
     return (
         <CctvView
             initialCameras={cameras}
             initialTunnelUrl={initialTunnelUrl}
+            initialIsOnline={initialIsOnline}
+            initialLastSeen={initialLastSeen}
             canManage={canManage}
             userRole={auth.session.role}
         />

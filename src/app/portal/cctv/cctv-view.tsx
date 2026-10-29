@@ -14,13 +14,18 @@ interface Props {
     canManage: boolean
     userRole: string
     initialTunnelUrl?: string
+    initialIsOnline?: boolean
+    initialLastSeen?: string | null
 }
 
 type StreamMode = 'webrtc' | 'hls' | 'snapshot' | 'rtsp'
 
-export function CctvView({ initialCameras, canManage, initialTunnelUrl }: Props) {
+export function CctvView({ initialCameras, canManage, initialTunnelUrl, initialIsOnline, initialLastSeen }: Props) {
     const [cameras, setCameras] = useState<CctvCamera[]>(initialCameras)
     const [tunnelUrl, setTunnelUrl] = useState<string>(initialTunnelUrl || '')
+    const [isOnline, setIsOnline] = useState<boolean>(initialIsOnline ?? false)
+    const [lastSeen, setLastSeen] = useState<string | null>(initialLastSeen ?? null)
+    const [isCheckingTunnel, setIsCheckingTunnel] = useState<boolean>(false)
     const [focusedCamId, setFocusedCamId] = useState<string | null>(null)
     const [streamMode, setStreamMode] = useState<StreamMode>('webrtc')
     const [currentTime, setCurrentTime] = useState<string>('')
@@ -36,14 +41,10 @@ export function CctvView({ initialCameras, canManage, initialTunnelUrl }: Props)
         'cam-4': true,
     })
 
-    // Automatically synchronize active Cloudflare Tunnel URL from gateway registry
-    // Optimized for Vercel Free Tier:
-    // 1. Skip redundant initial fetch if initialTunnelUrl is already provided by SSR
-    // 2. Poll every 3 minutes (180s) instead of 15 seconds (reduces invocations by >90%)
-    // 3. Pause polling when tab is hidden / minimized in background
-    // 4. Resume immediately when tab becomes visible again
+    // Automatically synchronize active Cloudflare Tunnel URL and Gateway status
     const fetchTunnelUrl = useCallback(async () => {
         if (typeof document !== 'undefined' && document.hidden) return
+        setIsCheckingTunnel(true)
         try {
             const res = await fetch('/api/cctv/tunnel')
             if (!res.ok) return
@@ -51,17 +52,23 @@ export function CctvView({ initialCameras, canManage, initialTunnelUrl }: Props)
             if (data.tunnel_url) {
                 setTunnelUrl(prev => (prev !== data.tunnel_url ? data.tunnel_url : prev))
             }
+            if (typeof data.is_online === 'boolean') {
+                setIsOnline(data.is_online)
+            }
+            if (data.last_seen) {
+                setLastSeen(data.last_seen)
+            }
         } catch (err) {
             // Ignore transient network errors
+        } finally {
+            setIsCheckingTunnel(false)
         }
     }, [])
 
     useEffect(() => {
-        if (!initialTunnelUrl) {
-            fetchTunnelUrl()
-        }
+        fetchTunnelUrl()
 
-        const interval = setInterval(fetchTunnelUrl, 180_000)
+        const interval = setInterval(fetchTunnelUrl, 60_000)
 
         const handleVisibilityChange = () => {
             if (!document.hidden) {
@@ -74,7 +81,7 @@ export function CctvView({ initialCameras, canManage, initialTunnelUrl }: Props)
             clearInterval(interval)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
         }
-    }, [initialTunnelUrl, fetchTunnelUrl])
+    }, [fetchTunnelUrl])
 
     // Real-time clock for CCTV On-Screen Display (OSD)
     useEffect(() => {
@@ -241,15 +248,56 @@ export function CctvView({ initialCameras, canManage, initialTunnelUrl }: Props)
             </div>
 
             {/* Quick Status Bar */}
-            <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-3 text-white/70">
-                    <div className="flex items-center gap-1.5">
-                        <Radio size={14} className="text-emerald-400 animate-pulse" />
-                        <span className="font-semibold text-white">สถานะระบบ:</span>
-                        <span className="text-emerald-300">ทำงานปกติ (Online)</span>
+            <div className={cn(
+                "rounded-2xl border px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs backdrop-blur-md transition-all",
+                isOnline
+                    ? "border-emerald-500/30 bg-emerald-950/20"
+                    : "border-rose-500/30 bg-rose-950/30"
+            )}>
+                <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-2">
+                        {isOnline ? (
+                            <>
+                                <Radio size={14} className="text-emerald-400 animate-pulse" />
+                                <span className="font-semibold text-white">เกตเวย์สตรีม:</span>
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                    ออนไลน์ (Online)
+                                </span>
+                            </>
+                        ) : (
+                            <>
+                                <AlertCircle size={15} className="text-rose-400" />
+                                <span className="font-semibold text-white">เกตเวย์สตรีม:</span>
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                                    ออฟไลน์ (เครื่องเกตเวย์ชั้นล่างยังไม่ได้เปิดสคริปต์)
+                                </span>
+                                {lastSeen && (
+                                    <span className="text-[11px] text-white/50">
+                                        (เชื่อมต่อล่าสุด: {new Date(lastSeen).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.)
+                                    </span>
+                                )}
+                            </>
+                        )}
                     </div>
-                    <span className="text-white/20">•</span>
-                    <div className="hidden md:flex items-center gap-1.5">
+
+                    <button
+                        type="button"
+                        onClick={() => {
+                            fetchTunnelUrl()
+                            showToast('กำลังตรวจสอบการเชื่อมต่อเกตเวย์...')
+                        }}
+                        disabled={isCheckingTunnel}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-medium text-white/90 border border-white/10 transition-colors disabled:opacity-50"
+                        title="รีเฟรชสถานะเกตเวย์"
+                    >
+                        <RefreshCw size={11} className={isCheckingTunnel ? "animate-spin" : ""} />
+                        <span>รีเฟรชสถานะ</span>
+                    </button>
+
+                    <span className="text-white/20 hidden md:inline">•</span>
+                    <div className="hidden md:flex items-center gap-1.5 text-white/70">
                         <Layers size={14} className="text-blue-300" />
                         <span>รุ่นกล้อง:</span>
                         <span className="text-white font-medium">TP-Link Tapo C545D (4 ตัว)</span>
@@ -285,6 +333,8 @@ export function CctvView({ initialCameras, canManage, initialTunnelUrl }: Props)
                         streamMode={streamMode}
                         isFocused={focusedCamId === cam.id}
                         isMuted={mutedStates[cam.id] ?? true}
+                        isOnline={isOnline}
+                        lastSeen={lastSeen}
                         canManage={canManage}
                         tunnelUrl={tunnelUrl}
                         onToggleFocus={() => setFocusedCamId(focusedCamId === cam.id ? null : cam.id)}
@@ -292,6 +342,7 @@ export function CctvView({ initialCameras, canManage, initialTunnelUrl }: Props)
                         onEdit={() => setEditingCam(cam)}
                         onShowToast={showToast}
                         onRefreshTunnel={fetchTunnelUrl}
+                        onOpenGuide={() => setShowGuide(true)}
                     />
                 ))}
             </div>
@@ -438,6 +489,29 @@ export function CctvView({ initialCameras, canManage, initialTunnelUrl }: Props)
                         </div>
 
                         <div className="space-y-4 text-xs sm:text-sm text-white/80 leading-relaxed">
+                            {/* Urgent Restart Box */}
+                            <div className="rounded-2xl bg-blue-500/15 border border-blue-400/30 p-4 space-y-2 text-blue-200">
+                                <div className="flex items-center gap-2 font-bold text-blue-100 text-sm">
+                                    <Sparkles size={16} className="text-blue-300" />
+                                    <span>วิธีเปิดเกตเวย์สตรีมให้ภาพขึ้นทันที (เครื่องชั้นล่าง)</span>
+                                </div>
+                                <p className="text-xs text-blue-200/90 leading-relaxed">
+                                    หากหน้าจอขึ้น <strong>&ldquo;เกตเวย์ออฟไลน์&rdquo;</strong> ให้ไปที่เครื่องคอมพิวเตอร์ชั้นล่าง (Windows) แล้วเลือกทำข้อใดข้อหนึ่ง:
+                                </p>
+                                <div className="space-y-1.5 pl-2 font-mono text-xs">
+                                    <div className="bg-black/50 p-2.5 rounded-xl border border-white/10 space-y-1">
+                                        <div className="text-white font-bold font-sans">วิธีที่ 1 (แนะนำที่สุด): ให้เปิดออโต้ตอนเปิดคอมทุกเช้า</div>
+                                        <div className="text-emerald-300">ดับเบิ้ลคลิกไฟล์: install-startup.bat</div>
+                                        <div className="text-[11px] text-white/50 font-sans">ระบบจะติดตั้งให้อัตโนมัติ ทุกครั้งที่เปิดคอมในตอนเช้า กล้องจะสตรีมขึ้นทันที</div>
+                                    </div>
+                                    <div className="bg-black/50 p-2.5 rounded-xl border border-white/10 space-y-1">
+                                        <div className="text-white font-bold font-sans">วิธีที่ 2: รันทันที</div>
+                                        <div className="text-cyan-300">ดับเบิ้ลคลิกไฟล์: Start-EBCI-CCTV.vbs</div>
+                                        <div className="text-[11px] text-white/50 font-sans">หรือเปิด PowerShell แล้วรัน: powershell -ExecutionPolicy Bypass -File scripts\cctv\start-gateway.ps1</div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="rounded-2xl bg-amber-500/10 border border-amber-400/25 p-4 space-y-2 text-amber-200">
                                 <div className="flex items-center gap-2 font-bold text-amber-100">
                                     <Info size={16} />
@@ -540,6 +614,8 @@ function CameraCard({
     streamMode,
     isFocused,
     isMuted,
+    isOnline,
+    lastSeen,
     canManage,
     tunnelUrl,
     onToggleFocus,
@@ -547,6 +623,7 @@ function CameraCard({
     onEdit,
     onShowToast,
     onRefreshTunnel,
+    onOpenGuide,
 }: {
     camera: CctvCamera
     index: number
@@ -554,6 +631,8 @@ function CameraCard({
     streamMode: StreamMode
     isFocused: boolean
     isMuted: boolean
+    isOnline: boolean
+    lastSeen: string | null
     canManage: boolean
     tunnelUrl?: string
     onToggleFocus: () => void
@@ -561,6 +640,7 @@ function CameraCard({
     onEdit: () => void
     onShowToast: (msg: string) => void
     onRefreshTunnel?: () => void
+    onOpenGuide?: () => void
 }) {
     const videoRef = useRef<HTMLVideoElement>(null)
     const [streamFailed, setStreamFailed] = useState(false)
@@ -570,7 +650,7 @@ function CameraCard({
     // Reset stream failure flag on mode, camera, or tunnel change
     useEffect(() => {
         setStreamFailed(false)
-    }, [streamMode, camera.id, camera.webrtc_url, camera.snapshot_url, tunnelUrl])
+    }, [streamMode, camera.id, camera.webrtc_url, camera.snapshot_url, tunnelUrl, isOnline])
 
     // Helper to resolve URLs: normalize any trycloudflare.com or http:// URLs to the active HTTPS tunnel
     const resolveStreamUrl = useCallback((rawUrl: string | null | undefined, fallbackPath: string): string => {
@@ -587,7 +667,7 @@ function CameraCard({
 
     // Double-buffered snapshot loading: keeps the previous frame on screen without flickering
     useEffect(() => {
-        if (streamMode !== 'snapshot') return
+        if (streamMode !== 'snapshot' || !isOnline) return
         let isCancelled = false
         let timerId: ReturnType<typeof setTimeout>
 
@@ -625,7 +705,7 @@ function CameraCard({
             isCancelled = true
             if (timerId) clearTimeout(timerId)
         }
-    }, [streamMode, camera.id, camera.snapshot_url, index, resolveStreamUrl, retryTrigger])
+    }, [streamMode, isOnline, camera.id, camera.snapshot_url, index, resolveStreamUrl, retryTrigger])
 
     // Capture camera snapshot
     const handleSnapshot = () => {
@@ -647,8 +727,50 @@ function CameraCard({
                 {/* Simulated Feed Background with camera aesthetic grid */}
                 <div className="absolute inset-0 opacity-20 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
 
-                {/* Live Stream / WebRTC Player */}
-                {streamMode === 'webrtc' && !streamFailed ? (
+                {/* Gateway Offline State */}
+                {!isOnline ? (
+                    <div className="relative w-full h-full flex flex-col items-center justify-center p-6 text-center bg-gradient-to-br from-slate-950 via-rose-950/20 to-slate-950">
+                        <div className="h-14 w-14 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 mb-3 shadow-inner">
+                            <AlertCircle size={28} />
+                        </div>
+                        <p className="text-sm font-bold text-white mb-0.5">{camera.name}</p>
+                        <p className="text-xs font-semibold text-rose-400 mb-1">
+                            เครื่องเกตเวย์ออฟไลน์ (Gateway Offline)
+                        </p>
+                        <p className="text-[11px] text-white/50 max-w-xs mb-3">
+                            เครื่องคอมพิวเตอร์เกตเวย์ชั้นล่างยังไม่ได้รันสคริปต์สตรีม หรือเครื่องปิดอยู่
+                            {lastSeen && (
+                                <span className="block text-[10px] text-white/40 mt-1">
+                                    ออนไลน์ล่าสุด: {new Date(lastSeen).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} น.
+                                </span>
+                            )}
+                        </p>
+                        <div className="flex items-center gap-2">
+                            {onOpenGuide && (
+                                <button
+                                    type="button"
+                                    onClick={onOpenGuide}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-[11px] font-medium text-white border border-white/15 transition-colors"
+                                >
+                                    <HelpCircle size={13} className="text-amber-300" />
+                                    <span>วิธีเปิดเกตเวย์</span>
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    onRefreshTunnel?.()
+                                    onShowToast('กำลังตรวจสอบการเชื่อมต่อเกตเวย์...')
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/80 hover:bg-blue-600 text-[11px] font-semibold text-white border border-blue-400/40 shadow-md transition-colors"
+                            >
+                                <RefreshCw size={13} />
+                                <span>เช็คสถานะใหม่</span>
+                            </button>
+                        </div>
+                    </div>
+                ) : streamMode === 'webrtc' && !streamFailed ? (
+                    /* Live Stream / WebRTC Player */
                     <iframe
                         src={streamHtmlUrl}
                         title={camera.name}
