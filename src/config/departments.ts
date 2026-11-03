@@ -18,6 +18,7 @@ export const DEPARTMENTS = [
     'ฝ่ายนวัตกรรมและเทคโนโลยี',
     'ที่ปรึกษา',
     'ฝ่ายสิทธิประโยชน์',
+    'ฝ่ายการตลาดและการขาย',
 ] as const
 
 export type Department = (typeof DEPARTMENTS)[number]
