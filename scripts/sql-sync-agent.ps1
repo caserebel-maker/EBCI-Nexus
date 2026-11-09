@@ -75,6 +75,15 @@ function Map-EnrollNumber($EnrollNumber) {
     if (@('748867', '48867', '048867', '488', '488-67') -contains $Compact -or $Compact -eq '48867') {
         return '436-62'
     }
+    if (@('1751569', '751569', '51569', '515-69') -contains $Compact -or $Compact -eq '1751569') {
+        return '515-69'
+    }
+    if ($Str.Length -eq 7 -and $Str.StartsWith("17")) {
+        $Code = $Str.Substring(2)
+        $Mapped = "$($Code.Substring(0, 3))-$($Code.Substring(3, 2))"
+        if ($Mapped -eq '488-67') { return '436-62' }
+        return $Mapped
+    }
     # Pattern: 700935 -> 009-35
     if ($Str.Length -eq 6 -and $Str.StartsWith("7")) {
         $Code = $Str.Substring(1) # 00935

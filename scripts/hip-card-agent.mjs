@@ -230,6 +230,10 @@ function mapSpecialHipCode(raw) {
     if (['748867', '48867', '048867', '488', '488-67'].includes(compact) || compact === '48867' || value === '488-67') {
         return '436-62'
     }
+    // Areeya "Bow" Duangmahasorn's physical card IDs (1751569 / 751569) -> DB employee_code '515-69'
+    if (['1751569', '751569', '51569', '515-69'].includes(compact) || compact === '1751569') {
+        return '515-69'
+    }
     return null
 }
 

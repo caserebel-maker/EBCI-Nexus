@@ -136,6 +136,11 @@ async function pollForNewScans() {
             empCode = '466-64'
         } else if (['748867', '48867', '048867', '488', '488-67'].includes(empCode.replace(/[\s-]/g, '')) || empCode === '488-67') {
             empCode = '436-62'
+        } else if (['1751569', '751569', '51569', '515-69'].includes(empCode.replace(/[\s-]/g, '')) || empCode === '1751569') {
+            empCode = '515-69'
+        } else if (/^17\d{5}$/.test(empCode)) {
+            const code = empCode.slice(2)
+            empCode = `${code.slice(0, 3)}-${code.slice(3)}`
         } else if (/^7\d{5}$/.test(empCode)) {
             const code = empCode.slice(1)
             empCode = `${code.slice(0, 3)}-${code.slice(3)}`

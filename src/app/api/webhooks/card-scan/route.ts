@@ -123,6 +123,17 @@ function mapEmployeeCode(code: string): string {
     if (['748867', '48867', '048867', '488'].includes(compact) || compact === '48867' || trimmed === '488-67') {
         return '436-62'
     }
+    // Map Areeya (Bow) Duangmahasorn's physical card codes (1751569 / 751569) to her DB employee_code '515-69'
+    if (['1751569', '751569', '51569'].includes(compact) || trimmed === '515-69') {
+        return '515-69'
+    }
+    // Pattern: 1751569 -> 515-69 (remove leading 17, then format XXX-YY)
+    if (compact.length === 7 && compact.startsWith('17')) {
+        const slice = compact.slice(2)
+        const mapped = `${slice.slice(0, 3)}-${slice.slice(3)}`
+        if (mapped === '488-67') return '436-62'
+        return mapped
+    }
     // Pattern: 751369 -> 513-69 (remove leading 7, then format XXX-YY)
     if (compact.length === 6 && compact.startsWith('7')) {
         const slice = compact.slice(1)
