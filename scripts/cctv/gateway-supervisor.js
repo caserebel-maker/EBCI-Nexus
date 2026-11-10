@@ -21,8 +21,8 @@ const MAC_CAM3 = 'ec-b9-31-d0-a9-29'; // Spirit house / Courtyard (ศาลพ�
 
 // Dynamic camera targets
 const cameras = {
-    cam1: { listenPort: 5541, host: '192.168.0.28', port: 554, mac: MAC_CAM1, name: 'Cam 1 (Front)' },
-    cam2: { listenPort: 5542, host: '192.168.0.90', port: 554, mac: MAC_CAM2, name: 'Cam 2 (Side)' },
+    cam1: { listenPort: 5541, host: '192.168.0.19', port: 554, mac: MAC_CAM1, name: 'Cam 1 (Front)' },
+    cam2: { listenPort: 5542, host: '192.168.0.80', port: 554, mac: MAC_CAM2, name: 'Cam 2 (Side)' },
     cam3: { listenPort: 5543, host: '192.168.10.101', port: 554, mac: MAC_CAM3, name: 'Cam 3 (Courtyard)' },
 };
 
