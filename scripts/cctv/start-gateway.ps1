@@ -1,6 +1,13 @@
 $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $PSScriptRoot
 
+# 0. Check if gateway-supervisor is already running
+$existing = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*gateway-supervisor.js*" }
+if ($existing) {
+    Write-Host "[OK] EBCI CCTV Gateway Supervisor is already running (PID: $($existing.ProcessId))" -ForegroundColor Green
+    exit 0
+}
+
 # 1. Prevent Windows from sleeping while gateway is running
 try {
     powercfg /change standby-timeout-ac 0 2>$null
