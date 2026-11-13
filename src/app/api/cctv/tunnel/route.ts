@@ -5,45 +5,33 @@ export const dynamic = 'force-dynamic'
 
 const GATEWAY_SECRET = process.env.CARD_SCAN_WEBHOOK_SECRET || 'ebci_card_webhook_secret_production_2026'
 
-// Memory cache for serverless instance
-let cachedTunnelUrl: string | null = null
-let lastHeartbeat: number = 0
-
 export async function GET() {
     try {
-        let tunnelUrl = cachedTunnelUrl
+        const { data } = await supabaseAdmin
+            .from('cctv_cameras')
+            .select('webrtc_url, updated_at')
+            .order('sort_order', { ascending: true })
+            .limit(1)
+            .maybeSingle()
 
-        // If not in memory, fetch from Supabase cctv_cameras (sort_order = 1)
-        if (!tunnelUrl) {
-            const { data } = await supabaseAdmin
-                .from('cctv_cameras')
-                .select('webrtc_url, updated_at')
-                .order('sort_order', { ascending: true })
-                .limit(1)
-                .maybeSingle()
-
-            if (data?.webrtc_url) {
-                const match = data.webrtc_url.match(/^(https:\/\/[^/]+)/)
-                if (match) {
-                    tunnelUrl = match[1]
-                    cachedTunnelUrl = tunnelUrl
-                }
-            }
-            if (data?.updated_at && !lastHeartbeat) {
-                lastHeartbeat = new Date(data.updated_at).getTime()
+        let tunnelUrl: string | null = null
+        if (data?.webrtc_url) {
+            const match = data.webrtc_url.match(/^(https:\/\/[^/]+)/)
+            if (match) {
+                tunnelUrl = match[1]
             }
         }
 
-        const isOnline = Date.now() - lastHeartbeat < 600_000 // online if seen within 10 minutes (heartbeat interval is 5 mins)
+        const updatedAtMs = data?.updated_at ? new Date(data.updated_at).getTime() : 0
+        const isOnline = Date.now() - updatedAtMs < 600_000 // online if seen within 10 minutes
 
         return NextResponse.json({
-            tunnel_url: tunnelUrl || null,
+            tunnel_url: tunnelUrl,
             is_online: isOnline,
-            last_seen: lastHeartbeat ? new Date(lastHeartbeat).toISOString() : null,
+            last_seen: data?.updated_at || null,
         }, {
             headers: {
-                // Cache at Vercel Edge CDN for 60 seconds to absorb multiple users/tabs without triggering serverless invocations
-                'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+                'Cache-Control': 'no-store, no-cache, must-revalidate',
             }
         })
     } catch (err: unknown) {
@@ -67,41 +55,26 @@ export async function POST(req: NextRequest) {
 
         const cleanUrl = rawUrl.trim().replace(/\/+$/, '')
         const now = new Date().toISOString()
-        lastHeartbeat = Date.now()
 
-        // Short-circuit full camera re-sync if URL hasn't changed, but ALWAYS update updated_at in Supabase so any serverless instance knows the gateway is online
-        if (cachedTunnelUrl === cleanUrl && !body?.force) {
-            await supabaseAdmin.from('cctv_cameras').update({ updated_at: now }).eq('sort_order', 1);
+        // Check current URL in database
+        const { data: cam1 } = await supabaseAdmin
+            .from('cctv_cameras')
+            .select('webrtc_url')
+            .order('sort_order', { ascending: true })
+            .limit(1)
+            .maybeSingle()
+
+        const currentDbUrl = cam1?.webrtc_url ? cam1.webrtc_url.match(/^(https:\/\/[^/]+)/)?.[1] : null
+
+        if (currentDbUrl === cleanUrl && !body?.force) {
+            await supabaseAdmin.from('cctv_cameras').update({ updated_at: now }).eq('sort_order', 1)
             return NextResponse.json({
                 success: true,
                 tunnel_url: cleanUrl,
-                status: 'unchanged_heartbeat',
+                status: 'heartbeat_updated',
                 updated_at: now,
             })
         }
-
-        // Check if database already has this URL (e.g. serverless instance cold start)
-        if (!cachedTunnelUrl) {
-            const { data: cam1 } = await supabaseAdmin
-                .from('cctv_cameras')
-                .select('webrtc_url')
-                .order('sort_order', { ascending: true })
-                .limit(1)
-                .maybeSingle()
-
-            if (cam1?.webrtc_url?.startsWith(cleanUrl) && !body?.force) {
-                cachedTunnelUrl = cleanUrl
-                await supabaseAdmin.from('cctv_cameras').update({ updated_at: now }).eq('sort_order', 1);
-                return NextResponse.json({
-                    success: true,
-                    tunnel_url: cleanUrl,
-                    status: 'already_up_to_date',
-                    updated_at: now,
-                })
-            }
-        }
-
-        cachedTunnelUrl = cleanUrl
 
         // Synchronize all cameras in Supabase with the active tunnel URL
         const updates = [
@@ -110,8 +83,8 @@ export async function POST(req: NextRequest) {
                 webrtc_url: `${cleanUrl}/api/webrtc?src=cam1`,
                 hls_url: `${cleanUrl}/api/hls?src=cam1`,
                 snapshot_url: `${cleanUrl}/api/frame.jpeg?src=cam1`,
-                stream_url: 'rtsp://Pondebci:0818331367@192.168.0.28:554/stream1',
-                sub_stream_url: 'rtsp://Pondebci:0818331367@192.168.0.28:554/stream2',
+                stream_url: 'rtsp://Pondebci:0818331367@192.168.0.19:554/stream1',
+                sub_stream_url: 'rtsp://Pondebci:0818331367@192.168.0.19:554/stream2',
                 updated_at: now,
             },
             {
@@ -119,8 +92,8 @@ export async function POST(req: NextRequest) {
                 webrtc_url: `${cleanUrl}/api/webrtc?src=cam2`,
                 hls_url: `${cleanUrl}/api/hls?src=cam2`,
                 snapshot_url: `${cleanUrl}/api/frame.jpeg?src=cam2`,
-                stream_url: 'rtsp://Pondebci:0818331367@192.168.10.109:554/stream1',
-                sub_stream_url: 'rtsp://Pondebci:0818331367@192.168.10.109:554/stream2',
+                stream_url: 'rtsp://Pondebci:0818331367@192.168.0.80:554/stream1',
+                sub_stream_url: 'rtsp://Pondebci:0818331367@192.168.0.80:554/stream2',
                 updated_at: now,
             },
             {
