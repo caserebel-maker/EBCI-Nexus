@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { HandCoins, Paperclip, Plus, X } from 'lucide-react'
+import { HandCoins, Paperclip, Plus } from 'lucide-react'
+import { ClaimSheet } from '@/components/expenses/claim-sheet'
 import {
     claimStatusClass,
     claimStatusLabel,
@@ -19,7 +20,7 @@ interface Props {
 }
 
 const inputClass =
-    'w-full rounded-2xl border border-white/20 bg-black/20 px-4 py-3 text-lg text-white placeholder:text-white/40 focus:border-cyan-300 focus:outline-none'
+    'block w-full min-w-0 max-w-full appearance-none rounded-2xl border border-white/20 bg-black/20 px-4 py-3 text-lg text-white placeholder:text-white/40 focus:border-cyan-300 focus:outline-none'
 
 export function PortalClaimsSection({ claims, categories, notReady }: Props) {
     const router = useRouter()
@@ -145,15 +146,8 @@ export function PortalClaimsSection({ claims, categories, notReady }: Props) {
             </div>
 
             {open && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4">
-                    <form onSubmit={submit} className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-[#5a1e2a] p-6 text-white shadow-2xl sm:rounded-3xl">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-2xl font-bold">ยื่นเบิกค่าใช้จ่าย</h2>
-                            <button type="button" onClick={() => setOpen(false)} className="rounded-xl p-2 hover:bg-white/10" aria-label="ปิด">
-                                <X className="h-6 w-6" />
-                            </button>
-                        </div>
-                        <div className="mt-5 space-y-4">
+                <ClaimSheet title="ยื่นเบิกค่าใช้จ่าย" onClose={() => setOpen(false)} onSubmit={submit}>
+                        <div className="space-y-4">
                             <label className="block">
                                 <span className="mb-1 block text-lg">ประเภท</span>
                                 <select name="category_id" required defaultValue="" className={inputClass}>
@@ -165,7 +159,7 @@ export function PortalClaimsSection({ claims, categories, notReady }: Props) {
                                 <span className="mb-1 block text-lg">รายการ</span>
                                 <input name="title" required maxLength={200} placeholder="เช่น ค่าแท็กซี่ไปพบลูกค้า" className={inputClass} />
                             </label>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <label className="block">
                                     <span className="mb-1 block text-lg">จำนวนเงิน (บาท)</span>
                                     <input name="amount" required type="number" inputMode="decimal" min="0.01" step="0.01" className={inputClass} />
@@ -189,8 +183,7 @@ export function PortalClaimsSection({ claims, categories, notReady }: Props) {
                         <button type="submit" disabled={saving} className="mt-6 w-full rounded-2xl bg-amber-400 py-4 text-xl font-bold text-black hover:bg-amber-300 disabled:opacity-60">
                             {saving ? 'กำลังส่ง...' : 'ส่งคำขอเบิก'}
                         </button>
-                    </form>
-                </div>
+                </ClaimSheet>
             )}
         </section>
     )

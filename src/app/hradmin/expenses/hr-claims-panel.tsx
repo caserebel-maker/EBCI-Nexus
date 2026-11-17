@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, HandCoins, Paperclip, Plus, Search, Wallet, X } from 'lucide-react'
+import { ClaimSheet } from '@/components/expenses/claim-sheet'
 import {
     claimEmployeeName,
     claimStatusClass,
@@ -28,7 +29,7 @@ interface Props {
 type Tab = 'pending' | 'approved' | 'all' | 'categories'
 
 const inputClass =
-    'w-full rounded-2xl border border-white/20 bg-black/20 px-4 py-3 text-lg text-white placeholder:text-white/40 focus:border-cyan-300 focus:outline-none'
+    'block w-full min-w-0 max-w-full appearance-none rounded-2xl border border-white/20 bg-black/20 px-4 py-3 text-lg text-white placeholder:text-white/40 focus:border-cyan-300 focus:outline-none'
 
 function today() {
     return new Date().toLocaleDateString('sv-SE')
@@ -308,16 +309,8 @@ function CreateClaimDialog({
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center sm:p-4">
-            <form onSubmit={submit} className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-[#5a1e2a] p-6 text-white shadow-2xl sm:rounded-3xl">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold">บันทึกการเบิกแทนพนักงาน</h2>
-                    <button type="button" onClick={onClose} className="rounded-xl p-2 hover:bg-white/10" aria-label="ปิด">
-                        <X className="h-6 w-6" />
-                    </button>
-                </div>
-                <p className="mt-1 text-base text-white/60">รายการที่ HR บันทึกจะถือว่าอนุมัติแล้ว</p>
-                <div className="mt-5 space-y-4">
+        <ClaimSheet title="บันทึกการเบิกแทนพนักงาน" subtitle="รายการที่ HR บันทึกจะถือว่าอนุมัติแล้ว" onClose={onClose} onSubmit={submit}>
+                <div className="space-y-4">
                     <label className="block">
                         <span className="mb-1 block text-lg">พนักงาน</span>
                         <select name="employee_id" required defaultValue="" className={inputClass}>
@@ -336,7 +329,7 @@ function CreateClaimDialog({
                         <span className="mb-1 block text-lg">รายการ</span>
                         <input name="title" required maxLength={200} className={inputClass} />
                     </label>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <label className="block">
                             <span className="mb-1 block text-lg">จำนวนเงิน (บาท)</span>
                             <input name="amount" required type="number" inputMode="decimal" min="0.01" step="0.01" className={inputClass} />
@@ -369,7 +362,6 @@ function CreateClaimDialog({
                 <button type="submit" disabled={saving} className="mt-6 w-full rounded-2xl bg-amber-400 py-4 text-xl font-bold text-black hover:bg-amber-300 disabled:opacity-60">
                     {saving ? 'กำลังบันทึก...' : 'บันทึก'}
                 </button>
-            </form>
-        </div>
+        </ClaimSheet>
     )
 }
