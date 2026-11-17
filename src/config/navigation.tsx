@@ -42,7 +42,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
             matchPrefix: ['/hradmin/employees', '/hradmin/organization', '/hradmin/applicants', '/hradmin/expenses'],
             children: [
                 { label: 'รายชื่อ',              href: '/hradmin/employees',    icon: User },
-                { label: 'ค่าใช้จ่ายพนักงาน',    href: '/hradmin/expenses',     icon: ReceiptText },
+                { label: 'เบิกค่าใช้จ่าย',        href: '/hradmin/expenses',     icon: ReceiptText },
                 { label: 'ผังองค์กร',            href: '/hradmin/organization', icon: Network },
                 { label: 'รับสมัครงาน',          href: '/hradmin/applicants',   icon: Briefcase },
             ],
@@ -140,7 +140,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
             matchPrefix: ['/portal/profile', '/portal/payroll', '/portal/expenses'],
             children: [
                 { label: 'recruitment.personalInfo', href: '/portal/profile',  icon: UserCircle },
-                { label: 'ค่าใช้จ่าย/สวัสดิการ',    href: '/portal/expenses', icon: ReceiptText },
+                { label: 'เบิกค่าใช้จ่าย/สวัสดิการ', href: '/portal/expenses', icon: ReceiptText },
             ],
         },
         // "บริษัท" group — read-only org-wide info that managers consult
@@ -190,7 +190,7 @@ export const NAVIGATION_CONFIG: Record<UserRole, NavItem[]> = {
             matchPrefix: ['/portal/profile', '/portal/payroll', '/portal/expenses'],
             children: [
                 { label: 'recruitment.personalInfo', href: '/portal/profile', icon: UserCircle },
-                { label: 'ค่าใช้จ่าย/สวัสดิการ',    href: '/portal/expenses', icon: ReceiptText },
+                { label: 'เบิกค่าใช้จ่าย/สวัสดิการ', href: '/portal/expenses', icon: ReceiptText },
                 { label: 'สลิปเงินเดือน',           href: '/portal/payroll',  icon: FileText },
             ],
         },

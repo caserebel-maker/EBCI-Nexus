@@ -4,6 +4,8 @@ import { ReceiptText, WalletCards } from 'lucide-react'
 import { getAuth, isHrStaff } from '@/lib/route-auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { formatExpenseAmount } from '@/lib/employee-expense-shared'
+import { fetchAllClaims, fetchClaimCategories } from '@/lib/expense-claims'
+import { HrClaimsPanel } from './hr-claims-panel'
 
 export const dynamic = 'force-dynamic'
 
@@ -135,12 +137,26 @@ export default async function HrAdminExpensesPage({
         if (payment.status === 'pending') item.pending += 1
     }
 
+    const [claimResult, categoryResult] = await Promise.all([fetchAllClaims(), fetchClaimCategories(true)])
+    const employeeOptions = sortedEmployeeRows.map((employee) => ({
+        id: employee.id,
+        label: `${employee.employee_code ?? ''} ${fullName(employee)}${employee.nickname ? ` (${employee.nickname})` : ''}`.trim(),
+    }))
+
     const totalActiveBenefits = benefits.filter((benefit) => benefit.is_active).length
     const totalPending = payments.filter((payment) => payment.status === 'pending').length
     const totalPaid = payments.filter((payment) => payment.status === 'paid').length
 
     return (
         <main className="space-y-6 text-white">
+            <HrClaimsPanel
+                claims={claimResult.claims}
+                categories={categoryResult.categories}
+                employees={employeeOptions}
+                notReady={claimResult.missing || categoryResult.missing}
+            />
+
+            <hr className="border-white/10" />
             <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div className="flex items-center gap-4">
                     <span className="rounded-3xl bg-cyan-400/15 p-4 text-cyan-200 ring-1 ring-cyan-200/20">

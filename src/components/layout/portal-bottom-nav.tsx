@@ -89,7 +89,7 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         // 1. Employees group — รายชื่อ is the bottom-tab "พนักงาน"; the
         //    sub-page that's NOT in the tab is ผังองค์กร.
         { label: 'ผังองค์กร',     desc: 'โครงสร้างบริษัท',        href: '/hradmin/organization',          icon: Network, groupLabel: 'พนักงาน' },
-        { label: 'ค่าใช้จ่ายพนักงาน', desc: 'บันทึกค่าใช้จ่ายและใบเสร็จ', href: '/hradmin/expenses',       icon: ReceiptText },
+        { label: 'เบิกค่าใช้จ่าย', desc: 'อนุมัติคำขอเบิกและบันทึกจ่าย', href: '/hradmin/expenses',       icon: ReceiptText },
         // 2. เวลาทำงาน group
         { label: 'การเข้างาน',     desc: 'Dashboard เช็คอิน',     href: '/hradmin/attendance',            icon: MapPin, groupLabel: 'การเข้างาน' },
         { label: 'เช็คอินภาคสนาม', desc: 'พนักงานออกพื้นที่',     href: '/hradmin/attendance/field',      icon: Briefcase },
@@ -134,7 +134,7 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'นโยบายการลา',  desc: 'ระเบียบการลาบริษัท',     href: '/portal/leave-policy',    icon: ScrollText },
         // "ส่วนตัว" group: profile + (manager has no payroll mgmt by default).
         { label: 'โปรไฟล์',        desc: 'ข้อมูลส่วนตัวและตำแหน่ง',  href: '/portal/profile',         icon: UserRound,       groupLabel: 'ส่วนตัว' },
-        { label: 'ค่าใช้จ่าย/สวัสดิการ', desc: 'รายการที่บริษัทจ่ายให้', href: '/portal/expenses',      icon: ReceiptText },
+        { label: 'เบิกค่าใช้จ่าย/สวัสดิการ', desc: 'ยื่นเบิกและดูสถานะ', href: '/portal/expenses',      icon: ReceiptText },
         { label: 'ใครไม่อยู่วันนี้', desc: 'ลา · WFH · ออกพื้นที่',      href: '/portal/who-is-out',      icon: UserMinus,       groupLabel: 'บริษัท' },
         { label: 'ผังองค์กร',     desc: 'ดูลำดับขั้นและสายอนุมัติ', href: '/portal/organization',    icon: Network },
         { label: 'จองห้องประชุม', desc: 'ห้องประชุมชั้น 2',         href: '/portal/meeting-room',    icon: DoorOpen },
@@ -152,7 +152,7 @@ const MORE_CONFIG: Record<Role, MoreItem[]> = {
         { label: 'นโยบายการลา',  desc: 'ระเบียบการลาบริษัท',     href: '/portal/leave-policy',    icon: ScrollText },
         // "ส่วนตัว" group — personal data only (profile + slip).
         { label: 'โปรไฟล์',        desc: 'ข้อมูลส่วนตัวและตำแหน่ง',  href: '/portal/profile',        icon: UserRound,       groupLabel: 'ส่วนตัว' },
-        { label: 'ค่าใช้จ่าย/สวัสดิการ', desc: 'รายการที่บริษัทจ่ายให้', href: '/portal/expenses',     icon: ReceiptText },
+        { label: 'เบิกค่าใช้จ่าย/สวัสดิการ', desc: 'ยื่นเบิกและดูสถานะ', href: '/portal/expenses',     icon: ReceiptText },
         { label: 'ทายบอลโลก',     desc: 'ลุ้นแชมป์เงินรางวัล 3,000 บ. 🏆', href: '/portal/events/world-cup', icon: Sparkles },
         // "บริษัท" group — read-only org-wide info.
         { label: 'ใครไม่อยู่วันนี้', desc: 'ลา · WFH · ออกพื้นที่',     href: '/portal/who-is-out',     icon: UserMinus,       groupLabel: 'บริษัท' },

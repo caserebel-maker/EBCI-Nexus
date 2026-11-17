@@ -17,8 +17,8 @@ const MENU_ITEMS = [
         icon: UserCircle,
     },
     {
-        label: 'ค่าใช้จ่าย/สวัสดิการ',
-        desc: 'ดูรายการที่บริษัทจ่ายให้',
+        label: 'เบิกค่าใช้จ่าย/สวัสดิการ',
+        desc: 'ยื่นเบิกและดูสถานะการจ่าย',
         href: '/portal/expenses',
         icon: ReceiptText,
     },
