@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 
-const THRESHOLD = 70 // px the indicator must travel before release reloads
-const MAX_PULL = 110
+const THRESHOLD = 56 // px the indicator must travel before release reloads
+const MAX_PULL = 90
 
 /**
  * Pull-to-refresh for the shell's inner scroll container.
@@ -59,7 +59,7 @@ export function PullToRefresh({ scrollRef }: { scrollRef: React.RefObject<HTMLEl
                 return
             }
             // Resistance so it feels like it's being stretched.
-            setPullBoth(Math.min(dy * 0.5, MAX_PULL))
+            setPullBoth(Math.min(dy * 0.6, MAX_PULL))
             if (e.cancelable) e.preventDefault()
         }
 
@@ -89,17 +89,20 @@ export function PullToRefresh({ scrollRef }: { scrollRef: React.RefObject<HTMLEl
 
     if (!pull && !refreshing) return null
 
+    // Sits just under the top bar (which is ~56px + safe area and has a higher
+    // z-index) and slides down with the finger, so it is visible as soon as
+    // the pull starts instead of hiding behind the bar.
     const ready = pull >= THRESHOLD
     return (
         <div
-            className="pointer-events-none fixed left-0 right-0 z-[55] flex justify-center lg:hidden print:hidden"
-            style={{ top: `calc(env(safe-area-inset-top) + 56px + ${pull - 44}px)` }}
+            className="pointer-events-none fixed left-0 right-0 z-[65] flex justify-center lg:hidden print:hidden"
+            style={{ top: 'calc(env(safe-area-inset-top) + 64px)', transform: `translateY(${pull * 0.8}px)` }}
             aria-live="polite"
         >
-            <div className="flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-base font-semibold text-white shadow-lg backdrop-blur">
+            <div className="flex items-center gap-2 rounded-full bg-black/70 px-4 py-2 text-base font-semibold text-white shadow-lg backdrop-blur">
                 <RefreshCw
                     className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`}
-                    style={refreshing ? undefined : { transform: `rotate(${pull * 3}deg)` }}
+                    style={refreshing ? undefined : { transform: `rotate(${pull * 4}deg)` }}
                 />
                 {refreshing ? 'กำลังรีเฟรช...' : ready ? 'ปล่อยเพื่อรีเฟรช' : 'ดึงลงเพื่อรีเฟรช'}
             </div>
