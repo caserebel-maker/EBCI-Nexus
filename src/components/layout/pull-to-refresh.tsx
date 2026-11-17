@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 
-const THRESHOLD = 56 // px the indicator must travel before release reloads
-const MAX_PULL = 90
+const THRESHOLD = 64 // px the indicator must travel before release reloads
+const MAX_PULL = 96
 
 /**
  * Pull-to-refresh for the shell's inner scroll container.
@@ -28,9 +28,13 @@ export function PullToRefresh({ scrollRef }: { scrollRef: React.RefObject<HTMLEl
 
         let startY: number | null = null
 
-        const setPullBoth = (value: number) => {
+        const setPullBoth = (value: number, animate = false) => {
             pullRef.current = value
             setPull(value)
+            // Content follows the finger like the native iOS pull; springs
+            // back with a transition when released.
+            el.style.transition = animate ? 'transform 0.25s cubic-bezier(0.22, 1, 0.36, 1)' : 'none'
+            el.style.transform = value ? `translateY(${value}px)` : ''
         }
 
         const nestedScrolled = (target: EventTarget | null) => {
@@ -55,7 +59,7 @@ export function PullToRefresh({ scrollRef }: { scrollRef: React.RefObject<HTMLEl
             if (startY === null) return
             const dy = e.touches[0].clientY - startY
             if (dy <= 0 || el.scrollTop > 0) {
-                if (pullRef.current) setPullBoth(0)
+                if (pullRef.current) setPullBoth(0, true)
                 return
             }
             // Resistance so it feels like it's being stretched.
@@ -68,10 +72,10 @@ export function PullToRefresh({ scrollRef }: { scrollRef: React.RefObject<HTMLEl
             startY = null
             if (pullRef.current >= THRESHOLD) {
                 setRefreshing(true)
-                setPullBoth(THRESHOLD)
+                setPullBoth(THRESHOLD * 0.75, true)
                 window.location.reload()
             } else {
-                setPullBoth(0)
+                setPullBoth(0, true)
             }
         }
 
@@ -89,22 +93,25 @@ export function PullToRefresh({ scrollRef }: { scrollRef: React.RefObject<HTMLEl
 
     if (!pull && !refreshing) return null
 
-    // Sits just under the top bar (which is ~56px + safe area and has a higher
-    // z-index) and slides down with the finger, so it is visible as soon as
-    // the pull starts instead of hiding behind the bar.
-    const ready = pull >= THRESHOLD
+    // Small circular spinner in the gap the content leaves behind, just under
+    // the top bar (z-index lower than the bar, so it never covers it).
+    const progress = Math.min(pull / THRESHOLD, 1)
     return (
         <div
-            className="pointer-events-none fixed left-0 right-0 z-[65] flex justify-center lg:hidden print:hidden"
-            style={{ top: 'calc(env(safe-area-inset-top) + 64px)', transform: `translateY(${pull * 0.8}px)` }}
-            aria-live="polite"
+            className="pointer-events-none fixed left-0 right-0 z-[55] flex justify-center lg:hidden print:hidden"
+            style={{
+                top: 'calc(env(safe-area-inset-top) + 66px)',
+                transform: `translateY(${Math.max(pull * 0.9 - 36, 4)}px)`,
+                opacity: refreshing ? 1 : progress,
+            }}
+            role="status"
+            aria-label={refreshing ? 'กำลังรีเฟรช' : 'ดึงลงเพื่อรีเฟรช'}
         >
-            <div className="flex items-center gap-2 rounded-full bg-black/70 px-4 py-2 text-base font-semibold text-white shadow-lg backdrop-blur">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white shadow-lg ring-1 ring-white/20 backdrop-blur">
                 <RefreshCw
                     className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`}
-                    style={refreshing ? undefined : { transform: `rotate(${pull * 4}deg)` }}
+                    style={refreshing ? undefined : { transform: `rotate(${progress * 270}deg)` }}
                 />
-                {refreshing ? 'กำลังรีเฟรช...' : ready ? 'ปล่อยเพื่อรีเฟรช' : 'ดึงลงเพื่อรีเฟรช'}
             </div>
         </div>
     )

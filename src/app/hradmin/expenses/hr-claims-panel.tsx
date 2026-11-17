@@ -92,26 +92,26 @@ export function HrClaimsPanel({ claims, categories, employees, notReady }: Props
 
     return (
         <section className="space-y-4">
-            <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex items-center gap-4">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-200 ring-1 ring-amber-200/20">
+            <header className="space-y-2">
+                <div className="flex items-center justify-between">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-200 ring-1 ring-amber-200/20">
                         <HandCoins className="h-6 w-6" />
                     </span>
-                    <div>
-                        <h1 className="text-2xl font-bold leading-tight">การเบิกค่าใช้จ่าย</h1>
-                        <p className="text-sm text-white/60">อนุมัติคำขอ บันทึกการจ่าย และดูประวัติการเบิกทั้งหมด</p>
-                    </div>
+                    {!notReady && (
+                        <button
+                            type="button"
+                            onClick={() => setCreateOpen(true)}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-base font-bold text-black hover:bg-amber-300 active:scale-95"
+                        >
+                            <Plus className="h-5 w-5" />
+                            บันทึกแทนพนักงาน
+                        </button>
+                    )}
                 </div>
-                {!notReady && (
-                    <button
-                        type="button"
-                        onClick={() => setCreateOpen(true)}
-                        className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-base font-bold text-black hover:bg-amber-300"
-                    >
-                        <Plus className="h-5 w-5" />
-                        บันทึกการเบิกแทนพนักงาน
-                    </button>
-                )}
+                <div>
+                    <h1 className="text-2xl font-bold leading-tight">การเบิกค่าใช้จ่าย</h1>
+                    <p className="text-sm text-white/60">อนุมัติคำขอ บันทึกการจ่าย และดูประวัติการเบิก</p>
+                </div>
             </header>
 
             {notReady ? (

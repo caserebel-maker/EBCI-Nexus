@@ -59,26 +59,26 @@ export function PortalClaimsSection({ claims, categories, notReady }: Props) {
 
     return (
         <section className="space-y-5">
-            <header className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-200 ring-1 ring-amber-200/20">
+            <header className="space-y-2">
+                <div className="flex items-center justify-between">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-200 ring-1 ring-amber-200/20">
                         <HandCoins className="h-6 w-6" />
                     </span>
-                    <div className="min-w-0">
-                        <h1 className="text-2xl font-bold leading-tight">เบิกค่าใช้จ่าย</h1>
-                        <p className="text-sm text-white/60">ยื่นเบิก ดูสถานะ และประวัติการเบิกของคุณ</p>
-                    </div>
+                    {!notReady && (
+                        <button
+                            type="button"
+                            onClick={() => { setError(null); setOpen(true) }}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-base font-bold text-black shadow hover:bg-amber-300 active:scale-95"
+                        >
+                            <Plus className="h-5 w-5" />
+                            ยื่นเบิก
+                        </button>
+                    )}
                 </div>
-                {!notReady && (
-                    <button
-                        type="button"
-                        onClick={() => { setError(null); setOpen(true) }}
-                        className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-base font-bold text-black shadow hover:bg-amber-300 active:scale-95"
-                    >
-                        <Plus className="h-5 w-5" />
-                        ยื่นเบิก
-                    </button>
-                )}
+                <div>
+                    <h1 className="text-2xl font-bold leading-tight">เบิกค่าใช้จ่าย</h1>
+                    <p className="text-sm text-white/60">ยื่นเบิกและดูสถานะการจ่าย</p>
+                </div>
             </header>
 
             {notReady && (
