@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils'
 import { NAVIGATION_CONFIG, type NavItem } from '@/config/navigation'
 import { useTranslation } from '@/contexts/language-context'
 import { PortalBottomNav } from '@/components/layout/portal-bottom-nav'
+import { PullToRefresh } from '@/components/layout/pull-to-refresh'
 import { SidebarNav } from '@/components/layout/sidebar-nav'
 import { UserMenu } from '@/components/layout/user-menu'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
@@ -121,6 +122,7 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
     const pathname = usePathname()
     const { t } = useTranslation()
     const lastHeartbeatAt = React.useRef(0)
+    const contentScrollRef = React.useRef<HTMLDivElement>(null)
 
     React.useEffect(() => {
         const sendHeartbeat = (force = false) => {
@@ -505,7 +507,8 @@ export function DashboardShell({ children, role, userName, showBottomNav = false
                     snapping. min-w-0 lets flex children shrink below
                     their intrinsic width without forcing the parent
                     to grow. */}
-                <div className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 pt-3 px-4 pb-4 lg:p-8">
+                <PullToRefresh scrollRef={contentScrollRef} />
+                <div ref={contentScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain min-w-0 pt-3 px-4 pb-4 lg:p-8">
                     {/* Priority alerts — top of content on every viewport.
                         Hidden on print so a one-off "ส้วมระเบิด..." banner
                         doesn't tag along with every PDF export. */}
