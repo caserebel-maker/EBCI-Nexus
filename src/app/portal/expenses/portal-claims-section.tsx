@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { HandCoins, Paperclip, Plus } from 'lucide-react'
+import { Paperclip, Plus } from 'lucide-react'
 import { ClaimSheet } from '@/components/expenses/claim-sheet'
 import {
     claimStatusClass,
@@ -59,11 +59,9 @@ export function PortalClaimsSection({ claims, categories, notReady }: Props) {
 
     return (
         <section className="space-y-5">
-            <header className="space-y-2">
-                <div className="flex items-center justify-between">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-200 ring-1 ring-amber-200/20">
-                        <HandCoins className="h-6 w-6" />
-                    </span>
+            <header>
+                <div className="flex items-center justify-between gap-3">
+                    <h1 className="text-2xl font-bold leading-tight">เบิกค่าใช้จ่าย</h1>
                     {!notReady && (
                         <button
                             type="button"
@@ -75,10 +73,7 @@ export function PortalClaimsSection({ claims, categories, notReady }: Props) {
                         </button>
                     )}
                 </div>
-                <div>
-                    <h1 className="text-2xl font-bold leading-tight">เบิกค่าใช้จ่าย</h1>
-                    <p className="text-sm text-white/60">ยื่นเบิกและดูสถานะการจ่าย</p>
-                </div>
+                <p className="mt-0.5 text-sm text-white/60">ยื่นเบิกและดูสถานะการจ่าย</p>
             </header>
 
             {notReady && (
