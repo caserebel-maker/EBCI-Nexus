@@ -65,6 +65,7 @@ interface Metrics {
     pendingLeaveRequests?: number
     pendingLeaveCancellations?: number
     pendingWfhRequests?: number
+    pendingExpenseClaims?: number
     expiringContracts: number
 }
 
@@ -792,6 +793,7 @@ export function HRDashboard({
     const pendingLeaveRequestCount = metrics.pendingLeaveRequests ?? metrics.pendingLeaves
     const pendingLeaveCancellationCount = metrics.pendingLeaveCancellations ?? 0
     const pendingWfhRequestCount = metrics.pendingWfhRequests ?? 0
+    const pendingExpenseClaimCount = metrics.pendingExpenseClaims ?? 0
     const hasPendingApprovals = pendingApprovalTotal > 0
 
     useEffect(() => {
@@ -904,7 +906,7 @@ export function HRDashboard({
                             sub="ได้รับอนุมัติแล้ว" icon={CalendarDays} accent="bg-gradient-to-br from-emerald-500 to-emerald-700"
                             href="/hradmin/leave/admin?filter=today" />
                         <MetricCard title="งานรออนุมัติ" value={pendingApprovalTotal}
-                            sub={`ลา ${pendingLeaveRequestCount} · ยกเลิก ${pendingLeaveCancellationCount} · WFH ${pendingWfhRequestCount}`}
+                            sub={`ลา ${pendingLeaveRequestCount} · ยกเลิก ${pendingLeaveCancellationCount} · WFH ${pendingWfhRequestCount} · เบิก ${pendingExpenseClaimCount}`}
                             icon={Clock} accent="bg-gradient-to-br from-amber-500 to-amber-700"
                             href="#pending-approvals" highlight={hasPendingApprovals} />
                         <MetricCard title="สัญญาหมดใน 30 วัน" value={metrics.expiringContracts}
@@ -1013,8 +1015,18 @@ export function HRDashboard({
                                 ดูทั้งหมด →
                             </button>
                         </div>
+                        {pendingExpenseClaimCount > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => router.push('/hradmin/expenses')}
+                                className="mb-2 flex w-full items-center justify-between gap-2 rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2.5 text-left transition-colors hover:bg-amber-400/20"
+                            >
+                                <span className="text-sm font-bold text-amber-100">คำขอเบิกค่าใช้จ่าย {pendingExpenseClaimCount} รายการ รออนุมัติ</span>
+                                <span className="shrink-0 text-xs font-bold text-amber-300">ตรวจสอบ →</span>
+                            </button>
+                        )}
                         {pending.length === 0 ? (
-                            <p className="text-sm text-white/30 italic text-center py-3">ไม่มีงานรออนุมัติ</p>
+                            pendingExpenseClaimCount > 0 ? null : <p className="text-sm text-white/30 italic text-center py-3">ไม่มีงานรออนุมัติ</p>
                         ) : (
                             <div className="space-y-2">
                                 {pending.map(item => (

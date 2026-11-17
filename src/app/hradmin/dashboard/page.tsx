@@ -286,13 +286,20 @@ export default async function AdminDashboard() {
         }
     })
     const pendingPasswordCount = (pendingPasswordRequests ?? []).length
+    // Expense claims waiting for HR. Tolerates the table not existing yet
+    // (migration not applied) so the dashboard never breaks over it.
+    const { count: pendingExpenseClaimsRaw } = await supabaseAdmin
+        .from('expense_claims')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending')
+    const pendingExpenseClaimCount = pendingExpenseClaimsRaw ?? 0
     const pendingApprovalItems = [...pendingLeaveEnriched, ...pendingWfhEnriched, ...pendingPasswordEnriched]
         .sort((a: PendingApprovalItem, b: PendingApprovalItem) => {
             const timeOf = (item: PendingApprovalItem) => new Date(item.cancellation_requested_at ?? item.submitted_at ?? item.created_at ?? '1970-01-01').getTime()
             return timeOf(b) - timeOf(a)
         })
         .slice(0, 8)
-    const pendingApprovalTotal = pendingLeaveRequestCount + pendingLeaveCancellationCount + pendingWfhCount + pendingPasswordCount
+    const pendingApprovalTotal = pendingLeaveRequestCount + pendingLeaveCancellationCount + pendingWfhCount + pendingPasswordCount + pendingExpenseClaimCount
 
     const leavesTodayEnriched = (leavesToday ?? []).map(lr => ({
         ...lr,
@@ -380,6 +387,7 @@ export default async function AdminDashboard() {
                 pendingLeaveRequests: pendingLeaveRequestCount,
                 pendingLeaveCancellations: pendingLeaveCancellationCount,
                 pendingWfhRequests: pendingWfhCount,
+                pendingExpenseClaims: pendingExpenseClaimCount,
                 expiringContracts: (contractsExpiring ?? []).length,
             }}
             attendanceStats={attendanceStats}
