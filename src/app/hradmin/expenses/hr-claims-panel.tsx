@@ -94,19 +94,19 @@ export function HrClaimsPanel({ claims, categories, employees, notReady }: Props
         <section className="space-y-4">
             <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-center gap-4">
-                    <span className="rounded-3xl bg-amber-400/15 p-4 text-amber-200 ring-1 ring-amber-200/20">
-                        <HandCoins className="h-8 w-8" />
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-200 ring-1 ring-amber-200/20">
+                        <HandCoins className="h-6 w-6" />
                     </span>
                     <div>
-                        <h1 className="text-3xl font-bold">การเบิกค่าใช้จ่าย</h1>
-                        <p className="mt-1 text-lg text-white/65">อนุมัติคำขอ บันทึกการจ่าย และดูประวัติการเบิกทั้งหมด</p>
+                        <h1 className="text-2xl font-bold leading-tight">การเบิกค่าใช้จ่าย</h1>
+                        <p className="text-sm text-white/60">อนุมัติคำขอ บันทึกการจ่าย และดูประวัติการเบิกทั้งหมด</p>
                     </div>
                 </div>
                 {!notReady && (
                     <button
                         type="button"
                         onClick={() => setCreateOpen(true)}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-300/40 bg-amber-400/20 px-5 py-3 text-lg font-bold text-amber-50 hover:bg-amber-400/30"
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-base font-bold text-black hover:bg-amber-300"
                     >
                         <Plus className="h-5 w-5" />
                         บันทึกการเบิกแทนพนักงาน
@@ -126,13 +126,13 @@ export function HrClaimsPanel({ claims, categories, employees, notReady }: Props
                                 key={t.key}
                                 type="button"
                                 onClick={() => setTab(t.key)}
-                                className={`rounded-2xl border px-5 py-3 text-lg font-semibold transition ${tab === t.key
+                                className={`rounded-xl border px-4 py-2 text-base font-semibold transition ${tab === t.key
                                     ? 'border-yellow-300/60 bg-yellow-300/20 text-yellow-50'
                                     : 'border-white/15 bg-white/10 text-white/75 hover:bg-white/15'
                                     }`}
                             >
                                 {t.label}
-                                {t.count ? <span className="ml-2 rounded-full bg-rose-500 px-2 py-0.5 text-sm text-white">{t.count}</span> : null}
+                                {t.count ? <span className="ml-2 rounded-full bg-rose-500 px-2 py-0.5 text-xs text-white">{t.count}</span> : null}
                             </button>
                         ))}
                     </div>

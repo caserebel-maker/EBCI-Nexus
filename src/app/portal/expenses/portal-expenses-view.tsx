@@ -28,58 +28,50 @@ export function PortalExpensesView({ benefits, hasEmployeeRow }: Props) {
     const pendingCount = payments.filter((payment) => payment.status === 'pending').length
 
     return (
-        <main className="mx-auto w-full max-w-6xl px-4 py-8 text-white sm:px-6 lg:px-8">
-            <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div className="flex items-center gap-4">
-                    <span className="rounded-3xl bg-cyan-400/15 p-4 text-cyan-200 ring-1 ring-cyan-200/20">
-                        <WalletCards className="h-7 w-7" />
-                    </span>
-                    <div>
-                        <p className="text-sm font-semibold uppercase tracking-[0.28em] text-cyan-100/70">Employee Benefit</p>
-                        <h1 className="mt-1 text-3xl font-bold sm:text-4xl">ค่าใช้จ่าย/สวัสดิการ</h1>
-                        <p className="mt-2 text-white/65">รายการค่าใช้จ่ายที่บริษัทบันทึกให้ เช่น ค่าโทรศัพท์ ค่าเดินทาง หรือสวัสดิการเฉพาะบุคคล</p>
-                    </div>
-                </div>
+        <section className="space-y-4 border-t border-white/10 pt-8">
+            <header>
+                <h2 className="flex items-center gap-2 text-xl font-bold">
+                    <WalletCards className="h-6 w-6 text-cyan-200" />
+                    สวัสดิการประจำ
+                </h2>
+                <p className="mt-1 text-sm text-white/60">ค่าใช้จ่ายและสวัสดิการที่บริษัทบันทึกให้ เช่น ค่าโทรศัพท์ ค่าเดินทาง</p>
             </header>
 
             {!hasEmployeeRow && (
-                <div className="mt-6 rounded-3xl border border-yellow-300/30 bg-yellow-400/10 p-5 text-yellow-50">
+                <div className="rounded-2xl border border-yellow-300/30 bg-yellow-400/10 p-4 text-base text-yellow-50">
                     ยังไม่พบข้อมูลพนักงานที่เชื่อมกับบัญชีนี้ กรุณาแจ้ง HR
                 </div>
             )}
 
-            <section className="mt-6 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-3xl border border-white/15 bg-white/10 p-5 shadow-xl backdrop-blur">
-                    <p className="text-sm text-white/60">สิทธิ์ที่ได้รับ</p>
-                    <p className="mt-2 text-4xl font-bold">{benefits.filter((benefit) => benefit.is_active).length}</p>
-                    <p className="text-sm text-white/55">รายการที่ยังใช้งาน</p>
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-3 sm:p-4">
+                    <p className="text-sm text-white/60">สิทธิ์ที่ใช้งาน</p>
+                    <p className="mt-1 text-2xl font-bold sm:text-3xl">{benefits.filter((benefit) => benefit.is_active).length}</p>
                 </div>
-                <div className="rounded-3xl border border-emerald-300/20 bg-emerald-400/10 p-5 shadow-xl backdrop-blur">
-                    <p className="text-sm text-emerald-100/75">จ่ายแล้ว</p>
-                    <p className="mt-2 text-4xl font-bold text-emerald-100">{paidCount}</p>
-                    <p className="text-sm text-white/55">ประวัติการจ่ายทั้งหมด</p>
+                <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-3 sm:p-4">
+                    <p className="text-sm text-emerald-100/80">จ่ายแล้ว</p>
+                    <p className="mt-1 text-2xl font-bold text-emerald-100 sm:text-3xl">{paidCount}</p>
                 </div>
-                <div className="rounded-3xl border border-yellow-300/20 bg-yellow-400/10 p-5 shadow-xl backdrop-blur">
-                    <p className="text-sm text-yellow-100/75">รอจ่าย</p>
-                    <p className="mt-2 text-4xl font-bold text-yellow-100">{pendingCount}</p>
-                    <p className="text-sm text-white/55">รายการที่ HR ยังไม่ได้บันทึกจ่าย</p>
+                <div className="rounded-2xl border border-yellow-300/20 bg-yellow-400/10 p-3 sm:p-4">
+                    <p className="text-sm text-yellow-100/80">รอจ่าย</p>
+                    <p className="mt-1 text-2xl font-bold text-yellow-100 sm:text-3xl">{pendingCount}</p>
                 </div>
-            </section>
+            </div>
 
-            <section className="mt-6 space-y-4">
+            <div className="space-y-3">
                 {benefits.length === 0 ? (
-                    <div className="rounded-3xl border border-dashed border-white/20 bg-white/10 p-10 text-center text-white/60">
+                    <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-8 text-center text-base text-white/55">
                         ยังไม่มีรายการค่าใช้จ่ายหรือสวัสดิการเฉพาะบุคคล
                     </div>
                 ) : benefits.map((benefit) => (
-                    <article key={benefit.id} className="rounded-3xl border border-white/15 bg-white/10 p-5 shadow-xl backdrop-blur">
+                    <article key={benefit.id} className="rounded-2xl border border-white/15 bg-white/10 p-4 shadow-lg backdrop-blur">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <h2 className="text-2xl font-bold">{benefit.title}</h2>
+                                    <h3 className="text-lg font-bold">{benefit.title}</h3>
                                     <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/70">{getCategoryLabel(benefit.category)}</span>
                                 </div>
-                                <p className="mt-2 text-sm text-white/65">
+                                <p className="mt-1 text-sm text-white/60">
                                     ยอดปกติ {formatExpenseAmount(benefit.default_amount)} บาท
                                     {benefit.start_month ? ` · เริ่ม ${benefit.start_month}` : ''}
                                     {benefit.end_month ? ` · ถึง ${benefit.end_month}` : ''}
@@ -120,7 +112,7 @@ export function PortalExpensesView({ benefits, hasEmployeeRow }: Props) {
                         </div>
                     </article>
                 ))}
-            </section>
-        </main>
+            </div>
+        </section>
     )
 }

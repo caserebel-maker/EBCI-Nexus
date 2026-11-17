@@ -20,7 +20,7 @@ export default async function PortalExpensesPage() {
     ])
 
     return (
-        <>
+        <main className="mx-auto w-full max-w-5xl space-y-8 px-1 py-2 text-white sm:px-4 lg:px-6">
             {employeeId && (
                 <PortalClaimsSection
                     claims={claimResult.claims}
@@ -29,6 +29,6 @@ export default async function PortalExpensesPage() {
                 />
             )}
             <PortalExpensesView benefits={benefits} hasEmployeeRow={!!employeeId} />
-        </>
+        </main>
     )
 }

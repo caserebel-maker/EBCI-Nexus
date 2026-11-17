@@ -157,17 +157,12 @@ export default async function HrAdminExpensesPage({
             />
 
             <hr className="border-white/10" />
-            <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <div className="flex items-center gap-4">
-                    <span className="rounded-3xl bg-cyan-400/15 p-4 text-cyan-200 ring-1 ring-cyan-200/20">
-                        <WalletCards className="h-7 w-7" />
-                    </span>
-                    <div>
-                        <p className="text-sm font-semibold uppercase tracking-[0.28em] text-cyan-100/70">Employee Expenses</p>
-                        <h1 className="mt-1 text-3xl font-bold">ค่าใช้จ่ายพนักงาน</h1>
-                        <p className="mt-2 text-white/65">ภาพรวมรายการค่าใช้จ่ายและสวัสดิการเฉพาะบุคคล เช่น ค่าโทรศัพท์ ค่าเดินทาง หรือใบเสร็จที่บริษัทจ่ายให้</p>
-                    </div>
-                </div>
+            <header>
+                <h2 className="flex items-center gap-2 text-xl font-bold">
+                    <WalletCards className="h-6 w-6 text-cyan-200" />
+                    สวัสดิการประจำรายบุคคล
+                </h2>
+                <p className="mt-1 text-sm text-white/60">สวัสดิการและค่าใช้จ่ายรายเดือนที่ HR บันทึกให้พนักงานแต่ละคน เช่น ค่าโทรศัพท์ ค่าเดินทาง</p>
             </header>
 
             {tableMissing && (

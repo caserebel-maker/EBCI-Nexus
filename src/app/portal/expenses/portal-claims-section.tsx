@@ -58,73 +58,73 @@ export function PortalClaimsSection({ claims, categories, notReady }: Props) {
     }
 
     return (
-        <section className="mx-auto w-full max-w-6xl px-4 pt-8 text-white sm:px-6 lg:px-8">
-            <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-4">
-                    <span className="rounded-3xl bg-amber-400/15 p-4 text-amber-200 ring-1 ring-amber-200/20">
-                        <HandCoins className="h-8 w-8" />
+        <section className="space-y-5">
+            <header className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-200 ring-1 ring-amber-200/20">
+                        <HandCoins className="h-6 w-6" />
                     </span>
-                    <div>
-                        <h1 className="text-3xl font-bold sm:text-4xl">เบิกค่าใช้จ่าย</h1>
-                        <p className="mt-1 text-lg text-white/65">ยื่นเบิก ดูสถานะ และประวัติการเบิกของคุณ</p>
+                    <div className="min-w-0">
+                        <h1 className="text-2xl font-bold leading-tight">เบิกค่าใช้จ่าย</h1>
+                        <p className="text-sm text-white/60">ยื่นเบิก ดูสถานะ และประวัติการเบิกของคุณ</p>
                     </div>
                 </div>
                 {!notReady && (
                     <button
                         type="button"
                         onClick={() => { setError(null); setOpen(true) }}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-400 px-6 py-4 text-xl font-bold text-black shadow-lg hover:bg-amber-300"
+                        className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-base font-bold text-black shadow hover:bg-amber-300 active:scale-95"
                     >
-                        <Plus className="h-6 w-6" />
+                        <Plus className="h-5 w-5" />
                         ยื่นเบิก
                     </button>
                 )}
             </header>
 
             {notReady && (
-                <div className="mt-6 rounded-3xl border border-yellow-300/30 bg-yellow-400/10 p-5 text-lg text-yellow-50">
+                <div className="rounded-2xl border border-yellow-300/30 bg-yellow-400/10 p-4 text-base text-yellow-50">
                     ระบบเบิกค่าใช้จ่ายยังไม่เปิดใช้งาน กรุณาแจ้ง HR
                 </div>
             )}
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-3xl border border-yellow-300/20 bg-yellow-400/10 p-5">
-                    <p className="text-lg text-yellow-100/80">รออนุมัติ</p>
-                    <p className="mt-1 text-4xl font-bold text-yellow-100">{pending.length}</p>
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                <div className="rounded-2xl border border-yellow-300/20 bg-yellow-400/10 p-3 sm:p-4">
+                    <p className="text-sm text-yellow-100/80">รออนุมัติ</p>
+                    <p className="mt-1 text-2xl font-bold text-yellow-100 sm:text-3xl">{pending.length}</p>
                 </div>
-                <div className="rounded-3xl border border-cyan-300/20 bg-cyan-400/10 p-5">
-                    <p className="text-lg text-cyan-100/80">อนุมัติแล้ว · รอจ่าย</p>
-                    <p className="mt-1 text-4xl font-bold text-cyan-100">{waitingPay.length}</p>
+                <div className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 p-3 sm:p-4">
+                    <p className="text-sm text-cyan-100/80">รอจ่าย</p>
+                    <p className="mt-1 text-2xl font-bold text-cyan-100 sm:text-3xl">{waitingPay.length}</p>
                 </div>
-                <div className="rounded-3xl border border-emerald-300/20 bg-emerald-400/10 p-5">
-                    <p className="text-lg text-emerald-100/80">ได้รับเงินแล้วทั้งหมด</p>
-                    <p className="mt-1 text-4xl font-bold text-emerald-100">{formatBaht(paidTotal)} <span className="text-xl">บาท</span></p>
+                <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-3 sm:p-4">
+                    <p className="text-sm text-emerald-100/80">ได้รับแล้ว</p>
+                    <p className="mt-1 truncate text-2xl font-bold text-emerald-100 sm:text-3xl">{formatBaht(paidTotal)}<span className="ml-1 text-sm font-medium">บาท</span></p>
                 </div>
             </div>
 
-            <div className="mt-6 space-y-3">
+            <div className="space-y-3">
                 {claims.length === 0 ? (
-                    <div className="rounded-3xl border border-dashed border-white/20 bg-white/10 p-10 text-center text-lg text-white/60">
+                    <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-8 text-center text-base text-white/55">
                         ยังไม่มีประวัติการเบิก
                     </div>
                 ) : claims.map((claim) => (
-                    <article key={claim.id} className="rounded-3xl border border-white/15 bg-white/10 p-5 shadow-xl backdrop-blur">
+                    <article key={claim.id} className="rounded-2xl border border-white/15 bg-white/10 p-4 shadow-lg backdrop-blur">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div className="min-w-0">
-                                <p className="text-xl font-bold">{claim.title}</p>
-                                <p className="mt-1 text-base text-white/65">
+                                <p className="text-lg font-bold leading-snug">{claim.title}</p>
+                                <p className="mt-0.5 text-sm text-white/60">
                                     {claim.category_name} · ใช้จ่ายวันที่ {formatThaiDate(claim.expense_date)}
                                 </p>
-                                {claim.description && <p className="mt-1 text-base text-white/55">{claim.description}</p>}
+                                {claim.description && <p className="mt-1 text-sm text-white/50">{claim.description}</p>}
                             </div>
                             <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
-                                <p className="text-2xl font-bold">{formatBaht(claim.amount)} บาท</p>
-                                <span className={`rounded-full border px-3 py-1 text-base font-semibold ${claimStatusClass(claim.status)}`}>
+                                <p className="text-xl font-bold">{formatBaht(claim.amount)} <span className="text-sm font-medium text-white/60">บาท</span></p>
+                                <span className={`rounded-full border px-3 py-0.5 text-sm font-semibold ${claimStatusClass(claim.status)}`}>
                                     {claimStatusLabel(claim.status)}
                                 </span>
                             </div>
                         </div>
-                        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-base text-white/60">
+                        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-white/10 pt-3 text-sm text-white/55">
                             <span>ยื่นเมื่อ {formatThaiDate(claim.created_at)}</span>
                             {claim.status === 'paid' && <span className="text-emerald-200">จ่ายแล้ววันที่ {formatThaiDate(claim.paid_on)}</span>}
                             {claim.status === 'rejected' && claim.review_note && (
