@@ -19,6 +19,7 @@ interface Props {
     viewerLevel: number
     canSeeFullOrg: boolean
     showLevelNumber?: boolean
+    showDepartmentMembers?: boolean
 }
 
 export function TabStructure({
@@ -30,6 +31,7 @@ export function TabStructure({
     viewerLevel: _viewerLevel,
     canSeeFullOrg,
     showLevelNumber = false,
+    showDepartmentMembers,
 }: Props) {
     void _viewerLevel
 
@@ -94,7 +96,7 @@ export function TabStructure({
                     viewerSecondaryDepartment={viewerSecondaryDepartment}
                 />
             )}
-            {sub === 'overview' && <OverviewView employees={employees} />}
+            {sub === 'overview' && <OverviewView employees={employees} showDepartmentMembers={showDepartmentMembers} />}
             {sub === 'people' && canSeeFullOrg && (
                 <PeopleView
                     employees={employees}

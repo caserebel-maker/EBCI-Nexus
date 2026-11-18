@@ -14,7 +14,12 @@ import type { OrgEmployee } from './view-department'
 
 interface Props {
     employees: OrgEmployee[]
+    showDepartmentMembers?: boolean
 }
+
+const UNASSIGNED = 'ไม่ระบุแผนก'
+const isDepartmentStaff = (e: OrgEmployee) =>
+    !e.isAdvisor && e.position !== 'ที่ปรึกษา' && e.department !== 'ที่ปรึกษา' && (e.approvalLevel ?? 0) < 4
 
 const COMMUNICATIONS = 'ฝ่ายสื่อสารองค์กร'
 const RESPONSIBILITIES: Record<string, { title: string; items: string[] }> = {
@@ -43,11 +48,14 @@ const RESPONSIBILITIES: Record<string, { title: string; items: string[] }> = {
 
 // Tab 1 "ภาพรวมองค์กร" — privacy-safe aggregate view.
 // Flows top → bottom:   ประธาน → MD → แผนก (grid) → ที่ปรึกษา
-// Shows NO individual names, photos, or levels.
-export function OverviewView({ employees }: Props) {
+// Only the authorized HR view enables named department rosters.
+export function OverviewView({ employees, showDepartmentMembers = false }: Props) {
     const dialog = useRef<HTMLDialogElement>(null)
     const [selected, setSelected] = useState<string | null>(null)
     const details = selected ? RESPONSIBILITIES[selected] : undefined
+    const members = selected && showDepartmentMembers
+        ? employees.filter(e => isDepartmentStaff(e) && ((e.department ?? UNASSIGNED) === selected || e.secondaryDepartment === selected))
+        : []
     const { presidentCount, mdCount, departments, advisorsCount, total } = useMemo(() => {
         const isAdvisor = (e: OrgEmployee) =>
             e.isAdvisor || e.position === 'ที่ปรึกษา' || e.department === 'ที่ปรึกษา'
@@ -58,8 +66,8 @@ export function OverviewView({ employees }: Props) {
         const byDept = new Map<string, number>([[COMMUNICATIONS, 0]])
         let communicationsSecondary = 0
         for (const e of staff) {
-            if ((e.approvalLevel ?? 0) >= 4) continue // exec tiles rendered separately
-            const key = e.department ?? 'ไม่ระบุแผนก'
+            if (!isDepartmentStaff(e)) continue
+            const key = e.department ?? UNASSIGNED
             byDept.set(key, (byDept.get(key) ?? 0) + 1)
             if (key !== COMMUNICATIONS && e.secondaryDepartment === COMMUNICATIONS) communicationsSecondary++
         }
@@ -167,6 +175,33 @@ export function OverviewView({ employees }: Props) {
                     </ul>
                 ) : (
                     <p className="text-sm text-white/70">ยังไม่มีรายละเอียดความรับผิดชอบ</p>
+                )}
+                {showDepartmentMembers && (
+                    <section className="mt-5 border-t border-white/15 pt-4">
+                        <h4 className="mb-2 text-sm font-semibold">รายชื่อและตำแหน่ง ({members.length} คน)</h4>
+                        {members.length === 0 ? (
+                            <p className="text-sm text-white/70">ยังไม่มีพนักงานหรือผู้รับผิดชอบควบในฝ่ายนี้</p>
+                        ) : (
+                            <ul className="divide-y divide-white/10">
+                                {members.map(member => {
+                                    const secondary = (member.department ?? UNASSIGNED) !== selected
+                                    return (
+                                        <li key={member.id} className="space-y-1 py-2.5 text-sm">
+                                            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                                                <span className="break-words font-semibold">
+                                                    {member.firstName} {member.lastName}{member.nickname && ` (${member.nickname})`}
+                                                </span>
+                                                {secondary && <span className="text-xs text-amber-200">รับผิดชอบควบ</span>}
+                                            </div>
+                                            <p className="break-words text-white/75">
+                                                {secondary && 'ตำแหน่งต้นสังกัด: '}{member.position || 'ไม่ระบุตำแหน่ง'}
+                                            </p>
+                                        </li>
+                                    )
+                                })}
+                            </ul>
+                        )}
+                    </section>
                 )}
             </dialog>
 

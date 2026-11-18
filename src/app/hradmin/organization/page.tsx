@@ -93,6 +93,7 @@ export default async function HrOrganizationPage() {
                 viewerSecondaryDepartment={me?.secondaryDepartment ?? null}
                 viewerLevel={viewerLevel}
                 canSeeFullOrg={canSeeFullOrg}
+                showDepartmentMembers={permissions.can_view_all_employees}
             />
         </div>
     )

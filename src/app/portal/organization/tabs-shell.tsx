@@ -25,6 +25,7 @@ interface Props {
     viewerSecondaryDepartment: string | null
     viewerLevel: number
     canSeeFullOrg: boolean
+    showDepartmentMembers?: boolean
 }
 
 export function TabsShell({
@@ -35,6 +36,7 @@ export function TabsShell({
     viewerSecondaryDepartment,
     viewerLevel,
     canSeeFullOrg,
+    showDepartmentMembers,
 }: Props) {
     const params = useSearchParams()
     const router = useRouter()
@@ -97,6 +99,7 @@ export function TabsShell({
                     viewerLevel={viewerLevel}
                     canSeeFullOrg={canSeeFullOrg}
                     showLevelNumber={permissions.can_manage_system}
+                    showDepartmentMembers={showDepartmentMembers}
                 />
             )}
             {view === 'authority' && (
