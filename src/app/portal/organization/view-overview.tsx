@@ -22,8 +22,10 @@ const isDepartmentStaff = (e: OrgEmployee) =>
     !e.isAdvisor && e.position !== 'ที่ปรึกษา' && e.department !== 'ที่ปรึกษา' && (e.approvalLevel ?? 0) < 4
 
 const COMMUNICATIONS = 'ฝ่ายสื่อสารองค์กร'
+const INNOVATION = 'ฝ่ายนวัตกรรมและเทคโนโลยี'
+const departmentLabel = (name: string) => name === COMMUNICATIONS ? 'แผนกสื่อสารองค์กร' : name
 const RESPONSIBILITIES: Record<string, { title: string; items: string[] }> = {
-    'ฝ่ายนวัตกรรมและเทคโนโลยี': {
+    [INNOVATION]: {
         title: 'Innovation & Technology',
         items: [
             'Digital Transformation และ Modernization',
@@ -63,7 +65,7 @@ export function OverviewView({ employees, showDepartmentMembers = false }: Props
         const advisors = employees.filter(isAdvisor)
         const staff = employees.filter(e => !isAdvisor(e))
 
-        const byDept = new Map<string, number>([[COMMUNICATIONS, 0]])
+        const byDept = new Map<string, number>([[INNOVATION, 0], [COMMUNICATIONS, 0]])
         let communicationsSecondary = 0
         for (const e of staff) {
             if (!isDepartmentStaff(e)) continue
@@ -87,6 +89,24 @@ export function OverviewView({ employees, showDepartmentMembers = false }: Props
         }
     }, [employees])
 
+    const communications = departments.find(d => d.name === COMMUNICATIONS)
+    const mainDepartments = departments.filter(d => d.name !== COMMUNICATIONS)
+    const departmentSummary = `${mainDepartments.length} หน่วยงานหลัก · ${communications ? 1 : 0} แผนกย่อย`
+
+    function renderDepartment(department: (typeof departments)[number]) {
+        return (
+            <DepartmentTile
+                name={departmentLabel(department.name)}
+                count={department.count}
+                secondary={department.secondary}
+                onOpen={() => {
+                    setSelected(department.name)
+                    dialog.current?.showModal()
+                }}
+            />
+        )
+    }
+
     return (
         <div className="space-y-5 lg:space-y-6">
             {/* Header */}
@@ -101,7 +121,7 @@ export function OverviewView({ employees, showDepartmentMembers = false }: Props
                 <div>
                     <h2 className="text-white font-bold">ภาพรวมองค์กร EBCI</h2>
                     <p className="text-white/70 text-xs mt-0.5">
-                        {departments.length} แผนก · {total} พนักงาน
+                        {departmentSummary} · {total} พนักงาน
                         {advisorsCount > 0 && ` · ${advisorsCount} ที่ปรึกษา`}
                     </p>
                 </div>
@@ -133,20 +153,23 @@ export function OverviewView({ employees, showDepartmentMembers = false }: Props
             <section>
                 <h3 className="text-white/70 text-xs uppercase tracking-wider mb-3 flex items-center gap-1.5 justify-center">
                     <Building2 size={14} className="text-sky-300" />
-                    แผนก · {departments.length} แผนก
+                    {departmentSummary}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {departments.map(d => (
-                        <DepartmentTile
-                            key={d.name}
-                            name={d.name}
-                            count={d.count}
-                            secondary={d.secondary}
-                            onOpen={() => {
-                                setSelected(d.name)
-                                dialog.current?.showModal()
-                            }}
-                        />
+                    {mainDepartments.map(d => (
+                        <div key={d.name} className="min-w-0">
+                            {renderDepartment(d)}
+                            {d.name === INNOVATION && communications && (
+                                <div
+                                    role="group"
+                                    aria-label={`แผนกย่อยของ${INNOVATION}`}
+                                    className="relative ml-5 pt-3 pl-4"
+                                >
+                                    <span aria-hidden="true" className="absolute top-0 left-0 h-9 w-4 rounded-bl-md border-b border-l border-amber-200/60" />
+                                    {renderDepartment(communications)}
+                                </div>
+                            )}
+                        </div>
                     ))}
                 </div>
             </section>
@@ -159,7 +182,7 @@ export function OverviewView({ employees, showDepartmentMembers = false }: Props
             >
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                        <h3 id="department-dialog-title" className="break-words text-lg font-bold">{selected}</h3>
+                        <h3 id="department-dialog-title" className="break-words text-lg font-bold">{selected && departmentLabel(selected)}</h3>
                         {details && <p className="mt-1 text-sm text-amber-200">{details.title}</p>}
                     </div>
                     <form method="dialog">
@@ -295,7 +318,7 @@ function DepartmentTile({ name, count, secondary, onOpen }: {
             type="button"
             aria-haspopup="dialog"
             onClick={onOpen}
-            className="p-4 rounded-xl border border-white/15 flex items-center gap-3 text-left transition-all hover:-translate-y-0.5 hover:border-white/25 focus-visible:outline-2 focus-visible:outline-amber-300"
+            className="w-full p-4 rounded-xl border border-white/15 flex items-center gap-3 text-left transition-all hover:-translate-y-0.5 hover:border-white/25 focus-visible:outline-2 focus-visible:outline-amber-300"
             style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}
         >
             <span
