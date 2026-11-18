@@ -1,12 +1,14 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
     Building2,
     Crown,
     Briefcase,
     GraduationCap,
     Users as UsersIcon,
+    ChevronRight,
+    X,
 } from 'lucide-react'
 import type { OrgEmployee } from './view-department'
 
@@ -14,10 +16,38 @@ interface Props {
     employees: OrgEmployee[]
 }
 
+const COMMUNICATIONS = 'ฝ่ายสื่อสารองค์กร'
+const RESPONSIBILITIES: Record<string, { title: string; items: string[] }> = {
+    'ฝ่ายนวัตกรรมและเทคโนโลยี': {
+        title: 'Innovation & Technology',
+        items: [
+            'Digital Transformation และ Modernization',
+            'EBCI Nexus, ConNext และ Cortex',
+            'AI, Automation และระบบภายใน',
+            'IT Infrastructure และ Cybersecurity',
+            'พัฒนานวัตกรรมและเทคโนโลยีใหม่',
+        ],
+    },
+    [COMMUNICATIONS]: {
+        title: 'Corporate Communications',
+        items: [
+            'Corporate Branding และ Brand Guideline',
+            'Corporate PR และภาพลักษณ์องค์กร',
+            'Social Media และ Content Strategy',
+            'Video Production และ Motion Graphics',
+            'Internal Communications และกิจกรรมองค์กร',
+            'ข่าวสารและประชาสัมพันธ์บริษัท',
+        ],
+    },
+}
+
 // Tab 1 "ภาพรวมองค์กร" — privacy-safe aggregate view.
 // Flows top → bottom:   ประธาน → MD → แผนก (grid) → ที่ปรึกษา
 // Shows NO individual names, photos, or levels.
 export function OverviewView({ employees }: Props) {
+    const dialog = useRef<HTMLDialogElement>(null)
+    const [selected, setSelected] = useState<string | null>(null)
+    const details = selected ? RESPONSIBILITIES[selected] : undefined
     const { presidentCount, mdCount, departments, advisorsCount, total } = useMemo(() => {
         const isAdvisor = (e: OrgEmployee) =>
             e.isAdvisor || e.position === 'ที่ปรึกษา' || e.department === 'ที่ปรึกษา'
@@ -25,14 +55,16 @@ export function OverviewView({ employees }: Props) {
         const advisors = employees.filter(isAdvisor)
         const staff = employees.filter(e => !isAdvisor(e))
 
-        const byDept = new Map<string, number>()
+        const byDept = new Map<string, number>([[COMMUNICATIONS, 0]])
+        let communicationsSecondary = 0
         for (const e of staff) {
             if ((e.approvalLevel ?? 0) >= 4) continue // exec tiles rendered separately
             const key = e.department ?? 'ไม่ระบุแผนก'
             byDept.set(key, (byDept.get(key) ?? 0) + 1)
+            if (key !== COMMUNICATIONS && e.secondaryDepartment === COMMUNICATIONS) communicationsSecondary++
         }
         const depts = Array.from(byDept.entries())
-            .map(([name, count]) => ({ name, count }))
+            .map(([name, count]) => ({ name, count, secondary: name === COMMUNICATIONS ? communicationsSecondary : 0 }))
             .sort((a, b) => {
                 if (a.count !== b.count) return b.count - a.count
                 return a.name.localeCompare(b.name, 'th')
@@ -97,10 +129,46 @@ export function OverviewView({ employees }: Props) {
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {departments.map(d => (
-                        <DepartmentTile key={d.name} name={d.name} count={d.count} />
+                        <DepartmentTile
+                            key={d.name}
+                            name={d.name}
+                            count={d.count}
+                            secondary={d.secondary}
+                            onOpen={() => {
+                                setSelected(d.name)
+                                dialog.current?.showModal()
+                            }}
+                        />
                     ))}
                 </div>
             </section>
+
+            <dialog
+                ref={dialog}
+                aria-labelledby="department-dialog-title"
+                className="m-auto max-h-[85dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-lg border border-white/20 bg-[#461d23] p-5 text-white shadow-2xl backdrop:bg-black/65"
+                onClose={() => setSelected(null)}
+            >
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <h3 id="department-dialog-title" className="break-words text-lg font-bold">{selected}</h3>
+                        {details && <p className="mt-1 text-sm text-amber-200">{details.title}</p>}
+                    </div>
+                    <form method="dialog">
+                        <button type="submit" autoFocus aria-label="ปิด" title="ปิด" className="grid size-9 place-items-center rounded-lg hover:bg-white/10">
+                            <X size={18} />
+                        </button>
+                    </form>
+                </div>
+                <h4 className="mb-2 mt-5 text-sm font-semibold">ขอบเขตความรับผิดชอบ</h4>
+                {details ? (
+                    <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-white/85 marker:text-amber-300">
+                        {details.items.map(item => <li key={item}>{item}</li>)}
+                    </ul>
+                ) : (
+                    <p className="text-sm text-white/70">ยังไม่มีรายละเอียดความรับผิดชอบ</p>
+                )}
+            </dialog>
 
             {/* Advisors footer */}
             {advisorsCount > 0 && (
@@ -181,10 +249,18 @@ function ExecutiveCard({
     )
 }
 
-function DepartmentTile({ name, count }: { name: string; count: number }) {
+function DepartmentTile({ name, count, secondary, onOpen }: {
+    name: string
+    count: number
+    secondary: number
+    onOpen: () => void
+}) {
     return (
-        <div
-            className="p-4 rounded-xl border border-white/15 flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.09]"
+        <button
+            type="button"
+            aria-haspopup="dialog"
+            onClick={onOpen}
+            className="p-4 rounded-xl border border-white/15 flex items-center gap-3 text-left transition-all hover:-translate-y-0.5 hover:border-white/25 focus-visible:outline-2 focus-visible:outline-amber-300"
             style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(8px)' }}
         >
             <span
@@ -196,10 +272,13 @@ function DepartmentTile({ name, count }: { name: string; count: number }) {
             >
                 <Building2 size={18} className="text-amber-200" />
             </span>
-            <div className="flex-1 min-w-0">
-                <p className="text-white font-semibold text-sm leading-tight line-clamp-2">{name}</p>
-                <p className="text-white/55 text-xs mt-0.5">{count} คน</p>
-            </div>
-        </div>
+            <span className="flex-1 min-w-0">
+                <span className="block text-white font-semibold text-sm leading-tight break-words">{name}</span>
+                <span className="block text-white/70 text-xs mt-0.5">
+                    {count} คน{secondary > 0 && ` · รับผิดชอบควบ ${secondary} คน`}
+                </span>
+            </span>
+            <ChevronRight size={16} className="shrink-0 text-white/60" aria-hidden="true" />
+        </button>
     )
 }
