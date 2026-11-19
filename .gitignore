@@ -63,11 +63,12 @@ next-env.d.ts
 *.db-journal
 .env*.local
 
-# cctv binaries
+# cctv binaries & logs
 scripts/cctv/go2rtc
 scripts/cctv/*.exe
 scripts/cctv/*.zip
 scripts/cctv/*.tar.gz
+scripts/cctv/*.log
 cam1*.jpg
 Wi-Fi-EBCI.xml
 

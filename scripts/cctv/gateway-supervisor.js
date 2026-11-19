@@ -7,12 +7,14 @@ const { spawn } = require('child_process');
 
 const GATEWAY_SECRET = process.env.CARD_SCAN_WEBHOOK_SECRET || 'ebci_card_webhook_secret_production_2026';
 const NEXUS_TUNNEL_ENDPOINT = 'https://ebci-nexus.vercel.app/api/cctv/tunnel';
+const SINGLETON_PORT = 19850;
 
 const DIR = __dirname;
 const GO2RTC_BIN = path.join(DIR, 'go2rtc.exe');
 const GO2RTC_CFG = path.join(DIR, 'go2rtc.yaml');
 const CLOUDFLARED_BIN = path.join(DIR, 'cloudflared.exe');
 const CLOUDFLARE_LOG = path.join(DIR, 'cloudflare.log');
+const SUPERVISOR_LOG = path.join(DIR, 'supervisor.log');
 
 // Camera MAC signatures
 const MAC_CAM1 = 'ec-b9-31-8d-9d-1d'; // Front (หน้าอาคาร)
@@ -26,9 +28,22 @@ const cameras = {
     cam3: { listenPort: 5543, host: '192.168.10.101', port: 554, mac: MAC_CAM3, name: 'Cam 3 (Courtyard)' },
 };
 
+let logWriteCount = 0;
 function log(msg) {
     const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] ${msg}`);
+    const line = `[${timestamp}] [PID:${process.pid}] ${msg}`;
+    console.log(line);
+    try {
+        // Rotate supervisor.log periodically if > 1MB
+        if (++logWriteCount % 100 === 0 && fs.existsSync(SUPERVISOR_LOG)) {
+            const stat = fs.statSync(SUPERVISOR_LOG);
+            if (stat.size > 1024 * 1024) {
+                const lines = fs.readFileSync(SUPERVISOR_LOG, 'utf8').split('\n');
+                fs.writeFileSync(SUPERVISOR_LOG, lines.slice(-1500).join('\n'), 'utf8');
+            }
+        }
+        fs.appendFileSync(SUPERVISOR_LOG, line + '\n', 'utf8');
+    } catch (_) {}
 }
 
 // 1. Dynamic Local Wi-Fi IP Detection & Auto-Reconnect
@@ -223,9 +238,18 @@ function startCameraRelays() {
             inbound.pipe(outbound);
             outbound.pipe(inbound);
 
-            inbound.on('error', () => {});
-            outbound.on('error', (err) => {
+            inbound.on('error', () => {
+                if (!outbound.destroyed) outbound.destroy();
+            });
+            inbound.on('close', () => {
+                if (!outbound.destroyed) outbound.destroy();
+            });
+            outbound.on('error', () => {
+                if (!inbound.destroyed) inbound.destroy();
                 healCameras();
+            });
+            outbound.on('close', () => {
+                if (!inbound.destroyed) inbound.destroy();
             });
         });
 
@@ -234,19 +258,16 @@ function startCameraRelays() {
         });
 
         server.on('error', (err) => {
-            if (err.code === 'EADDRINUSE') {
-                log(`[Relay] Port ${config.listenPort} already in use, continuing.`);
-            } else {
-                log(`[Relay Error] ${err.message}`);
-            }
+            log(`[Relay Error] Port ${config.listenPort}: ${err.message}`);
         });
     }
 }
 
 // 3. Register Tunnel with Nexus
 let currentTunnelUrl = '';
+let lastHeartbeatLoggedAt = 0;
 
-async function registerTunnelUrl(url) {
+async function registerTunnelUrl(url, force = false) {
     if (!url) return;
     try {
         const res = await fetch(NEXUS_TUNNEL_ENDPOINT, {
@@ -258,13 +279,20 @@ async function registerTunnelUrl(url) {
             body: JSON.stringify({
                 tunnel_url: url,
                 secret: GATEWAY_SECRET,
+                force,
             }),
+            signal: AbortSignal.timeout(10000),
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok && data.success) {
-            log(`[Heartbeat Success] Registered active tunnel with Nexus: ${url}`);
+            const now = Date.now();
+            // Log every new tunnel or every 15 minutes to keep supervisor.log readable
+            if (force || data.status === 'synced_to_db' || now - lastHeartbeatLoggedAt > 15 * 60_000) {
+                lastHeartbeatLoggedAt = now;
+                log(`[Heartbeat Success] (${data.status}) ${url}`);
+            }
         } else {
-            log(`[Heartbeat Warning] Failed to register: ${JSON.stringify(data)}`);
+            log(`[Heartbeat Warning] HTTP ${res.status}: ${JSON.stringify(data)}`);
         }
     } catch (err) {
         log(`[Heartbeat Network Error] ${err.message}`);
@@ -274,37 +302,72 @@ async function registerTunnelUrl(url) {
 // 4. Cloudflared Subprocess Management & Auto-Recovery
 let cloudflaredProc = null;
 let isRestartingCloudflared = false;
+let cloudflaredStartedAt = 0;
+let tunnelDetectedAt = 0;
+let consecutiveRestarts = 0;
 
-function restartCloudflared(reason) {
+function killProcessSync(proc, processName) {
+    try {
+        if (proc && proc.pid) {
+            proc.removeAllListeners();
+            try {
+                cp.execSync(`taskkill /F /T /PID ${proc.pid}`, { timeout: 4000, windowsHide: true, stdio: 'ignore' });
+            } catch (_) {
+                proc.kill('SIGKILL');
+            }
+        }
+        if (processName) {
+            cp.execSync(`taskkill /F /IM ${processName}`, { timeout: 4000, windowsHide: true, stdio: 'ignore' });
+        }
+    } catch (_) {}
+}
+
+function restartCloudflared(reason, customDelayMs = null) {
     if (isRestartingCloudflared) return;
     isRestartingCloudflared = true;
-    log(`[Cloudflared Recovery] Restarting cloudflared due to: ${reason}`);
+    consecutiveRestarts++;
+    const delayMs = customDelayMs !== null
+        ? customDelayMs
+        : Math.min(2000 + Math.max(0, consecutiveRestarts - 1) * 5000, 30000);
 
-    try {
-        if (cloudflaredProc) {
-            cloudflaredProc.removeAllListeners();
-            cloudflaredProc.kill();
-        }
-        cp.execSync('Stop-Process -Name cloudflared -Force -ErrorAction SilentlyContinue', { shell: 'powershell', timeout: 5000, windowsHide: true });
-    } catch (e) {}
+    log(`[Cloudflared Recovery] Restarting in ${delayMs}ms (attempt #${consecutiveRestarts}) due to: ${reason}`);
 
+    killProcessSync(cloudflaredProc, 'cloudflared.exe');
     cloudflaredProc = null;
     currentTunnelUrl = '';
+    tunnelDetectedAt = 0;
 
     try {
         if (fs.existsSync(CLOUDFLARE_LOG)) fs.unlinkSync(CLOUDFLARE_LOG);
-    } catch (e) {}
+    } catch (_) {}
 
     setTimeout(() => {
-        startCloudflared();
         isRestartingCloudflared = false;
-    }, 2000);
+        startCloudflared();
+    }, delayMs);
 }
 
 function checkCloudflareLog() {
+    if (isRestartingCloudflared) return;
+
+    // Guard against cloudflared hanging on startup without issuing a URL
+    if (cloudflaredProc && !currentTunnelUrl && cloudflaredStartedAt > 0) {
+        const waitMs = Date.now() - cloudflaredStartedAt;
+        if (waitMs > 45000) {
+            restartCloudflared(`Timed out waiting ${Math.round(waitMs / 1000)}s for trycloudflare URL`);
+            return;
+        }
+    }
+
     if (!fs.existsSync(CLOUDFLARE_LOG)) return;
     try {
         const content = fs.readFileSync(CLOUDFLARE_LOG, 'utf8');
+
+        // Check for rate limit / API rejection
+        if (content.includes('429 Too Many Requests') || content.includes('failed to request quick Tunnel')) {
+            restartCloudflared('Cloudflare Quick Tunnel API error/rate-limit in cloudflare.log', 20000);
+            return;
+        }
 
         // Check if tunnel expired on Cloudflare side
         if (content.includes('Unauthorized: Tunnel not found') || content.includes('Register tunnel error from server side')) {
@@ -318,21 +381,30 @@ function checkCloudflareLog() {
             const latestUrl = matches[matches.length - 1][0];
             if (latestUrl !== currentTunnelUrl) {
                 currentTunnelUrl = latestUrl;
+                tunnelDetectedAt = Date.now();
+                consecutiveRestarts = 0;
+                tunnelFailCount = 0;
                 log(`>>> NEW CLOUDFLARE TUNNEL DETECTED: ${currentTunnelUrl}`);
-                registerTunnelUrl(currentTunnelUrl);
+                registerTunnelUrl(currentTunnelUrl, true);
             }
         }
-    } catch (e) {}
+    } catch (_) {}
 }
 
 function startCloudflared() {
+    if (isRestartingCloudflared || cloudflaredProc) return;
     log('Starting Cloudflare Tunnel daemon...');
     try {
         if (fs.existsSync(CLOUDFLARE_LOG)) fs.unlinkSync(CLOUDFLARE_LOG);
-    } catch (e) {}
+    } catch (_) {}
+
+    cloudflaredStartedAt = Date.now();
+    currentTunnelUrl = '';
+    tunnelDetectedAt = 0;
 
     cloudflaredProc = spawn(CLOUDFLARED_BIN, [
         'tunnel',
+        '--no-autoupdate',
         '--url',
         'http://127.0.0.1:1984',
         '--logfile',
@@ -346,6 +418,8 @@ function startCloudflared() {
     cloudflaredProc.on('exit', (code) => {
         log(`Cloudflared exited (code ${code}). Restarting in 5s...`);
         cloudflaredProc = null;
+        currentTunnelUrl = '';
+        tunnelDetectedAt = 0;
         if (!isRestartingCloudflared) {
             setTimeout(startCloudflared, 5000);
         }
@@ -355,7 +429,7 @@ function startCloudflared() {
     const checkInterval = setInterval(() => {
         checkCloudflareLog();
         attempts++;
-        if (currentTunnelUrl || attempts > 20) {
+        if (currentTunnelUrl || attempts > 30 || !cloudflaredProc) {
             clearInterval(checkInterval);
         }
     }, 1000);
@@ -366,15 +440,21 @@ let tunnelFailCount = 0;
 async function verifyTunnelReachable() {
     if (!currentTunnelUrl || isRestartingCloudflared) return;
 
+    // Allow 20s DNS propagation grace period after a brand-new tunnel URL appears
+    if (tunnelDetectedAt && Date.now() - tunnelDetectedAt < 20000) {
+        return;
+    }
+
     try {
         const res = await fetch(`${currentTunnelUrl}/api/streams`, {
-            signal: AbortSignal.timeout(6000),
+            signal: AbortSignal.timeout(8000),
         });
         if (res.ok) {
             tunnelFailCount = 0;
             return;
         }
         tunnelFailCount++;
+        log(`[Tunnel Health Check] Non-OK HTTP ${res.status} (${tunnelFailCount}/3)`);
     } catch (err) {
         tunnelFailCount++;
         log(`[Tunnel Health Check] Public ping failed (${tunnelFailCount}/3): ${err.message}`);
@@ -388,8 +468,10 @@ async function verifyTunnelReachable() {
 
 // 5. Go2rtc Subprocess Management & Health Check
 let go2rtcProc = null;
+let isShuttingDown = false;
 
 function startGo2rtc() {
+    if (isShuttingDown || go2rtcProc) return;
     log('Starting go2rtc daemon...');
     go2rtcProc = spawn(GO2RTC_BIN, ['-config', GO2RTC_CFG], {
         cwd: DIR,
@@ -400,7 +482,9 @@ function startGo2rtc() {
     go2rtcProc.on('exit', (code) => {
         log(`go2rtc exited (code ${code}). Restarting in 3s...`);
         go2rtcProc = null;
-        setTimeout(startGo2rtc, 3000);
+        if (!isShuttingDown) {
+            setTimeout(startGo2rtc, 3000);
+        }
     });
 }
 
@@ -412,49 +496,112 @@ async function verifyGo2rtcReachable() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch (e) {
         log(`[go2rtc Health Warning] Local API not responding: ${e.message}`);
-        if (!go2rtcProc) {
-            startGo2rtc();
+        if (go2rtcProc) {
+            killProcessSync(go2rtcProc, 'go2rtc.exe');
+            go2rtcProc = null;
         }
+        startGo2rtc();
     }
 }
 
-// Main Supervisor Bootstrap
-log('=== EBCI NEXUS CCTV GATEWAY SUPERVISOR STARTING ===');
-const wifiIp = ensureWifiConnected();
-log(`Detected Wi-Fi Adapter IP: ${wifiIp || 'None (will check on demand)'}`);
+// 6. Enforce Atomic Single-Instance Lock on 127.0.0.1:19850 before touching anything
+const lockServer = net.createServer((sock) => {
+    sock.end(JSON.stringify({
+        pid: process.pid,
+        tunnel_url: currentTunnelUrl || null,
+        uptime_sec: Math.round(process.uptime()),
+    }));
+});
 
-startCameraRelays();
-startGo2rtc();
-startCloudflared();
-
-// Watchdogs & Timers:
-// 1. Wi-Fi connection check every 15 seconds
-setInterval(ensureWifiConnected, 15000);
-
-// 2. Periodic Cloudflare log check every 10 seconds
-setInterval(checkCloudflareLog, 10000);
-
-// 3. Heartbeat ping to Nexus every 5 minutes (reduced from 30s to stay well within free tier limits)
-// Note: When a new tunnel is detected, registerTunnelUrl is already called immediately on detection.
-setInterval(() => {
-    if (currentTunnelUrl) {
-        registerTunnelUrl(currentTunnelUrl);
+lockServer.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        log(`[Singleton] Another gateway-supervisor is already running on port ${SINGLETON_PORT}. Exiting cleanly.`);
+        process.exit(0);
     }
-}, 60000);
+    log(`[Singleton Lock Error] ${err.message}`);
+    process.exit(1);
+});
 
-// 4. Verify public reachability of tunnel every 30 seconds
-setInterval(verifyTunnelReachable, 30000);
+lockServer.listen(SINGLETON_PORT, '127.0.0.1', () => {
+    log(`=== EBCI NEXUS CCTV GATEWAY SUPERVISOR STARTING (Lock port ${SINGLETON_PORT} acquired) ===`);
 
-// 5. Auto-Heal camera IPs every 60 seconds
-setInterval(healCameras, 60000);
+    // Prevent sleep and ensure EBCI Wi-Fi auto-connects (non-blocking)
+    try {
+        cp.exec('powercfg /change standby-timeout-ac 0 & powercfg /change hibernate-timeout-ac 0 & netsh wlan set profileparameter name="EBCI" connectionmode=auto', { windowsHide: true, timeout: 5000 }, () => {});
+    } catch (_) {}
 
-// 6. Verify local go2rtc every 60 seconds
-setInterval(verifyGo2rtcReachable, 60000);
+    // Clean up any orphaned child binaries left from a crashed prior supervisor
+    killProcessSync(null, 'cloudflared.exe');
+    killProcessSync(null, 'go2rtc.exe');
+
+    const wifiIp = ensureWifiConnected();
+    log(`Detected Wi-Fi Adapter IP: ${wifiIp || 'None (will check on demand)'}`);
+
+    startCameraRelays();
+    startGo2rtc();
+    startCloudflared();
+
+    // Watchdogs & Timers:
+    // 1. Wi-Fi connection check every 15 seconds + Hibernation/Wake detector
+    let lastTick = Date.now();
+    setInterval(async () => {
+        const now = Date.now();
+        const gapMs = now - lastTick;
+        lastTick = now;
+
+        ensureWifiConnected();
+
+        // Detect sleep/hibernation resume (>2 minute jump between 15s ticks)
+        if (gapMs > 120_000) {
+            log(`[Wake Detected] System resumed after ${Math.round(gapMs / 1000)}s pause. Re-syncing Wi-Fi, cameras, and tunnel...`);
+            await healCameras();
+            setTimeout(async () => {
+                if (currentTunnelUrl) {
+                    try {
+                        const res = await fetch(`${currentTunnelUrl}/api/streams`, {
+                            signal: AbortSignal.timeout(6000),
+                        });
+                        if (res.ok) {
+                            await registerTunnelUrl(currentTunnelUrl, true);
+                            return;
+                        }
+                    } catch (_) {}
+                }
+                restartCloudflared('Refreshing quick tunnel after system sleep/hibernation');
+            }, 5000);
+        }
+    }, 15000);
+
+    // 2. Periodic Cloudflare log & startup-timeout check every 10 seconds
+    setInterval(checkCloudflareLog, 10000);
+
+    // 3. Heartbeat ping to Nexus every 60 seconds (well within 10-min online window)
+    setInterval(() => {
+        if (currentTunnelUrl) {
+            registerTunnelUrl(currentTunnelUrl);
+        }
+    }, 60000);
+
+    // 4. Verify public reachability of tunnel every 30 seconds
+    setInterval(verifyTunnelReachable, 30000);
+
+    // 5. Auto-Heal camera IPs every 60 seconds
+    setInterval(healCameras, 60000);
+
+    // 6. Verify local go2rtc every 60 seconds
+    setInterval(verifyGo2rtcReachable, 60000);
+});
 
 // Graceful shutdown
-process.on('SIGINT', () => {
+function shutdown() {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
     log('Shutting down supervisor...');
-    if (go2rtcProc) go2rtcProc.kill();
-    if (cloudflaredProc) cloudflaredProc.kill();
+    killProcessSync(go2rtcProc, null);
+    killProcessSync(cloudflaredProc, null);
+    try { lockServer.close(); } catch (_) {}
     process.exit(0);
-});
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

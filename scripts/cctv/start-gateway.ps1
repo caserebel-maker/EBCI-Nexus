@@ -1,8 +1,21 @@
 $PSScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $PSScriptRoot
 
-# 0. Check if gateway-supervisor is already running
-$existing = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*gateway-supervisor.js*" }
+# 0. Fast atomic check: is gateway-supervisor already holding lock port 19850?
+try {
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    $async = $tcp.BeginConnect("127.0.0.1", 19850, $null, $null)
+    if ($async.AsyncWaitHandle.WaitOne(250, $false) -and $tcp.Connected) {
+        $tcp.EndConnect($async)
+        $tcp.Close()
+        Write-Host "[OK] EBCI CCTV Gateway Supervisor is already running (lock port 19850 active)" -ForegroundColor Green
+        exit 0
+    }
+    $tcp.Close()
+} catch {}
+
+# Secondary WMI check in case supervisor is still initializing within its first second
+$existing = Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like "*gateway-supervisor.js*" }
 if ($existing) {
     Write-Host "[OK] EBCI CCTV Gateway Supervisor is already running (PID: $($existing.ProcessId))" -ForegroundColor Green
     exit 0
@@ -35,9 +48,7 @@ try {
     Write-Host "[OK] Wi-Fi 'EBCI' connection verified" -ForegroundColor Cyan
 } catch {}
 
-# 3. Clean up any lingering processes
-Get-Process -Name "cloudflared" -ErrorAction SilentlyContinue | Stop-Process -Force
-Get-Process -Name "go2rtc" -ErrorAction SilentlyContinue | Stop-Process -Force
+# 3. Orphan cleanup is handled atomically inside gateway-supervisor.js after acquiring lock port 19850
 
 # 4. Ensure binaries exist
 if (-not (Test-Path ".\go2rtc.exe")) {
